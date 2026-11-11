@@ -138,7 +138,7 @@ export function ForgotPasswordForm({
                   value={newPassword}
                 />
                 {passwordError ? <FieldError className="flex items-center gap-2 font-medium" id="reset-password-error"><TriangleAlert className="size-4 shrink-0" aria-hidden="true" /><span>{t(`forgotPassword.${passwordError}`)}</span></FieldError> : null}
-                {hasFocusedPassword ? <ul aria-live="polite" className="flex flex-col gap-1 pt-0.5 text-sm font-medium" id="reset-password-criteria">{passwordCriteria.map((criterion) => <li className={cn("flex items-center gap-2", criterion.isMet ? "text-emerald-700 dark:text-emerald-400" : passwordInvalid ? "text-destructive" : "text-muted-foreground")} key={criterion.label}>{criterion.isMet ? <Check className="size-4 shrink-0" aria-hidden="true" /> : <X className="size-4 shrink-0" aria-hidden="true" />}<span>{criterion.label}</span></li>)}</ul> : null}
+                {hasFocusedPassword ? <ul aria-live="polite" className="flex flex-col gap-1 pt-0.5 type-title" id="reset-password-criteria">{passwordCriteria.map((criterion) => <li className={cn("flex items-center gap-2", criterion.isMet ? "text-emerald-700 dark:text-emerald-400" : passwordInvalid ? "text-destructive" : "text-muted-foreground")} key={criterion.label}>{criterion.isMet ? <Check className="size-4 shrink-0" aria-hidden="true" /> : <X className="size-4 shrink-0" aria-hidden="true" />}<span>{criterion.label}</span></li>)}</ul> : null}
               </Field>
             </>
           ) : (
@@ -197,7 +197,7 @@ export function ForgotPasswordForm({
         </FieldGroup>
       </form>
 
-      <p className="text-center text-sm text-muted-foreground">
+      <p className="text-center type-body-muted">
         <Link className="font-medium text-foreground underline-offset-4 hover:underline" href={loginPath}>
           {t("forgotPassword.backToLogin")}
         </Link>

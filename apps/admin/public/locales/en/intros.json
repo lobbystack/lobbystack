@@ -1,0 +1,161 @@
+{
+  "actions": {
+    "getStarted": "Get started",
+    "readGuide": "Read the guide"
+  },
+  "pages": {
+    "inbox": {
+      "title": "Your calls, texts and chats in one place",
+      "what": "Your agent's conversations show up here as they happen.",
+      "does": "Handle cancellation, reschedule and callback requests on the conversation.",
+      "how": "Filter by channel to see only calls, texts or chats."
+    },
+    "appointments": {
+      "title": "Your bookings on one calendar",
+      "what": "Each booking your agent makes shows up here.",
+      "does": "Click an empty time to book an appointment yourself.",
+      "how": "Add time off to block hours your agent can't book."
+    },
+    "agents": {
+      "title": "Set up how each agent answers",
+      "what": "Each agent has its own number, greeting, voice, rules, booking and transfers.",
+      "shared": "All your agents share your business details, services and knowledge.",
+      "does": "The default agent answers anything you haven't given to another agent.",
+      "how": "Make a change, then click Test Call to hear it."
+    },
+    "rules": {
+      "title": "Tell your agent what to do and when",
+      "what": "A rule tells your agent what to do when something happens.",
+      "does": "For example, when a caller mentions an emergency, transfer them to you.",
+      "how": "Limit a rule to one channel, such as phone calls."
+    },
+    "channels": {
+      "title": "Where customers reach this agent",
+      "what": "A channel is a phone number, the website widget or Instagram.",
+      "does": "This agent answers on every channel you connect here.",
+      "how": "Move a channel to another agent to change who answers it."
+    },
+    "knowledge": {
+      "title": "What your agent knows about your business",
+      "what": "Your agent answers from your website, files and FAQs.",
+      "does": "Check unanswered questions to see what to add.",
+      "how": "Add a web page, a file or an FAQ to fill a gap."
+    },
+    "services": {
+      "title": "The services your agent books",
+      "what": "List what you offer, with a duration and a price for each.",
+      "does": "Your agent quotes these prices and books these durations.",
+      "how": "Add a service, or edit one to change its price or length."
+    },
+    "employees": {
+      "title": "The people callers can book",
+      "what": "List who works here and the services each person does.",
+      "does": "Callers can ask for someone by name to book with them.",
+      "how": "Add a phone number so your agent can transfer calls to that person."
+    },
+    "analytics": {
+      "title": "See how many calls and bookings your agent handles",
+      "what": "The top row shows calls, today's appointments and the average call length.",
+      "does": "The chart tracks calls and messages over time, split by agent when you have several.",
+      "how": "Pick a date range and an interval to compare two periods."
+    }
+  },
+  "sample": {
+    "inbox": {
+      "title": "Inbox",
+      "all": "All",
+      "reschedule": "Reschedule",
+      "callback": "Callback",
+      "cancellation": "Cancellation",
+      "first": "Wants to move Friday's visit to Monday.",
+      "second": "Asked for a call back after 5 PM.",
+      "third": "Asked if you take walk-ins.",
+      "fourth": "Cancelled Thursday's appointment."
+    },
+    "appointments": {
+      "title": "Appointments",
+      "newAppointment": "New appointment",
+      "timeOff": "Time off"
+    },
+    "agents": {
+      "title": "Agents",
+      "add": "Add agent",
+      "defaultAgent": "Default agent",
+      "default": "Default",
+      "afterHours": "After-hours agent",
+      "bookings": "Bookings agent",
+      "everything": "Everything else",
+      "evenings": "Evenings and weekends",
+      "website": "Website chat"
+    },
+    "rules": {
+      "title": "Rules",
+      "add": "Add rule",
+      "emergency": "A caller mentions an emergency",
+      "emergencyAction": "Transfer the call to the owner",
+      "prices": "Someone asks about prices",
+      "pricesAction": "Quote the price from Services",
+      "afterHours": "A chat comes in after hours",
+      "afterHoursAction": "Take a message for the team",
+      "allChannels": "All channels",
+      "calls": "Calls",
+      "webChat": "Website chat"
+    },
+    "channels": {
+      "title": "Channels",
+      "phone": "Phone number",
+      "widget": "Website widget",
+      "instagram": "Instagram",
+      "connected": "Connected",
+      "notConnected": "Not connected",
+      "move": "Move",
+      "connect": "Connect"
+    },
+    "knowledge": {
+      "title": "Knowledge",
+      "add": "Add knowledge",
+      "website": "Website",
+      "files": "Files",
+      "faqs": "FAQs",
+      "pages_one": "{{count}} page",
+      "pages_other": "{{count}} pages",
+      "priceList": "Price list.pdf",
+      "questions_one": "{{count}} question",
+      "questions_other": "{{count}} questions",
+      "unanswered": "Unanswered questions",
+      "giftCards": "Do you sell gift cards?",
+      "parking": "Is there parking nearby?"
+    },
+    "services": {
+      "title": "Services",
+      "add": "Add service",
+      "name": "Name",
+      "duration": "Duration",
+      "price": "Price",
+      "consultation": "Consultation",
+      "standardVisit": "Standard visit",
+      "followUp": "Follow-up visit",
+      "minutes": "{{value}} min",
+      "free": "Free"
+    },
+    "employees": {
+      "title": "Employees",
+      "add": "Add employee",
+      "name": "Name",
+      "services": "Services",
+      "status": "Status",
+      "allServices": "All services",
+      "working": "Working",
+      "onLeave": "On leave"
+    },
+    "analytics": {
+      "title": "Analytics",
+      "calls": "Calls",
+      "today": "Today",
+      "averageDuration": "Average duration",
+      "chart": "Calls and messages",
+      "messages": "Messages",
+      "range": "Last 30 days"
+    }
+  }
+}

@@ -56,20 +56,23 @@ describe("dashboard voice follow-up parity", () => {
   });
   it("keeps a retained follow-up readable when its related call is absent", async () => {
     await setup("en", null);
-    expect(screen.getAllByRole("link").map(link => link.getAttribute("href"))).toEqual(["/appointments?view=list"]);
+    expect(screen.getAllByRole("link").map(link => link.getAttribute("href"))).toEqual(["/inbox", "/appointments?view=list"]);
     expect(screen.getByText(/Please call back.*Alex/)).toBeTruthy();
   });
 });
 describe("how many requests are open", () => {
-  it("counts every open request and links to the rest in the Inbox when Home lists only some", async () => {
-    const i18n = await setup("en", "call-123", { actionRequiredCount: 9 });
+  it("counts every open request", async () => {
+    await setup("en", "call-123", { actionRequiredCount: 9 });
     expect(screen.getByText("9")).toBeTruthy();
-    expect(screen.getAllByRole("link", { name: i18n.t("home.actionRequired.viewAll") }).map((link) => link.getAttribute("href"))).toEqual(["/inbox", "/appointments?view=list"]);
   });
 
-  it("offers no link when Home lists them all", async () => {
+  it("links each section title to the full list, named for where it goes", async () => {
     const i18n = await setup("en", "call-123", { actionRequiredCount: 1 });
-    expect(screen.getAllByRole("link", { name: i18n.t("home.actionRequired.viewAll") }).map((link) => link.getAttribute("href"))).toEqual(["/appointments?view=list"]);
+    const inbox = screen.getByRole("link", { name: i18n.t("home.actionRequired.inboxLink") });
+    const appointments = screen.getByRole("link", { name: i18n.t("home.upcoming.appointmentsLink") });
+    expect([inbox.getAttribute("href"), appointments.getAttribute("href")]).toEqual(["/inbox", "/appointments?view=list"]);
+    expect(within(inbox).getByRole("heading", { name: i18n.t("home.actionRequired.title") })).toBeTruthy();
+    expect(within(appointments).getByRole("heading", { name: i18n.t("home.upcoming.title") })).toBeTruthy();
   });
 
   it("opens a handoff on its conversation in the Inbox", async () => {
@@ -77,12 +80,9 @@ describe("how many requests are open", () => {
     expect(screen.getByRole("link", { name: /Marie/ }).getAttribute("href")).toBe("/inbox?conversation=conversation-1");
   });
 
-  it("holds the link's place while Home loads", async () => {
+  it("keeps the section titles' links while Home loads", async () => {
     const i18n = await setup("en", null, { loading: true });
-    const heading = screen.getByRole("heading", { name: i18n.t("home.actionRequired.title") });
-    const placeholder = heading.parentElement!.querySelector("span.invisible");
-    expect(placeholder?.textContent).toBe(i18n.t("home.actionRequired.viewAll"));
-    expect(placeholder?.closest("[aria-hidden='true']")).toBeTruthy();
+    expect(screen.getByRole("link", { name: i18n.t("home.actionRequired.inboxLink") }).getAttribute("href")).toBe("/inbox");
   });
 });
 
@@ -100,7 +100,7 @@ describe("dashboard unanswered questions", () => {
   });
   it("shows nothing when every question is handled", async () => {
     await setup("en", null, { role: "business_owner", unansweredCount: 0 });
-    expect(screen.getAllByRole("link").map(link => link.getAttribute("href"))).toEqual(["/appointments?view=list"]);
+    expect(screen.getAllByRole("link").map(link => link.getAttribute("href"))).toEqual(["/inbox", "/appointments?view=list"]);
   });
 });
 describe("dashboard unanswered questions by access", () => {

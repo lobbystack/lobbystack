@@ -37,6 +37,8 @@ Do not duplicate ownership between runtimes unless there is a specific analytics
 - `web.page.agent_viewed`: any of one agent's pages, under `/agents/[agentId]`.
 - `web.page.workspace_viewed`: a workspace settings page, under `/workspace`. With `web.page.account_viewed`, it replaced `web.page.settings_viewed`.
 - `web.page.account_viewed`: the person's own settings, under `/account`.
+- `web.page.intro_shown`: a page's first-visit intro card opened, with `pageId`
+- `web.page.intro_dismissed`: the operator closed that card, with `pageId` and `method` set to `get_started`, `guide`, `close`, `escape` or `outside`
 - `web.contacts.contact_opened`
 - `web.messages.thread_opened`
 - `web.messages.reply_sent`

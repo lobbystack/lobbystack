@@ -111,7 +111,7 @@ function ImageField({ id, image, label, help, savedUrl, choice, disabled, onChan
     <Field>
       <FieldLabel htmlFor={id}>{label}</FieldLabel>
       <div className="flex items-center gap-2">
-        <label className={cn("flex min-w-0 flex-1 items-center gap-3 rounded-xl border border-dashed border-border bg-card px-4 py-3 text-sm font-medium transition-colors focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background", disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:border-foreground/40 hover:bg-muted")}>
+        <label className={cn("flex min-w-0 flex-1 items-center gap-3 rounded-xl border border-dashed border-border bg-card px-4 py-3 type-title transition-colors focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background", disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:border-foreground/40 hover:bg-muted")}>
           <input accept={brandLogoContentTypes.join(",")} className="sr-only" disabled={disabled} id={id} onChange={(event) => { void pick(event.target.files?.[0]); event.target.value = ""; }} type="file" />
           <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted">
             {shown ? <img alt="" className="size-6 object-contain" src={shown} /> : <ImageUp aria-hidden="true" className="size-4 text-muted-foreground" />}
@@ -193,7 +193,7 @@ export function PartnerBrandingSurface() {
     return (
       <div className="flex flex-col gap-6">
         <PageHeader title={t("branding.title")} />
-        <p className="text-sm text-muted-foreground" role="alert">{t("branding.loadFailed")}</p>
+        <p className="type-body-muted" role="alert">{t("branding.loadFailed")}</p>
       </div>
     );
   }
@@ -256,7 +256,7 @@ export function PartnerBrandingSurface() {
               </FieldSet>
 
               <div className="flex flex-col gap-2">
-                <span className="text-xs font-medium text-muted-foreground">{t("branding.preview")}</span>
+                <span className="type-meta">{t("branding.preview")}</span>
                 <Surface className="px-4 py-5">
                   <BrandLockup appName={draft.name.trim() || data.name} logoUrl={logo === undefined ? data.logoUrl : logo?.previewUrl ?? null} partner />
                 </Surface>
@@ -270,7 +270,7 @@ export function PartnerBrandingSurface() {
               <Button disabled={save.isPending || !draft.name.trim()} loading={save.isPending} loadingLabel={t("branding.saving")} type="submit">{t("branding.save")}</Button>
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">{t("branding.membersCantEdit")}</p>
+            <p className="type-body-muted">{t("branding.membersCantEdit")}</p>
           )}
         </form>
       )}

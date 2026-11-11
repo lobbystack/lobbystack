@@ -108,7 +108,7 @@ export function LiveSetupGuideSurface({ businessId }: { businessId: string }) {
     <section className="flex w-full flex-col gap-4">
       <h2 className="type-section-title">{t("setupGuide.title")}</h2>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3 text-muted-foreground"><ProgressRing completed={completed} total={steps.length} /><p className="text-base">{t("setupGuide.description", { completed, total: steps.length })}</p></div>
+        <div className="flex items-center gap-3 text-muted-foreground"><ProgressRing completed={completed} total={steps.length} /><p className="type-body-lg">{t("setupGuide.description", { completed, total: steps.length })}</p></div>
         <Button size="sm" disabled={skip.isPending} onClick={async () => { for (const step of steps) if (!skippedSteps.includes(step.id)) await skip.mutateAsync(step.id); }} type="button" variant="outline">{t("setupGuide.skip")}</Button>
       </div>
       <Surface>
@@ -118,7 +118,7 @@ export function LiveSetupGuideSurface({ businessId }: { businessId: string }) {
             const locked = !opens(step);
             const skipLink = finished ? null : <Button className="h-auto px-0 underline underline-offset-4" disabled={skip.isPending} onClick={() => skip.mutate(step.id)} variant="link">{t("setupGuide.skipStep")}</Button>;
             return <AccordionItem key={step.id} value={step.id}>
-              <AccordionTrigger aria-disabled={locked || undefined} className={locked ? "min-h-16 cursor-default px-6 [&_[data-icon=inline-end]]:opacity-0" : "min-h-16 px-6"} tabIndex={locked ? -1 : undefined}><span className="flex min-w-0 items-center gap-4"><StepMarker completed={finished} /><span className={finished ? "truncate text-base text-muted-foreground line-through decoration-muted-foreground/70" : "truncate text-base"}>{t(stepTitleKey(step, skippedSteps))}</span></span></AccordionTrigger>
+              <AccordionTrigger aria-disabled={locked || undefined} className={locked ? "min-h-16 cursor-default px-6 [&_[data-icon=inline-end]]:opacity-0" : "min-h-16 px-6"} tabIndex={locked ? -1 : undefined}><span className="flex min-w-0 items-center gap-4"><StepMarker completed={finished} /><span className={finished ? "truncate type-body-lg text-muted-foreground line-through decoration-muted-foreground/70" : "truncate type-body-lg"}>{t(stepTitleKey(step, skippedSteps))}</span></span></AccordionTrigger>
               <AccordionContent aria-labelledby="" className="px-6"><div className="flex gap-4"><span className="size-6 shrink-0" /><div className="flex min-w-0 flex-1 flex-col gap-4">
                 {step.id === "fullScan" ? (
                   <>
@@ -200,7 +200,7 @@ function NumberListStep({ businessId, guide, skip, step, upgrade }: { businessId
 }
 
 function StepDescription({ children }: { children: ReactNode }) {
-  return <p className="max-w-lg text-base leading-6 text-muted-foreground">{children}</p>;
+  return <p className="max-w-lg type-body-lg text-muted-foreground">{children}</p>;
 }
 
 function StepActions({ primary, skip }: { primary?: ReactNode; skip: ReactNode }) {

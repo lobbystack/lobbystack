@@ -172,7 +172,7 @@ export function UploadKnowledgeDocumentSheet({
       }}
       open={open}
     >
-      <DialogContent >
+      <DialogContent size="sm" >
         <DialogHeader>
           <DialogTitle>{t("sections.knowledge.uploadDocument")}</DialogTitle>
           <DialogDescription>
@@ -230,7 +230,7 @@ export function UploadKnowledgeDocumentSheet({
               >
                 <div className="flex flex-col items-center gap-3">
                   <Upload className="size-5 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">
+                  <p className="type-body-muted">
                     {t("sections.knowledge.fields.file.dropzonePrefix")}{" "}
                     <span className="underline underline-offset-2">
                       {t("sections.knowledge.fields.file.chooseFile")}

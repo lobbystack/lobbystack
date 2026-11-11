@@ -56,14 +56,14 @@ export function OnboardingNumberCountryFallback({ businessId, initialCountry, nu
       </Field>
       {country ? <>
         <div className="flex flex-col gap-3 rounded-xl border border-border p-4 text-left">
-          <p className="text-sm font-medium text-foreground">{t("number.country.title", { country: countryName })}</p>
-          <p className="text-sm text-muted-foreground">{t("number.country.body", { country: countryName })}</p>
-          {joined ? <p className="text-sm text-foreground">{t("number.country.joined")}</p> : <Button disabled={waitlist.isPending} onClick={() => waitlist.mutate()} type="button" variant="outline">{t("number.country.notify")}</Button>}
+          <p className="type-title text-foreground">{t("number.country.title", { country: countryName })}</p>
+          <p className="type-body-muted">{t("number.country.body", { country: countryName })}</p>
+          {joined ? <p className="type-body text-foreground">{t("number.country.joined")}</p> : <Button disabled={waitlist.isPending} onClick={() => waitlist.mutate()} type="button" variant="outline">{t("number.country.notify")}</Button>}
         </div>
         {error ? <FieldError>{error}</FieldError> : null}
         <Button className="w-full" disabled={skip.isPending} onClick={() => { setError(null); skip.mutate(); }} type="button">{t("number.country.continue")}</Button>
       </> : null}
-      {onBack ? <button className="mx-auto text-sm font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground" onClick={onBack} type="button">{t("number.country.back")}</button> : null}
+      {onBack ? <button className="mx-auto type-title text-muted-foreground underline underline-offset-4 hover:text-foreground" onClick={onBack} type="button">{t("number.country.back")}</button> : null}
     </div>
   );
 }

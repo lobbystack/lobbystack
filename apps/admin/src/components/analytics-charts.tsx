@@ -135,7 +135,7 @@ function MetricTooltipRow({ label, value }: { label: string; value: string }) {
   return (
     <>
       <div className="size-2.5 shrink-0 rounded-xs bg-(--color-bg)" style={{ "--color-bg": "var(--chart-1)" } as React.CSSProperties} />
-      <div className="flex flex-1 items-center justify-between gap-4 leading-none">
+      <div className="flex flex-1 items-center justify-between gap-4">
         <span className="text-muted-foreground">{label}</span>
         <span className="font-mono font-medium text-foreground tabular-nums">{value}</span>
       </div>

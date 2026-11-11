@@ -81,7 +81,7 @@ export function OnboardingWebsiteSurface() {
       </FieldGroup>
       </form>
       <div className="mt-6 flex flex-col items-center gap-3">
-        <button className="text-sm font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground disabled:opacity-50" disabled={!business || working} onClick={() => { setError(null); setAction("skip"); skip.mutate(); }} type="button">{skip.isPending ? t("website.skipping") : t("website.skip")}</button>
+        <button className="type-title text-muted-foreground underline underline-offset-4 hover:text-foreground disabled:opacity-50" disabled={!business || working} onClick={() => { setError(null); setAction("skip"); skip.mutate(); }} type="button">{skip.isPending ? t("website.skipping") : t("website.skip")}</button>
       </div>
     </div>
   );

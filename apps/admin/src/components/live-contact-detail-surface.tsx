@@ -200,7 +200,7 @@ export function LiveContactDetailSurface({ contactId }: { contactId: string }) {
 }
 
 function StatCard({ className, label, value }: { className?: string; label: string; value: number }) {
-  return <div className={cn("flex items-center px-4 py-3", className)}><div className="flex flex-col"><span className="font-heading text-lg leading-none font-semibold tracking-tight text-foreground">{value}</span><span className="type-meta">{label}</span></div></div>;
+  return <div className={cn("flex items-center px-4 py-3", className)}><div className="flex flex-col"><span className="type-metric-sm">{value}</span><span className="type-meta">{label}</span></div></div>;
 }
 
 function ActivityTab({ data, locale }: { data: Detail; locale: string }) {
@@ -293,8 +293,8 @@ function DetailSkeleton({ t }: { t: (key: string) => string }) {
       <Surface className="grid grid-cols-2 sm:grid-cols-4">
         {stats.map(([stat, border]) => (
           <div className={cn("flex items-center px-4 py-3", border)} key={stat}>
-            <div className="flex flex-col gap-1">
-              <div className="flex h-[18px] items-center"><Skeleton className="h-[18px] w-8" /></div>
+            <div className="flex flex-col">
+              <HiddenTextSkeleton className="type-metric-sm">0</HiddenTextSkeleton>
               <HiddenTextSkeleton className="type-meta">{t(`detail.stats.${stat}`)}</HiddenTextSkeleton>
             </div>
           </div>
@@ -304,7 +304,7 @@ function DetailSkeleton({ t }: { t: (key: string) => string }) {
       <div>
         <div className="inline-flex items-center gap-2">
           {tabs.map(([tab, Icon]) => (
-            <Skeleton aria-hidden="true" className="inline-flex h-9 items-center gap-1.5 rounded-full px-4 text-sm font-medium whitespace-nowrap" key={tab}>
+            <Skeleton aria-hidden="true" className="inline-flex h-9 items-center gap-1.5 rounded-full px-4 type-title whitespace-nowrap" key={tab}>
               <Icon className="invisible size-4" />
               <span className="invisible">{t(`detail.tabs.${tab}`)}</span>
             </Skeleton>

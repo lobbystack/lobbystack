@@ -77,7 +77,7 @@ export function ContactPasscodeSection({ businessId, canMutate, contactId, local
     </div> : null}
 
     <Dialog onOpenChange={(open) => { if (!save.isPending) setSetOpen(open); }} open={setOpen}>
-      <DialogContent>
+      <DialogContent size="sm">
         <form className="flex flex-col gap-6" onSubmit={submit}>
           <DialogHeader>
             <DialogTitle>{t("detail.passcode.dialogTitle")}</DialogTitle>

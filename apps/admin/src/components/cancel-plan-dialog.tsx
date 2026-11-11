@@ -29,7 +29,7 @@ export function CancelPlanDialog({ businessId, plan, periodEnd, onCanceled }: { 
   return (
     <Dialog onOpenChange={(next) => { if (!cancel.isPending) setOpen(next); }} open={open}>
       <DialogTrigger render={<Button className="w-full sm:w-auto" size="sm" variant="outline" />}>{t("billing.actions.cancelPlan")}</DialogTrigger>
-      <DialogContent>
+      <DialogContent size="sm">
         <DialogHeader>
           <DialogTitle>{t("billing.cancel.title", { plan })}</DialogTitle>
           <DialogDescription>{endDate ? t("billing.cancel.description", { date: endDate }) : t("billing.cancel.descriptionNoDate")}</DialogDescription>
@@ -40,7 +40,7 @@ export function CancelPlanDialog({ businessId, plan, periodEnd, onCanceled }: { 
             {cancellationReasons.map((key) => (
               <button
                 aria-pressed={reason === key}
-                className={cn("rounded-xl border px-4 py-2.5 text-left text-sm transition-colors", reason === key ? "border-foreground bg-muted font-medium text-foreground" : "border-border text-foreground hover:border-foreground/30")}
+                className={cn("rounded-xl border px-4 py-2.5 text-left type-body transition-colors", reason === key ? "border-foreground bg-muted font-medium text-foreground" : "border-border text-foreground hover:border-foreground/30")}
                 disabled={cancel.isPending}
                 key={key}
                 onClick={() => setReason(reason === key ? null : key)}

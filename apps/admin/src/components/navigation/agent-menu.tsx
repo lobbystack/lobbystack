@@ -1,7 +1,8 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { ArrowUpRight, AudioLines, Check, ChevronsUpDown, Layers, ListChecks, MessagesSquare, Plus, Radio, ScrollText, type LucideIcon } from "lucide-react";
+import { ArrowUpRight, AudioLines, Check, ChevronsUpDown, Layers, ListChecks, MessagesSquare, Plus, Radio, type LucideIcon } from "lucide-react";
+import { useContext } from "react";
 import { useTranslation } from "react-i18next";
 
 import { AddAgentDialog } from "@/components/agents/add-agent-dialog";
@@ -12,15 +13,16 @@ import { useManagedBusiness } from "@/hooks/use-agent-settings";
 import type { AgentListItem } from "@/hooks/use-agents";
 import { useAgents } from "@/hooks/use-agents";
 import { agentHref, agentPageOf, AGENT_PAGES, type AgentPage } from "@/lib/agent-pages";
-import { MenuGroup, MenuRow } from "./menu-parts";
+import { levelFor } from "@/lib/navigation-levels";
+import { MenuGroup, MenuNavigationContext, MenuRow } from "./menu-parts";
 
-const ICONS: Partial<Record<AgentPage["section"], LucideIcon>> = { "": AudioLines, instructions: ScrollText, rules: ListChecks, channels: Radio, shared: Layers };
+const ICONS: Partial<Record<AgentPage["section"], LucideIcon>> = { "": AudioLines, rules: ListChecks, channels: Radio, shared: Layers };
 
 /** The rows of the agent's menu: its own pages, without the pages Channels opens. */
 const MENU_PAGES = AGENT_PAGES.filter((page) => page.section in ICONS);
 
 function AgentIdentity({ agent }: { agent: AgentListItem }) {
-  return <span className="min-w-0 flex-1 truncate text-start text-sm font-medium">{agent.name}</span>;
+  return <span className="min-w-0 flex-1 truncate text-start type-title">{agent.name}</span>;
 }
 
 /**
@@ -30,6 +32,8 @@ function AgentIdentity({ agent }: { agent: AgentListItem }) {
 function AgentHeading({ agent }: { agent: AgentListItem | undefined }) {
   const { t } = useTranslation("nav");
   const router = useRouter();
+  // In the phone menu, switching agents closes the sheet as the page opens.
+  const navigate = useContext(MenuNavigationContext) ?? router.push;
   const pathname = usePathname();
   const { agents, hasChoice } = useAgents();
   const { canManage } = useManagedBusiness();
@@ -52,7 +56,7 @@ function AgentHeading({ agent }: { agent: AgentListItem | undefined }) {
           <DropdownMenuContent align="start" className="min-w-56">
             <DropdownMenuGroup>
               {agents.map((item) => (
-                <DropdownMenuItem key={item.id} onClick={() => router.push(agentHref(item.id, section))}>
+                <DropdownMenuItem key={item.id} onClick={() => navigate(agentHref(item.id, section))}>
                   {item.id === agent.id ? <Check /> : <span aria-hidden="true" className="size-4" />}
                   <span className="truncate">{item.name}</span>
                 </DropdownMenuItem>
@@ -76,11 +80,13 @@ export function AgentMenu({ agentId }: { agentId: string }) {
   const pathname = usePathname();
   const { find, hasChoice } = useAgents();
   const agent = find(agentId);
-  const open = agentPageOf(pathname)?.section ?? "";
+  // The phone menu can show an agent's menu from any page; only that agent's own pages light a row.
+  const onAgent = levelFor(pathname) === `agent:${agentId}`;
+  const open = onAgent ? agentPageOf(pathname)?.section ?? "" : null;
   const channels = agent ? agent.phoneNumbers + agent.widgetKeys + agent.instagramAccounts : null;
   const trailing = (section: AgentPage["section"]) => {
     if (section !== "channels" || channels === null) return undefined;
-    if (channels) return <span className="text-xs text-muted-foreground tabular-nums">{channels}</span>;
+    if (channels) return <span className="type-caption text-muted-foreground tabular-nums">{channels}</span>;
     return <><span aria-hidden="true" className="size-2 rounded-full bg-primary" /><span className="sr-only">{t("agentMenu.noChannels")}</span></>;
   };
   return (
@@ -91,7 +97,7 @@ export function AgentMenu({ agentId }: { agentId: string }) {
           const Icon = ICONS[page.section]!;
           const label = t(page.titleKey);
           // Channels stays lit on the phone number and widget pages it opens.
-          const active = page.section === "channels" ? open.startsWith("channels") : open === page.section;
+          const active = open !== null && (page.section === "channels" ? open.startsWith("channels") : open === page.section);
           return <MenuRow active={active} href={agentHref(agentId, page.section)} key={page.section} label={label} leading={<Icon />} title={label} trailing={trailing(page.section)} />;
         })}
       </MenuGroup>

@@ -190,14 +190,14 @@ function PartnerSwitcher({ partner, partners }: { partner: ConsolePartner; partn
           >
             <ItemMedia><Initial value={partner.name} /></ItemMedia>
             <ItemContent className="min-w-0">
-              <ItemTitle className="ph-mask w-full truncate text-left font-medium">{partner.name}</ItemTitle>
+              <ItemTitle className="ph-mask w-full truncate text-left">{partner.name}</ItemTitle>
             </ItemContent>
             <ItemActions><ChevronsUpDown className="size-4 text-muted-foreground" /></ItemActions>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="min-w-56" side={isMobile ? "bottom" : "right"} sideOffset={4}>
             <DropdownMenuGroup>
               {partners.map((option) => (
-                <DropdownMenuItem className="gap-2.5 px-3 py-2" key={option.partnerId} render={<Link href={`/partner/${option.partnerId}/businesses`} />}>
+                <DropdownMenuItem key={option.partnerId} render={<Link href={`/partner/${option.partnerId}/businesses`} />}>
                   {option.partnerId === partner.partnerId ? <Check className="size-4" /> : <span className="size-4" />}
                   <span className="ph-mask truncate">{option.name}</span>
                 </DropdownMenuItem>
@@ -205,7 +205,7 @@ function PartnerSwitcher({ partner, partners }: { partner: ConsolePartner; partn
             </DropdownMenuGroup>
             {onPartnerHost ? null : <>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="gap-2.5 px-3 py-2" render={<Link href="/partner/signup" />}>
+              <DropdownMenuItem render={<Link href="/partner/signup" />}>
                 <Plus className="size-4" />
                 {t("shell.signUpAnother")}
               </DropdownMenuItem>
@@ -235,8 +235,8 @@ function PartnerUserMenu({ businessDashboard, email }: { businessDashboard: bool
             render={<SidebarMenuButton className="data-[popup-open=true]:bg-sidebar-accent data-[popup-open=true]:text-sidebar-accent-foreground" size="lg" />}
           >
             <Initial value={email} />
-            <div className="grid flex-1 text-start text-sm leading-tight">
-              <span className="truncate text-sm">{email}</span>
+            <div className="grid flex-1 text-start">
+              <span className="truncate type-body">{email}</span>
             </div>
             <ChevronsUpDown className="ms-auto size-4" />
           </DropdownMenuTrigger>

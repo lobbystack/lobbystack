@@ -56,13 +56,26 @@ function requireSchedule(input: { hours: HoursWindow[] | null; timeOff: Employee
   }
 }
 
-async function replaceSchedule(tx: DatabaseTransaction, businessId: string, staffId: string, schedule: ReturnType<typeof requireSchedule>) {
+async function replaceSchedule(tx: DatabaseTransaction, businessId: string, staffId: string, schedule: ReturnType<typeof requireSchedule>, timezone: string) {
   await tx.delete(businessHours).where(and(eq(businessHours.businessId, businessId), eq(businessHours.staffId, staffId)));
   if (schedule.hours) await tx.insert(businessHours).values(schedule.hours.map((window) => ({ businessId, staffId, ...window })));
-  // Time off that already ended isn't listed, so a save drops it, as with the business's closures.
-  await tx.delete(closures).where(and(eq(closures.businessId, businessId), eq(closures.staffId, staffId)));
-  if (schedule.timeOff.length) await tx.insert(closures).values(schedule.timeOff.map((entry) => ({ businessId, staffId, ...entry })));
+  // This editor works in whole days, and the calendar can add part of a day. Time off whose days didn't change
+  // keeps its row, so its hours and note survive a save. Time off that already ended isn't listed, so a save
+  // drops it, as with the business's closures.
+  const current = await tx.select({ id: closures.id, startsAt: closures.startsAt, endsAt: closures.endsAt }).from(closures).where(and(eq(closures.businessId, businessId), eq(closures.staffId, staffId)));
+  const kept = new Set<string>();
+  const added = schedule.timeOff.filter((entry) => {
+    const days = timeOffDays(entry, timezone);
+    const same = current.find((row) => !kept.has(row.id) && row.endsAt > new Date() && sameDays(timeOffDays(row, timezone), days));
+    if (same) kept.add(same.id);
+    return !same;
+  });
+  const removed = current.filter((row) => !kept.has(row.id)).map((row) => row.id);
+  if (removed.length) await tx.delete(closures).where(and(eq(closures.businessId, businessId), inArray(closures.id, removed)));
+  if (added.length) await tx.insert(closures).values(added.map((entry) => ({ businessId, staffId, ...entry })));
 }
+
+const sameDays = (left: EmployeeTimeOff, right: EmployeeTimeOff) => left.startsOn === right.startsOn && left.endsOn === right.endsOn;
 
 function activeEmployees(businessId: string, ...conditions: SQL[]) {
   return and(eq(staff.businessId, businessId), eq(staff.isEmployee, true), eq(staff.active, true), ...conditions);
@@ -173,7 +186,7 @@ export async function createEmployee(
     const [employee] = await tx.insert(staff).values({ businessId: input.businessId, name, timezone, transferNumber: input.phone, isEmployee: true }).returning(employeeColumns);
     if (!employee) throw new Error("Employee could not be created.");
     await replaceServices(tx, input.businessId, employee.id, serviceIds);
-    await replaceSchedule(tx, input.businessId, employee.id, schedule);
+    await replaceSchedule(tx, input.businessId, employee.id, schedule, timezone);
     await refreshSnapshot(tx, input.businessId, employee.id, "employee_created");
     return { ...employee, serviceIds };
   });
@@ -186,7 +199,8 @@ export async function updateEmployee(
   return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
     const name = requireName(input.name);
-    const schedule = requireSchedule(input, await businessTimezone(tx, input.businessId));
+    const timezone = await businessTimezone(tx, input.businessId);
+    const schedule = requireSchedule(input, timezone);
     const serviceIds = await requireServiceIds(tx, input.businessId, input.serviceIds);
     await assertPhoneAvailable(tx, input);
     const [employee] = await tx.update(staff).set({ name, transferNumber: input.phone, updatedAt: new Date() })
@@ -194,7 +208,7 @@ export async function updateEmployee(
       .returning(employeeColumns);
     if (!employee) return null;
     await replaceServices(tx, input.businessId, employee.id, serviceIds);
-    await replaceSchedule(tx, input.businessId, employee.id, schedule);
+    await replaceSchedule(tx, input.businessId, employee.id, schedule, timezone);
     await refreshSnapshot(tx, input.businessId, employee.id, "employee_updated");
     return { ...employee, serviceIds };
   });

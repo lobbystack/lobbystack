@@ -29,16 +29,17 @@ function DialogOverlay({ className, ...props }: DialogPrimitive.Backdrop.Props) 
 }
 
 /**
- * Polar's widths: the default is Orbit's Modal, the full width of a phone or
- * tablet and 800px from lg; `sm` is its plain dialog's 512px, for a short
- * question or a single field.
+ * Polar's widths, as caps that hold at every window size: the default is
+ * Orbit's Modal, 800px, for side-by-side content; `sm` is its plain dialog's
+ * 512px, for a short form, a confirmation or a single field. Below the cap a
+ * dialog keeps a 1rem gutter on each side.
  */
 function DialogContent({ className, children, overlayClassName, showCloseButton = true, size = "default", ...props }: DialogPrimitive.Popup.Props & { showCloseButton?: boolean; overlayClassName?: string; size?: "default" | "sm" }) {
   const { t } = useTranslation("common")
   return (
     <DialogPortal>
       <DialogOverlay className={overlayClassName} />
-      <DialogPrimitive.Popup data-size={size} data-slot="dialog-content" className={cn("fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-6 rounded-3xl bg-popover p-6 shadow-lg text-sm text-popover-foreground ring-1 ring-foreground/5 duration-100 outline-none data-[size=default]:lg:max-w-[800px] data-[size=sm]:sm:max-w-lg data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95", className)} {...props}>
+      <DialogPrimitive.Popup data-size={size} data-slot="dialog-content" className={cn(size === "sm" ? "max-w-[min(512px,calc(100%-2rem))]" : "max-w-[min(800px,calc(100%-2rem))]", "fixed top-1/2 left-1/2 z-50 grid w-full -translate-x-1/2 -translate-y-1/2 gap-6 rounded-3xl bg-popover p-6 shadow-lg type-body text-popover-foreground ring-1 ring-foreground/5 duration-100 outline-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95", className)} {...props}>
         {children}
         {showCloseButton ? <DialogPrimitive.Close data-slot="dialog-close" render={<Button className="absolute top-4 right-4" size="icon-sm" variant="ghost" />}><XIcon /><span className="sr-only">{t("accessibility.close")}</span></DialogPrimitive.Close> : null}
       </DialogPrimitive.Popup>
@@ -56,11 +57,11 @@ function DialogFooter({ className, showCloseButton = false, children, ...props }
 }
 
 function DialogTitle({ className, ...props }: DialogPrimitive.Title.Props) {
-  return <DialogPrimitive.Title data-slot="dialog-title" className={cn("font-heading text-base leading-none font-medium", className)} {...props} />
+  return <DialogPrimitive.Title data-slot="dialog-title" className={cn("type-heading-xxs", className)} {...props} />
 }
 
 function DialogDescription({ className, ...props }: DialogPrimitive.Description.Props) {
-  return <DialogPrimitive.Description data-slot="dialog-description" className={cn("text-sm text-muted-foreground *:[a]:underline *:[a]:underline-offset-3 *:[a]:hover:text-foreground", className)} {...props} />
+  return <DialogPrimitive.Description data-slot="dialog-description" className={cn("type-body-muted *:[a]:underline *:[a]:underline-offset-3 *:[a]:hover:text-foreground", className)} {...props} />
 }
 
 export { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogOverlay, DialogPortal, DialogTitle, DialogTrigger }

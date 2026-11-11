@@ -99,7 +99,8 @@ describe("saveReceptionistProfileInTransaction", () => {
    */
   function store(existing: { id: string } | null, saved: Record<string, unknown> | null) {
     const recorded: { values?: Record<string, unknown>; set?: Record<string, unknown> } = {};
-    const rows = (value: unknown[]) => ({ limit: async () => value });
+    // The agent's channel rules, which the row returned reads its instructions from, come back empty.
+    const rows = (value: unknown[]) => ({ limit: async () => value, orderBy: async () => [] });
     const tx = {
       select: () => ({ from: () => ({ where: () => rows(existing ? [existing] : []) }) }),
       update: () => ({ set: (set: Record<string, unknown>) => { recorded.set = set; return { where: () => ({ returning: async () => (saved ? [saved] : []) }) }; } }),

@@ -119,7 +119,7 @@ function VoiceRow({ voice, picked, inUse, preview, onPick }: { voice: Receptioni
       <button aria-pressed={picked} className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 py-1 text-left outline-none after:absolute after:inset-0 after:rounded-xl" onClick={onPick} type="button">
         <span className="flex min-w-0 flex-1 flex-col">
           <span className="flex items-center gap-2"><span className="truncate font-medium">{voiceName(voice)}</span>{inUse ? <Badge variant="secondary">{t("fields.voice.inUse")}</Badge> : null}</span>
-          <span className="truncate text-sm text-muted-foreground">{traits(voice)}</span>
+          <span className="truncate type-body-muted">{traits(voice)}</span>
         </span>
         {picked ? <Check aria-hidden="true" className="size-4 shrink-0" /> : null}
       </button>
@@ -153,11 +153,11 @@ export function VoiceDialog({ open, onOpenChange, current, preview, saving, onSa
         </DialogHeader>
         <div className="-mx-2 flex min-h-0 flex-col gap-4 overflow-y-auto px-2">
           <section aria-labelledby="voice-current" className="flex flex-col gap-1">
-            <h3 className="px-2 text-xs font-medium text-muted-foreground" id="voice-current">{t("fields.voice.dialog.current")}</h3>
+            <h3 className="px-2 type-meta" id="voice-current">{t("fields.voice.dialog.current")}</h3>
             <ul><VoiceRow inUse onPick={() => setPicked(current)} picked={picked === current} preview={preview} voice={current} /></ul>
           </section>
           <section aria-labelledby="voice-all" className="flex flex-col gap-1">
-            <h3 className="px-2 text-xs font-medium text-muted-foreground" id="voice-all">{t("fields.voice.dialog.all")}</h3>
+            <h3 className="px-2 type-meta" id="voice-all">{t("fields.voice.dialog.all")}</h3>
             <ul>{receptionistVoices.filter((voice) => voice !== current).map((voice) => <VoiceRow key={voice} onPick={() => setPicked(voice)} picked={picked === voice} preview={preview} voice={voice} />)}</ul>
           </section>
         </div>

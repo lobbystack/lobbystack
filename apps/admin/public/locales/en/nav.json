@@ -47,8 +47,7 @@
       "security": "password, 2fa, login, email, sign in, profile",
       "phone": "forwarding, forward, carrier, number, line, sip, call, calls",
       "voice": "accent, sound, tone, greeting, hello, intro, welcome, name",
-      "instructions": "instruction, prompt, script, behaviour, behavior",
-      "rules": "rule, escalate, handoff",
+      "rules": "rule, rules, escalate, handoff, instruction, instructions, prompt, script, behaviour, behavior",
       "handling": "transfer, transfers, staff first, booking, appointment changes, cancel, reschedule, transfer number, staff answers first",
       "business": "hours, opening, closed, holiday, timezone, language, currency",
       "knowledge": "faq, answer, answers, website, document, pdf, teach",
@@ -77,6 +76,7 @@
     "workspaceReady": "Workspace ready",
     "upgradeToPro": "Upgrade to Pro",
     "account": "Account",
+    "accountSettings": "Account settings",
     "partnerConsole": "Partner console",
     "toggleTheme": "Toggle theme",
     "support": "Support",
@@ -88,7 +88,6 @@
   },
   "agentPages": {
     "general": "General",
-    "instructions": "Instructions",
     "rules": "Rules",
     "channels": "Channels",
     "phone": "Phone number",
@@ -179,5 +178,16 @@
     "moveDescription": "Its open conversations move too, and {{name}} answers from now on.",
     "moved": "{{channel}} moved to {{name}}",
     "moveFailed": "We couldn't move it."
+  },
+  "mobileNav": {
+    "label": "Main menu",
+    "menu": "Menu",
+    "allAgents": "All agents",
+    "tabs": {
+      "home": "Home",
+      "inbox": "Inbox",
+      "appointments": "Bookings",
+      "contacts": "Contacts"
+    }
   }
 }

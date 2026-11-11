@@ -1239,7 +1239,7 @@
       "get": {
         "operationId": "listRules",
         "summary": "List rules",
-        "description": "Every rule, active or not, in the order the receptionist reads them, all in one page. Calls follow the first 50 active rules.",
+        "description": "Every rule, active or not, in the order the receptionist reads them, all in one page. Calls follow the first 50 active rules. A rule with a channel applies only there; voice_instructions, sms_instructions and chat_instructions on /receptionist read and write these rules.",
         "tags": [
           "Receptionist"
         ],
@@ -17154,6 +17154,13 @@
               "not_required"
             ]
           },
+          "notes": {
+            "description": "Notes on the appointment. The receptionist can read them to a verified caller.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "created_at": {
             "type": "string",
             "format": "date-time",
@@ -17180,6 +17187,7 @@
           "contact_phone",
           "source",
           "calendar_sync_status",
+          "notes",
           "created_at",
           "updated_at"
         ],
@@ -17217,6 +17225,11 @@
             "description": "Book with this active staff member. Without it, LobbyStack picks one who is free.",
             "type": "string",
             "format": "uuid"
+          },
+          "notes": {
+            "description": "Notes on the appointment. The receptionist can read them to a verified caller.",
+            "type": "string",
+            "maxLength": 2000
           },
           "sms_consent": {
             "description": "True only if the customer agreed to receive confirmation and reminder texts. Self-hosted instances only: on LobbyStack Cloud, texts come from LobbyStack's shared number, and only the receptionist can collect that consent, on a call.",
@@ -19394,21 +19407,21 @@
             "description": "Rules it follows when it books."
           },
           "voice_instructions": {
-            "description": "Extra instructions for calls.",
+            "description": "Deprecated: use a rule with channel voice. The text of the agent's first voice rule while it's active, otherwise null.",
             "type": [
               "string",
               "null"
             ]
           },
           "sms_instructions": {
-            "description": "Extra instructions for text messages.",
+            "description": "Deprecated: use a rule with channel sms. The text of the agent's first sms rule while it's active, otherwise null.",
             "type": [
               "string",
               "null"
             ]
           },
           "chat_instructions": {
-            "description": "Extra instructions for website chat.",
+            "description": "Deprecated: use rules with channel web_chat and instagram. The text of the agent's first web_chat rule while it's active, otherwise null.",
             "type": [
               "string",
               "null"
@@ -19601,21 +19614,21 @@
             "description": "Rules it follows when it books."
           },
           "voice_instructions": {
-            "description": "Extra instructions for calls.",
+            "description": "Deprecated: use a rule with channel voice. The text of the agent's first voice rule while it's active, otherwise null.",
             "type": [
               "string",
               "null"
             ]
           },
           "sms_instructions": {
-            "description": "Extra instructions for text messages.",
+            "description": "Deprecated: use a rule with channel sms. The text of the agent's first sms rule while it's active, otherwise null.",
             "type": [
               "string",
               "null"
             ]
           },
           "chat_instructions": {
-            "description": "Extra instructions for website chat.",
+            "description": "Deprecated: use rules with channel web_chat and instagram. The text of the agent's first web_chat rule while it's active, otherwise null.",
             "type": [
               "string",
               "null"
@@ -19781,7 +19794,7 @@
           "updated_at"
         ],
         "additionalProperties": false,
-        "description": "An agent: one set of greeting, voice, instructions and rules. The agents of a business share its knowledge, services and staff."
+        "description": "An agent: one set of greeting, voice, settings and rules. The agents of a business share its knowledge, services and staff."
       },
       "ReceptionistUpdate": {
         "type": "object",
@@ -19813,7 +19826,7 @@
             "maxLength": 2000
           },
           "voice_instructions": {
-            "description": "null removes them.",
+            "description": "Deprecated: use /rules with channel voice. Sets the text of the first voice rule and turns it on, adding the rule when there's none. null deletes that rule.",
             "anyOf": [
               {
                 "type": "string",
@@ -19826,7 +19839,7 @@
             ]
           },
           "sms_instructions": {
-            "description": "null removes them.",
+            "description": "Deprecated: use /rules with channel sms. Sets the text of the first sms rule and turns it on, adding the rule when there's none. null deletes that rule.",
             "anyOf": [
               {
                 "type": "string",
@@ -19839,7 +19852,7 @@
             ]
           },
           "chat_instructions": {
-            "description": "null removes them.",
+            "description": "Deprecated: use /rules with channels web_chat and instagram. Sets the text of the first web_chat rule and the first instagram rule and turns them on, adding them when there are none. null deletes them.",
             "anyOf": [
               {
                 "type": "string",
@@ -20035,11 +20048,28 @@
           },
           "content": {
             "type": "string",
-            "description": "What the receptionist must or must not do. Calls read the first 4,000 characters; a rule written in the dashboard can be longer."
+            "description": "What the receptionist must or must not do. Calls read the first 4,000 characters, or 8,000 for a rule with a channel; a rule written in the dashboard can be longer."
           },
           "active": {
             "type": "boolean",
             "description": "Whether the receptionist follows it."
+          },
+          "channel": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "voice",
+                  "sms",
+                  "web_chat",
+                  "instagram"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The one channel the receptionist follows it on: voice (phone and browser calls), sms, web_chat or instagram. null: every channel."
           },
           "created_at": {
             "type": "string",
@@ -20057,11 +20087,12 @@
           "title",
           "content",
           "active",
+          "channel",
           "created_at",
           "updated_at"
         ],
         "additionalProperties": false,
-        "description": "An instruction the receptionist follows on calls and in chats."
+        "description": "An instruction the receptionist follows, on every channel or on one."
       },
       "RuleCreate": {
         "type": "object",
@@ -20074,12 +20105,29 @@
           "content": {
             "type": "string",
             "minLength": 1,
-            "maxLength": 4000,
-            "description": "Up to 4,000 characters, all of which calls use."
+            "maxLength": 8000,
+            "description": "Up to 4,000 characters, or 8,000 for a rule with a channel, all of which calls use."
           },
           "active": {
             "description": "Defaults to true.",
             "type": "boolean"
+          },
+          "channel": {
+            "description": "The one channel the rule applies on. Leave it out, or send null, for every channel.",
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "voice",
+                  "sms",
+                  "web_chat",
+                  "instagram"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -20097,14 +20145,31 @@
             "maxLength": 160
           },
           "content": {
-            "description": "Up to 4,000 characters, all of which calls use.",
+            "description": "Up to 4,000 characters, or 8,000 for a rule with a channel, all of which calls use.",
             "type": "string",
             "minLength": 1,
-            "maxLength": 4000
+            "maxLength": 8000
           },
           "active": {
             "description": "false stops the receptionist following it without deleting it.",
             "type": "boolean"
+          },
+          "channel": {
+            "description": "null puts it back on every channel.",
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "voice",
+                  "sms",
+                  "web_chat",
+                  "instagram"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false
@@ -22940,6 +23005,13 @@
                   "not_required"
                 ]
               },
+              "notes": {
+                "description": "Notes on the appointment. The receptionist can read them to a verified caller.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
               "created_at": {
                 "type": "string",
                 "format": "date-time",
@@ -22966,6 +23038,7 @@
               "contact_phone",
               "source",
               "calendar_sync_status",
+              "notes",
               "created_at",
               "updated_at"
             ],
@@ -23082,6 +23155,13 @@
                   "not_required"
                 ]
               },
+              "notes": {
+                "description": "Notes on the appointment. The receptionist can read them to a verified caller.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
               "created_at": {
                 "type": "string",
                 "format": "date-time",
@@ -23108,6 +23188,7 @@
               "contact_phone",
               "source",
               "calendar_sync_status",
+              "notes",
               "created_at",
               "updated_at"
             ],
@@ -23224,6 +23305,13 @@
                   "not_required"
                 ]
               },
+              "notes": {
+                "description": "Notes on the appointment. The receptionist can read them to a verified caller.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
               "created_at": {
                 "type": "string",
                 "format": "date-time",
@@ -23250,6 +23338,7 @@
               "contact_phone",
               "source",
               "calendar_sync_status",
+              "notes",
               "created_at",
               "updated_at"
             ],

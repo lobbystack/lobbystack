@@ -47,7 +47,7 @@ export function LandingNavbar({ locale = "en" }: LandingNavbarProps) {
         <div className="flex items-center gap-3">
           <a
             href={localizePublicPath("/login", locale)}
-            className="rounded-md text-sm font-medium text-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            className="rounded-md type-title text-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
             {copy.login}
           </a>

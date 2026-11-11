@@ -30,6 +30,8 @@ export type AnalyticsViewModel = AnalyticsResultsViewModel & {
   from: string;
   to: string;
   granularity: "hour" | "day" | "week" | "month" | "year";
+  /** The business's time zone, which the series buckets start in. */
+  timeZone: string;
   calls: AnalyticsMetricViewModel;
   appointments: AnalyticsMetricViewModel;
   messages: AnalyticsMetricViewModel;

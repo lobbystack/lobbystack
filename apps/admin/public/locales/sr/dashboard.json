@@ -165,11 +165,11 @@
       "notes": "Napomene: {{notes}}",
       "rescheduleRequest": "Zahtev za pomeranje",
       "newTime": "Novo vreme: {{time}}",
-      "viewAll": "Prikaži sve"
+      "inboxLink": "Prikaži sve u prijemnom sandučetu"
     },
     "upcoming": {
       "title": "Predstojeće",
-      "viewAll": "Prikaži sve",
+      "appointmentsLink": "Prikaži sve termine",
       "description": "Sledeći termini u kalendaru.",
       "unknownService": "Nepoznata usluga",
       "employee": "Zaposleni: {{name}}",

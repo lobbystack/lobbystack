@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, inArray, sql, type SQL } from "drizzle-orm";
 
 import { agentRules, defaultAgentIdOf, enqueueOutbox, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import type { RuleChannel } from "@lobbystack/shared";
 
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
 import type { DomainContext } from "./context";
@@ -28,7 +29,7 @@ export async function listAgentRulesInTransaction(tx: DatabaseTransaction, input
 
 export async function createAgentRule(
   context: DomainContext,
-  input: { userId: string; businessId: string; agentId?: string | undefined; title: string; content: string; active?: boolean },
+  input: { userId: string; businessId: string; agentId?: string | undefined; title: string; content: string; active?: boolean; channel?: RuleChannel | null },
 ): Promise<string> {
   return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
@@ -47,10 +48,10 @@ export async function lockAgentRulesInTransaction(tx: DatabaseTransaction, input
 }
 
 /** Adds a rule after the agent's others and refreshes the snapshot calls read rules from. Callers authorize and check the fields first. */
-export async function insertAgentRuleInTransaction(tx: DatabaseTransaction, input: AgentScope & { title: string; content: string; active?: boolean | undefined }): Promise<AgentRule> {
+export async function insertAgentRuleInTransaction(tx: DatabaseTransaction, input: AgentScope & { title: string; content: string; active?: boolean | undefined; channel?: RuleChannel | null | undefined }): Promise<AgentRule> {
   await lockAgentRulesInTransaction(tx, input);
   const [last] = await tx.select({ sortOrder: agentRules.sortOrder }).from(agentRules).where(ofAgent(input)).orderBy(desc(agentRules.sortOrder)).limit(1);
-  const [rule] = await tx.insert(agentRules).values({ businessId: input.businessId, agentId: input.agentId ?? defaultAgentIdOf(input.businessId), title: input.title.trim(), content: input.content.trim(), active: input.active ?? true, sortOrder: (last?.sortOrder ?? -1) + 1 }).returning();
+  const [rule] = await tx.insert(agentRules).values({ businessId: input.businessId, agentId: input.agentId ?? defaultAgentIdOf(input.businessId), title: input.title.trim(), content: input.content.trim(), active: input.active ?? true, channel: input.channel ?? null, sortOrder: (last?.sortOrder ?? -1) + 1 }).returning();
   if (!rule) throw new Error("Agent rule could not be created.");
   await publishRulesChanged(tx, input.businessId, rule.id, `agent-rule:${rule.id}:created`);
   return rule;
@@ -58,21 +59,22 @@ export async function insertAgentRuleInTransaction(tx: DatabaseTransaction, inpu
 
 export async function updateAgentRule(
   context: DomainContext,
-  input: { userId: string; businessId: string; agentId?: string | undefined; ruleId: string; title?: string; content?: string; active?: boolean },
+  input: { userId: string; businessId: string; agentId?: string | undefined; ruleId: string; title?: string; content?: string; active?: boolean; channel?: RuleChannel | null },
 ): Promise<void> {
   return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
-    if (input.title === undefined && input.content === undefined && input.active === undefined) throw new Error("At least one rule field is required.");
+    if (input.title === undefined && input.content === undefined && input.active === undefined && input.channel === undefined) throw new Error("At least one rule field is required.");
     if (!await updateAgentRuleInTransaction(tx, input)) throw new Error("Agent rule not found.");
   });
 }
 
 /** Changes the fields given and refreshes the snapshot. Null when the agent has no such rule. Callers authorize first. */
-export async function updateAgentRuleInTransaction(tx: DatabaseTransaction, input: AgentScope & { ruleId: string; title?: string | undefined; content?: string | undefined; active?: boolean | undefined }): Promise<AgentRule | null> {
+export async function updateAgentRuleInTransaction(tx: DatabaseTransaction, input: AgentScope & { ruleId: string; title?: string | undefined; content?: string | undefined; active?: boolean | undefined; channel?: RuleChannel | null | undefined }): Promise<AgentRule | null> {
   const values = {
     ...(input.title !== undefined ? { title: input.title.trim() } : {}),
     ...(input.content !== undefined ? { content: input.content.trim() } : {}),
     ...(input.active !== undefined ? { active: input.active } : {}),
+    ...(input.channel !== undefined ? { channel: input.channel } : {}),
     updatedAt: new Date(),
   };
   const [rule] = await tx.update(agentRules).set(values).where(and(eq(agentRules.id, input.ruleId), ofAgent(input))).returning();

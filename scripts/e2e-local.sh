@@ -40,6 +40,7 @@ TESTS=(
   e2e/affiliate-program.e2e.ts
   e2e/agents.e2e.ts
   e2e/appointment-reschedule.e2e.ts
+  e2e/appointments-calendar.e2e.ts
   e2e/auth-pages.e2e.ts
   e2e/auth-return-to.e2e.ts
   e2e/billing-return-cap.e2e.ts
@@ -47,13 +48,16 @@ TESTS=(
   e2e/getting-started.e2e.ts
   e2e/home-analytics-metrics.e2e.ts
   e2e/manual-create.e2e.ts
+  e2e/mobile-navigation.e2e.ts
   e2e/navigation.e2e.ts
   e2e/onboarding-flow.e2e.ts
   e2e/onboarding-path.e2e.ts
   e2e/onboarding-pending.e2e.ts
   e2e/operator-actions.e2e.ts
   e2e/operator-auth.e2e.ts
+  e2e/page-intros.e2e.ts
   e2e/performance-startup.e2e.ts
+  e2e/rule-channels.e2e.ts
   e2e/setup-prompts.e2e.ts
   e2e/supported-journeys.e2e.ts
   e2e/widget-settings.e2e.ts

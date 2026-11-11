@@ -38,3 +38,10 @@
 .border-teal-100 {
   border-color: var(--border) !important;
 }
+
+/* Toasts on a phone sit above the dashboard's bottom tab bar while it shows. */
+@media (max-width: 767px) {
+  :root:has([data-mobile-tab-bar]) {
+    --mobile-tab-bar-offset: calc(3.5rem + env(safe-area-inset-bottom));
+  }
+}

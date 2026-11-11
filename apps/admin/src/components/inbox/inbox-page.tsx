@@ -61,13 +61,13 @@ function InboxRow({ href, item, onOpen, selected, showAgent }: { href: string; i
   // A call says what came of it, in the operator's language, as its own page does.
   const preview = item.outcome && item.outcome.kind !== "none" ? formatCallOutcomeSummary(item.outcome, i18n.language, t) : item.preview;
   return (
-    <Link aria-current={selected ? "true" : undefined} className={cn("flex w-full flex-col gap-1 rounded-md px-2 py-2 text-sm hover:bg-muted", selected && "bg-muted")} href={href} onClick={onOpen} scroll={false}>
+    <Link aria-current={selected ? "true" : undefined} className={cn("flex w-full flex-col gap-1 rounded-md px-2 py-2 type-body hover:bg-muted", selected && "bg-muted")} href={href} onClick={onOpen} scroll={false}>
       <span className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-2">
-        <span className="ph-mask truncate font-semibold">{title}</span>
-        <span className="text-[11px] text-muted-foreground">{formatDateTime(item.occurredAt, i18n.language, { month: "short", day: "numeric" })}</span>
+        <span className="ph-mask truncate type-item-title">{title}</span>
+        <span className="type-caption text-muted-foreground">{formatDateTime(item.occurredAt, i18n.language, { month: "short", day: "numeric" })}</span>
       </span>
       {preview ? <span className="ph-mask line-clamp-2 text-muted-foreground">{preview}</span> : null}
-      <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+      <span className="flex min-w-0 items-center gap-1.5 type-caption text-muted-foreground">
         <Icon aria-hidden="true" className="size-3.5 shrink-0" /><span>{getChannelLabel(item.channel, t)}</span>
         {showAgent && item.agent ? <><span aria-hidden="true">·</span><span className="truncate">{item.agent.name}</span></> : null}
       </span>
@@ -151,8 +151,8 @@ export function InboxPage() {
         {open && openItem?.agent && hasChoice ? <HandledBy agent={openItem.agent} linked={canSetUp} /> : null}
         {callId ? <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6"><div className="mb-4 sm:hidden">{back}</div><LiveCallDetailSurface callId={callId} embedded key={callId} /></div>
           : conversationId ? <ConversationThread back={back} conversationId={conversationId} key={conversationId} />
-          : loading ? <div className="m-auto p-8"><HiddenTextSkeleton className="text-sm">{t("inbox:pick")}</HiddenTextSkeleton></div>
-          : <div className="m-auto p-8 text-center text-sm text-muted-foreground">{t("inbox:pick")}</div>}
+          : loading ? <div className="m-auto p-8"><HiddenTextSkeleton className="type-body">{t("inbox:pick")}</HiddenTextSkeleton></div>
+          : <div className="m-auto p-8 text-center type-body-muted">{t("inbox:pick")}</div>}
       </div>
     </section>
   );

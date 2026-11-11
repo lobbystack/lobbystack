@@ -28,6 +28,7 @@ import {
 } from "@lobbystack/shared";
 
 import { enqueueAgentSnapshotRefresh } from "./agentSnapshot";
+import { saveLegacyInstructionsInTransaction, withLegacyInstructions } from "./channelRules";
 import { assertTransferNumberAllowed, enqueueRefusedCallForwardRefresh } from "./numberTrials";
 import { assertStaffFirstChange, enqueueStaffFirstRouting } from "./staffFirst";
 
@@ -192,8 +193,9 @@ export function defaultReceptionistProfile(businessName: string, locale: Runtime
  * the receptionist from. A transfer number must pass the same country and
  * free-trial checks as the dashboard's. A summary someone writes is never
  * replaced by AI; regenerateSummary hands it back to AI and queues the
- * rewrite. Callers authorize and check the fields first. Null when nothing
- * was saved.
+ * rewrite. Voice, SMS and chat instructions go to the agent's rules for those
+ * channels (see channelRules.ts), and the row returned reads them from there.
+ * Callers authorize and check the fields first. Null when nothing was saved.
  */
 export async function saveReceptionistProfileInTransaction(
   tx: DatabaseTransaction,
@@ -209,13 +211,17 @@ export async function saveReceptionistProfileInTransaction(
   if (patch.transferNumber) await assertTransferNumberAllowed(tx, { businessId, phone: patch.transferNumber });
   const changesStaffFirst = patch.staffFirstMode !== undefined || patch.staffFirstNumber !== undefined;
   if (changesStaffFirst) await assertStaffFirstChange(tx, { businessId, agentId, mode: patch.staffFirstMode, number: patch.staffFirstNumber });
-  const changes = { ...patch, ...(input.name !== undefined ? { name: input.name } : {}), ...(patch.summary !== undefined ? { summarySource: "operator" as const, summaryRegenerateStatus: null } : {}), ...(input.regenerateSummary ? { summarySource: "generated" as const, summaryRegenerateStatus: "pending" as const } : {}), updatedAt: new Date() };
+  // The old per-channel instructions are rules kept to their channel now, and their columns stay unwritten.
+  const { voiceInstructions, smsInstructions, chatInstructions, ...columns } = patch;
+  const instructions = { ...(voiceInstructions !== undefined ? { voiceInstructions } : {}), ...(smsInstructions !== undefined ? { smsInstructions } : {}), ...(chatInstructions !== undefined ? { chatInstructions } : {}) };
+  const changes = { ...columns, ...(input.name !== undefined ? { name: input.name } : {}), ...(patch.summary !== undefined ? { summarySource: "operator" as const, summaryRegenerateStatus: null } : {}), ...(input.regenerateSummary ? { summarySource: "generated" as const, summaryRegenerateStatus: "pending" as const } : {}), updatedAt: new Date() };
   // Updates by id, so nothing depends on the one-agent-per-business index that
   // release 5b drops. A business without a default agent gets one from the defaults.
   const profile = agentId
     ? (await tx.update(agents).set(changes).where(and(eq(agents.id, agentId), eq(agents.businessId, businessId))).returning())[0]
     : await insertDefaultAgentInTransaction(tx, input, changes);
   if (!profile) return null;
+  await saveLegacyInstructionsInTransaction(tx, { businessId, agentId: profile.id, patch: instructions });
   // Some carriers forward a call the receptionist refuses to a number stored on the carrier, so they learn the new transfer number.
   if (patch.transferNumber !== undefined) await enqueueRefusedCallForwardRefresh(tx, businessId, profile.id);
   if (patch.staffFirstMode !== undefined) await enqueueStaffFirstRouting(tx, businessId, profile.id);
@@ -230,7 +236,8 @@ export async function saveReceptionistProfileInTransaction(
       payload: { businessId, reason: "operator_regenerate", force: true },
     });
   }
-  return profile;
+  // Callers show the instructions as the rules now hold them.
+  return await withLegacyInstructions(tx, profile);
 }
 
 /**
@@ -254,9 +261,6 @@ async function insertDefaultAgentInTransaction(
     // A summary a person writes is never replaced by AI.
     summarySource: patch.summary !== undefined ? "operator" : "placeholder",
     bookingPolicy: patch.bookingPolicy ?? defaults.bookingPolicy,
-    ...(patch.voiceInstructions !== undefined ? { voiceInstructions: patch.voiceInstructions } : {}),
-    ...(patch.smsInstructions !== undefined ? { smsInstructions: patch.smsInstructions } : {}),
-    ...(patch.chatInstructions !== undefined ? { chatInstructions: patch.chatInstructions } : {}),
     transferMode: patch.transferMode ?? defaults.transferMode,
     ...(patch.transferNumber !== undefined ? { transferNumber: patch.transferNumber } : {}),
     appointmentChangePolicy: patch.appointmentChangePolicy ?? defaults.appointmentChangePolicy,

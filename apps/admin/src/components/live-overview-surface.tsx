@@ -27,7 +27,7 @@ import { LiveSetupGuideSurface, useSetupGuide } from "@/components/live-setup-gu
 import { needsHoursForBooking, useBusinessHours } from "@/components/business-hours-section";
 import { AppointmentDetailsSheet } from "@/components/appointment-details-sheet";
 import { appointmentSummary } from "@/components/cancel-appointment-button";
-import { HiddenTextSkeleton, ResultsRowSkeleton, SetupGuideSkeleton, StatusSkeleton } from "@/components/loading-skeletons";
+import { ResultsRowSkeleton, SetupGuideSkeleton, StatusSkeleton } from "@/components/loading-skeletons";
 import { RowChevron } from "@/components/row-chevron";
 import { formatBookedValue, formatTimeSaved } from "@/lib/analytics-results";
 import type { AnalyticsResultsViewModel } from "@/lib/page-view-models";
@@ -132,7 +132,7 @@ export function LiveOverviewSurface() {
         {showGuide || guidePending || !businessId ? null : <CallForwardingFromLink businessId={businessId} />}
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
           <section className="animate-in fade-in slide-in-from-bottom-2 duration-200 flex flex-col gap-3 xl:h-full">
-            <div className="flex items-center justify-between gap-4 px-1"><div className="flex items-center gap-3"><h2 className="type-section-title">{t("home.actionRequired.title")}</h2>{summary.isLoading ? <HiddenTextSkeleton className="text-sm">{t("home.actionRequired.viewAll")}</HiddenTextSkeleton> : openRequests > (summary.data?.actionRequired.length ?? 0) ? <Link className="text-sm text-muted-foreground transition-colors hover:text-foreground" href="/inbox">{t("home.actionRequired.viewAll")}</Link> : null}</div>{summary.isLoading ? <Skeleton className="h-6 w-12 rounded-full" /> : <Badge variant="outline">{(openRequests + (unansweredCount > 0 ? 1 : 0)).toLocaleString(intlLocale(i18n.language))}</Badge>}</div>
+            <div className="flex items-center justify-between gap-4 px-1"><Link aria-label={t("home.actionRequired.inboxLink")} className="-mx-2 inline-flex items-center gap-1 rounded-md px-2 py-1 outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background" href="/inbox"><h2 className="type-section-title">{t("home.actionRequired.title")}</h2><RowChevron /></Link>{summary.isLoading ? <Skeleton className="h-6 w-12 rounded-full" /> : <Badge variant="outline">{(openRequests + (unansweredCount > 0 ? 1 : 0)).toLocaleString(intlLocale(i18n.language))}</Badge>}</div>
             {unansweredCount > 0 ? <Item render={<Link href={`/business/knowledge#${UNANSWERED_QUESTIONS_ANCHOR}`} />} variant="outline">
               <ItemMedia variant="icon"><MessageCircleQuestionMark className="text-muted-foreground" /></ItemMedia>
               <ItemContent><ItemTitle>{tKnowledge("unansweredQuestions.home.count", { count: unansweredCount })}</ItemTitle><ItemDescription>{tKnowledge("unansweredQuestions.home.description")}</ItemDescription></ItemContent>
@@ -207,7 +207,7 @@ export function LiveOverviewSurface() {
                                       {request.notes ? <ItemDescription>{t("home.actionRequired.notes", { notes: request.notes })}</ItemDescription> : null}
                                     </>;
                                   })() : null}
-                                  <ItemFooter className="flex-wrap gap-2 text-xs text-muted-foreground">
+                                  <ItemFooter className="flex-wrap gap-2 type-caption text-muted-foreground">
                                     <span>
                                       {formatDateTime(item.createdAt, i18n.language, {
                                         dateStyle: "medium",
@@ -236,7 +236,7 @@ export function LiveOverviewSurface() {
               </Card> : unansweredCount > 0 ? null : <div className="rounded-xl border border-dashed p-12 text-center xl:flex xl:flex-1 xl:flex-col xl:items-center xl:justify-center"><p className="type-empty-title">{t("home.actionRequired.emptyTitle")}</p><p className="type-empty-description mt-2">{t("home.actionRequired.emptyDescription")}</p></div>}
           </section>
           <section className="animate-in fade-in slide-in-from-bottom-2 duration-200 order-first flex flex-col gap-3 xl:h-full">
-            <div className="flex items-center justify-between gap-4 px-1"><div className="flex items-center gap-3"><h2 className="type-section-title">{t("home.upcoming.title")}</h2><Link className="text-sm text-muted-foreground transition-colors hover:text-foreground" href="/appointments?view=list">{t("home.upcoming.viewAll")}</Link></div>{summary.isLoading ? <Skeleton className="h-6 w-12 rounded-full" /> : <Badge variant="outline">{(summary.data?.upcoming.length ?? 0).toLocaleString(intlLocale(i18n.language))}</Badge>}</div>
+            <div className="flex items-center justify-between gap-4 px-1"><Link aria-label={t("home.upcoming.appointmentsLink")} className="-mx-2 inline-flex items-center gap-1 rounded-md px-2 py-1 outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background" href="/appointments?view=list"><h2 className="type-section-title">{t("home.upcoming.title")}</h2><RowChevron /></Link>{summary.isLoading ? <Skeleton className="h-6 w-12 rounded-full" /> : <Badge variant="outline">{(summary.data?.upcoming.length ?? 0).toLocaleString(intlLocale(i18n.language))}</Badge>}</div>
             {summary.isLoading ? <UpcomingSkeleton /> : summary.data?.upcoming.length ? (
               <Card className="ph-mask border-border/70 xl:flex-1"><CardContent className="flex flex-col gap-2">
                 {summary.data.upcoming.map((appointment, index) => {
@@ -269,7 +269,7 @@ export function LiveOverviewSurface() {
             {results.map((result) => (
               <section className="flex min-w-0 flex-col gap-2 border-b p-6 last:border-b-0 sm:border-r sm:border-b-0 sm:last:border-r-0" key={result.key}>
                 <h2 className="type-card-title text-foreground">{t(`home.results.${result.key}`)}</h2>
-                <p className="text-4xl font-normal tracking-normal break-words text-foreground tabular-nums">{result.value}</p>
+                <p className="type-metric-sm break-words">{result.value}</p>
                 {result.description ? <p className="type-meta">{result.description}</p> : null}
               </section>
             ))}
@@ -277,7 +277,7 @@ export function LiveOverviewSurface() {
         ) : null}
         {summary.isLoading ? <OverviewChartSkeleton chartTitle={t("home.chart.title")} recentCallsTitle={t("home.recentCalls.title")} /> : <div className="grid grid-cols-1 gap-4 lg:grid-cols-7">
           <Card className="col-span-1 lg:col-span-4"><CardHeader><CardTitle>{t("home.chart.title")}</CardTitle></CardHeader><CardContent className="ps-2"><OverviewCallChart data={(summary.data?.monthlyCalls ?? []).map((item) => ({ name: formatDateTime(item.monthStart, i18n.language, { month: "short", timeZone: "UTC" }), total: item.total }))} /></CardContent></Card>
-          <Card className="ph-mask col-span-1 lg:col-span-3"><CardHeader><CardTitle>{t("home.recentCalls.title")}</CardTitle><CardDescription>{t("home.recentCalls.description", { count: summary.data?.recentCalls.length ?? 0 })}</CardDescription></CardHeader><CardContent><div className="flex flex-col gap-6">{(summary.data?.recentCalls ?? []).map((call) => <div className="flex items-center gap-4" key={call.id}><Avatar className="h-9 w-9"><AvatarFallback>{initials(call.contactName)}</AvatarFallback></Avatar><div className="flex flex-1 flex-wrap items-center justify-between"><div className="flex flex-col gap-1"><p className="type-item-title leading-none">{getContactDisplayName({ name: call.contactName, phone: call.contactPhone, email: call.contactEmail, channels: [call.transport] }, i18n.language, t)}</p><p className="type-body-muted">{call.contactName && hasDisplayablePhone(call.contactPhone) ? formatPhoneNumberDisplay(call.contactPhone, i18n.language) : formatDateTime(call.startedAt, i18n.language, { dateStyle: "medium", timeStyle: "short" })}</p></div><div className="type-item-title">{call.durationSeconds ? t("home.recentCalls.durationValue", { value: call.durationSeconds }) : call.status}</div></div></div>)}</div></CardContent></Card>
+          <Card className="ph-mask col-span-1 lg:col-span-3"><CardHeader><CardTitle>{t("home.recentCalls.title")}</CardTitle><CardDescription>{t("home.recentCalls.description", { count: summary.data?.recentCalls.length ?? 0 })}</CardDescription></CardHeader><CardContent><div className="flex flex-col gap-6">{(summary.data?.recentCalls ?? []).map((call) => <div className="flex items-center gap-4" key={call.id}><Avatar className="h-9 w-9"><AvatarFallback>{initials(call.contactName)}</AvatarFallback></Avatar><div className="flex flex-1 flex-wrap items-center justify-between"><div className="flex flex-col gap-1"><p className="type-item-title">{getContactDisplayName({ name: call.contactName, phone: call.contactPhone, email: call.contactEmail, channels: [call.transport] }, i18n.language, t)}</p><p className="type-body-muted">{call.contactName && hasDisplayablePhone(call.contactPhone) ? formatPhoneNumberDisplay(call.contactPhone, i18n.language) : formatDateTime(call.startedAt, i18n.language, { dateStyle: "medium", timeStyle: "short" })}</p></div><div className="type-item-title">{call.durationSeconds ? t("home.recentCalls.durationValue", { value: call.durationSeconds }) : call.status}</div></div></div>)}</div></CardContent></Card>
         </div>}
       </div>
     </div>

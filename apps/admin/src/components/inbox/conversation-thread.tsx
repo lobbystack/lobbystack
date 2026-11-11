@@ -112,10 +112,10 @@ export function ConversationThread({ back, conversationId }: { back?: ReactNode;
       <div className="flex flex-wrap items-center gap-3 border-b p-4">
         {back}
         <Avatar><AvatarFallback className="ph-mask">{initials(latest.visitorName ?? latest.contactName, displayName)}</AvatarFallback></Avatar>
-        <div className="min-w-0"><h2 className="ph-mask truncate font-semibold">{displayName}</h2><p className="ph-mask truncate text-sm text-muted-foreground">{subtitle(latest, t)}</p></div>
+        <div className="min-w-0"><h2 className="ph-mask truncate type-item-title">{displayName}</h2><p className="ph-mask truncate type-body-muted">{subtitle(latest, t)}</p></div>
         {canHandOff ? (
           <div className="ml-auto flex items-center gap-2">
-            <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium", automation === "ai_active" ? "bg-teal-50 text-teal-700" : "bg-amber-50 text-amber-700")}>
+            <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 type-label", automation === "ai_active" ? "bg-teal-50 text-teal-700" : "bg-amber-50 text-amber-700")}>
               {automation === "ai_active" ? <Bot className="size-3.5" /> : <User className="size-3.5" />}
               {automation === "ai_active" ? t("page.automationAiActive") : waiting ? t("page.waitingTitle") : t("page.automationHumanHandoff")}
             </span>
@@ -124,13 +124,13 @@ export function ConversationThread({ back, conversationId }: { back?: ReactNode;
           </div>
         ) : null}
       </div>
-      {waiting ? <p className="border-b bg-amber-50 px-4 py-2 text-xs text-amber-800">{t("page.waitingDescription")}</p> : null}
+      {waiting ? <p className="border-b bg-amber-50 px-4 py-2 type-caption text-amber-800">{t("page.waitingDescription")}</p> : null}
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4">
         {thread.data!.messages.map((message) => (
           <div className={cn("flex", message.direction === "outbound" ? "justify-end" : "justify-start")} key={message.id}>
-            <div className={cn("max-w-[80%] rounded-2xl px-4 py-3 text-sm", message.direction === "outbound" ? "rounded-br-sm bg-primary text-primary-foreground" : "rounded-bl-sm bg-muted text-foreground")}>
+            <div className={cn("max-w-[80%] rounded-2xl px-4 py-3 type-body", message.direction === "outbound" ? "rounded-br-sm bg-primary text-primary-foreground" : "rounded-bl-sm bg-muted text-foreground")}>
               <p className="ph-mask whitespace-pre-wrap">{message.body}</p>
-              <p className="mt-1 text-[11px] opacity-70">{formatDateTime(message.createdAt, i18n.language, { hour: "numeric", minute: "2-digit" })}</p>
+              <p className="mt-1 type-caption opacity-70">{formatDateTime(message.createdAt, i18n.language, { hour: "numeric", minute: "2-digit" })}</p>
             </div>
           </div>
         ))}

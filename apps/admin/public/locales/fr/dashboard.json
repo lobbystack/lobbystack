@@ -165,11 +165,11 @@
       "notes": "Notes : {{notes}}",
       "rescheduleRequest": "Demande de report",
       "newTime": "Nouvel horaire : {{time}}",
-      "viewAll": "Tout voir"
+      "inboxLink": "Tout voir dans la boîte de réception"
     },
     "upcoming": {
       "title": "À venir",
-      "viewAll": "Tout voir",
+      "appointmentsLink": "Voir tous les rendez-vous",
       "description": "Les prochains rendez-vous au calendrier.",
       "unknownService": "Service inconnu",
       "employee": "Employé : {{name}}",

@@ -354,11 +354,11 @@ export function PhoneNumberChooser({
         }
       >
         <div className="flex flex-col gap-2">
-          <label className="text-sm font-medium" htmlFor="number-country">
+          <label className="type-title" htmlFor="number-country">
             {labels.countryLabel}
           </label>
           {countryFixed ? (
-            <p className="flex h-9 items-center gap-2 text-sm" id="number-country">
+            <p className="flex h-9 items-center gap-2 type-body" id="number-country">
               <Flag region={country} />
               {COUNTRY_OPTIONS.find((option) => option.code === country)?.label ?? country}
             </p>
@@ -381,7 +381,7 @@ export function PhoneNumberChooser({
           <>
             <div aria-hidden="true" className="hidden sm:block" />
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium" htmlFor="number-area-code">
+              <label className="type-title" htmlFor="number-area-code">
                 {labels.areaCodeLabel}
               </label>
               <Input
@@ -413,13 +413,13 @@ export function PhoneNumberChooser({
       </div>
 
       <Surface className="flex h-96 flex-col">
-        <div className="flex h-14 shrink-0 items-center border-b border-border px-4 text-sm font-medium text-muted-foreground">
+        <div className="flex h-14 shrink-0 items-center border-b border-border px-4 type-title text-muted-foreground">
           <span>{labels.phoneNumberHeader}</span>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto">
           {numbers.length === 0 ? (
-            <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+            <div className="px-4 py-8 text-center type-body-muted">
               {labels.empty}
             </div>
           ) : (
@@ -433,11 +433,11 @@ export function PhoneNumberChooser({
                     key={number.e164}
                   >
                     <div className="flex flex-col gap-1">
-                      <span className="text-sm font-medium text-foreground">
+                      <span className="type-title text-foreground">
                         {number.display}
                       </span>
                       {locationLabel ? (
-                        <span className="text-xs text-muted-foreground">
+                        <span className="type-caption text-muted-foreground">
                           {locationLabel}
                         </span>
                       ) : null}
@@ -466,7 +466,7 @@ export function PhoneNumberChooser({
           <div className="shrink-0 border-t border-border px-4 py-3">
             <button
               aria-label={labels.loadMore}
-              className="inline-flex h-5 min-w-16 items-center justify-start text-sm font-medium text-muted-foreground hover:text-foreground disabled:opacity-60"
+              className="inline-flex h-5 min-w-16 items-center justify-start type-title text-muted-foreground hover:text-foreground disabled:opacity-60"
               disabled={isSearching}
               onClick={() => void handleSearch("loadMore")}
               type="button"

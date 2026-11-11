@@ -47,6 +47,7 @@ import {
 } from "./publicApi/operations";
 import { listKnowledgeEntryResources, listKnowledgeSourceResources, listServiceResources, loadBusinessResource, serializeReceptionist, serializeRule, type Page } from "./publicApi/resources";
 import { listAgentRulesInTransaction } from "./rules";
+import { withLegacyInstructions } from "./channelRules";
 import { storageFileName, uploadObjectKey, type BinaryStorageProvider } from "./storage";
 
 // Business templates: a partner saves one of its businesses' setup in the
@@ -152,11 +153,18 @@ async function readBusinessSetup(tx: DatabaseTransaction, businessId: string): P
   const business = await loadBusinessResource(tx, businessId);
   if (!business) throw businessNotFound();
   const locale = normalizeRuntimeLocale(business.locale);
-  const [profile] = await tx.select().from(agents).where(defaultAgentOf(businessId)).limit(1);
+  const [agentRow] = await tx.select().from(agents).where(defaultAgentOf(businessId)).limit(1);
+  const profile = agentRow ? await withLegacyInstructions(tx, agentRow) : undefined;
   const receptionist = profile ? serializeReceptionist(profile) : null;
   const demoOnly = profile ? prospectDemoSettingsIn(profile) : new Set();
   const services = await listServiceResources(tx, businessId, { includeInactive: true });
-  const rules = (await listAgentRulesInTransaction(tx, { businessId })).map(serializeRule);
+  // Instructions for one channel travel as rules with that channel. A demo's own call and text rules stay out.
+  const ruleRows = await listAgentRulesInTransaction(tx, { businessId });
+  const demoRuleIds = new Set([
+    ...(demoOnly.has("voiceInstructions") ? [ruleRows.find((rule) => rule.channel === "voice")?.id] : []),
+    ...(demoOnly.has("smsInstructions") ? [ruleRows.find((rule) => rule.channel === "sms")?.id] : []),
+  ]);
+  const rules = ruleRows.filter((rule) => !demoRuleIds.has(rule.id)).map(serializeRule);
   const page = { limit: PUBLIC_API_MAX_PAGE_SIZE };
   // Entries and sources list newest first; a template keeps the order they were added in.
   const entries = (type: "faq" | "text") => allPages(async (cursor) => await listKnowledgeEntryResources(tx, businessId, { ...page, type, cursor })).then((rows) => rows.filter((row) => row.active).reverse());
@@ -198,9 +206,7 @@ async function readBusinessSetup(tx: DatabaseTransaction, businessId: string): P
         tone: receptionist.tone,
         ...(receptionist.summary_source === "operator" ? { summary: receptionist.summary } : {}),
         ...(demoOnly.has("bookingPolicy") ? {} : { booking_policy: receptionist.booking_policy }),
-        ...(demoOnly.has("voiceInstructions") ? {} : { voice_instructions: receptionist.voice_instructions }),
-        ...(demoOnly.has("smsInstructions") ? {} : { sms_instructions: receptionist.sms_instructions }),
-        chat_instructions: receptionist.chat_instructions,
+
         transfer_mode: receptionist.transfer_mode,
         booking_mode: receptionist.booking_mode,
         voice: receptionist.voice,
@@ -208,7 +214,7 @@ async function readBusinessSetup(tx: DatabaseTransaction, businessId: string): P
       },
     } : {}),
     ...(services.length ? { services: services.map((service) => ({ name: service.name, slug: service.slug, ...(service.description ? { description: service.description } : {}), duration_minutes: service.duration_minutes, active: service.active })) } : {}),
-    ...(rules.length ? { rules: rules.map((rule) => ({ title: rule.title, content: rule.content, active: rule.active })) } : {}),
+    ...(rules.length ? { rules: rules.map((rule) => ({ title: rule.title, content: rule.content, active: rule.active, ...(rule.channel ? { channel: rule.channel } : {}) })) } : {}),
     knowledge: {
       ...(websites.length ? { websites: websites.map((website) => String(website.url)), read_full_site: websites.every(isFullSiteRead) } : {}),
       ...(files.length ? { files: files.map((file) => ({ path: file.path, ...(file.title === file.path ? {} : { title: file.title }), ...(file.tags.length ? { tags: file.tags } : {}) })) } : {}),

@@ -45,8 +45,8 @@ function RoleOptions({ roles, value, onChange }: { roles: PartnerRole[]; value: 
           <button aria-checked={selected} aria-describedby={`${id}-${role}-help`} aria-labelledby={`${id}-${role}`} className="flex w-full items-start gap-3 py-1 text-left" key={role} onClick={() => onChange(role)} role="radio" type="button">
             <span className={cn("mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border", selected ? "border-foreground" : "border-muted-foreground")}>{selected ? <span className="size-2 rounded-full bg-foreground" /> : null}</span>
             <span className="flex min-w-0 flex-col gap-1">
-              <span className="text-sm font-medium" id={`${id}-${role}`}>{t(`roles.${role}`)}</span>
-              <span className="text-sm leading-6 text-muted-foreground" id={`${id}-${role}-help`}>{t(`team.invite.roles.${role}`)}</span>
+              <span className="type-title" id={`${id}-${role}`}>{t(`roles.${role}`)}</span>
+              <span className="type-body-muted" id={`${id}-${role}-help`}>{t(`team.invite.roles.${role}`)}</span>
             </span>
           </button>
         );
@@ -117,7 +117,7 @@ export function PartnerTeamSurface() {
   const inviteDialog = canManage ? (
     <Dialog onOpenChange={(open) => { setInviteOpen(open); setInviteError(null); setInviteSubmitted(false); }} open={inviteOpen}>
       <DialogTrigger render={<Button disabled={team.isLoading} size="sm" />}>{t("team.invite.action")}</DialogTrigger>
-      <DialogContent>
+      <DialogContent size="sm">
         <form className="flex flex-col gap-6" noValidate onSubmit={(event) => { event.preventDefault(); setInviteSubmitted(true); if (!invite.isPending && email.trim()) { setInviteError(null); invite.mutate(); } }}>
           <DialogHeader>
             <DialogTitle>{t("team.invite.title")}</DialogTitle>
@@ -133,7 +133,7 @@ export function PartnerTeamSurface() {
               <RoleOptions onChange={setInviteRole} roles={invitableRoles} value={inviteRole} />
             </Field>
           </FieldGroup>
-          {inviteError ? <p className="text-sm text-destructive" role="alert">{inviteError}</p> : null}
+          {inviteError ? <p className="type-body text-destructive" role="alert">{inviteError}</p> : null}
           <DialogFooter>
             <DialogClose render={<Button disabled={invite.isPending} type="button" variant="outline" />}>{t("team.invite.cancel")}</DialogClose>
             <Button disabled={invite.isPending} loading={invite.isPending} loadingLabel={t("team.invite.sending")} type="submit">{t("team.invite.submit")}</Button>
@@ -167,14 +167,14 @@ export function PartnerTeamSurface() {
         {team.isLoading ? (
           <div className="flex flex-col gap-4 p-6"><Skeleton className="h-5 w-40" /><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /></div>
         ) : team.isError ? (
-          <p className="px-6 py-8 text-sm text-muted-foreground" role="alert">{t("team.loadFailed")}</p>
+          <p className="px-6 py-8 type-body-muted" role="alert">{t("team.loadFailed")}</p>
         ) : (
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>{t("team.table.person")}</TableHead>
                 <TableHead>{t("team.table.role")}</TableHead>
-                {canManage ? <TableHead className="w-12" /> : null}
+                {canManage ? <TableHead className="w-16" /> : null}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -185,9 +185,9 @@ export function PartnerTeamSurface() {
                   <TableRow key={row.kind === "member" ? row.memberId : row.invitationId}>
                     <TableCell className="whitespace-normal [overflow-wrap:anywhere]">
                       <div className="flex flex-col gap-1">
-                        <p className="ph-mask text-sm">{row.kind === "member" && row.name ? `${row.name} · ${row.email}` : row.email}</p>
+                        <p className="ph-mask type-body">{row.kind === "member" && row.name ? `${row.name} · ${row.email}` : row.email}</p>
                         <div className="flex flex-wrap items-center gap-2">
-                          <p className="text-sm text-muted-foreground">{t(row.kind === "member" ? "team.joinedOn" : "team.invitedOn", { date: formatDate(row.kind === "member" ? row.joinedAt : row.invitedAt) })}</p>
+                          <p className="type-body-muted">{t(row.kind === "member" ? "team.joinedOn" : "team.invitedOn", { date: formatDate(row.kind === "member" ? row.joinedAt : row.invitedAt) })}</p>
                           {row.kind === "invitation" ? <Status variant={INVITATION_STATUS_VARIANTS[expired ? "expired" : "pending"]}>{t(expired ? "team.status.expired" : "team.status.pending")}</Status> : null}
                         </div>
                       </div>

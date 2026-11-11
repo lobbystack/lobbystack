@@ -139,6 +139,8 @@ describe("moved routes", () => {
     ["/agent", "/agents/primary"],
     ["/agent/basic-settings", "/agents/primary"],
     ["/agent/rules", "/agents/primary/rules"],
+    ["/agents/agent-1/instructions", "/agents/agent-1/rules"],
+    ["/agents/primary/instructions", "/agents/primary/rules"],
     ["/agent/integrations", "/agents/primary/channels"],
     ["/agent/knowledge", "/business/knowledge"],
     ["/agent/services", "/business/services"],

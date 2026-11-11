@@ -179,6 +179,8 @@ export function BusinessHoursSection({ businessId, canManage, bookingMode }: { b
     try {
       const saved = await requestJson<BusinessHoursState>(`/api/hours?businessId=${encodeURIComponent(businessId)}`, { method: "PUT", body: JSON.stringify({ hours: result.hours, closures }) });
       queryClient.setQueryData(businessHoursQueryKey(businessId), saved);
+      // The appointments calendar shows the closures.
+      void queryClient.invalidateQueries({ queryKey: ["time-off", businessId] });
       telemetry.track("web.agent.settings_saved", { businessId, setting: "hours" });
       toast.success(t("actions.saved"));
       setEditing(false);
@@ -224,8 +226,8 @@ export function BusinessHoursSection({ businessId, canManage, bookingMode }: { b
             <WeeklyHoursEditor days={days} disabled={disabled} onChange={update} />
             <div className="flex flex-col gap-4 py-3">
               <div className="flex flex-col gap-1">
-                <span className="text-sm font-medium">{t("hours.closures.title")}</span>
-                <p className="text-sm text-muted-foreground">{t("hours.closures.description", { timezone: state?.timezone })}</p>
+                <span className="type-title">{t("hours.closures.title")}</span>
+                <p className="type-body-muted">{t("hours.closures.description", { timezone: state?.timezone })}</p>
               </div>
               {closures.map((closure, index) => {
                 const edit = (change: Partial<Closure>) => updateClosures(closures.map((item, position) => (position === index ? { ...item, ...change } : item)));
@@ -248,7 +250,7 @@ export function BusinessHoursSection({ businessId, canManage, bookingMode }: { b
               ) : null}
             </div>
           </div>
-          {error ? <p className="text-sm text-destructive" id={errorId} role="alert">{error}</p> : null}
+          {error ? <p className="type-body text-destructive" id={errorId} role="alert">{error}</p> : null}
           <DialogFooter>
             <Button disabled={saving} onClick={close} type="button" variant="outline">{t("hours.cancel")}</Button>
             <Button disabled={disabled || loading} onClick={() => void save()} type="button">{saving ? t("actions.saving") : t("hours.save")}</Button>
@@ -283,7 +285,7 @@ export function WeeklyHoursEditor({ days, disabled, onChange: update }: { days: 
         return (
           <div className="flex items-start justify-between gap-4 border-b border-border py-3 last:border-b-0" key={dayOfWeek}>
             <div className="flex min-w-0 flex-col gap-2">
-              <span className="text-sm font-medium">{day}</span>
+              <span className="type-title">{day}</span>
               {windows.length ? (
                 <div className="flex flex-col gap-2">
                   {windows.map((window, index) => (
@@ -298,7 +300,7 @@ export function WeeklyHoursEditor({ days, disabled, onChange: update }: { days: 
                     <Button className="w-fit" disabled={disabled} onClick={() => update(dayOfWeek, [...windows, { open: windows.at(-1)?.close ?? "13:00", close: "17:00" }])} size="sm" type="button" variant="ghost"><Plus />{t("hours.addWindow")}</Button>
                   ) : null}
                 </div>
-              ) : <span className="text-sm text-muted-foreground">{t("hours.closed")}</span>}
+              ) : <span className="type-body-muted">{t("hours.closed")}</span>}
             </div>
             <Switch aria-label={t("hours.openOn", { day })} checked={windows.length > 0} disabled={disabled} onCheckedChange={(checked) => update(dayOfWeek, checked ? [{ open: "09:00", close: "17:00" }] : [])} />
           </div>

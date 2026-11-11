@@ -3,7 +3,7 @@ import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { and, desc, eq, isNull, sql, type SQL } from "drizzle-orm";
 
 import { agents, businessContextSnapshots, businessMemberships, businesses, calls, defaultAgentOf, enqueueOutbox, knowledgeDocuments, partnerMembers, prospectDemos, services, staff, staffServiceAssignments, websiteIngestionJobs, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
-import { defaultAgentName, defaultCurrencyForTimezone, defaultGreeting, isPartnerAccessLevel, isUuid, normalizeRuntimeLocale, partnerFeatures, partnerOrigin, type PartnerAccessLevel, type PartnerRole } from "@lobbystack/shared";
+import { channelRuleTitle, defaultAgentName, defaultCurrencyForTimezone, defaultGreeting, isPartnerAccessLevel, isUuid, normalizeRuntimeLocale, partnerFeatures, partnerOrigin, type PartnerAccessLevel, type PartnerRole } from "@lobbystack/shared";
 import { type TelemetryEventName, type TelemetryProperties } from "@lobbystack/telemetry";
 
 import { AuthorizationError } from "../authz";
@@ -18,6 +18,8 @@ import { deletePartnerBusinessInTransaction, reserveSubdomainIn, type PartnerAct
 import { recordProductEventBestEffort } from "./productEvents";
 import { PROSPECT_DEMO_BOOKING_POLICY, PROSPECT_DEMO_SMS_INSTRUCTIONS, prospectDemoSettingsIn, prospectDemoVoiceInstructions, type ProspectDemoSetting } from "./prospectDemoSettings";
 import { saveReceptionistProfileInTransaction } from "./receptionistProfile";
+import { withLegacyInstructions } from "./channelRules";
+import { insertAgentRuleInTransaction } from "./rules";
 import { NEW_BUSINESS_RECEPTIONIST_INSTRUCTIONS, partnerMemberNotOnTeam, rememberActiveBusinessInTransaction } from "./tenancy";
 import { periodKeyFor } from "./usage";
 
@@ -290,7 +292,7 @@ async function insertDemoInTransaction(
     if (!owner.operatorUserId) throw new Error("The host's demo needs its operator.");
     await tx.insert(businessMemberships).values({ businessId, userId: owner.operatorUserId, role: "business_owner", status: "active" });
   }
-  await tx.insert(agents).values({
+  const [demoAgent] = await tx.insert(agents).values({
     businessId,
     isDefault: true,
     name: defaultAgentName(locale),
@@ -298,10 +300,13 @@ async function insertDemoInTransaction(
     tone: "professional and friendly",
     summary: `${name} virtual receptionist`,
     bookingPolicy: PROSPECT_DEMO_BOOKING_POLICY,
-    voiceInstructions: prospectDemoVoiceInstructions(owner.brandName),
-    smsInstructions: PROSPECT_DEMO_SMS_INSTRUCTIONS,
     transferMode: "on_request",
-  });
+  }).returning({ id: agents.id });
+  if (!demoAgent) throw new Error("Demo agent could not be created.");
+  // What the demo's receptionist is told on calls and in texts, as rules kept to those channels.
+  for (const [channel, content] of [["voice", prospectDemoVoiceInstructions(owner.brandName)], ["sms", PROSPECT_DEMO_SMS_INSTRUCTIONS]] as const) {
+    await insertAgentRuleInTransaction(tx, { businessId, agentId: demoAgent.id, title: channelRuleTitle(channel, locale), content, channel });
+  }
   const [defaultStaff] = await tx.insert(staff).values({ businessId, name: name, timezone }).returning({ id: staff.id });
   if (!defaultStaff) throw new Error("Default demo staff could not be created.");
   for (const [index, serviceName] of demo.serviceNames.entries()) {
@@ -706,8 +711,10 @@ export async function claimProspectDemo(
 
 /** Puts back what a new business's receptionist is told wherever the demo's own settings are still in place. Settings someone changed during the demo stay. */
 async function endDemoSettingsInTransaction(tx: DatabaseTransaction, input: { businessId: string; businessName: string; locale: string }): Promise<void> {
-  const [profile] = await tx.select({ bookingPolicy: agents.bookingPolicy, voiceInstructions: agents.voiceInstructions, smsInstructions: agents.smsInstructions }).from(agents).where(defaultAgentOf(input.businessId)).limit(1);
-  if (!profile) return;
+  const [agent] = await tx.select({ id: agents.id, businessId: agents.businessId, bookingPolicy: agents.bookingPolicy }).from(agents).where(defaultAgentOf(input.businessId)).limit(1);
+  if (!agent) return;
+  // The demo's call and text instructions are rules kept to those channels.
+  const profile = await withLegacyInstructions(tx, agent);
   const patch: Partial<Record<ProspectDemoSetting, string>> = {};
   for (const field of prospectDemoSettingsIn(profile)) patch[field] = NEW_BUSINESS_RECEPTIONIST_INSTRUCTIONS[field];
   if (!Object.keys(patch).length) return;

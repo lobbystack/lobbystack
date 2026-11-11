@@ -135,7 +135,7 @@ export function LivePhoneNumberSettingsSurface({ agentId }: { agentId?: string }
           <Item variant="outline">
             <ItemContent>
               <ItemTitle aria-hidden="true"><Skeleton className="w-fit"><span className="invisible">{t("phoneNumber.current.label")}</span></Skeleton></ItemTitle>
-              <div aria-hidden="true" className="text-sm"><Skeleton className="w-fit max-w-full"><span className="invisible">{t("phoneNumber.current.description")}</span></Skeleton></div>
+              <div aria-hidden="true" className="type-body"><Skeleton className="w-fit max-w-full"><span className="invisible">{t("phoneNumber.current.description")}</span></Skeleton></div>
               <Skeleton className="h-6 w-48 max-w-full" />
             </ItemContent>
             {businesses.isLoading || canManageTenant ? (
@@ -162,12 +162,12 @@ export function LivePhoneNumberSettingsSurface({ agentId }: { agentId?: string }
       <div className="w-full space-y-4">
         {showReclaimBanner && reclaimScheduledAt ? (
           <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
-            <p className="text-sm font-medium text-foreground">
+            <p className="type-title text-foreground">
               {t("phoneNumber.reclaim.title", {
                 date: formatReclaimDate(reclaimScheduledAt, i18n.language),
               })}
             </p>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-1 type-body-muted">
               {t("phoneNumber.reclaim.description", {
                 number: displayPhoneNumber ?? primaryPhoneNumber?.e164,
               })}
@@ -193,9 +193,9 @@ export function LivePhoneNumberSettingsSurface({ agentId }: { agentId?: string }
               {primaryPhoneNumber === undefined ? (
                 <Skeleton className="h-6 w-48 max-w-full" />
               ) : displayPhoneNumber ? (
-                <p className="text-[15px] leading-6 text-foreground">{displayPhoneNumber}</p>
+                <p className="type-body text-foreground">{displayPhoneNumber}</p>
               ) : (
-                <p className="text-[15px] leading-6 text-muted-foreground">
+                <p className="type-body-muted">
                   {offersFreeTrial || partnerNumbers?.trial
                     ? t("phoneNumber.freeTrial.description")
                     : partnerNumberMessage

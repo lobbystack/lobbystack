@@ -113,7 +113,7 @@ export function PartnerStripeSurface() {
   const header = (
     <PageHeader title={t("stripe.title")} />
   );
-  const message = (text: string) => <Surface className="px-6 py-8"><p className="text-sm text-muted-foreground" role="alert">{text}</p></Surface>;
+  const message = (text: string) => <Surface className="px-6 py-8"><p className="type-body-muted" role="alert">{text}</p></Surface>;
   if (!isOwner) return <div className="flex flex-col gap-6">{header}{message(t("stripe.ownersOnly"))}</div>;
   const data = connection.data;
   if (connection.isLoading || !data) {
@@ -129,8 +129,8 @@ export function PartnerStripeSurface() {
       <div className="flex flex-col gap-6">
         {header}
         <Surface className="flex flex-col gap-2 p-6">
-          <h2 className="text-base font-medium">{t("stripe.notConfigured.title")}</h2>
-          <p className="text-sm leading-6 text-muted-foreground">{t("stripe.notConfigured.description")}</p>
+          <h2 className="type-card-title">{t("stripe.notConfigured.title")}</h2>
+          <p className="type-body-muted">{t("stripe.notConfigured.description")}</p>
         </Surface>
       </div>
     );
@@ -153,13 +153,13 @@ export function PartnerStripeSurface() {
       <Surface className="flex flex-col gap-6 p-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex min-w-0 flex-col gap-1">
-            <h2 className="text-base font-medium">{t(copy.title)}</h2>
-            {copy.description ? <p className="text-sm leading-6 text-muted-foreground">{t(copy.description, { currency: data.currency ?? "", date: data.disconnectedAt ? formatDate(data.disconnectedAt) : "" })}</p> : null}
+            <h2 className="type-card-title">{t(copy.title)}</h2>
+            {copy.description ? <p className="type-body-muted">{t(copy.description, { currency: data.currency ?? "", date: data.disconnectedAt ? formatDate(data.disconnectedAt) : "" })}</p> : null}
           </div>
           <Status variant={STRIPE_ACCOUNT_STATUS_VARIANTS[data.status]}>{t(STATUS_KEYS[data.status])}</Status>
         </div>
         {data.accountId && data.status !== "disconnected" ? (
-          <dl className="grid gap-4 text-sm sm:grid-cols-2">
+          <dl className="grid gap-4 type-body sm:grid-cols-2">
             {data.country ? <div className="flex flex-col gap-1"><dt className="text-muted-foreground">{t("stripe.details.country")}</dt><dd>{regionName(data.country)}</dd></div> : null}
             {data.currency ? <div className="flex flex-col gap-1"><dt className="text-muted-foreground">{t("stripe.details.currency")}</dt><dd>{data.currency}</dd></div> : null}
             <div className="flex flex-col gap-1"><dt className="text-muted-foreground">{t("stripe.details.payouts")}</dt><dd>{t(data.payoutsEnabled ? "stripe.details.payoutsOn" : "stripe.details.payoutsOff")}</dd></div>
@@ -177,7 +177,7 @@ export function PartnerStripeSurface() {
             </Field>
           </FieldGroup>
         ) : null}
-        {error ? <p className="text-sm text-destructive" role="alert">{error}</p> : null}
+        {error ? <p className="type-body text-destructive" role="alert">{error}</p> : null}
         <div className="flex flex-wrap gap-3">
           {copy.action ? (
             <Button disabled={working || (needsCountry && !country)} loading={working} loadingLabel={t("stripe.opening")} onClick={() => { setError(null); start.mutate(); }} type="button">{t(copy.action)}</Button>

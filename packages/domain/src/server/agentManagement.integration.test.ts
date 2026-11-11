@@ -36,7 +36,7 @@ async function withBusiness(plan: "free_cloud" | "starter", run: (world: World) 
       const [agent] = await tx.insert(agents).values({ businessId, isDefault: true, name: "Front desk", greeting: "Front desk here", tone: "warm", summary: "A clinic", bookingPolicy: "Book", transferMode: "on_request", voice: "cedar", voiceInstructions: "Day voice" }).returning({ id: agents.id });
       const [number] = await tx.insert(phoneNumbers).values({ businessId, agentId: agent!.id, e164: "+15145550111", providerPhoneId: `PN${randomUUID()}`, status: "active", carrier: "twilio" }).returning({ id: phoneNumbers.id });
       const [widget] = await tx.insert(widgetKeys).values({ businessId, agentId: agent!.id, keyHash: randomUUID() }).returning({ id: widgetKeys.id });
-      await tx.insert(agentRules).values({ businessId, agentId: agent!.id, title: "Day rule", content: "Offer mornings", sortOrder: 0 });
+      await tx.insert(agentRules).values([{ businessId, agentId: agent!.id, title: "Day rule", content: "Offer mornings", sortOrder: 0 }, { businessId, agentId: agent!.id, title: "On calls", content: "Day voice", sortOrder: 1, channel: "voice" }]);
       await run({ tx, businessId, defaultAgent: agent!.id, numberId: number!.id, widgetId: widget!.id });
       await tx.execute(sql`set constraints all immediate`);
       throw rollback;
@@ -59,9 +59,10 @@ describe.skipIf(!testUrl)("managing a business's agents", () => {
   it("copies the agent it starts from, with its rules and none of its channels", async () => {
     await withBusiness("starter", async ({ tx, businessId, defaultAgent }) => {
       const evening = await createAgentInTransaction(tx, { businessId, name: "  Evening  " });
-      expect(evening).toMatchObject({ name: "Evening", isDefault: false, greeting: "Front desk here", voice: "cedar", voiceInstructions: "Day voice", archivedAt: null });
+      // The deprecated instruction column stays behind; the call rule carries its text.
+      expect(evening).toMatchObject({ name: "Evening", isDefault: false, greeting: "Front desk here", voice: "cedar", voiceInstructions: null, archivedAt: null });
       expect(evening.id).not.toBe(defaultAgent);
-      expect((await tx.select({ title: agentRules.title }).from(agentRules).where(eq(agentRules.agentId, evening.id)))).toEqual([{ title: "Day rule" }]);
+      expect((await tx.select({ title: agentRules.title, channel: agentRules.channel }).from(agentRules).where(eq(agentRules.agentId, evening.id)).orderBy(agentRules.sortOrder))).toEqual([{ title: "Day rule", channel: null }, { title: "On calls", channel: "voice" }]);
       expect(await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(eq(phoneNumbers.agentId, evening.id))).toEqual([]);
       expect((await outbox(tx, businessId, "snapshot.refresh")).map((row) => row.aggregateId)).toContain(evening.id);
     });

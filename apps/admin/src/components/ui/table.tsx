@@ -21,7 +21,7 @@ function Table({
     >
       <table
         data-slot="table"
-        className={cn("w-full caption-bottom text-sm", className)}
+        className={cn("w-full caption-bottom type-body", className)}
         {...props}
       />
     </div>
@@ -68,7 +68,7 @@ function TableFooter({ className, ...props }: React.ComponentProps<"tfoot">) {
     <tfoot
       data-slot="table-footer"
       className={cn(
-        "border-t bg-muted/50 font-medium [&>tr]:last:border-b-0",
+        "border-t bg-muted/50 type-title [&>tr]:last:border-b-0",
         className
       )}
       {...props}
@@ -94,7 +94,7 @@ function TableHead({ className, ...props }: React.ComponentProps<"th">) {
     <th
       data-slot="table-head"
       className={cn(
-        "h-12 px-4 text-left align-middle font-medium whitespace-nowrap text-muted-foreground [&:has([role=checkbox])]:p-0",
+        "h-12 px-4 text-left align-middle type-table-head whitespace-nowrap [&:has([role=checkbox])]:p-0",
         className
       )}
       {...props}
@@ -115,6 +115,15 @@ function TableCell({ className, ...props }: React.ComponentProps<"td">) {
   )
 }
 
+/**
+ * The row-actions column of a fixed-layout table: an icon-sm button (32px)
+ * plus the cell's 16px padding on each side. Give the columns without a fixed
+ * width percentages that add up to 100%, so this one keeps its width.
+ */
+function TableActionsColumn() {
+  return <col data-slot="table-actions-column" className="w-16" />
+}
+
 function TableCaption({
   className,
   ...props
@@ -122,7 +131,7 @@ function TableCaption({
   return (
     <caption
       data-slot="table-caption"
-      className={cn("mt-4 text-sm text-muted-foreground", className)}
+      className={cn("mt-4 type-body-muted", className)}
       {...props}
     />
   )
@@ -138,4 +147,5 @@ export {
   TableRow,
   TableCell,
   TableCaption,
+  TableActionsColumn,
 }

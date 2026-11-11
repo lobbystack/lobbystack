@@ -48,8 +48,7 @@
       "security": "contraseña, inicio de sesión, correo, perfil, seguridad",
       "phone": "desvío, reenvío, operador, número, línea, llamada, llamadas",
       "voice": "acento, sonido, tono, saludo, bienvenida, hola, nombre",
-      "instructions": "instrucción, indicaciones, guion, comportamiento",
-      "rules": "regla, escalar, derivar",
+      "rules": "regla, reglas, escalar, derivar, instrucción, instrucciones, indicaciones, guion, comportamiento",
       "handling": "transferencia, transferencias, personal primero, reserva, cambios de cita, cancelar, reprogramar, número de transferencia, el personal responde primero",
       "business": "horario, horas, apertura, cerrado, feriado, zona horaria, idioma, moneda",
       "knowledge": "preguntas frecuentes, respuesta, respuestas, sitio web, documento, pdf, enseñar",
@@ -78,6 +77,7 @@
     "workspaceReady": "Espacio de trabajo listo",
     "upgradeToPro": "Pasar a Pro",
     "account": "Cuenta",
+    "accountSettings": "Configuración de la cuenta",
     "partnerConsole": "Consola de socios",
     "toggleTheme": "Cambiar tema",
     "support": "Soporte",
@@ -89,7 +89,6 @@
   },
   "agentPages": {
     "general": "General",
-    "instructions": "Instrucciones",
     "rules": "Reglas",
     "channels": "Canales",
     "phone": "Número de teléfono",
@@ -182,5 +181,16 @@
     "moveDescription": "Sus conversaciones abiertas también pasan, y desde ahora responde {{name}}.",
     "moved": "{{channel}} pasó a {{name}}",
     "moveFailed": "No pudimos pasarlo."
+  },
+  "mobileNav": {
+    "label": "Menú principal",
+    "menu": "Menú",
+    "allAgents": "Todos los agentes",
+    "tabs": {
+      "home": "Inicio",
+      "inbox": "Bandeja",
+      "appointments": "Citas",
+      "contacts": "Contactos"
+    }
   }
 }

@@ -217,7 +217,7 @@
       "editKnowledge": "Editar regla",
       "uploadDocument": "Subir documento",
       "addKnowledgeDescription": "Lo que debe hacer su agente, como transferir llamadas, hacer preguntas y enviar SMS.",
-      "editKnowledgeDescription": "Actualice la instrucción que su agente debe seguir durante las llamadas y los seguimientos.",
+      "editKnowledgeDescription": "Lo que debe hacer su agente, en todos los canales o en uno solo.",
       "uploadDocumentDescription": "Suba un archivo para que su agente pueda usarlo.",
       "documentBadge": "Documento",
       "textBadge": "Texto",
@@ -261,12 +261,21 @@
           "label": "Etiquetas",
           "placeholder": "Transferencias, escalado",
           "hint": "Opcional. Palabras clave separadas por comas para clasificar estas reglas."
+        },
+        "channel": {
+          "label": "Canal",
+          "all": "Todos los canales",
+          "voice": "Llamadas",
+          "sms": "Mensajes de texto",
+          "web_chat": "Chat del sitio web",
+          "instagram": "Instagram"
         }
       }
     }
   },
   "table": {
     "title": "Título",
+    "channel": "Canal",
     "preview": "Vista previa",
     "status": "Estado",
     "disabled": "Desactivada",
@@ -288,9 +297,6 @@
   "fields": {
     "defaults": {
       "title": "Valores predeterminados"
-    },
-    "instructions": {
-      "title": "Instrucciones"
     },
     "summary": {
       "label": "Resumen del negocio",
@@ -397,11 +403,6 @@
   "identity": { "title": "Nombre, saludo y voz" },
   "transfers": { "title": "Transferencias" },
   "businessDetails": { "title": "Datos del negocio" },
-  "instructions": {
-    "voice": { "label": "Llamadas", "placeholder": "Responde en pocas palabras y ofrece agendar una cita." },
-    "chat": { "label": "Chats", "hint": "Chat del sitio web e Instagram.", "placeholder": "Responde en dos o tres frases." },
-    "text": { "label": "Mensajes de texto", "placeholder": "Mantén las respuestas por debajo de 300 caracteres." }
-  },
   "staffFirst": {
     "title": "El personal responde primero",
     "save": "Guardar el personal responde primero",

@@ -30,7 +30,7 @@ function Meter({ label, used, included }: { label: string; used: number; include
   const count = (value: number) => new Intl.NumberFormat(intlLocale(i18n.language)).format(value);
   return (
     <div className="flex flex-col gap-2 border-b border-border px-6 py-5 last:border-b-0">
-      <div className="flex items-center justify-between gap-4 text-[15px] leading-6">
+      <div className="flex items-center justify-between gap-4 type-body">
         <span className="font-medium">{label}</span>
         <span className="tabular-nums text-muted-foreground">{included === null ? t("billing.pool.noLimit", { used: count(used) }) : `${count(used)} / ${count(included)}`}</span>
       </div>
@@ -50,8 +50,8 @@ export function PoolUsageSection({ usage, pool }: { usage: PoolUsage; pool: { vo
   return (
     <section aria-labelledby="partner-billing-pool" className="flex flex-col gap-3">
       <div className="flex flex-col gap-1">
-        <h2 className="text-sm font-medium text-muted-foreground" id="partner-billing-pool">{t("billing.pool.title")}</h2>
-        <p className="text-sm text-muted-foreground">{t("billing.pool.description", { resetsAt })}</p>
+        <h2 className="type-title text-muted-foreground" id="partner-billing-pool">{t("billing.pool.title")}</h2>
+        <p className="type-body-muted">{t("billing.pool.description", { resetsAt })}</p>
       </div>
       <Surface className="p-0">
         <Meter included={pool.voiceSeconds === null ? null : Math.floor(pool.voiceSeconds / 60)} label={t("billing.pool.minutes")} used={Math.ceil(usage.voiceSecondsUsed / 60)} />
@@ -93,7 +93,7 @@ export function PoolOverageSection({ partnerId, overage, spendCents }: { partner
 
   // Free bills no overage, so it skips what overage does and says why instead.
   const header = (
-    <h2 className="text-sm font-medium text-muted-foreground" id="partner-billing-overage">{t("billing.overage.title")}</h2>
+    <h2 className="type-title text-muted-foreground" id="partner-billing-overage">{t("billing.overage.title")}</h2>
   );
   // Free has no overage, so there is nothing to show or change.
   if (!overage.billed) return null;
@@ -105,13 +105,13 @@ export function PoolOverageSection({ partnerId, overage, spendCents }: { partner
       {header}
       <Surface className="flex flex-col gap-6 px-6 py-5">
         <div className="flex items-center justify-between gap-4">
-          <Label className="text-[15px] font-medium" htmlFor="partner-pool-overage">{t("billing.overage.toggle")}</Label>
+          <Label className="type-title" htmlFor="partner-pool-overage">{t("billing.overage.toggle")}</Label>
           <Switch checked={overage.enabled} disabled={busy} id="partner-pool-overage" onCheckedChange={(enabled) => save.mutate({ enabled, capCents: overage.capCents })} />
         </div>
         {overage.enabled ? (
           <>
             <div className="flex flex-col gap-2">
-              <div className="flex flex-wrap items-center justify-between gap-2 text-[15px]">
+              <div className="flex flex-wrap items-center justify-between gap-2 type-body">
                 <span className="font-medium">{overage.capCents === null ? t("billing.overage.noCap") : t("billing.overage.spend")}</span>
                 <span className="tabular-nums text-muted-foreground">
                   {overage.capCents === null
@@ -124,13 +124,13 @@ export function PoolOverageSection({ partnerId, overage, spendCents }: { partner
                   <div className={capReached ? "h-full rounded-full bg-destructive" : "h-full rounded-full bg-foreground"} style={{ width: `${overage.capCents === 0 ? 100 : Math.min(100, (spendCents / overage.capCents) * 100)}%` }} />
                 </div>
               ) : null}
-              {capReached ? <span className="text-sm leading-6 text-destructive">{t("billing.overage.capReached")}</span> : null}
+              {capReached ? <span className="type-body text-destructive">{t("billing.overage.capReached")}</span> : null}
             </div>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
               <div className="flex w-full max-w-xs flex-col gap-2">
                 <Label htmlFor="partner-pool-overage-cap">{t("billing.overage.capLabel")}</Label>
                 <div className="relative">
-                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
+                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 type-body-muted">$</span>
                   <Input className="pl-7" disabled={busy} id="partner-pool-overage-cap" inputMode="decimal" onChange={(event) => setCapInput(event.target.value)} placeholder={t("billing.overage.capPlaceholder")} value={capInput} />
                 </div>
               </div>

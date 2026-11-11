@@ -5,6 +5,14 @@
 
 import type { RuntimeLocale } from "@lobbystack/shared";
 
+/**
+ * A check-in on a quiet caller, however GPT-Live words it: "Are you still
+ * there?", "Are you still with me?", "Are you still on the line?", "Can you
+ * hear me?", or a line that opens with "Hello?". A goodbye or an answer
+ * without a check-in doesn't match.
+ */
+export const SILENCE_CHECK_IN = /\b(?:still (?:there|with me|on the line|here)|are you there|can you hear me)\b|^\s*hello\s*[?？]/imu;
+
 /** Words the caller says, or keys they press on the phone's keypad (0-9, * and #). */
 export type CallerLine = { text: string; pauseMs?: number } | { digits: string; pauseMs?: number };
 
@@ -43,7 +51,7 @@ export const SCENARIOS: CallScenario[] = [
   { name: "one-more-thing", expect: "continues", lines: [{ text: "No, that's everything." }, { text: "Oh wait, one more thing.", pauseMs: 3_000 }, { text: "Do you have parking?", pauseMs: 3_000 }] },
   // The caller goes quiet after the answer. The receptionist asks twice whether
   // they're still there, then says goodbye and hangs up, about 30 seconds in.
-  { name: "silent", expect: "ends", lines: [], endSilenceMs: 50_000, mustSay: /\b(still there|are you there)\b/i },
+  { name: "silent", expect: "ends", lines: [], endSilenceMs: 50_000, mustSay: SILENCE_CHECK_IN },
 ];
 
 // Scenarios that book a real appointment, so they run only by name.

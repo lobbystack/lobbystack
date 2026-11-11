@@ -53,7 +53,7 @@ export function AddAgentDialog({ copyFromAgentId, trigger }: { copyFromAgentId?:
     <>
       {trigger(() => setOpen(true))}
       <Dialog onOpenChange={setOpen} open={open}>
-        <DialogContent>
+        <DialogContent size="sm">
           <form className="flex flex-col gap-4" onSubmit={(event) => void submit(event)}>
             <DialogHeader>
               <DialogTitle>{t("agents.addTitle")}</DialogTitle>

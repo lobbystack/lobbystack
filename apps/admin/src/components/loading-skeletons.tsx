@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { statusShape } from "@/components/ui/status";
 import { Surface, surfaceClassName } from "@/components/ui/surface";
 import { Card, CardContent } from "@/components/ui/card";
-import { Table, TableBody, TableCard, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableActionsColumn, TableBody, TableCard, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 
 /** `titles` holds each card's real title, hidden so its placeholder is as wide as the text, or null for a default width. */
@@ -141,74 +141,62 @@ export function AppointmentRowsSkeleton({ label, rows = 5 }: { label: string; ro
   );
 }
 
-/** The appointments calendar and the selected day's list while bookings load. */
-export function AppointmentsCalendarSkeleton({ label, tabs, weeks = 5 }: { label: string; tabs: { range: string[]; view: string[] }; weeks?: number }) {
+/**
+ * Stands in for the appointments calendar while it loads: its header, then a
+ * time grid with a column per day (Day and Week) or a month of days, with a
+ * few booking placeholders. The header holds its real labels, hidden.
+ */
+export function AppointmentsCalendarSkeleton({ label, labels, tabs, view, days }: { label: string; labels: { today: string; title: string }; tabs: { range: string[]; view: string[] }; view: "day" | "week" | "month"; days: number }) {
+  const hours = 9;
   return (
-    <>
-      <div className="flex flex-col gap-4">
-        <span className="sr-only" role="status">{label}</span>
-        <div className="flex flex-wrap items-center gap-2">
-          <Skeleton className="size-8" />
-          <Skeleton className="size-8" />
-          <Skeleton className="h-7 min-w-0 flex-1 basis-24 sm:max-w-56" />
-          <div className="ms-auto flex items-center gap-2">
-            <Skeleton className="h-8 w-16" />
-            <TabsListSkeleton labels={tabs.range} />
-            <TabsListSkeleton labels={tabs.view} />
-          </div>
+    <div aria-busy="true" className="flex min-w-0 flex-col gap-4">
+      <span className="sr-only" role="status">{label}</span>
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-2">
+          <Skeleton className="size-8 rounded-full" />
+          <HiddenTextSkeleton className="shrink-0" skeletonClassName="h-8 rounded-full px-3 type-body">{labels.today}</HiddenTextSkeleton>
+          <Skeleton className="size-8 rounded-full" />
         </div>
-        <div className="rounded-xl border p-2 md:hidden">
-          <div className="grid grid-cols-7">
-            {Array.from({ length: 7 + weeks * 7 }).map((_, index) => (
-              <div className="flex h-12 items-center justify-center" key={index}>
-                <Skeleton className={index < 7 ? "h-3 w-3" : "size-5 rounded-full"} />
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="hidden overflow-x-auto rounded-xl border md:block">
-          <div className="grid min-w-[42rem] grid-cols-7">
-            {Array.from({ length: 7 }).map((_, index) => (
-              <div className="border-b px-3 py-2" key={index}>
-                <Skeleton className="h-3 w-8" />
-              </div>
-            ))}
-            {Array.from({ length: weeks * 7 }).map((_, index) => (
-              <div
-                className={`flex min-h-24 flex-col gap-1.5 p-2 ${index % 7 !== 6 ? "border-r" : ""} ${index >= (weeks - 1) * 7 ? "" : "border-b"}`}
-                key={index}
-              >
-                <Skeleton className="h-4 w-5" />
-              </div>
-            ))}
-          </div>
-        </div>
+        <div className="min-w-0 flex-1 basis-40"><HiddenTextSkeleton className="type-section-title">{labels.title}</HiddenTextSkeleton></div>
+        <TabsListSkeleton labels={tabs.range} />
+        <TabsListSkeleton labels={tabs.view} />
       </div>
-      <section className="flex flex-col gap-3">
-        <div className="px-1">
-          <Skeleton className="h-7 w-48" />
-        </div>
-        <Surface className="p-0">
-          <ul className="divide-y">
-            {Array.from({ length: 2 }).map((_, index) => (
-              <li className="p-1" key={index}>
-                <div className="flex items-center gap-4 px-3 py-3">
-                  <div className="flex w-20 shrink-0 flex-col gap-1">
-                    <Skeleton className="h-5 w-16" />
-                    <Skeleton className="h-4 w-14" />
-                  </div>
-                  <div className="flex min-w-0 flex-1 flex-col gap-1">
-                    <Skeleton className="h-5 w-32" />
-                    <Skeleton className="h-4 w-40" />
-                  </div>
-                  <Skeleton className="h-8 w-20 shrink-0" />
-                </div>
-              </li>
+      {view === "month" ? (
+        <div className="overflow-hidden rounded-xl border">
+          <div className="grid grid-cols-7 border-b">
+            {Array.from({ length: 7 }, (_, index) => <div className="px-2 py-2" key={index}><Skeleton className="h-3 w-8" /></div>)}
+          </div>
+          <div className="grid grid-cols-7">
+            {Array.from({ length: 42 }, (_, index) => (
+              <div className={cn("flex flex-col gap-1 p-1 md:h-32", index % 7 !== 6 && "border-r", index < 35 && "border-b")} key={index}>
+                <Skeleton className="size-7 self-center rounded-full md:self-start" />
+                {index % 3 === 1 ? <Skeleton className="hidden h-5 w-full md:block" /> : <div className="h-3 md:hidden" />}
+              </div>
             ))}
-          </ul>
-        </Surface>
-      </section>
-    </>
+          </div>
+        </div>
+      ) : (
+        <div className="overflow-hidden rounded-xl border">
+          <div className={cn(days > 1 && "min-w-[30rem]")}>
+            <div className="grid border-b" style={{ gridTemplateColumns: `3.5rem repeat(${days}, minmax(0, 1fr))` }}>
+              <div />
+              {Array.from({ length: days }, (_, index) => <div className="flex items-center justify-center gap-1.5 border-l py-2" key={index}><Skeleton className="h-3 w-8" /><Skeleton className="size-7 rounded-full" /></div>)}
+            </div>
+            <div className="grid" style={{ gridTemplateColumns: `3.5rem repeat(${days}, minmax(0, 1fr))` }}>
+              <div className="relative" style={{ height: hours * 48 }}>
+                {Array.from({ length: hours - 1 }, (_, index) => <Skeleton className="absolute right-2 h-3 w-8" key={index} style={{ top: (index + 1) * 48 - 6 }} />)}
+              </div>
+              {Array.from({ length: days }, (_, index) => (
+                <div className="relative border-l" key={index} style={{ height: hours * 48, backgroundImage: "linear-gradient(to bottom, var(--color-border) 1px, transparent 1px)", backgroundSize: "100% 48px" }}>
+                  {index % 2 === 0 ? <Skeleton className="absolute inset-x-0.5" style={{ top: 48 + (index % 3) * 48, height: 48 }} /> : null}
+                  {index % 3 === 1 ? <Skeleton className="absolute inset-x-0.5" style={{ top: 4 * 48, height: 72 }} /> : null}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -347,7 +335,7 @@ export function KnowledgePageSkeleton({ headings, rowsPerPage }: { headings: [ti
     <>
       <TableCard>
         <Table className="min-w-[60rem] w-full table-fixed">
-          <colgroup><col className="w-[20%]" /><col className="w-[46%]" /><col className="w-[12%]" /><col className="w-[22%]" /><col className="w-12" /></colgroup>
+          <colgroup><col className="w-[20%]" /><col className="w-[46%]" /><col className="w-[12%]" /><col className="w-[22%]" /><TableActionsColumn /></colgroup>
           <TableHeader>
             <TableRow>
               <TableHead>{headings[0]}</TableHead>
@@ -389,7 +377,7 @@ export function HeaderButtonSkeleton({ label, trailingIcon = false }: { label: s
   return (
     <Skeleton
       aria-hidden="true"
-      className="inline-flex h-10 shrink-0 items-center gap-2 rounded-full px-5 text-sm font-[550] tracking-[0.01em] whitespace-nowrap"
+      className="inline-flex h-10 shrink-0 items-center gap-2 rounded-full px-5 type-button whitespace-nowrap"
     >
       <span className="invisible size-4 shrink-0" />
       <span className="invisible">{label}</span>
@@ -407,7 +395,7 @@ export function TabsListSkeleton({ labels }: { labels: string[] }) {
     <Skeleton aria-hidden="true" className="inline-flex h-9 w-fit shrink-0 items-center justify-center gap-1 rounded-full p-1">
       {labels.map((label) => (
         <span
-          className="invisible inline-flex h-full flex-1 items-center justify-center border border-transparent px-3 py-1.5 text-xs font-medium whitespace-nowrap"
+          className="invisible inline-flex h-full flex-1 items-center justify-center border border-transparent px-3 py-1.5 type-label whitespace-nowrap"
           key={label}
         >
           {label}
@@ -446,7 +434,7 @@ export function ServicesPageSkeleton({ headings, rowsPerPage }: { headings: [tit
     <>
       <TableCard>
         <Table className="min-w-[60rem] w-full table-fixed">
-          <colgroup><col className="w-[20%]" /><col className="w-[34%]" /><col className="w-[14%]" /><col className="w-[12%]" /><col className="w-[16%]" /><col className="w-12" /></colgroup>
+          <colgroup><col className="w-[25%]" /><col className="w-[42%]" /><col className="w-[18%]" /><col className="w-[15%]" /><col className="w-48" /><TableActionsColumn /></colgroup>
           <TableHeader>
             <TableRow>
               <TableHead>{headings[0]}</TableHead>
@@ -493,14 +481,15 @@ export function EmployeeRowsSkeleton({ rows = 10 }: { rows?: number }) {
   );
 }
 
-/** Placeholder rows for the rules table. The drag handle column is there only for people who can manage rules. */
-export function RuleRowsSkeleton({ handle = true, rows = 10 }: { handle?: boolean; rows?: number }) {
+/** Rules' rows: the handle, title, channel (holding `channelLabel`, the label most rules show, hidden), preview, status, date and menu. */
+export function RuleRowsSkeleton({ channelLabel, handle = true, rows = 10 }: { channelLabel: string; handle?: boolean; rows?: number }) {
   return (
     <>
       {Array.from({ length: rows }).map((_, index) => (
         <TableRow className="hover:bg-transparent" key={index}>
           {handle ? <TableCell className="pr-0"><Skeleton className="size-7 rounded-md" /></TableCell> : null}
           <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+          <TableCell><HiddenTextSkeleton className="type-body">{channelLabel}</HiddenTextSkeleton></TableCell>
           <TableCell className="max-w-0"><Skeleton className="h-4 w-3/4" /></TableCell>
           <TableCell><StatusSkeleton /></TableCell>
           <TableCell><Skeleton className="ms-auto h-4 w-32" /></TableCell>
@@ -512,23 +501,24 @@ export function RuleRowsSkeleton({ handle = true, rows = 10 }: { handle?: boolea
 }
 
 /** The rules table and its pagination, for the moment before the workspace is known and the real table can render. */
-export function RulesPageSkeleton({ headings, rowsPerPage }: { headings: [title: string, preview: string, status: string, added: string]; rowsPerPage: string }) {
+export function RulesPageSkeleton({ channelLabel, headings, rowsPerPage }: { channelLabel: string; headings: [title: string, channel: string, preview: string, status: string, added: string]; rowsPerPage: string }) {
   return (
     <>
       <TableCard>
         <Table className="min-w-[60rem] w-full table-fixed">
-          <colgroup><col className="w-10" /><col className="w-[18%]" /><col className="w-[42%]" /><col className="w-[14%]" /><col className="w-[18%]" /><col className="w-12" /></colgroup>
+          <colgroup><col className="w-12" /><col className="w-[25%]" /><col className="w-[20%]" /><col className="w-[37%]" /><col className="w-[18%]" /><col className="w-48" /><TableActionsColumn /></colgroup>
           <TableHeader>
             <TableRow>
               <TableHead />
               <TableHead>{headings[0]}</TableHead>
               <TableHead>{headings[1]}</TableHead>
               <TableHead>{headings[2]}</TableHead>
-              <TableHead className="text-right">{headings[3]}</TableHead>
+              <TableHead>{headings[3]}</TableHead>
+              <TableHead className="text-right">{headings[4]}</TableHead>
               <TableHead />
             </TableRow>
           </TableHeader>
-          <TableBody aria-busy="true"><RuleRowsSkeleton /></TableBody>
+          <TableBody aria-busy="true"><RuleRowsSkeleton channelLabel={channelLabel} /></TableBody>
         </Table>
       </TableCard>
       <DataTablePaginationSkeleton rowsPerPage={rowsPerPage} />
@@ -543,13 +533,13 @@ export function RulesPageSkeleton({ headings, rowsPerPage }: { headings: [title:
 export function AnalyticsControlsSkeleton({ granularityLabel, rangeLabel }: { granularityLabel: string; rangeLabel: string }) {
   return (
     <>
-      <Skeleton aria-hidden="true" className="inline-flex h-10 shrink-0 items-center gap-2 rounded-full border border-transparent px-5 text-sm font-[550] tracking-[0.01em] whitespace-nowrap">
+      <Skeleton aria-hidden="true" className="inline-flex h-10 shrink-0 items-center gap-2 rounded-full border border-transparent px-5 type-button whitespace-nowrap">
         <span className="invisible">{granularityLabel}</span>
         <span className="invisible size-4 shrink-0" />
       </Skeleton>
       <div aria-hidden="true" className="flex w-fit items-stretch">
         <Skeleton className="size-10 rounded-full rounded-r-none" />
-        <Skeleton className="inline-flex h-10 max-w-56 items-center rounded-full rounded-l-none border border-transparent border-l-0 px-5 text-sm font-[550] tracking-[0.01em] whitespace-nowrap">
+        <Skeleton className="inline-flex h-10 max-w-56 items-center rounded-full rounded-l-none border border-transparent border-l-0 px-5 type-button whitespace-nowrap">
           <span className="invisible truncate">{rangeLabel}</span>
         </Skeleton>
       </div>
@@ -560,7 +550,7 @@ export function AnalyticsControlsSkeleton({ granularityLabel, rangeLabel }: { gr
 /** Stands in for a small outline button such as "Connect" or "Manage", sized from its hidden label. */
 export function SmallButtonSkeleton({ label }: { label: string }) {
   return (
-    <Skeleton aria-hidden="true" className="inline-flex h-8 shrink-0 items-center rounded-full border border-transparent px-3 text-sm font-medium whitespace-nowrap">
+    <Skeleton aria-hidden="true" className="inline-flex h-8 shrink-0 items-center rounded-full border border-transparent px-3 type-title whitespace-nowrap">
       <span className="invisible">{label}</span>
     </Skeleton>
   );
@@ -649,14 +639,14 @@ export function SetupGuideSkeleton({ labels }: { labels: { title: string; skip: 
           <Skeleton aria-hidden="true" className="size-5 shrink-0 rounded-full" />
           <Skeleton aria-hidden="true" className="h-5 w-56 max-w-full" />
         </div>
-        <Skeleton aria-hidden="true" className="inline-flex h-10 shrink-0 items-center rounded-full border border-transparent px-5 text-sm font-[550] tracking-[0.01em] whitespace-nowrap"><span className="invisible">{labels.skip}</span></Skeleton>
+        <Skeleton aria-hidden="true" className="inline-flex h-10 shrink-0 items-center rounded-full border border-transparent px-5 type-button whitespace-nowrap"><span className="invisible">{labels.skip}</span></Skeleton>
       </div>
       <Surface>
         <div className="divide-y divide-border">
           {labels.steps.map((step) => (
             <div className="flex min-h-16 items-center gap-4 px-6" key={step}>
               <Skeleton aria-hidden="true" className="size-6 shrink-0 rounded-full" />
-              <HiddenTextSkeleton className="text-base">{step}</HiddenTextSkeleton>
+              <HiddenTextSkeleton className="type-body-lg">{step}</HiddenTextSkeleton>
             </div>
           ))}
         </div>
@@ -703,18 +693,18 @@ export function PhoneNumberChooserSkeleton({ labels, rows = 4 }: { labels: { cou
     <div aria-busy="true" className="flex flex-col gap-6">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-[140px_1fr_160px_auto] sm:items-end">
         <div className="flex flex-col gap-2">
-          <span className="text-sm font-medium">{labels.country}</span>
+          <span className="type-title">{labels.country}</span>
           <Skeleton aria-hidden="true" className="h-10 w-20 rounded-xl" />
         </div>
         <div aria-hidden="true" className="hidden sm:block" />
         <div className="flex flex-col gap-2">
-          <span className="text-sm font-medium">{labels.areaCode}</span>
+          <span className="type-title">{labels.areaCode}</span>
           <Skeleton aria-hidden="true" className="h-10 w-full rounded-xl" />
         </div>
-        <HiddenTextSkeleton skeletonClassName="inline-flex h-10 w-full items-center justify-center rounded-full px-5 text-sm font-[550] tracking-[0.01em] whitespace-nowrap sm:w-fit">{labels.search}</HiddenTextSkeleton>
+        <HiddenTextSkeleton skeletonClassName="inline-flex h-10 w-full items-center justify-center rounded-full px-5 type-button whitespace-nowrap sm:w-fit">{labels.search}</HiddenTextSkeleton>
       </div>
       <Surface className="flex h-96 flex-col">
-        <div className="flex h-14 shrink-0 items-center border-b border-border px-4 text-sm font-medium text-muted-foreground">
+        <div className="flex h-14 shrink-0 items-center border-b border-border px-4 type-title text-muted-foreground">
           <span>{labels.phoneNumber}</span>
         </div>
         <div className="flex flex-col gap-3 px-4 py-4">
@@ -736,24 +726,24 @@ export function OnboardingBrandSkeleton({ labels }: { labels: { name: string; na
     <div aria-busy="true" className="flex flex-col gap-4">
       <div className="flex flex-col gap-5">
         <div className="flex flex-col gap-3">
-          <span className="text-sm leading-snug font-medium">{labels.name}</span>
+          <span className="type-title">{labels.name}</span>
           <Skeleton aria-hidden="true" className="h-10 w-full rounded-xl" />
-          <HiddenTextSkeleton className="text-sm">{labels.nameHint}</HiddenTextSkeleton>
+          <HiddenTextSkeleton className="type-body">{labels.nameHint}</HiddenTextSkeleton>
         </div>
         <div className="flex flex-col gap-3">
-          <span className="text-sm leading-snug font-medium">{labels.logo}</span>
+          <span className="type-title">{labels.logo}</span>
           <Skeleton aria-hidden="true" className="flex w-full items-center gap-3 rounded-xl px-4 py-3">
             <span className="invisible size-10 shrink-0 rounded-full" />
-            <span className="invisible text-sm font-medium">{labels.logoChoose}</span>
+            <span className="invisible type-title">{labels.logoChoose}</span>
           </Skeleton>
-          <HiddenTextSkeleton className="text-sm">{labels.logoHint}</HiddenTextSkeleton>
+          <HiddenTextSkeleton className="type-body">{labels.logoHint}</HiddenTextSkeleton>
         </div>
         <div className="flex flex-col gap-2">
-          <span className="text-xs font-medium text-muted-foreground">{labels.preview}</span>
+          <span className="type-meta">{labels.preview}</span>
           <Surface className="px-4 py-5"><Skeleton aria-hidden="true" className="mx-auto h-6 w-40" /></Surface>
         </div>
       </div>
-      <HiddenTextSkeleton className="mt-2" skeletonClassName="flex h-10 w-full items-center justify-center rounded-full text-sm font-[550] tracking-[0.01em]">{labels.continue}</HiddenTextSkeleton>
+      <HiddenTextSkeleton className="mt-2" skeletonClassName="flex h-10 w-full items-center justify-center rounded-full type-button">{labels.continue}</HiddenTextSkeleton>
       <HiddenTextSkeleton className="text-center" skeletonClassName="mx-auto h-5">{labels.skip}</HiddenTextSkeleton>
     </div>
   );
@@ -764,14 +754,14 @@ export function VerifyPhoneFormSkeleton({ labels }: { labels: { mobileNumber: st
   return (
     <div aria-busy="true" className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
-        <span className="text-sm font-medium">{labels.mobileNumber}</span>
+        <span className="type-title">{labels.mobileNumber}</span>
         <div className="flex min-w-0">
           <Skeleton aria-hidden="true" className="h-10 w-24 rounded-l-xl rounded-r-none" />
           <Skeleton aria-hidden="true" className="h-10 min-w-0 flex-1 rounded-l-none rounded-r-xl" />
         </div>
-        <HiddenTextSkeleton className="text-sm">{labels.hint}</HiddenTextSkeleton>
+        <HiddenTextSkeleton className="type-body">{labels.hint}</HiddenTextSkeleton>
       </div>
-      <HiddenTextSkeleton className="mt-2" skeletonClassName="flex h-10 w-full items-center justify-center rounded-full text-sm font-[550] tracking-[0.01em]">{labels.submit}</HiddenTextSkeleton>
+      <HiddenTextSkeleton className="mt-2" skeletonClassName="flex h-10 w-full items-center justify-center rounded-full type-button">{labels.submit}</HiddenTextSkeleton>
     </div>
   );
 }
@@ -794,7 +784,7 @@ export function OnboardingOptionsSkeleton({ gridClassName, itemClassName, labels
   return (
     <div aria-busy="true" className={gridClassName}>
       {labels.map((label) => (
-        <Skeleton aria-hidden="true" className={`flex items-center rounded-xl px-4 text-sm font-medium ${itemClassName}`} key={label}>
+        <Skeleton aria-hidden="true" className={`flex items-center rounded-xl px-4 type-title ${itemClassName}`} key={label}>
           <span className="invisible">{label}</span>
         </Skeleton>
       ))}
@@ -824,7 +814,7 @@ export function MeetFormSkeleton({ labels }: { labels: { name: string; voice: st
     <div aria-busy="true" className="flex flex-col gap-4">
       {([["name", "h-10 rounded-xl"], ["voice", "h-10 rounded-xl"], ["greeting", "h-28 rounded-xl"], ["language", "h-10 rounded-xl"]] as const).map(([key, size]) => (
         <div className="flex flex-col gap-2" key={key}>
-          <span className="text-sm leading-snug font-medium">{labels[key]}</span>
+          <span className="type-title">{labels[key]}</span>
           <Skeleton aria-hidden="true" className={`w-full ${size}`} />
         </div>
       ))}

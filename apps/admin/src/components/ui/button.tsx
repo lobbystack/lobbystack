@@ -15,7 +15,7 @@ import type { ReactNode } from "react"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "group/button inline-flex shrink-0 items-center justify-center rounded-full border border-transparent bg-clip-padding text-sm font-[550] tracking-[0.01em] whitespace-nowrap transition-all outline-none select-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "group/button inline-flex shrink-0 items-center justify-center rounded-full border border-transparent bg-clip-padding whitespace-nowrap transition-all outline-none select-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
@@ -33,18 +33,18 @@ const buttonVariants = cva(
         link: "text-primary underline-offset-4 hover:underline",
       },
       // Polar's Orbit Button sizes (github.com/polarsource/polar, clients/packages/orbit/src/components/Button.tsx):
-      // default h-10 px-5 text-sm, sm h-8 px-3 text-xs, lg h-12 px-5 text-sm, and square icon buttons at
+      // default h-10 px-5 text-sm, sm h-8 px-3 text-xs, lg h-12 px-5 text-sm (type-button and type-button-sm), and square icon buttons at
       // those heights. Orbit spaces an icon from its label by hand; gap does that here. xs has no Orbit size
       // and stays the smallest step below sm.
       size: {
-        default: "h-10 gap-2 px-5",
-        xs: "h-6 gap-1 px-2.5 text-xs [&_svg:not([class*='size-'])]:size-3",
-        sm: "h-8 gap-1.5 px-3 text-xs",
-        lg: "h-12 gap-2 px-5",
-        icon: "size-10",
-        "icon-xs": "size-6 [&_svg:not([class*='size-'])]:size-3",
-        "icon-sm": "size-8",
-        "icon-lg": "size-12",
+        default: "h-10 gap-2 px-5 type-button",
+        xs: "h-6 gap-1 px-2.5 type-button-sm [&_svg:not([class*='size-'])]:size-3",
+        sm: "h-8 gap-1.5 px-3 type-button-sm",
+        lg: "h-12 gap-2 px-5 type-button",
+        icon: "size-10 type-button",
+        "icon-xs": "size-6 type-button [&_svg:not([class*='size-'])]:size-3",
+        "icon-sm": "size-8 type-button",
+        "icon-lg": "size-12 type-button",
       },
     },
     defaultVariants: {

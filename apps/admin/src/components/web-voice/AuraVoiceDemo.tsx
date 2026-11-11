@@ -173,7 +173,7 @@ export function AuraVoiceDemo({
       {errorKey ? (
         <p
           className={cn(
-            "mt-4 max-w-sm text-sm",
+            "mt-4 max-w-sm type-body",
             auraTone === "dark" ? "text-red-300" : "text-destructive",
           )}
         >

@@ -48,8 +48,7 @@
       "security": "lozinka, prijava, imejl, e-pošta, profil, bezbednost",
       "phone": "prosleđivanje, operater, broj, linija, poziv, pozivi",
       "voice": "akcenat, zvuk, ton, pozdrav, dobrodošlica, zdravo, ime",
-      "instructions": "uputstvo, uputstva, skripta, ponašanje",
-      "rules": "pravilo, eskalacija, predaja",
+      "rules": "pravilo, pravila, eskalacija, predaja, uputstvo, uputstva, skripta, ponašanje",
       "handling": "preusmeravanje, osoblje prvo, zakazivanje, izmene termina, otkazivanje, pomeranje, broj za preusmeravanje, osoblje se javlja prvo",
       "business": "radno vreme, sati, otvoreno, zatvoreno, praznik, vremenska zona, jezik, valuta",
       "knowledge": "česta pitanja, odgovor, odgovori, sajt, dokument, pdf, naučiti",
@@ -78,6 +77,7 @@
     "workspaceReady": "Radni prostor je spreman",
     "upgradeToPro": "Pređite na Pro",
     "account": "Nalog",
+    "accountSettings": "Podešavanja naloga",
     "partnerConsole": "Partnerska konzola",
     "toggleTheme": "Promeni temu",
     "support": "Podrška",
@@ -89,7 +89,6 @@
   },
   "agentPages": {
     "general": "Opšte",
-    "instructions": "Uputstva",
     "rules": "Pravila",
     "channels": "Kanali",
     "phone": "Broj telefona",
@@ -182,5 +181,16 @@
     "moveDescription": "Otvoreni razgovori se takođe premeštaju, a od sada odgovara {{name}}.",
     "moved": "{{channel}} je premešten na agenta {{name}}",
     "moveFailed": "Nismo uspeli da premestimo."
+  },
+  "mobileNav": {
+    "label": "Glavni meni",
+    "menu": "Meni",
+    "allAgents": "Svi agenti",
+    "tabs": {
+      "home": "Početna",
+      "inbox": "Sanduče",
+      "appointments": "Termini",
+      "contacts": "Kontakti"
+    }
   }
 }

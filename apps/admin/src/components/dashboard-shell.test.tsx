@@ -13,7 +13,7 @@ vi.mock("next/navigation", () => ({ usePathname: () => route.pathname, useRouter
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { language: "en" }, t: (key: string, values?: { place?: string }) => values?.place ? `${key}:${values.place}` : key }) }));
 vi.mock("./live-upgrade-plan-provider", () => ({ LiveUpgradePlanProvider: ({ children }: { children: ReactNode }) => <UpgradePlanDialogProvider onOpen={vi.fn()}>{children}</UpgradePlanDialogProvider> }));
 vi.mock("@/components/navigation/shell-runtime", () => ({ ShellRuntime: () => null }));
-vi.mock("./nav-user", () => ({ NavUser: () => null }));
+vi.mock("./nav-user", async (importOriginal) => ({ ...await importOriginal<typeof import("./nav-user")>(), NavUser: () => null }));
 
 const agent = (id: string, name: string, overrides: Partial<AgentListItem> = {}): AgentListItem => ({ id, name, isDefault: false, paused: false, phoneNumbers: 0, widgetKeys: 0, instagramAccounts: 0, createdAt: "2026-01-01T00:00:00Z", updatedAt: "2026-01-01T00:00:00Z", ...overrides });
 const FRONT = agent("agent-1", "Front desk", { isDefault: true, phoneNumbers: 1, widgetKeys: 1 });
@@ -39,7 +39,8 @@ function setup({ role = "business_owner", appointments = [], capabilities, agent
   const view = render(content());
   return { ...view, navigate(pathname: string, search = "") { route.pathname = pathname; route.search = search; view.rerender(content()); } };
 }
-const links = () => screen.getAllByRole("link").map(link => link.getAttribute("href"));
+// The sidebar's links and the skip link; the phone tab bar has its own tests.
+const links = () => screen.getAllByRole("link").filter(link => !link.closest("[data-mobile-tab-bar]")).map(link => link.getAttribute("href"));
 const menu = () => document.querySelector("[data-menu-level]")!;
 
 describe("the workspace menu", () => {
@@ -121,7 +122,7 @@ describe("drilling into an agent, Business and Settings", () => {
     expect(menu().className).toContain("slide-in-from-right");
     expect(within(menu() as HTMLElement).getByRole("button", { name: "items.agents" }).hasAttribute("data-back-row")).toBe(true);
     expect(within(menu() as HTMLElement).getByText("Front desk")).toBeTruthy();
-    expect(within(menu() as HTMLElement).getAllByRole("link").map(link => link.getAttribute("href"))).toEqual(["/agents/agent-1", "/agents/agent-1/instructions", "/agents/agent-1/rules", "/agents/agent-1/channels", "/agents/agent-1/shared"]);
+    expect(within(menu() as HTMLElement).getAllByRole("link").map(link => link.getAttribute("href"))).toEqual(["/agents/agent-1", "/agents/agent-1/rules", "/agents/agent-1/channels", "/agents/agent-1/shared"]);
     // The phone number page keeps Channels lit.
     view.navigate("/agents/agent-1/channels/phone");
     expect(screen.getByRole("link", { name: /agentPages\.channels/ }).hasAttribute("data-active")).toBe(true);
@@ -192,20 +193,25 @@ describe("the collapsed rail", () => {
 });
 
 describe("on a phone", () => {
-  it("closes the drawer for a page and keeps it open to drill into an agent or Settings", async () => {
+  it("swaps the sidebar for the tab bar and its menu sheet, with no drawer", async () => {
     window.innerWidth = 390;
     setup();
-    await userEvent.click(screen.getByRole("button", { name: "accessibility.toggleSidebar" }));
-    let drawer = await screen.findByRole("dialog");
-    await userEvent.click(within(drawer).getByRole("button", { name: "items.inbox" }));
-    expect(route.router.push).toHaveBeenLastCalledWith("/inbox");
-    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(document.querySelector('[data-slot="sidebar"]')).toBeNull();
+    expect(screen.queryByRole("button", { name: "accessibility.toggleSidebar" })).toBeNull();
+    const tabs = screen.getByRole("navigation", { name: "mobileNav.label" });
+    expect(within(tabs).getAllByRole("link").map(link => link.getAttribute("href"))).toEqual(["/", "/inbox", "/appointments", "/contacts"]);
+    expect(within(tabs).getByRole("link", { name: "mobileNav.tabs.home" }).getAttribute("aria-current")).toBe("page");
+    await userEvent.click(within(tabs).getByRole("button", { name: "mobileNav.menu" }));
+    const sheet = await screen.findByRole("dialog", { name: /mobileNav\.menu/ });
+    expect(within(sheet).getByRole("link", { name: /items\.analytics/ }).getAttribute("href")).toBe("/analytics");
+    await userEvent.click(within(sheet).getByRole("button", { name: "items.agents" }));
+    expect(within(sheet).getAllByRole("link").map(link => link.getAttribute("href"))).toContain("/agents/agent-1/rules");
+  });
 
-    await userEvent.click(screen.getByRole("button", { name: "accessibility.toggleSidebar" }));
-    drawer = await screen.findByRole("dialog");
-    await userEvent.click(within(drawer).getByRole("button", { name: /items\.agents/ }));
-    expect(route.router.push).toHaveBeenLastCalledWith("/agents/agent-1");
-    expect(screen.getByRole("dialog")).toBeTruthy();
+  it("keeps the content above the tab bar", () => {
+    window.innerWidth = 390;
+    const view = setup();
+    expect((view.container.firstElementChild as HTMLElement).className).toContain("max-md:pb-[calc(3.5rem+env(safe-area-inset-bottom))]");
   });
 });
 

@@ -197,7 +197,7 @@ export function AgentHandlingSection({ agentId, businessId, canManage }: AgentSe
   return (
     <div aria-busy={isLoadingConfiguration || undefined} className="flex w-full flex-col gap-8">
       <section className="flex flex-col gap-3">
-        <h2 className="font-heading text-sm leading-snug font-medium">{t("agent:transfers.title")}</h2>
+        <h2 className="type-title">{t("agent:transfers.title")}</h2>
         <Surface className="flex flex-col">
           <Item className={settingRowClassName} variant="default">
             <ItemContent>
@@ -255,7 +255,7 @@ export function AgentHandlingSection({ agentId, businessId, canManage }: AgentSe
       <StaffFirstSection block={configuration?.staffFirstBlock ?? null} businessId={businessId} canManage={canManage} defaultLocale={configuration?.business?.defaultLocale ?? "en"} isLoading={isLoadingConfiguration} key={agentId} onSave={(patch) => save(patch)} profile={persistedProfile} />
 
       <section className="flex flex-col gap-3">
-        <h2 className="font-heading text-sm leading-snug font-medium">{t("agent:booking.title")}</h2>
+        <h2 className="type-title">{t("agent:booking.title")}</h2>
         <Surface className="flex flex-col">
           <Item className={settingRowClassName} variant="default">
             <ItemContent>
@@ -292,7 +292,7 @@ export function AgentHandlingSection({ agentId, businessId, canManage }: AgentSe
       </section>
 
       <section className="flex flex-col gap-3">
-        <h2 className="font-heading text-sm leading-snug font-medium">{t("agent:appointmentChanges.title")}</h2>
+        <h2 className="type-title">{t("agent:appointmentChanges.title")}</h2>
         <Surface className="flex flex-col">
           <Item className={settingRowClassName} variant="default">
             <ItemContent>

@@ -84,7 +84,7 @@ function RowText({ description, label, loading }: { description: string; label: 
   if (loading) return (
     <ItemContent>
       <ItemTitle aria-hidden="true"><Skeleton className="w-fit"><span className="invisible">{label}</span></Skeleton></ItemTitle>
-      <div aria-hidden="true" className="text-sm"><Skeleton className="w-fit max-w-full"><span className="invisible">{description}</span></Skeleton></div>
+      <div aria-hidden="true" className="type-body"><Skeleton className="w-fit max-w-full"><span className="invisible">{description}</span></Skeleton></div>
     </ItemContent>
   );
   return <ItemContent><ItemTitle>{label}</ItemTitle><ItemDescription>{description}</ItemDescription></ItemContent>;

@@ -62,10 +62,10 @@ function WorkspaceMenu({ onDrillIn, section }: { onDrillIn: () => void; section:
   const agentsLink: NavLink = hasChoice
     ? { ...links.agents, isActive: (pathname) => pathname === "/agents" || agentsLevel !== "root", ...(agentsLevel !== "root" ? { trailing: trailing(agentsLevel), ...drill(agentsLevel) } : {}), children: listed.map((agent) => {
       const level: MenuLevel = `agent:${agent.id}`;
-      return <MenuRow active={level === section} href={agentHref(agent.id)} indented keepOpen key={agent.id} label={agent.name} title={agent.name} trailing={trailing(level)} {...drill(level)} />;
+      return <MenuRow active={level === section} href={agentHref(agent.id)} indented key={agent.id} label={agent.name} title={agent.name} trailing={trailing(level)} {...drill(level)} />;
     }) }
-    : { ...links.agents, keepOpen: true, trailing: trailing(sectionAgent ? section : "root"), ...(sectionAgent ? drill(section) : {}) };
-  const sectionLink = (link: NavLink, level: MenuLevel): NavLink => ({ ...link, keepOpen: true, isActive: () => section === level, trailing: trailing(level), ...drill(level) });
+    : { ...links.agents, trailing: trailing(sectionAgent ? section : "root"), ...(sectionAgent ? drill(section) : {}) };
+  const sectionLink = (link: NavLink, level: MenuLevel): NavLink => ({ ...link, isActive: () => section === level, trailing: trailing(level), ...drill(level) });
   // Three groups with a line between them: the conversations, the records, then the sections that open their own menus.
   const groups = [
     allowed([links.home, links.inbox]),

@@ -30,7 +30,7 @@ type TimeZoneItemGroup = { value: string; label: string; items: TimeZoneOption[]
 type CurrencyOption = { id: string; label: string };
 
 // Matches SelectTrigger, so the searchable timezone picker looks like the selects beside it.
-const COMBOBOX_TRIGGER_CLASS = "flex h-9 w-full min-w-0 items-center justify-between gap-1.5 rounded-xl border border-input bg-input/30 px-3 py-2 text-sm whitespace-nowrap transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 sm:w-56";
+const COMBOBOX_TRIGGER_CLASS = "flex h-9 w-full min-w-0 items-center justify-between gap-1.5 rounded-xl border border-input bg-input/30 px-3 py-2 type-body whitespace-nowrap transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 sm:w-56";
 
 /** The workspace's business details, which every agent shares: summary, languages, time zone, currency and opening hours. */
 export function WorkspaceBusinessSection({ businessId, canManage, heading = true }: { businessId: string; canManage: boolean; /** Off on the page of the same name, whose header already says it. */ heading?: boolean }) {
@@ -220,7 +220,7 @@ export function WorkspaceBusinessSection({ businessId, canManage, heading = true
   return (
     <div aria-busy={isLoadingConfiguration || undefined} className="flex w-full flex-col gap-8">
       <section className="flex flex-col gap-3">
-        {heading ? <h2 className="font-heading text-sm leading-snug font-medium">{t("agent:businessDetails.title")}</h2> : null}
+        {heading ? <h2 className="type-title">{t("agent:businessDetails.title")}</h2> : null}
         <Surface className="flex flex-col">
           <Item className={settingRowClassName} variant="default">
             <ItemContent>
@@ -254,7 +254,7 @@ export function WorkspaceBusinessSection({ businessId, canManage, heading = true
                 toast.success(t("agent:fields.summary.rewriteCompleted"));
               }
             }} open={isSummaryOpen}>
-              <DialogContent className="flex flex-col gap-4">
+              <DialogContent size="sm" className="flex flex-col gap-4">
                 <DialogHeader><DialogTitle>{t("agent:fields.summary.label")}</DialogTitle></DialogHeader>
                 <div className="relative overflow-hidden rounded-xl">
                   <Textarea
@@ -282,7 +282,7 @@ export function WorkspaceBusinessSection({ businessId, canManage, heading = true
                   ) : null}
                 </div>
                 {rewritingInDialog ? (
-                  <p className="flex items-center gap-2 text-sm text-muted-foreground" role="status">
+                  <p className="flex items-center gap-2 type-body-muted" role="status">
                     <Sparkles aria-hidden="true" className="size-4 animate-pulse" />
                     {t("agent:fields.summary.regenerating")}
                   </p>
@@ -293,7 +293,7 @@ export function WorkspaceBusinessSection({ businessId, canManage, heading = true
                       <Button disabled={isSummarySaving || !canManage || !canRewriteSummary || awaitingRewrite} onClick={() => void saveSummary(true)} type="button" variant="ghost">
                         {t("agent:fields.summary.regenerate")}
                       </Button>
-                      {!canRewriteSummary ? <p className="text-xs text-muted-foreground">{t("agent:fields.summary.rewriteNeedsKnowledge")}</p> : null}
+                      {!canRewriteSummary ? <p className="type-caption text-muted-foreground">{t("agent:fields.summary.rewriteNeedsKnowledge")}</p> : null}
                     </div>
                   ) : <span className="hidden sm:block" />}
                   <div className="flex flex-col-reverse gap-2 sm:flex-row">

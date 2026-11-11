@@ -338,6 +338,17 @@ export const partnerDomains = pgTable(
   ],
 );
 
+// The dashboard intro cards a person has closed, one row each (migration 0206). 'dashboard' marks their first visit.
+export const userPageIntros = pgTable(
+  "user_page_intros",
+  {
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    intro: text("intro").notNull(),
+    seenAt: timestamp("seen_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.intro] })],
+);
+
 // The business a person last worked in on each partner's domains. The host's own domain keeps users.activeBusinessId.
 export const userActiveBusinesses = pgTable(
   "user_active_businesses",
@@ -623,6 +634,8 @@ export const closures = pgTable(
     startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
     endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
     reason: text("reason").notNull(),
+    // Staff-only detail, such as why someone is off. Never sent to the agent.
+    note: text("note"),
     ...timestamps,
   },
   (table) => [index("closures_business_starts_idx").on(table.businessId, table.startsAt)],
@@ -745,6 +758,8 @@ export const agents = pgTable(
     // The outcome of the last "Rewrite with AI"; null when none was asked for.
     summaryRegenerateStatus: varchar("summary_regenerate_status", { length: 16 }).$type<"pending" | "completed" | "empty" | "failed">(),
     bookingPolicy: text("booking_policy").notNull(),
+    // Deprecated: migration 0203 moved them into rules kept to their channel,
+    // and no code reads or writes them. A later release drops them.
     voiceInstructions: text("voice_instructions"),
     smsInstructions: text("sms_instructions"),
     chatInstructions: text("chat_instructions"),
@@ -1103,6 +1118,9 @@ export const appointments = pgTable(
     calendarSyncState: varchar("calendar_sync_state", { length: 32 }).default("not_required").notNull(),
     calendarExternalId: text("calendar_external_id"),
     videoUrl: text("video_url"),
+    // The agent can read notes once the caller is verified; internal notes stay in the dashboard (migration 0205).
+    notes: text("notes"),
+    internalNotes: text("internal_notes"),
     revision: integer("revision").default(0).notNull(),
     ...legacyId,
     ...timestamps,
@@ -1251,6 +1269,9 @@ export const agentRules = pgTable(
     sortOrder: integer("sort_order").default(0).notNull(),
     // The agent this rule shapes. Migration 0184's trigger fills it with the default agent.
     agentId: uuid("agent_id"),
+    // The one channel the rule applies on (voice covers browser calls too). Null: every channel.
+    // agent_rules_channel_check holds it to ruleChannels in @lobbystack/shared.
+    channel: varchar("channel", { length: 16 }).$type<"voice" | "sms" | "web_chat" | "instagram">(),
     ...legacyId,
     ...timestamps,
   },
@@ -2467,6 +2488,7 @@ export const schema = {
   partnerPackages,
   businesses,
   userActiveBusinesses,
+  userPageIntros,
   partnerBusinessOpens,
   businessTemplates,
   businessTemplateFiles,

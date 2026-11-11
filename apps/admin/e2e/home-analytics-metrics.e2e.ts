@@ -22,13 +22,14 @@ test("Home shows booked value and an Upcoming row with a chevron, and Analytics 
     fixtures.businessIds.push(owner.businessId);
     const { businessId } = owner;
 
-    // The agent booked a $50 cut by phone for tomorrow, and answered one two-minute call.
+    // The agent booked a $50 cut by phone for tomorrow, and answered one two-minute call an hour ago.
     const [employee] = await database.db.insert(staff).values({ businessId, name: "Sam", timezone: "UTC" }).returning();
     const [service] = await database.db.insert(services).values({ businessId, name: "Cut", slug: "cut", durationMinutes: 30, priceType: "fixed", priceMinor: 5_000 }).returning();
     const [contact] = await database.db.insert(contacts).values({ businessId, name: "Ana Silva", phone: "+14165550100" }).returning();
     const startsAt = new Date(Date.now() + 86_400_000);
     await database.db.insert(appointments).values({ businessId, contactId: contact!.id, staffId: employee!.id, serviceId: service!.id, startsAt, endsAt: new Date(startsAt.getTime() + 30 * 60_000), timezone: "UTC", status: "confirmed", sourceChannel: "voice" });
     const [conversation] = await database.db.insert(conversations).values({ businessId, contactId: contact!.id, channel: "voice" }).returning();
+    // An hour ago falls inside the business's last 30 days at any hour, even when it is already tomorrow in UTC.
     const startedAt = new Date(Date.now() - 60 * 60_000);
     await database.db.insert(calls).values({ businessId, contactId: contact!.id, conversationId: conversation!.id, providerCallId: randomUUID(), transport: "voice", status: "completed", startedAt, endedAt: new Date(startedAt.getTime() + 120_000), providerDurationSeconds: 120 });
 

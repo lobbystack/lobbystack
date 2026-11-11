@@ -70,18 +70,18 @@ export function AgentIdentitySection({ agentId, businessId, canManage }: AgentSe
   const disabled = loading || !profile || !canManage;
   return (
     <section aria-busy={loading || undefined} className="flex flex-col gap-3">
-      <h2 className="font-heading text-sm leading-snug font-medium">{t("agent:identity.title")}</h2>
+      <h2 className="type-title">{t("agent:identity.title")}</h2>
       <Surface className="flex flex-col">
         <TextSettingRow description={t("agent:fields.name.hint")} disabled={disabled} id="agent-name" label={t("agent:fields.name.label")} maxLength={AGENT_NAME_MAX_LENGTH} onSave={(value) => saveText("name", value)} singleLine value={profile?.name ?? ""} />
         <TextSettingRow description={t("agent:fields.greeting.hint")} disabled={disabled} id="agent-greeting" label={t("agent:fields.greeting.label")} maxLength={RECEPTIONIST_TEXT_MAX_LENGTH} onSave={(value) => saveText("greeting", value)} placeholder={t("agent:fields.greeting.placeholder")} value={profile?.greeting ?? ""} />
         <Item className={settingRowClassName} variant="default">
           <ItemContent>
             <ItemTitle>{t("agent:fields.voice.label")}</ItemTitle>
-            {loading ? <HiddenTextSkeleton className="text-sm">{t("agent:fields.voice.summary", { voice: voiceName(voice), traits: voiceTraits(voice) })}</HiddenTextSkeleton> : <ItemDescription>{t("agent:fields.voice.summary", { voice: voiceName(voice), traits: voiceTraits(voice) })}</ItemDescription>}
+            {loading ? <HiddenTextSkeleton className="type-body">{t("agent:fields.voice.summary", { voice: voiceName(voice), traits: voiceTraits(voice) })}</HiddenTextSkeleton> : <ItemDescription>{t("agent:fields.voice.summary", { voice: voiceName(voice), traits: voiceTraits(voice) })}</ItemDescription>}
           </ItemContent>
           <ItemActions className="w-full sm:w-auto">
             {loading ? (
-              <Skeleton aria-hidden="true" className="inline-flex h-8 items-center rounded-full px-3 text-xs font-[550] tracking-[0.01em]"><span className="invisible">{t("agent:fields.voice.change")}</span></Skeleton>
+              <Skeleton aria-hidden="true" className="inline-flex h-8 items-center rounded-full px-3 type-button-sm"><span className="invisible">{t("agent:fields.voice.change")}</span></Skeleton>
             ) : (
               <Button disabled={!profile || !canManage} onClick={() => setVoiceDialogOpen(true)} size="sm" type="button" variant="outline">{t("agent:fields.voice.change")}</Button>
             )}

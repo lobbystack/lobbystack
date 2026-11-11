@@ -57,7 +57,7 @@ export function TextSettingRow({ allowEmpty = false, description, disabled, id, 
         </Button>
       </ItemActions>
       <Dialog onOpenChange={(next) => { if (!next && !saving) setOpen(false); }} open={open}>
-        <DialogContent className="flex flex-col gap-4">
+        <DialogContent size="sm" className="flex flex-col gap-4">
           <DialogHeader><DialogTitle>{label}</DialogTitle>{description ? <DialogDescription>{description}</DialogDescription> : null}</DialogHeader>
           {singleLine ? <Input aria-label={label} {...field} /> : <Textarea aria-label={label} rows={rows} {...field} />}
           <DialogFooter>

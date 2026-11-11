@@ -1,40 +1,50 @@
 ---
-title: "Review upcoming appointments"
-description: "Review upcoming appointments for the active workspace and check their calendar synchronization status."
+title: "Manage appointments on the calendar"
+description: "See the active workspace's appointments on a day, week or month calendar, book new ones, add time off and check calendar synchronization."
 sidebarTitle: "Appointments"
 contentType: "How-to"
 ---
 
-The **Appointments** page lists upcoming bookings for the active workspace. Use it to review the schedule and check whether each booking reached the connected calendar.
+The **Appointments** page shows the active workspace's bookings on a calendar. Use it to see the schedule, book appointments, block time off and check whether each booking reached the connected calendar.
 
-## Review the schedule
+## Read the calendar
 
-Each row shows:
+Click **Day**, **Week** or **Month** to change the range, and use the arrows or **Today** to move. Week opens by default, and Day opens on phones.
 
-- Appointment time
-- Customer name
-- Service
-- Assigned staff member
-- Appointment status
-- Calendar synchronization status
+- In **Day** and **Week**, each appointment is a block at its time, sized by its length. It shows the customer, the service and the time. Appointments at the same time sit side by side, and a red line marks the current time.
+- In **Month**, each day lists its appointments by time and customer. Click **+N more** or a day's number to open that day.
+- Each service keeps its own color. Past appointments are faded, and cancelled ones are grey and struck through.
+- Hatched areas show when the business is closed: outside the opening hours, during closures, and when an employee is off.
 
-LobbyStack displays each appointment in its saved timezone.
+Times follow the business's timezone, wherever you are. Click an appointment to see its details, move or cancel it, and edit its notes.
+
+To see one employee's appointments, choose them in the employee filter. For a table of upcoming or past appointments, click **List**.
 
 ## Book an appointment
 
-1. Click **New appointment**.
-2. Choose a contact, or click **New contact** and enter a name and phone number. The list shows contacts that have a phone number.
-3. Choose a service. When more than one employee is assigned to it, you can pick one or keep **Anyone available**.
-4. Pick a day and an open time, then click **Book appointment**.
+1. Click an empty time on the calendar, or click **New appointment**. A panel opens beside the calendar, and a draft of the booking appears at that time.
+2. Choose a service. The draft takes the service's color and length. When more than one employee does the service, you can pick one or keep **Anyone available**.
+3. Choose a contact, or click **New contact** and enter a name and phone number. The list shows contacts that have a phone number.
+4. Change **Duration (minutes)** if this visit is longer or shorter than the service.
+5. Pick a day and an open time. If the time you clicked isn't open, the panel says so.
+6. Add **Notes** and **Internal notes** if you need them, then click **Book appointment**.
 
-LobbyStack books it the way the agent does: it checks availability, follows the same rules for confirmation and reminder texts, and adds the appointment to the connected calendar. Viewers can't book appointments. If someone takes the time before you book, pick another one from the refreshed list.
+Your agent can read **Notes** to a caller once it has verified them, and they appear in the API and webhooks. **Internal notes** stay with your team: LobbyStack never sends them to the agent, the customer, the API or webhooks.
 
-## Refresh appointment data
+LobbyStack books it the way the agent does: it checks availability, follows the same rules for confirmation and reminder texts, and adds the appointment to the connected calendar. Viewers can't book appointments. If someone takes the time before you book, pick another one from the refreshed list. Press **Esc** or click **Cancel** to drop the draft.
 
-Click **Refresh** to request the latest appointment list. The page also updates when LobbyStack receives an appointment event.
+## Add time off
+
+1. Click **Time off**.
+2. Choose **Whole business** to close the business, or **One employee** and pick the employee.
+3. Enter a name, such as `Christmas Day`.
+4. Choose **Closed all day**, or **Part of the day** with a start and end time.
+5. Pick the start and end dates, add a reason if you want, and click **Save**.
+
+The calendar shows the time off. Nobody can book the business during a closure, or an employee while they're off, and that includes the agent. The agent can mention a closure's name, but never the reason. Click time off on the calendar to change or delete it. Owners and admins can add time off; you can also edit closures under [opening hours](/settings/business-details) and an employee's days off on the **Employees** page.
 
 ## Investigate a calendar issue
 
-If the **Calendar** column shows a synchronization issue, check the Google Calendar, Cal.com or Calendly connection under **Business** > **Integrations**. Correct any account or permission problem before relying on live availability.
+If an appointment's **Calendar** status shows a synchronization issue, check the Google Calendar, Cal.com or Calendly connection under **Business** > **Integrations**. Correct any account or permission problem before relying on live availability.
 
 Connect [Google Calendar](/integrations/google-calendar), [Cal.com](/integrations/calcom) or [Calendly](/integrations/calendly) before allowing the agent to offer times. Configure caller cancellation and rescheduling under [Appointment changes](/agent/appointment-changes).

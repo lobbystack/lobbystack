@@ -12,8 +12,8 @@ import { openTestWindow, useTestWindowReady } from "@/lib/test-window";
 /**
  * Opens the one test window the shell keeps mounted, for an agent or, without
  * one, the default agent. The shell mounts the window for people who can set
- * agents up; until it's there, a placeholder holds the button's place. Phones
- * get the header's button.
+ * agents up; until it's there, a placeholder holds the button's place. On
+ * phones too it sits in the page header, beside the title.
  */
 export function TestCallButton({ agentId, variant = "outline" }: { agentId?: string; variant?: "default" | "outline" }) {
   const { t } = useTranslation("common");
@@ -24,11 +24,11 @@ export function TestCallButton({ agentId, variant = "outline" }: { agentId?: str
   if (!ready) {
     if (!business && !businesses.isLoading) return null;
     return (
-      <Skeleton aria-hidden="true" className="hidden h-10 shrink-0 items-center gap-2 rounded-full px-5 text-sm font-[550] tracking-[0.01em] whitespace-nowrap md:inline-flex">
+      <Skeleton aria-hidden="true" className="inline-flex h-10 shrink-0 items-center gap-2 rounded-full px-5 type-button whitespace-nowrap">
         <span className="invisible size-4 shrink-0" />
         <span className="invisible">{t("testCall.trigger")}</span>
       </Skeleton>
     );
   }
-  return <Button className="hidden md:inline-flex" onClick={() => openTestWindow(agentId ? { agentId } : {})} type="button" variant={variant}><Phone data-icon="inline-start" />{t("testCall.trigger")}</Button>;
+  return <Button onClick={() => openTestWindow(agentId ? { agentId } : {})} type="button" variant={variant}><Phone data-icon="inline-start" />{t("testCall.trigger")}</Button>;
 }

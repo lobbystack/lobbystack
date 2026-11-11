@@ -99,7 +99,7 @@ export function AgentActionsMenu({ agentId }: { agentId: string }) {
                 <Trash2 />
                 <span className="grid">
                   <span>{t("agents.remove")}</span>
-                  {agent.isDefault ? <span className="text-xs text-muted-foreground">{t("agents.removeDefaultHint")}</span> : null}
+                  {agent.isDefault ? <span className="type-caption text-muted-foreground">{t("agents.removeDefaultHint")}</span> : null}
                 </span>
               </DropdownMenuItem>
             </DropdownMenuGroup>

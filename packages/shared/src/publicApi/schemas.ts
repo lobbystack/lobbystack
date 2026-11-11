@@ -3,7 +3,8 @@ import { z } from "zod";
 import { billingPlanSlugs } from "../billing";
 import { interfaceLocales, runtimeLocales } from "../locales";
 import { partnerAccessLevels } from "../partners";
-import { appointmentChangeVerificationModes, bookingModes, STAFF_FIRST_MESSAGE_MAX_LENGTH, staffFirstModes, staffFirstRingSeconds, CONTACT_PASSCODE_DEFAULT_LENGTH, CONTACT_PASSCODE_LOCK_ATTEMPTS, CONTACT_PASSCODE_MAX_LENGTH, CONTACT_PASSCODE_MIN_LENGTH, isContactPasscode, isGuessableContactPasscode, RECEPTIONIST_INSTRUCTIONS_MAX_LENGTH, RECEPTIONIST_TEXT_MAX_LENGTH, RULE_CONTENT_CALL_MAX_LENGTH, RULE_TITLE_MAX_LENGTH, RULES_MAX, receptionistVoices, transferModes } from "../receptionist";
+import { CHANNEL_RULE_CONTENT_CALL_MAX_LENGTH, ruleChannels } from "../ruleChannels";
+import { appointmentChangeVerificationModes, bookingModes, STAFF_FIRST_MESSAGE_MAX_LENGTH, staffFirstModes, staffFirstRingSeconds, CONTACT_PASSCODE_DEFAULT_LENGTH, CONTACT_PASSCODE_LOCK_ATTEMPTS, CONTACT_PASSCODE_MAX_LENGTH, CONTACT_PASSCODE_MIN_LENGTH, isContactPasscode, isGuessableContactPasscode, RECEPTIONIST_INSTRUCTIONS_MAX_LENGTH, RECEPTIONIST_TEXT_MAX_LENGTH, RULE_TITLE_MAX_LENGTH, RULES_MAX, receptionistVoices, transferModes } from "../receptionist";
 import { WIDGET_COLOR_PATTERN, widgetPositionSchema } from "../widget";
 import { CONTACT_PASSCODES_MAX_PER_REQUEST, KNOWLEDGE_UPLOAD_MAX_BYTES, PUBLIC_API_VERSION, WEBHOOK_TEST_EVENT_TYPE, apiKeyScopes, webhookEventTypes, weekdays } from "./constants";
 
@@ -124,9 +125,9 @@ const agentGreetingFields = {
 
 const agentSettingFields = {
   booking_policy: z.string().describe("Rules it follows when it books."),
-  voice_instructions: z.string().nullable().describe("Extra instructions for calls."),
-  sms_instructions: z.string().nullable().describe("Extra instructions for text messages."),
-  chat_instructions: z.string().nullable().describe("Extra instructions for website chat."),
+  voice_instructions: z.string().nullable().describe("Deprecated: use a rule with channel voice. The text of the agent's first voice rule while it's active, otherwise null."),
+  sms_instructions: z.string().nullable().describe("Deprecated: use a rule with channel sms. The text of the agent's first sms rule while it's active, otherwise null."),
+  chat_instructions: z.string().nullable().describe("Deprecated: use rules with channel web_chat and instagram. The text of the agent's first web_chat rule while it's active, otherwise null."),
   transfer_mode: z.enum(transferModes).describe("When it puts a caller through to transfer_number: never, always, on_request, on_urgent or during_business_hours."),
   transfer_number: z.string().nullable().describe("Where it transfers calls, in E.164 format. A number saved before that was required may be in another format. With no number, it never transfers."),
   booking_mode: z.enum(bookingModes).describe("instant: appointments are booked directly. request: the receptionist takes a request and the team confirms it. off: no booking."),
@@ -156,7 +157,7 @@ export const apiAgentSchema = z.object({
   ...agentSettingFields,
   created_at: timestamp,
   updated_at: timestamp,
-}).describe("An agent: one set of greeting, voice, instructions and rules. The agents of a business share its knowledge, services and staff.");
+}).describe("An agent: one set of greeting, voice, settings and rules. The agents of a business share its knowledge, services and staff.");
 
 const staffFirstMessage = z.string().trim().min(1).max(STAFF_FIRST_MESSAGE_MAX_LENGTH).nullable();
 
@@ -166,9 +167,9 @@ export const apiReceptionistUpdateSchema = z.strictObject({
   summary: receptionistText.optional().describe("AI never rewrites a summary set here."),
   regenerate_summary: z.literal(true).optional().describe("Hands the summary back to AI, which rewrites it from the business's knowledge. Can't be sent with summary."),
   booking_policy: receptionistText.optional(),
-  voice_instructions: receptionistInstructions.optional().describe("null removes them."),
-  sms_instructions: receptionistInstructions.optional().describe("null removes them."),
-  chat_instructions: receptionistInstructions.optional().describe("null removes them."),
+  voice_instructions: receptionistInstructions.optional().describe("Deprecated: use /rules with channel voice. Sets the text of the first voice rule and turns it on, adding the rule when there's none. null deletes that rule."),
+  sms_instructions: receptionistInstructions.optional().describe("Deprecated: use /rules with channel sms. Sets the text of the first sms rule and turns it on, adding the rule when there's none. null deletes that rule."),
+  chat_instructions: receptionistInstructions.optional().describe("Deprecated: use /rules with channels web_chat and instagram. Sets the text of the first web_chat rule and the first instagram rule and turns them on, adding them when there are none. null deletes them."),
   transfer_mode: z.enum(transferModes).optional(),
   transfer_number: e164.nullable().optional().describe("null removes it, which stops transfers."),
   booking_mode: z.enum(bookingModes).optional(),
@@ -181,25 +182,30 @@ export const apiReceptionistUpdateSchema = z.strictObject({
   appointment_change_policy: z.strictObject(appointmentChangePolicyFields).optional().describe("Send all four fields."),
 }).refine((value) => value.summary === undefined || value.regenerate_summary === undefined, { message: "Send summary or regenerate_summary, not both.", path: ["regenerate_summary"] });
 
+const ruleChannel = z.enum(ruleChannels).nullable();
+
 export const apiRuleSchema = z.object({
   id,
   title: z.string(),
-  content: z.string().describe("What the receptionist must or must not do. Calls read the first 4,000 characters; a rule written in the dashboard can be longer."),
+  content: z.string().describe(`What the receptionist must or must not do. Calls read the first 4,000 characters, or ${CHANNEL_RULE_CONTENT_CALL_MAX_LENGTH.toLocaleString("en")} for a rule with a channel; a rule written in the dashboard can be longer.`),
   active: z.boolean().describe("Whether the receptionist follows it."),
+  channel: ruleChannel.describe("The one channel the receptionist follows it on: voice (phone and browser calls), sms, web_chat or instagram. null: every channel."),
   created_at: timestamp,
   updated_at: timestamp,
-}).describe("An instruction the receptionist follows on calls and in chats.");
+}).describe("An instruction the receptionist follows, on every channel or on one.");
 
 export const apiRuleCreateSchema = z.strictObject({
   title: z.string().trim().min(1).max(RULE_TITLE_MAX_LENGTH),
-  content: z.string().trim().min(1).max(RULE_CONTENT_CALL_MAX_LENGTH).describe("Up to 4,000 characters, all of which calls use."),
+  content: z.string().trim().min(1).max(CHANNEL_RULE_CONTENT_CALL_MAX_LENGTH).describe("Up to 4,000 characters, or 8,000 for a rule with a channel, all of which calls use."),
   active: z.boolean().optional().describe("Defaults to true."),
+  channel: ruleChannel.optional().describe("The one channel the rule applies on. Leave it out, or send null, for every channel."),
 });
 
 export const apiRuleUpdateSchema = z.strictObject({
   title: z.string().trim().min(1).max(RULE_TITLE_MAX_LENGTH).optional(),
-  content: z.string().trim().min(1).max(RULE_CONTENT_CALL_MAX_LENGTH).optional().describe("Up to 4,000 characters, all of which calls use."),
+  content: z.string().trim().min(1).max(CHANNEL_RULE_CONTENT_CALL_MAX_LENGTH).optional().describe("Up to 4,000 characters, or 8,000 for a rule with a channel, all of which calls use."),
   active: z.boolean().optional().describe("false stops the receptionist following it without deleting it."),
+  channel: ruleChannel.optional().describe("null puts it back on every channel."),
 });
 
 export const apiRuleReorderSchema = z.strictObject({
@@ -661,6 +667,7 @@ export const apiAppointmentSchema = z.object({
   contact_phone: z.string().nullable(),
   source: z.string().describe("Where the booking came from, for example voice, web_chat, dashboard or api."),
   calendar_sync_status: z.enum(["pending", "synced", "failed", "not_required"]),
+  notes: z.string().nullable().describe("Notes on the appointment. The receptionist can read them to a verified caller."),
   created_at: timestamp,
   updated_at: timestamp,
 });
@@ -672,6 +679,7 @@ export const apiAppointmentCreateSchema = z.strictObject({
   contact_phone: e164.optional(),
   contact_name: z.string().trim().min(1).max(200).optional(),
   staff_id: id.optional().describe("Book with this active staff member. Without it, LobbyStack picks one who is free."),
+  notes: z.string().trim().max(2000).optional().describe("Notes on the appointment. The receptionist can read them to a verified caller."),
   sms_consent: z.boolean().optional().describe("True only if the customer agreed to receive confirmation and reminder texts. Self-hosted instances only: on LobbyStack Cloud, texts come from LobbyStack's shared number, and only the receptionist can collect that consent, on a call."),
 }).refine((value) => Boolean(value.contact_id || value.contact_phone), { error: "Provide contact_id or contact_phone.", path: ["contact_phone"] });
 

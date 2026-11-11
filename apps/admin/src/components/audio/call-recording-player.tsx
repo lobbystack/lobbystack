@@ -445,7 +445,7 @@ export function CallRecordingPlayer({
           />
         )}
 
-        <time className="min-w-10 text-right text-sm tabular-nums text-muted-foreground">
+        <time className="min-w-10 text-right type-body-muted tabular-nums">
           {formatDuration(displayedRemainingSeconds)}
         </time>
 

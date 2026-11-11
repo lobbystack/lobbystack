@@ -45,7 +45,7 @@ const widths = { sm: "max-w-sm", md: "max-w-md", lg: "max-w-lg", xl: "max-w-xl",
 
 const legalPrefixKeys = { login: "login.legalPrefix", signup: "signup.legal.prefix", business: "signup.legal.businessPrefix", emailChange: "signup.legal.emailChangePrefix", passwordReset: "forgotPassword.legalPrefix", verifyEmail: "verifyEmail.legalPrefix" } as const;
 
-const headerButton = "rounded-full px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
+const headerButton = "rounded-full px-4 py-3 type-title text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 
 export function ReplacementOnboardingShell({ icon, eyebrow, title, description, progress, width = "md", children, legalFooter: customLegalFooter, legalAgreement, onBackToDashboard, onSignOut }: OnboardingShellProps) {
   const { t, i18n } = useTranslation("onboarding");
@@ -53,7 +53,7 @@ export function ReplacementOnboardingShell({ icon, eyebrow, title, description, 
   const links = useBrandLinks(resolveLocale(i18n.resolvedLanguage, i18n.language));
   const { partner } = useBranding();
   const legalFooter = customLegalFooter ?? (legalAgreement && links.terms && links.privacy ? (
-    <p className="max-w-full text-center text-xs leading-5 text-muted-foreground sm:whitespace-nowrap">
+    <p className="max-w-full text-center type-caption text-muted-foreground sm:whitespace-nowrap">
       {tAuth(legalPrefixKeys[legalAgreement])} {" "}
       <a className="underline underline-offset-4 hover:text-foreground" href={links.terms} rel="noreferrer" target="_blank">{tAuth("signup.legal.terms")}</a>{" "}
       {tAuth("signup.legal.and")} {" "}
@@ -80,9 +80,9 @@ export function ReplacementOnboardingShell({ icon, eyebrow, title, description, 
           <BrandMark />
           <div className="mt-10 flex w-full flex-col items-center gap-4 text-center">
             {icon}
-            {eyebrow ? <span className="inline-flex items-center rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">{eyebrow}</span> : null}
-            <h1 className="font-heading text-3xl leading-tight font-semibold tracking-tight text-foreground">{title}</h1>
-            {description ? <p className="text-[15px] leading-7 text-muted-foreground">{description}</p> : null}
+            {eyebrow ? <span className="inline-flex items-center rounded-full bg-muted px-3 py-1 type-meta">{eyebrow}</span> : null}
+            <h1 className="type-page-title">{title}</h1>
+            {description ? <p className="type-body-lg text-muted-foreground">{description}</p> : null}
           </div>
           <div className="mt-10 w-full">{children}</div>
         </div>
@@ -106,7 +106,7 @@ export function ReplacementOnboardingShell({ icon, eyebrow, title, description, 
           </nav>
         ) : null}
         {legalFooter}
-        {footerLinks.length ? <div className="flex items-center gap-4 text-xs text-muted-foreground">
+        {footerLinks.length ? <div className="flex items-center gap-4 type-caption text-muted-foreground">
           {footerLinks.map((link, index) => (
             <Fragment key={link.key}>
               {index > 0 ? <span aria-hidden="true">·</span> : null}
