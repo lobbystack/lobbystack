@@ -70,6 +70,59 @@ WHERE page.id = website_hosts.id
   AND imports.host = website_hosts.host
   AND page.website_document_id IS NULL;
 
+-- Until the worker finishes deploying, the previous worker keeps crawling
+-- website imports, and it saves every page with no agent and no website. A
+-- page of an agent-only import would then be shared with every agent for
+-- good. This trigger gives such a page the agent and website of the import
+-- crawling its host: an import with an agent, still processing, and the only
+-- kind of import on that host, since a host is in one scope only
+-- (assertWebsiteScopeFree). New code always names the website, so only old
+-- code fires it. The release after this one drops it.
+CREATE OR REPLACE FUNCTION app.scope_crawled_page_like_its_import()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_catalog
+AS $$
+DECLARE
+  v_host text := regexp_replace(lower(substring(NEW.source_url from '^[a-zA-Z][a-zA-Z0-9+.-]*://(?:[^@/?#]*@)?([^/?#]+)')), '^www\.', '');
+  v_import record;
+BEGIN
+  IF v_host IS NULL THEN
+    RETURN NEW;
+  END IF;
+  SELECT d.id, d.agent_id INTO v_import
+  FROM public.knowledge_documents d
+  WHERE d.business_id = NEW.business_id
+    AND d.source_type = 'website'
+    AND d.agent_id IS NOT NULL
+    AND d.status = 'processing'
+    AND regexp_replace(lower(substring(d.source_url from '^[a-zA-Z][a-zA-Z0-9+.-]*://(?:[^@/?#]*@)?([^/?#]+)')), '^www\.', '') = v_host
+    AND EXISTS (SELECT 1 FROM public.website_ingestion_jobs j WHERE j.root_document_id = d.id AND j.business_id = d.business_id)
+  ORDER BY d.created_at, d.id
+  LIMIT 1;
+  IF v_import.id IS NOT NULL AND NOT EXISTS (
+    SELECT 1 FROM public.knowledge_documents d
+    WHERE d.business_id = NEW.business_id
+      AND d.source_type = 'website'
+      AND d.agent_id IS NULL
+      AND regexp_replace(lower(substring(d.source_url from '^[a-zA-Z][a-zA-Z0-9+.-]*://(?:[^@/?#]*@)?([^/?#]+)')), '^www\.', '') = v_host
+      AND EXISTS (SELECT 1 FROM public.website_ingestion_jobs j WHERE j.root_document_id = d.id AND j.business_id = d.business_id)
+  ) THEN
+    NEW.agent_id := v_import.agent_id;
+    NEW.website_document_id := v_import.id;
+  END IF;
+  RETURN NEW;
+END
+$$;
+REVOKE ALL ON FUNCTION app.scope_crawled_page_like_its_import() FROM PUBLIC;
+
+DROP TRIGGER IF EXISTS knowledge_documents_scope_crawled_page ON public.knowledge_documents;
+CREATE TRIGGER knowledge_documents_scope_crawled_page
+  BEFORE INSERT ON public.knowledge_documents
+  FOR EACH ROW WHEN (NEW.source_type = 'website' AND NEW.agent_id IS NULL AND NEW.website_document_id IS NULL AND NEW.source_url IS NOT NULL)
+  EXECUTE FUNCTION app.scope_crawled_page_like_its_import();
+
 -- What one agent turned off. A row names a document or a snippet. Scope
 -- 'source' is a whole website, file or entry; 'page' is one page of a
 -- website, so turning the website back on keeps the pages turned off.

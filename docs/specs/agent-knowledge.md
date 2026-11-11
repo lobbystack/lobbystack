@@ -90,11 +90,20 @@ Raphael decided:
 | 1 | What happens when someone adds a website that's already a source in another scope? | It's still refused with `409`, and the error says where the website is: "This website is already in your shared knowledge. Turn it off for the agents that shouldn't use it." or "This website is already in [agent name]'s knowledge." The dashboard shows it in the person's language, and the public API returns the English message. |
 | 2 | What happens to an agent's own knowledge when the agent is removed? | Removing an agent deletes its documents, their text and crawls, its FAQ and text entries, and its opt-outs, in the transaction that archives it, because an archived agent can't come back. The remove dialog says "Its own knowledge will be deleted." Shared knowledge and other agents' opt-outs stay. |
 
+## Release notes
+
+The release runs the migrator, then the worker, then the admin, and the previous worker can drain for up to 31 minutes. Until it stops:
+
+- The previous worker searches and builds snapshots without `agent_id` or exclusions. A call or text it answers can use another agent's own sources, or a source an agent turned off. A snapshot it builds has no per-agent knowledge, so new code rebuilds it before reading it (`schemaVersion`, see `docs/specs/merge-instructions-into-rules.md`).
+- The previous worker saves every page it crawls with no agent and no `website_document_id`. For an agent-only import, the trigger `knowledge_documents_scope_crawled_page` from 0208 gives such a page the agent and website of the import crawling its host, as long as that import is still processing and no shared import holds the host. A page it saves for a shared website keeps `agent_id` null, and joins its website on the next re-import. Until then, a website switched off in that window can still answer from it, and the listing groups it by host.
+- The previous admin doesn't check scopes, so an owner on it can add a website whose host is already another scope's.
+
+The release after this one drops the trigger and `app.scope_crawled_page_like_its_import()`.
+
 ## Open questions
 
 - **Agent-only sources on the business page:** they show only on their agent's page. A later version could list them on the business page with the agent's name.
 - **Moving a source between agents, or making one shared:** not built. An operator deletes it and adds it again where it belongs.
 - **Business summary and hours:** they ignore agent-only sources, so an agent's own opening hours don't change the business's.
-- **Deploy window:** pages crawled by the old worker while a release drains have no `website_document_id`. Retrieval doesn't see them as part of their website until the next re-import, so a website switched off in that window can still answer from those pages. The listing groups them by host.
 - **Copying an agent:** a new agent copies the settings and rules of the agent it's created from, but not its own sources or its opt-outs. It starts with every shared source on.
 - **Turning an agent's switch on for a source the business turned off:** the switch stays disabled. The business page's switch wins.
