@@ -4,11 +4,13 @@ import { readFileSync } from "node:fs";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 import { agentKnowledgeExclusions, agents, billingAccounts, businessContextSnapshots, createDatabaseClient, knowledgeChunks, knowledgeDocuments, knowledgeSnippets, users, websiteIngestionJobs, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import type { SnapshotAgent } from "@lobbystack/shared";
 import { snapshotForAgent } from "../snapshot";
 
 import { applyKnowledgeAction, listKnowledgeSources, listWebsitePages } from "./agentKnowledge";
 import { archiveAgent } from "./agents";
-import { createKnowledgeDocumentInTransaction, createKnowledgeSnippet, loadLatestBusinessSnapshot, refreshBusinessSnapshot, searchKnowledgeEvidence } from "./knowledge";
+import { createKnowledgeDocumentInTransaction, createKnowledgeSnippet, loadLatestBusinessSnapshot, loadSnapshotAgent, refreshBusinessSnapshot, searchKnowledgeEvidence } from "./knowledge";
+import { getBusinessSnapshotForAgent } from "./snapshotCache";
 import { createBusiness } from "./tenancy";
 
 // Which knowledge each agent answers from, against PostgreSQL under RLS. Each
@@ -239,6 +241,39 @@ describe.skipIf(!testUrl)("knowledge scoped to agents", () => {
       expect(snapshot.knowledgeSnippets?.map((snippet) => snippet.title)).toEqual(["Parking"]);
       expect(snapshotForAgent(snapshot, evening)?.knowledgeSnippets?.map((snippet) => snippet.title)).toEqual(["Night door"]);
       expect(snapshotForAgent(snapshot, front)?.knowledgeSnippets?.map((snippet) => snippet.title)).toEqual(["Parking"]);
+    });
+  });
+
+  it("reads an agent the snapshot doesn't list with its own FAQs, never the default agent's", async () => {
+    await rollbackTest(async (tx) => {
+      const { context, userId, businessId, front, evening } = await seed(tx);
+      await as(tx, "lobbystack_app");
+      const shared = await createKnowledgeSnippet(context, { userId, businessId, title: "Parking", content: "Behind the clinic." });
+      await createKnowledgeSnippet(context, { userId, businessId, title: "Hours", content: "Open nine to five." });
+      await createKnowledgeSnippet(context, { userId, businessId, title: "Desk", content: "Ask for Mira.", agentId: front });
+      await createKnowledgeSnippet(context, { userId, businessId, title: "Night door", content: "Ring the side bell.", agentId: evening });
+      await applyKnowledgeAction(context, { userId, businessId, action: "agent_disable", agentId: evening, items: [{ type: "snippet", id: shared }] });
+      await as(tx, "lobbystack_worker");
+      await refreshBusinessSnapshot(context, { businessId });
+      const snapshot = (await loadLatestBusinessSnapshot(context, { businessId }))!;
+      const titles = (agentId: string, agent: SnapshotAgent | null) => snapshotForAgent({ ...snapshot, agents: [...(snapshot.agents ?? []).filter((listed) => listed.id !== agentId), agent!] }, agentId)?.knowledgeSnippets?.map((snippet) => snippet.title).sort();
+
+      // Shared FAQs it didn't turn off, and its own.
+      expect(titles(evening, await loadSnapshotAgent(context, { businessId, agentId: evening, business: snapshot }))).toEqual(["Hours", "Night door"]);
+      // The default agent's own FAQ stays the default agent's.
+      expect(titles(front, await loadSnapshotAgent(context, { businessId, agentId: front, business: snapshot }))).toEqual(["Desk", "Hours", "Parking"]);
+
+      // A call that started on an agent archived since reads it from its row: shared knowledge only, since its own went with it.
+      await as(tx, "lobbystack_app");
+      await archiveAgent(context, { userId, businessId, agentId: evening });
+      // One transaction shares one now(), so the snapshot that still lists the agent would tie with the next.
+      await as(tx, null);
+      await tx.delete(businessContextSnapshots).where(eq(businessContextSnapshots.businessId, businessId));
+      await as(tx, "lobbystack_worker");
+      const call = await getBusinessSnapshotForAgent(context, { businessId, agentId: evening, underWay: true });
+      expect(call?.agentId).toBe(evening);
+      expect(call?.knowledgeSnippets?.map((snippet) => snippet.title).sort()).toEqual(["Hours", "Parking"]);
+      await as(tx, null);
     });
   });
 

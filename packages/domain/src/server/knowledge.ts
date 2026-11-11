@@ -704,7 +704,8 @@ function snapshotAgentFields(agent: typeof agents.$inferSelect | undefined) {
 }
 
 /**
- * One agent as the snapshot lists it, read from its row, for a call already
+ * One agent as the snapshot lists it, read from its rows with its own scoped
+ * knowledge (shared minus what it turned off, plus its own), for a call already
  * under way on an agent the snapshot no longer lists because it was archived.
  * Null when the business has no such agent.
  */
@@ -718,7 +719,9 @@ export async function loadSnapshotAgent(
     const rules = await tx.select().from(agentRules).where(and(eq(agentRules.businessId, input.businessId), eq(agentRules.agentId, input.agentId), eq(agentRules.active, true))).orderBy(asc(agentRules.sortOrder), asc(agentRules.createdAt), asc(agentRules.id));
     const fields = snapshotAgentFields(row);
     const instructions = agentInstructions(input.business, { tone: fields.tone });
-    return { id: row.id, name: row.name, isDefault: row.isDefault, greeting: row.greeting, ...fields, ...instructions, rules: snapshotRules(rules.map(ruleSummary)), phoneNumber: null };
+    // Always its own knowledge: without it, snapshotForAgent would fall back to the default agent's, own FAQs included.
+    const knowledge = await snapshotKnowledge(tx, input.businessId, { agentId: row.id });
+    return { id: row.id, name: row.name, isDefault: row.isDefault, greeting: row.greeting, ...fields, ...instructions, rules: snapshotRules(rules.map(ruleSummary)), phoneNumber: null, ...knowledge };
   });
 }
 
