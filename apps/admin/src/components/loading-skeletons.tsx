@@ -68,9 +68,9 @@ export function PhoneResultsSkeleton({ labels }: { labels: { results: ReadonlyAr
   if (!labels.status) return <div aria-busy="true">{card}</div>;
   return (
     <section aria-busy="true" className="flex flex-col gap-3">
-      <div className="flex items-center gap-2 px-1">
+      <div className="flex items-start gap-2 px-1">
         <HiddenTextSkeleton className="type-section-title">{labels.status}</HiddenTextSkeleton>
-        <Skeleton aria-hidden="true" className="size-2 shrink-0 rounded-full" />
+        <span aria-hidden="true" className="flex h-lh shrink-0 items-center type-section-title"><Skeleton className="size-2 rounded-full" /></span>
       </div>
       {card}
     </section>
