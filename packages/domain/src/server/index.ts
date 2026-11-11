@@ -35,6 +35,8 @@ export * from "./feedback";
 export * from "./hostEmails";
 export * from "./employees";
 export * from "./knowledge";
+export * from "./agentKnowledge";
+export * from "./knowledgeScope";
 export * from "./unansweredQuestions";
 export * from "./liveCalls";
 export * from "./notifications";

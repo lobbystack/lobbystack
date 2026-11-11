@@ -4,6 +4,7 @@ import { and, asc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 
 import { countKnowledgeTokens } from "../knowledgeRanking";
 import { businesses, businessHours, enqueueOutbox, knowledgeChunks, knowledgeDocuments, knowledgeSnippets, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { BUSINESS_KNOWLEDGE_SCOPE, documentInScope, snippetInScope } from "./knowledgeScope";
 import type { HoursWindow } from "@lobbystack/shared";
 
 import { normalizeHoursWindows, sameHoursWindows } from "../hours";
@@ -119,10 +120,10 @@ export async function loadBusinessHoursInput(context: DomainContext, input: { bu
     if (!business) return null;
     const [windows] = await tx.select({ count: sql<number>`count(*)::int` }).from(businessHours).where(and(eq(businessHours.businessId, input.businessId), isNull(businessHours.staffId)));
     const snippets = await tx.select({ title: knowledgeSnippets.title, content: knowledgeSnippets.content }).from(knowledgeSnippets)
-      .where(and(eq(knowledgeSnippets.businessId, input.businessId), eq(knowledgeSnippets.active, true)))
+      .where(and(eq(knowledgeSnippets.businessId, input.businessId), snippetInScope("knowledge_snippets", input.businessId, BUSINESS_KNOWLEDGE_SCOPE)))
       .orderBy(asc(knowledgeSnippets.createdAt)).limit(HOURS_MAX_SNIPPETS);
     const documents = await tx.select({ id: knowledgeDocuments.id, title: knowledgeDocuments.title }).from(knowledgeDocuments)
-      .where(and(eq(knowledgeDocuments.businessId, input.businessId), eq(knowledgeDocuments.active, true), eq(knowledgeDocuments.status, "indexed")))
+      .where(and(eq(knowledgeDocuments.businessId, input.businessId), eq(knowledgeDocuments.status, "indexed"), documentInScope("knowledge_documents", input.businessId, BUSINESS_KNOWLEDGE_SCOPE)))
       .orderBy(sql`case when ${knowledgeDocuments.sourceType} = 'upload' then 0 else 1 end`, asc(knowledgeDocuments.createdAt));
     const titles = new Map(documents.map((document) => [document.id, document.title]));
     const chunks = documents.length

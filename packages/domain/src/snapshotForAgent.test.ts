@@ -206,3 +206,19 @@ describe("an agent's phone number", () => {
     expect(businessHasPhoneNumber({ ...snapshot, contactChannels: {} })).toBe(false);
   });
 });
+
+describe("snapshotForAgent knowledge", () => {
+  const parking = { id: "faq-parking", title: "Parking", content: "Behind the clinic.", tags: [], priority: 0 };
+  const nightDoor = { id: "faq-door", title: "Night door", content: "Ring the side bell.", tags: [], priority: 0 };
+
+  it("answers from the agent's own FAQs and digest when it has them, and the flat ones otherwise", () => {
+    const snapshot = buildBusinessContextSnapshot({ ...base, snippets: [parking], knowledgeDigest: "shared digest", agents: [defaultAgent, { ...afterHours, knowledgeSnippets: [nightDoor], knowledgeDigest: "" }] });
+    expect(snapshotForAgent(snapshot, afterHours.id)).toMatchObject({ knowledgeSnippets: [nightDoor], knowledgeDigest: "" });
+    expect(snapshotForAgent(snapshot, defaultAgent.id)).toMatchObject({ knowledgeSnippets: [parking], knowledgeDigest: "shared digest" });
+  });
+
+  it("answers a paused agent's channels with the default agent's knowledge", () => {
+    const snapshot = buildBusinessContextSnapshot({ ...base, snippets: [parking], agents: [defaultAgent, { ...afterHours, paused: true, knowledgeSnippets: [nightDoor] }] });
+    expect(snapshotForAgent(snapshot, afterHours.id)?.knowledgeSnippets).toEqual([parking]);
+  });
+});

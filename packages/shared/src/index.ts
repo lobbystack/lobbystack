@@ -356,6 +356,10 @@ export type SnapshotAgent = {
   phoneNumber?: string | null;
   /** The plan keeps fewer agents than the business has, so the default agent answers this one's channels. */
   paused?: boolean;
+  /** This agent's FAQs and text, when they differ from the default agent's flat ones. Absent means the flat ones. */
+  knowledgeSnippets?: Array<KnowledgeSnippet>;
+  /** This agent's document digest, when it differs from the default agent's flat one. Absent means the flat one. */
+  knowledgeDigest?: string;
 };
 
 export type BusinessContextSnapshot = {

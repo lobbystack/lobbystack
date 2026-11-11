@@ -1,6 +1,7 @@
 import { customType } from "drizzle-orm/pg-core";
 import { sql, type AnyColumn, type SQL } from "drizzle-orm";
 import {
+  type AnyPgColumn,
   bigint,
   boolean,
   doublePrecision,
@@ -1147,10 +1148,16 @@ export const knowledgeDocuments = pgTable(
     contentHash: varchar("content_hash", { length: 128 }),
     error: text("error"),
     revision: integer("revision").default(0).notNull(),
+    // The one agent that uses this source, or null when every agent does (migration 0208).
+    agentId: uuid("agent_id"),
+    // For a crawled page, the website import document that brought it in.
+    websiteDocumentId: uuid("website_document_id").references((): AnyPgColumn => knowledgeDocuments.id, { onDelete: "set null" }),
+    // The whole source's switch. A website keeps it on its import document; active stays each page's own.
+    sourceActive: boolean("source_active").default(true).notNull(),
     ...legacyId,
     ...timestamps,
   },
-  (table) => [index("knowledge_documents_business_status_idx").on(table.businessId, table.status), index("knowledge_documents_hash_idx").on(table.businessId, table.contentHash), uniqueIndex("knowledge_documents_business_url_unique").on(table.businessId, table.sourceUrl), index("knowledge_documents_title_keyword_idx").using("gin", sql`to_tsvector('simple', ${table.title})`)],
+  (table) => [foreignKey({ name: "knowledge_documents_agent_fk", columns: [table.businessId, table.agentId], foreignColumns: [agents.businessId, agents.id] }), index("knowledge_documents_business_agent_idx").on(table.businessId, table.agentId), index("knowledge_documents_business_status_idx").on(table.businessId, table.status), index("knowledge_documents_hash_idx").on(table.businessId, table.contentHash), uniqueIndex("knowledge_documents_business_url_unique").on(table.businessId, table.sourceUrl), index("knowledge_documents_title_keyword_idx").using("gin", sql`to_tsvector('simple', ${table.title})`)],
 );
 
 export const knowledgeChunks = pgTable(
@@ -1182,10 +1189,34 @@ export const knowledgeSnippets = pgTable(
     tags: jsonb("tags").$type<string[]>().default([]).notNull(),
     priority: integer("priority").default(0).notNull(),
     active: boolean("active").default(true).notNull(),
+    // The one agent that uses this entry, or null when every agent does (migration 0208).
+    agentId: uuid("agent_id"),
     ...legacyId,
     ...timestamps,
   },
-  (table) => [index("knowledge_snippets_business_active_idx").on(table.businessId, table.active)],
+  (table) => [foreignKey({ name: "knowledge_snippets_agent_fk", columns: [table.businessId, table.agentId], foreignColumns: [agents.businessId, agents.id] }), index("knowledge_snippets_business_agent_idx").on(table.businessId, table.agentId), index("knowledge_snippets_business_active_idx").on(table.businessId, table.active)],
+);
+
+// What one agent turned off of the shared knowledge (migration 0208). A row
+// names a document or a snippet. Scope "source" is a whole website, file or
+// entry, and "page" is one page of a website.
+export const agentKnowledgeExclusions = pgTable(
+  "agent_knowledge_exclusions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
+    agentId: uuid("agent_id").notNull(),
+    documentId: uuid("document_id").references(() => knowledgeDocuments.id, { onDelete: "cascade" }),
+    snippetId: uuid("snippet_id").references(() => knowledgeSnippets.id, { onDelete: "cascade" }),
+    scope: varchar("scope", { length: 8 }).$type<"source" | "page">().default("source").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    foreignKey({ name: "agent_knowledge_exclusions_agent_fk", columns: [table.businessId, table.agentId], foreignColumns: [agents.businessId, agents.id] }),
+    uniqueIndex("agent_knowledge_exclusions_document_unique").on(table.agentId, table.documentId, table.scope).where(sql`${table.documentId} is not null`),
+    uniqueIndex("agent_knowledge_exclusions_snippet_unique").on(table.agentId, table.snippetId).where(sql`${table.snippetId} is not null`),
+    index("agent_knowledge_exclusions_business_agent_idx").on(table.businessId, table.agentId),
+  ],
 );
 
 // The first real conversation of each business. One row per business makes its
@@ -2412,6 +2443,7 @@ export const allTenantTables = [
   knowledgeDocuments,
   knowledgeChunks,
   knowledgeSnippets,
+  agentKnowledgeExclusions,
   unansweredQuestions,
   agentRules,
   websiteIngestionJobs,
@@ -2491,6 +2523,7 @@ export const schema = {
   knowledgeDocuments,
   knowledgeChunks,
   knowledgeSnippets,
+  agentKnowledgeExclusions,
   unansweredQuestions,
   agentRules,
   websiteIngestionJobs,

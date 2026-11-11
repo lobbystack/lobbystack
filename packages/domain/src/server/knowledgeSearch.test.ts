@@ -28,7 +28,9 @@ beforeEach(() => {
       if (query.sql.startsWith("SET")) return { rows: [] };
       if (failAll) throw new Error("database unavailable");
       expect(query.params).toContain("tenant-a");
-      expect(query.sql).toContain("d.active = true AND d.status = 'indexed'");
+      expect(query.sql).toContain("d.status = 'indexed' AND (d.active AND d.source_active");
+      // Without an agent, the search reads as the default agent.
+      expect(query.sql).toContain("a.is_default");
       if (query.sql.includes("BETWEEN")) return { rows: current };
       return { rows: query.sql.includes("<=>") ? semantic : lexical };
     } });

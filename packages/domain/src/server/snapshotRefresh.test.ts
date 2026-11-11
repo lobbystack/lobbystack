@@ -65,6 +65,8 @@ function makeTx(selectRows: Record<string, unknown>) {
   const tx = {
     select: vi.fn(() => fromChain(rowsFor)),
     insert: vi.fn(() => ({ values: () => Promise.resolve([{ id: "saved" }]) })),
+    // No agent has knowledge of its own, so every agent reads the flat knowledge.
+    execute: vi.fn(async () => ({ rows: [{ found: false }] })),
     delete: vi.fn((table: unknown) => ({ where: (condition: SQL) => { deleted.push({ table: tableName(table), where: new PgDialect().sqlToQuery(condition) }); return Promise.resolve(); } })),
   };
   return tx;
