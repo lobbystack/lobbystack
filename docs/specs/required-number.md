@@ -76,7 +76,7 @@ So **Start 14-day free trial** doesn't start a clock. The clock started a few se
 
 `goal` leaves the list. A stored `goal` reads as `attribution`, as the other legacy stages read as the step after them. A stored `verify_phone` reads as `phone_number` for a direct business, and so do the legacy stages that read as `verify_phone`.
 
-Migration `0203_required_number.sql` moves stored values forward once: direct businesses on `verify_phone` or a legacy stage before it go to `phone_number`, and every business on `goal` goes to `attribution`. The read-time mapping covers values that old code writes during the rollout. Before a trial claim, `reserveOnboardingNumberClaim` repairs a direct business still stored on `verify_phone`, because `app.reserve_trial_number_claim` checks the stored value.
+Migration `0207_required_number.sql` moves stored values forward once: direct businesses on `verify_phone` or a legacy stage before it go to `phone_number`, and every business on `goal` goes to `attribution`. The read-time mapping covers values that old code writes during the rollout. Before a trial claim, `reserveOnboardingNumberClaim` repairs a direct business still stored on `verify_phone`, because `app.reserve_trial_number_claim` checks the stored value.
 
 Allowed moves for a direct business:
 
@@ -209,7 +209,7 @@ Getting started opens the existing `CallForwardingDialog`. An **It works** butto
 
 ## Data
 
-Migration `0203_required_number.sql`:
+Migration `0207_required_number.sql`:
 
 - Adds `forwarded_from_e164`, `forwarding_detected_at` and `forwarding_confirmed_at` to `phone_numbers`. The table's existing RLS policies cover them.
 - Moves stored onboarding stages forward, as described under Stages.
