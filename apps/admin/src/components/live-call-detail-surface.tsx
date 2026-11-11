@@ -85,24 +85,23 @@ function formatDate(value: string, locale: string): string {
 function CallEventTimeline({ events, locale }: { events: Detail["timeline"]; locale: string }) {
   const { t } = useTranslation("calls");
   return (
-    <div className="flex items-start gap-0 overflow-x-auto px-2 py-4">
+    // One equal column per event, so the timeline always fits its card: a narrow card wraps the labels and dates instead of cutting them off.
+    <div className="grid py-4" data-slot="call-timeline" style={{ gridTemplateColumns: `repeat(${events.length}, minmax(0, 1fr))` }}>
       {events.map((event, index) => {
         const reached = event.status !== "pending";
         const failed = event.status === "failed";
         return (
-          <div className="flex items-start" key={`${event.type}-${event.at}`}>
-            <div className="flex flex-col items-center gap-1.5">
+          <div className="relative flex min-w-0 flex-col items-center gap-1.5 px-1 text-center" key={`${event.type}-${event.at}`}>
+            {index < events.length - 1 ? <div aria-hidden="true" className="absolute top-4 left-[calc(50%+1.25rem)] right-[calc(-50%+1.25rem)] h-px bg-border" /> : null}
               <div className="flex size-8 items-center justify-center">
                 {failed ? <XCircle className="size-5 text-destructive" /> : reached ? <CheckCircle2 className="size-5 text-emerald-500" /> : <Circle className="size-5 text-muted-foreground/40" />}
               </div>
-              <span className={cn("type-body whitespace-nowrap", reached ? failed ? "text-destructive" : "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground")}>
+              <span className={cn("type-body", reached ? failed ? "text-destructive" : "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground")}>
                 {t(`detail.events.${event.type}`)}
               </span>
               <span className="type-meta">
                 {event.at ? <>{formatDateTime(event.at, locale, { month: "short", day: "numeric" })}{", "}{formatDateTime(event.at, locale, { hour: "numeric", minute: "2-digit" })}</> : <>&nbsp;</>}
               </span>
-            </div>
-            {index < events.length - 1 ? <div className="mt-3.5 h-px w-12 self-start bg-border sm:w-20" /> : null}
           </div>
         );
       })}
@@ -324,15 +323,13 @@ function DetailPageSkeleton({ embedded, t }: { embedded: boolean; t: (key: strin
 
       <SectionSkeleton title={t("detail.events.title")}>
         <Surface className="px-4">
-          <div className="flex items-start px-2 py-4">
+          <div className="grid py-4" style={{ gridTemplateColumns: `repeat(${events.length}, minmax(0, 1fr))` }}>
             {events.map((event, index) => (
-              <div className="flex items-start" key={event}>
-                <div className="flex flex-col items-center gap-1.5">
-                  <div className="flex size-8 items-center justify-center"><Skeleton className="size-5 rounded-full" /></div>
-                  <HiddenTextSkeleton className="type-body whitespace-nowrap">{t(`detail.events.${event}`)}</HiddenTextSkeleton>
-                  <div className="flex h-4 items-center"><Skeleton className="h-3 w-20" /></div>
-                </div>
-                {index < events.length - 1 ? <div className="mt-3.5 h-px w-12 self-start bg-border sm:w-20" /> : null}
+              <div className="relative flex min-w-0 flex-col items-center gap-1.5 px-1 text-center" key={event}>
+                {index < events.length - 1 ? <div aria-hidden="true" className="absolute top-4 left-[calc(50%+1.25rem)] right-[calc(-50%+1.25rem)] h-px bg-border" /> : null}
+                <div className="flex size-8 items-center justify-center"><Skeleton className="size-5 rounded-full" /></div>
+                <HiddenTextSkeleton className="type-body" skeletonClassName="w-fit max-w-full">{t(`detail.events.${event}`)}</HiddenTextSkeleton>
+                <div className="flex h-4 max-w-full items-center"><Skeleton className="h-3 w-20 max-w-full" /></div>
               </div>
             ))}
           </div>
@@ -340,7 +337,7 @@ function DetailPageSkeleton({ embedded, t }: { embedded: boolean; t: (key: strin
       </SectionSkeleton>
 
       <div>
-        <div className="inline-flex items-center gap-2">
+        <div className="scroll-row items-center gap-2">
           {tabs.map(([tab, Icon]) => (
             <Skeleton aria-hidden="true" className="inline-flex h-9 items-center gap-1.5 rounded-full px-4 type-title whitespace-nowrap" key={tab}>
               <Icon className="invisible size-4" />

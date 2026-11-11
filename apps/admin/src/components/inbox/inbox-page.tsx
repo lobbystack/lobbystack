@@ -13,6 +13,7 @@ import { HiddenTextSkeleton } from "@/components/loading-skeletons";
 import { PageHeader } from "@/components/page-header";
 import { useTelemetry } from "@/components/product-analytics";
 import { Button } from "@/components/ui/button";
+import { ScrollRow } from "@/components/ui/scroll-row";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useActiveBusiness } from "@/hooks/use-active-business";
@@ -132,10 +133,10 @@ export function InboxPage() {
     <section className="@container/inbox flex h-full min-w-0 gap-6" data-slot="inbox">
       <div className={cn("flex w-full min-w-0 flex-col gap-3 @min-[50rem]/inbox:w-72 2xl:w-80", open && "hidden @min-[50rem]/inbox:flex")} data-slot="inbox-list">
         <PageHeader className="py-0" title={t("inbox:title")} />
-        <div aria-label={t("inbox:filters.label")} className="flex flex-wrap items-center gap-1" role="group">
+        <ScrollRow aria-label={t("inbox:filters.label")} className="scroll-row-bleed" role="group">
           <Button aria-pressed={!filters.channel} onClick={() => filterBy({ channel: null })} size="sm" variant={!filters.channel ? "secondary" : "ghost"}>{t("inbox:filters.all")}</Button>
           {channels.map((channel) => <Button aria-pressed={filters.channel === channel} key={channel} onClick={() => filterBy({ channel: filters.channel === channel ? null : channel })} size="sm" variant={filters.channel === channel ? "secondary" : "ghost"}>{getChannelLabel(channel, t)}</Button>)}
-        </div>
+        </ScrollRow>
         {hasChoice ? (
           <Select items={[{ value: "all", label: t("inbox:filters.allAgents") }, ...agents.map((agent) => ({ value: agent.id, label: agent.name }))]} onValueChange={(value) => filterBy({ agent: !value || value === "all" ? null : String(value) })} value={filters.agentId ?? "all"}>
             <SelectTrigger aria-label={t("inbox:filters.agent")} className="w-full"><SelectValue /></SelectTrigger>

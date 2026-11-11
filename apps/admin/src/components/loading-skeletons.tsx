@@ -470,10 +470,10 @@ export function HeaderButtonSkeleton({ label, trailingIcon = false }: { label: s
  */
 export function TabsListSkeleton({ labels }: { labels: string[] }) {
   return (
-    <Skeleton aria-hidden="true" className="inline-flex h-9 w-fit shrink-0 items-center justify-center gap-1 rounded-full p-1">
+    <Skeleton aria-hidden="true" className="flex h-9 w-fit max-w-full shrink-0 items-center justify-start gap-1 overflow-hidden rounded-full p-1">
       {labels.map((label) => (
         <span
-          className="invisible inline-flex h-full flex-1 items-center justify-center border border-transparent px-3 py-1.5 type-label whitespace-nowrap"
+          className="invisible inline-flex h-full flex-1 shrink-0 items-center justify-center border border-transparent px-3 py-1.5 type-label whitespace-nowrap"
           key={label}
         >
           {label}

@@ -426,6 +426,34 @@
   scrollbar-width: none;
 }
 
+/*
+ * A row of tabs, chips or menu items that scrolls sideways when it doesn't
+ * fit. The row never grows past its container, so items are cut off at the
+ * content edge on both sides, which shows there's more to swipe. The native
+ * scrollbar is left alone: overlay scrollbars show only while scrolling. A
+ * row without padding of its own takes `scroll-row-bleed`, so focus rings
+ * aren't clipped.
+ */
+@utility scroll-row {
+  display: flex;
+  flex-wrap: nowrap;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+
+  & > * {
+    flex-shrink: 0;
+  }
+}
+
+/* Room above and below a scroll row's items for focus rings, given back with a negative margin so the layout doesn't move. */
+@utility scroll-row-bleed {
+  padding-block: 4px;
+  margin-block: -4px;
+}
+
 @utility faded-bottom {
   @apply after:pointer-events-none after:absolute after:start-0 after:bottom-0 after:hidden after:h-32 after:w-full after:rounded-b-2xl after:bg-[linear-gradient(180deg,transparent_10%,var(--background)_70%)] md:after:block;
 }
