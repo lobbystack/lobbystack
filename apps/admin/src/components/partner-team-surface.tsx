@@ -22,6 +22,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { intlLocale } from "@/lib/locale";
 import { requestJson } from "@/lib/request-json";
 import { cn } from "@/lib/utils";
+import { Status } from "@/components/ui/status";
+import { INVITATION_STATUS_VARIANTS } from "@/lib/status-variants";
 
 type Team = {
   role: PartnerRole;
@@ -169,10 +171,10 @@ export function PartnerTeamSurface() {
         ) : (
           <Table>
             <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="h-12 px-6 text-sm font-medium text-foreground">{t("team.table.person")}</TableHead>
-                <TableHead className="h-12 px-6 text-sm font-medium text-foreground">{t("team.table.role")}</TableHead>
-                {canManage ? <TableHead className="w-12 px-6" /> : null}
+              <TableRow>
+                <TableHead>{t("team.table.person")}</TableHead>
+                <TableHead>{t("team.table.role")}</TableHead>
+                {canManage ? <TableHead className="w-12" /> : null}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -180,19 +182,19 @@ export function PartnerTeamSurface() {
                 const actions = rowActions(row);
                 const expired = row.kind === "invitation" && new Date(row.expiresAt) <= new Date();
                 return (
-                  <TableRow className="hover:bg-transparent" key={row.kind === "member" ? row.memberId : row.invitationId}>
-                    <TableCell className="px-6 py-5 whitespace-normal [overflow-wrap:anywhere]">
+                  <TableRow key={row.kind === "member" ? row.memberId : row.invitationId}>
+                    <TableCell className="whitespace-normal [overflow-wrap:anywhere]">
                       <div className="flex flex-col gap-1">
                         <p className="ph-mask text-sm">{row.kind === "member" && row.name ? `${row.name} · ${row.email}` : row.email}</p>
                         <div className="flex flex-wrap items-center gap-2">
                           <p className="text-sm text-muted-foreground">{t(row.kind === "member" ? "team.joinedOn" : "team.invitedOn", { date: formatDate(row.kind === "member" ? row.joinedAt : row.invitedAt) })}</p>
-                          {row.kind === "invitation" ? <Badge className={expired ? undefined : "border-amber-200 bg-amber-100 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/20 dark:text-amber-200"} variant="outline">{t(expired ? "team.status.expired" : "team.status.pending")}</Badge> : null}
+                          {row.kind === "invitation" ? <Status variant={INVITATION_STATUS_VARIANTS[expired ? "expired" : "pending"]}>{t(expired ? "team.status.expired" : "team.status.pending")}</Status> : null}
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="px-6 py-5"><Badge variant="secondary">{t(`roles.${row.role}`)}</Badge></TableCell>
+                    <TableCell><Badge variant="secondary">{t(`roles.${row.role}`)}</Badge></TableCell>
                     {canManage ? (
-                      <TableCell className="px-6 py-5">
+                      <TableCell>
                         {actions ? (
                           <DropdownMenu>
                             <DropdownMenuTrigger render={<Button aria-label={t("team.actions.moreOptions", { email: row.email })} disabled={busy} size="icon-sm" variant="ghost"><MoreHorizontal /></Button>} />

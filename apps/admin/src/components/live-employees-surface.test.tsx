@@ -36,7 +36,7 @@ describe("employees loading states", () => {
     expect(screen.getByText("table.name")).toBeTruthy();
     expect(document.querySelector("tbody")?.getAttribute("aria-busy")).toBe("true");
     expect(skeletons("tbody")).toBe(80);
-    expect(skeletons('[aria-hidden="true"]')).toBe(9);
+    expect(skeletons('[aria-hidden="true"]')).toBe(7);
     expect(screen.queryByRole("button", { name: /add.button/ })).toBeNull();
     expect(screen.queryByText("table.emptyState")).toBeNull();
   });

@@ -201,14 +201,14 @@ describe("knowledge loading states", () => {
     expect(screen.queryByText("loading.workspace")).toBeNull();
     expect(screen.getByText("table.title")).toBeTruthy();
     expect(skeletons("tbody")).toBe(60);
-    expect(skeletons('[aria-hidden="true"]')).toBe(9);
+    expect(skeletons('[aria-hidden="true"]')).toBe(7);
   });
   it("keeps the real header and shows placeholder rows and pagination while the entries load", () => {
     renderPending(true);
     expect(screen.getByText("table.title")).toBeTruthy();
     expect(document.querySelector("tbody")?.getAttribute("aria-busy")).toBe("true");
     expect(skeletons("tbody")).toBe(60);
-    expect(skeletons('[aria-hidden="true"]')).toBe(9);
+    expect(skeletons('[aria-hidden="true"]')).toBe(7);
     expect(screen.queryByText("sections.knowledge.emptyState")).toBeNull();
     expect(screen.queryByRole("button", { name: /sections.knowledge.addKnowledge/ })).toBeNull();
   });

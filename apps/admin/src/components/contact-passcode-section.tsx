@@ -8,13 +8,14 @@ import { toast } from "sonner";
 import { CONTACT_PASSCODE_MAX_LENGTH, isContactPasscode, isGuessableContactPasscode, randomContactPasscode } from "@lobbystack/shared";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { DetailSection } from "@/components/detail-fields";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { formatDateTime } from "@/lib/locale";
 import { requestJson } from "@/lib/request-json";
+import { Status } from "@/components/ui/status";
+import { CONTACT_STATUS_VARIANTS } from "@/lib/status-variants";
 
 /** Whether the contact has a keypad PIN, as the contact detail API returns it. */
 export type ContactPasscodeStatus = { setAt: string; locked: boolean } | null;
@@ -66,7 +67,7 @@ export function ContactPasscodeSection({ businessId, canMutate, contactId, local
     <p className="type-body-muted">{t("detail.passcode.hint")}</p>
     <dl className="grid grid-cols-[auto_1fr] items-baseline gap-x-6 gap-y-3">
       <dt className="type-meta">{t("detail.passcode.status")}</dt>
-      <dd className="type-body">{passcode?.locked ? <Badge variant="destructive">{status}</Badge> : status}</dd>
+      <dd className="type-body">{passcode?.locked ? <Status variant={CONTACT_STATUS_VARIANTS.locked}>{status}</Status> : status}</dd>
       <dt className="type-meta">{t("detail.passcode.setAt")}</dt>
       <dd className="type-body">{passcode ? formatDateTime(passcode.setAt, locale, { dateStyle: "medium", timeStyle: "short" }) : t("detail.details.notSet")}</dd>
     </dl>

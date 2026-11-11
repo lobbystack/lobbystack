@@ -26,6 +26,8 @@ import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { requestJson } from "@/lib/request-json";
 import { intlLocale } from "@/lib/locale";
+import { Status } from "@/components/ui/status";
+import { webhookDeliveryStatusVariant } from "@/lib/status-variants";
 
 type Endpoint = {
   id: string;
@@ -126,7 +128,7 @@ function DeliveryLog({ businessId, endpointId }: { businessId: string; endpointI
             <TableRow key={row.id}>
               <TableCell><code className="font-mono text-xs">{row.eventType}</code></TableCell>
               <TableCell>
-                <Badge variant={row.status === "succeeded" ? "secondary" : row.status === "failed" ? "destructive" : "outline"}>{t(`webhooks.deliveries.status.${row.status}`)}</Badge>
+                <Status variant={webhookDeliveryStatusVariant(row.status)}>{t(`webhooks.deliveries.status.${row.status}`)}</Status>
                 {row.status === "retrying" && row.nextAttemptAt ? <p className="mt-1 text-xs text-muted-foreground">{t("webhooks.deliveries.nextAttempt", { time: format(row.nextAttemptAt) })}</p> : null}
               </TableCell>
               <TableCell className="text-muted-foreground">

@@ -32,6 +32,8 @@ import { intlLocale } from "@/lib/locale";
 import { parsePriceInput, priceInputMinor, priceInputValue } from "@/lib/price-input";
 import { requestJson } from "@/lib/request-json";
 import { availableTimeZones, groupTimeZones, isTimeZoneRegion, type TimeZoneOption } from "@/lib/time-zones";
+import { Status } from "@/components/ui/status";
+import { INVITATION_STATUS_VARIANTS, PACKAGE_SUBSCRIPTION_STATUS_VARIANTS } from "@/lib/status-variants";
 
 /** What a business is sold, with its overage in the package's currency, which only owners and admins see. */
 type PackageBilling = { kind: "package"; packageId: string; packageName: string; status: PackageSubscriptionStatus; overage: PackageOverage };
@@ -64,13 +66,6 @@ const BILLING_ERRORS: Record<string, string> = {
   package_not_found: "businesses.billing.errors.packageGone",
   stripe_not_connected: "businesses.billing.errors.notConnected",
   stripe_not_configured: "businesses.billing.errors.notConfigured",
-};
-
-const STATUS_BADGE: Record<PackageSubscriptionStatus, string | undefined> = {
-  awaiting_payment: "border-amber-200 bg-amber-100 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/20 dark:text-amber-200",
-  active: undefined,
-  past_due: "border-destructive/30 bg-destructive/10 text-destructive",
-  inactive: undefined,
 };
 
 // Matches SelectTrigger, as the time zone picker in the receptionist's settings does.
@@ -429,14 +424,14 @@ export function PartnerBusinessesSurface() {
         <Surface className="overflow-hidden p-0">
           <Table>
             <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="h-12 px-6 text-sm font-medium text-foreground">{t("businesses.table.business")}</TableHead>
-                <TableHead className="h-12 px-6 text-sm font-medium text-foreground">{t("businesses.table.owner")}</TableHead>
-                <TableHead className="h-12 px-6 text-sm font-medium text-foreground">{t("businesses.table.access")}</TableHead>
-                {canCreate ? <TableHead className="h-12 px-6 text-sm font-medium text-foreground">{t("businesses.table.billing")}</TableHead> : null}
-                <TableHead className="h-12 px-6 text-right text-sm font-medium text-foreground">{t("businesses.table.minutes")}</TableHead>
-                <TableHead className="h-12 px-6 text-right text-sm font-medium text-foreground">{t("businesses.table.chats")}</TableHead>
-                <TableHead className="h-12 px-6"><span className="sr-only">{t("businesses.table.actions")}</span></TableHead>
+              <TableRow>
+                <TableHead>{t("businesses.table.business")}</TableHead>
+                <TableHead>{t("businesses.table.owner")}</TableHead>
+                <TableHead>{t("businesses.table.access")}</TableHead>
+                {canCreate ? <TableHead>{t("businesses.table.billing")}</TableHead> : null}
+                <TableHead className="text-right">{t("businesses.table.minutes")}</TableHead>
+                <TableHead className="text-right">{t("businesses.table.chats")}</TableHead>
+                <TableHead><span className="sr-only">{t("businesses.table.actions")}</span></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -444,30 +439,30 @@ export function PartnerBusinessesSurface() {
                 const owner = business.owner;
                 const expired = owner?.status === "invited" && new Date(owner.expiresAt) <= new Date();
                 return (
-                  <TableRow className="hover:bg-transparent" key={business.businessId}>
-                    <TableCell className="px-6 py-5 whitespace-normal [overflow-wrap:anywhere]">
+                  <TableRow key={business.businessId}>
+                    <TableCell className="whitespace-normal [overflow-wrap:anywhere]">
                       <div className="flex flex-col gap-1">
                         <p className="ph-mask text-sm font-medium">{business.name}</p>
                         <p className="text-sm text-muted-foreground">{t("businesses.createdOn", { date: formatDate(business.createdAt) })}</p>
                       </div>
                     </TableCell>
-                    <TableCell className="px-6 py-5 whitespace-normal [overflow-wrap:anywhere]">
+                    <TableCell className="whitespace-normal [overflow-wrap:anywhere]">
                       {owner ? (
                         <div className="flex flex-wrap items-center gap-2">
                           <p className="ph-mask text-sm">{owner.email}</p>
-                          {owner.status === "invited" ? <Badge className={expired ? undefined : "border-amber-200 bg-amber-100 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/20 dark:text-amber-200"} variant="outline">{t(expired ? "businesses.owner.expired" : "businesses.owner.invited")}</Badge> : null}
+                          {owner.status === "invited" ? <Status variant={INVITATION_STATUS_VARIANTS[expired ? "expired" : "invited"]}>{t(expired ? "businesses.owner.expired" : "businesses.owner.invited")}</Status> : null}
                         </div>
                       ) : <p className="text-sm text-muted-foreground">{t("businesses.owner.none")}</p>}
                     </TableCell>
-                    <TableCell className="px-6 py-5"><Badge variant="secondary">{t(`businesses.access.${business.accessLevel}`)}</Badge></TableCell>
+                    <TableCell><Badge variant="secondary">{t(`businesses.access.${business.accessLevel}`)}</Badge></TableCell>
                     {canCreate ? (
                       // Words wrap whole here: breaking anywhere split "yourself" across lines on a narrow table.
-                      <TableCell className="min-w-40 px-6 py-5 whitespace-normal break-words">
+                      <TableCell className="min-w-40 whitespace-normal break-words">
                         <div className="flex flex-col gap-1">
                           <div className="flex flex-wrap items-center gap-2">
                             {business.billing?.kind === "package" ? <>
                               <p className="text-sm">{business.billing.packageName}</p>
-                              <Badge className={STATUS_BADGE[business.billing.status]} variant={business.billing.status === "active" ? "secondary" : "outline"}>{t(`businesses.billing.status.${business.billing.status}`)}</Badge>
+                              <Status variant={PACKAGE_SUBSCRIPTION_STATUS_VARIANTS[business.billing.status]}>{t(`businesses.billing.status.${business.billing.status}`)}</Status>
                             </> : <p className="text-sm text-muted-foreground">{t("businesses.billing.outside")}</p>}
                             {sellsPackages ? <Button aria-label={t("businesses.billing.changeFor", { name: business.name })} onClick={() => { setChanging(business); setNewBilling(billingValue(business)); setBillingError(null); }} size="sm" variant="ghost">{t("businesses.billing.change")}</Button> : null}
                           </div>
@@ -480,9 +475,9 @@ export function PartnerBusinessesSurface() {
                         </div>
                       </TableCell>
                     ) : null}
-                    <TableCell className="px-6 py-5 text-right text-sm tabular-nums">{formatMinutes(business.usage.voiceSeconds)}</TableCell>
-                    <TableCell className="px-6 py-5 text-right text-sm tabular-nums">{formatCount(business.usage.chats)}</TableCell>
-                    <TableCell className="px-6 py-5">
+                    <TableCell className="text-right text-sm tabular-nums">{formatMinutes(business.usage.voiceSeconds)}</TableCell>
+                    <TableCell className="text-right text-sm tabular-nums">{formatCount(business.usage.chats)}</TableCell>
+                    <TableCell>
                       <div className="flex items-center justify-end gap-2">
                         <Button
                           aria-label={t("businesses.open.label", { name: business.name })}

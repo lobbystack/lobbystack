@@ -17,7 +17,6 @@ import { CallRecordingPlayer } from "@/components/audio/call-recording-player";
 import { BackLink, DetailSection, MetadataField, truncateId, useCopiedField } from "@/components/detail-fields";
 import { HiddenTextSkeleton, SectionSkeleton } from "@/components/loading-skeletons";
 import { SectionBlock } from "@/components/section-block";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -36,6 +35,8 @@ import { getChannelLabel, getContactDisplayName, hasDisplayablePhone, normalizeC
 import { formatPhoneNumberDisplay } from "@/lib/phone";
 import { useTelemetry } from "@/components/product-analytics";
 import { formatDateTime } from "@/lib/locale";
+import { Status } from "@/components/ui/status";
+import { CONTACT_STATUS_VARIANTS } from "@/lib/status-variants";
 
 type Detail = {
   call: {
@@ -161,7 +162,7 @@ export function LiveCallDetailSurface({ callId, embedded = false }: { callId: st
           {embedded ? <h2 className="type-page-title ph-mask">{callerName}</h2> : <h1 className="type-page-title ph-mask">{callerName}</h1>}
           {blocked ? (
             <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="destructive">{t("detail.blocking.badge")}</Badge>
+              <Status variant={CONTACT_STATUS_VARIANTS.blocked}>{t("detail.blocking.badge")}</Status>
               <span className="type-body-muted">{t("detail.blocking.blockedAtInline", { time: formatDate(contact?.blockedAt ?? call.endedAt ?? call.startedAt, i18n.language) })}</span>
             </div>
           ) : null}

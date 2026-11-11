@@ -58,7 +58,7 @@ export function LiveNotificationSettingsSurface({ widgetOnly = false }: { widget
 }
 
 function NotificationTable({ draft, events: rows, onChange, title, t }: { draft: Preferences; events: EventKey[]; onChange: (next: Preferences) => void; title: string; t: (key: string) => string }) {
-  return <section className="flex flex-col gap-4"><div><h3 className="text-sm font-medium text-foreground">{title}</h3></div><Surface><Table><TableHeader className="bg-transparent"><TableRow className="border-b border-border hover:bg-transparent"><TableHead className="h-12 px-6 align-middle text-sm font-medium text-foreground">{t("notifications.communication.eventColumn")}</TableHead>{draft.emailEnabled ? <TableHead className="h-12 w-[120px] px-6 text-center align-middle text-sm font-medium text-foreground">{t("notifications.sources.email.title")}</TableHead> : null}{draft.smsEnabled ? <TableHead className="h-12 w-[120px] px-6 text-center align-middle text-sm font-medium text-foreground">{t("notifications.sources.sms.title")}</TableHead> : null}</TableRow></TableHeader><TableBody>{rows.map((event) => <TableRow className="border-b border-border last:border-b-0 hover:bg-transparent" key={event}><TableCell className="whitespace-normal px-6 py-5"><div className="flex flex-col gap-1 pr-4"><span className="text-sm font-medium text-foreground">{t(`notifications.events.${event}.title`)}</span><span className="text-sm text-muted-foreground">{t(`notifications.events.${event}.description`)}</span></div></TableCell>{draft.emailEnabled ? <TableCell className="px-6 py-5 text-center align-middle !pr-6"><div className="flex w-full justify-center"><Checkbox aria-label={`${t("notifications.sources.email.title")} - ${t(`notifications.events.${event}.title`)}`} checked={draft.eventPreferences[event]?.email ?? false} onCheckedChange={(checked) => onChange({ ...draft, eventPreferences: { ...draft.eventPreferences, [event]: { ...(draft.eventPreferences[event] ?? { email: false, sms: false }), email: checked === true } } })} /></div></TableCell> : null}{draft.smsEnabled ? <TableCell className="px-6 py-5 text-center align-middle !pr-6"><div className="flex w-full justify-center"><Checkbox aria-label={`${t("notifications.sources.sms.title")} - ${t(`notifications.events.${event}.title`)}`} checked={draft.eventPreferences[event]?.sms ?? false} onCheckedChange={(checked) => onChange({ ...draft, eventPreferences: { ...draft.eventPreferences, [event]: { ...(draft.eventPreferences[event] ?? { email: false, sms: false }), sms: checked === true } } })} /></div></TableCell> : null}</TableRow>)}</TableBody></Table></Surface></section>;
+  return <section className="flex flex-col gap-4"><div><h3 className="text-sm font-medium text-foreground">{title}</h3></div><Surface><Table><TableHeader><TableRow><TableHead className="align-middle">{t("notifications.communication.eventColumn")}</TableHead>{draft.emailEnabled ? <TableHead className="w-[120px] text-center align-middle">{t("notifications.sources.email.title")}</TableHead> : null}{draft.smsEnabled ? <TableHead className="w-[120px] text-center align-middle">{t("notifications.sources.sms.title")}</TableHead> : null}</TableRow></TableHeader><TableBody>{rows.map((event) => <TableRow key={event}><TableCell className="whitespace-normal"><div className="flex flex-col gap-1 pr-4"><span className="text-sm font-medium text-foreground">{t(`notifications.events.${event}.title`)}</span><span className="text-sm text-muted-foreground">{t(`notifications.events.${event}.description`)}</span></div></TableCell>{draft.emailEnabled ? <TableCell className="text-center align-middle"><div className="flex w-full justify-center"><Checkbox aria-label={`${t("notifications.sources.email.title")} - ${t(`notifications.events.${event}.title`)}`} checked={draft.eventPreferences[event]?.email ?? false} onCheckedChange={(checked) => onChange({ ...draft, eventPreferences: { ...draft.eventPreferences, [event]: { ...(draft.eventPreferences[event] ?? { email: false, sms: false }), email: checked === true } } })} /></div></TableCell> : null}{draft.smsEnabled ? <TableCell className="text-center align-middle"><div className="flex w-full justify-center"><Checkbox aria-label={`${t("notifications.sources.sms.title")} - ${t(`notifications.events.${event}.title`)}`} checked={draft.eventPreferences[event]?.sms ?? false} onCheckedChange={(checked) => onChange({ ...draft, eventPreferences: { ...draft.eventPreferences, [event]: { ...(draft.eventPreferences[event] ?? { email: false, sms: false }), sms: checked === true } } })} /></div></TableCell> : null}</TableRow>)}</TableBody></Table></Surface></section>;
 }
 
 /** Hidden text keeps a placeholder as wide and tall as the text it stands in for. */
@@ -72,25 +72,25 @@ function NotificationTableSkeleton({ events: rows, title, t }: { events: EventKe
       <HiddenText className="text-sm font-medium">{title}</HiddenText>
       <Surface>
         <Table>
-          <TableHeader className="bg-transparent">
-            <TableRow className="border-b border-border hover:bg-transparent">
-              <TableHead className="h-12 px-6 align-middle text-sm font-medium text-foreground">{t("notifications.communication.eventColumn")}</TableHead>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="align-middle">{t("notifications.communication.eventColumn")}</TableHead>
               {/* Which of the Email and SMS columns exist depends on the saved choice, so both show as placeholders. */}
-              <TableHead className="h-12 w-[120px] px-6 align-middle"><Skeleton className="mx-auto h-4 w-10" /></TableHead>
-              <TableHead className="h-12 w-[120px] px-6 align-middle"><Skeleton className="mx-auto h-4 w-10" /></TableHead>
+              <TableHead className="w-[120px] align-middle"><Skeleton className="mx-auto h-4 w-10" /></TableHead>
+              <TableHead className="w-[120px] align-middle"><Skeleton className="mx-auto h-4 w-10" /></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody aria-busy="true">
             {rows.map((event) => (
-              <TableRow className="border-b border-border last:border-b-0 hover:bg-transparent" key={event}>
-                <TableCell className="whitespace-normal px-6 py-5">
+              <TableRow key={event}>
+                <TableCell className="whitespace-normal">
                   <div className="flex flex-col gap-1 pr-4">
                     <HiddenText className="text-sm font-medium">{t(`notifications.events.${event}.title`)}</HiddenText>
                     <HiddenText className="text-sm">{t(`notifications.events.${event}.description`)}</HiddenText>
                   </div>
                 </TableCell>
-                <TableCell className="px-6 py-5"><Skeleton className="mx-auto size-4" /></TableCell>
-                <TableCell className="px-6 py-5"><Skeleton className="mx-auto size-4" /></TableCell>
+                <TableCell><Skeleton className="mx-auto size-4" /></TableCell>
+                <TableCell><Skeleton className="mx-auto size-4" /></TableCell>
               </TableRow>
             ))}
           </TableBody>

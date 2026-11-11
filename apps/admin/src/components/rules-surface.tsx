@@ -12,10 +12,9 @@ import { useSetupAction } from "@/lib/use-setup-action";
 import { requestJson } from "@/lib/request-json";
 import { HeaderActions } from "@/components/header-actions";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
-import { DataTablePagination, paginationFeatures } from "./data-table/pagination";
+import { DataTablePagination, paginationFeatures, useDataTablePaginationLabels } from "./data-table/pagination";
 import { DataTablePaginationSkeleton, HeaderButtonSkeleton, RuleRowsSkeleton, RulesPageSkeleton } from "./loading-skeletons";
 import { PageSurface } from "./page-surface";
-import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "./ui/dropdown-menu";
@@ -25,6 +24,8 @@ import { Table, TableBody, TableCard, TableCell, TableHead, TableHeader, TableRo
 import { Textarea } from "./ui/textarea";
 import { intlLocale } from "@/lib/locale";
 import { cn } from "@/lib/utils";
+import { Status } from "@/components/ui/status";
+import { knowledgeStatusVariant } from "@/lib/status-variants";
 
 type Rule = { id: string; title: string; content: string; active: boolean; sortOrder: number; createdAt: string };
 
@@ -36,6 +37,7 @@ function summarize(value: string, length: number): string {
 /** One agent's rules, or without `agentId` the default agent's. */
 export function RulesSurface({ agentId }: { agentId?: string } = {}) {
   const { i18n, t } = useTranslation("agent");
+  const paginationLabels = useDataTablePaginationLabels("agent");
   const queryClient = useQueryClient();
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
   const [editingRule, setEditingRule] = useState<Rule | null>(null);
@@ -102,7 +104,7 @@ export function RulesSurface({ agentId }: { agentId?: string } = {}) {
 
   if (businesses.isLoading) return <PageSurface title={t("sections.rules.title")}><div className="flex w-full flex-col gap-6">
     <HeaderActions><HeaderButtonSkeleton label={t("sections.rules.addKnowledge")} /></HeaderActions>
-    <RulesPageSkeleton headings={[t("table.title"), t("table.preview"), t("table.status"), t("table.added")]} />
+    <RulesPageSkeleton headings={[t("table.title"), t("table.preview"), t("table.status"), t("table.added")]} rowsPerPage={paginationLabels.rowsPerPage} />
   </div></PageSurface>;
   if (!business) return <PageSurface title={t("sections.rules.title")}><p className="text-sm text-muted-foreground">{t("empty.description")}</p></PageSurface>;
 
@@ -140,7 +142,7 @@ export function RulesSurface({ agentId }: { agentId?: string } = {}) {
                   {canManage ? <TableCell className="pr-0" onClick={(event) => event.stopPropagation()}><span aria-hidden="true" className={cn("flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground", reorderRules.isPending ? "cursor-not-allowed opacity-50" : "cursor-grab active:cursor-grabbing")} onPointerDown={() => { if (!reorderRules.isPending) setDragArmed(rule.id); }} onPointerUp={() => setDragArmed(null)} title={t("actions.dragToReorder")}><GripVertical className="size-4" /></span></TableCell> : null}
                   <TableCell className="max-w-0 overflow-hidden"><span className="block truncate font-medium" title={rule.title}>{summarize(rule.title, 32)}</span></TableCell>
                   <TableCell className="max-w-0 overflow-hidden"><span className="block truncate text-sm text-muted-foreground" title={rule.content}>{summarize(rule.content, 72)}</span></TableCell>
-                  <TableCell>{rule.active ? <Badge variant="secondary">{t("sections.rules.status.indexed")}</Badge> : <Badge variant="outline">{t("table.disabled")}</Badge>}</TableCell>
+                  <TableCell><Status variant={knowledgeStatusVariant(rule.active ? "indexed" : "disabled")}>{rule.active ? t("sections.rules.status.indexed") : t("table.disabled")}</Status></TableCell>
                   <TableCell className="text-right text-sm text-muted-foreground">{new Intl.DateTimeFormat(intlLocale(i18n.resolvedLanguage), { dateStyle: "medium", timeStyle: "short" }).format(new Date(rule.createdAt))}</TableCell>
                   <TableCell onClick={(event) => event.stopPropagation()}>{canManage ? <DropdownMenu><DropdownMenuTrigger render={<Button aria-label={t("actions.moreOptions")} size="icon-sm" type="button" variant="ghost"><MoreHorizontal /></Button>} /><DropdownMenuContent align="end" className="min-w-0 w-fit p-1"><DropdownMenuItem onClick={() => { setEditingRule(rule); setDialogOpen(true); }}><Pencil />{t("actions.edit")}</DropdownMenuItem><DropdownMenuSeparator /><DropdownMenuItem disabled={orderedIndex === 0 || reorderRules.isPending} onClick={() => moveRule(rule, -1)}><ArrowUp />{t("actions.moveUp")}</DropdownMenuItem><DropdownMenuItem disabled={orderedIndex === orderedRules.length - 1 || reorderRules.isPending} onClick={() => moveRule(rule, 1)}><ArrowDown />{t("actions.moveDown")}</DropdownMenuItem><DropdownMenuSeparator /><DropdownMenuItem disabled={updateRule.isPending} onClick={() => updateRule.mutate({ ruleId: rule.id, active: !rule.active })}>{rule.active ? <Pause /> : <Play />}{rule.active ? t("actions.disable") : t("actions.enable")}</DropdownMenuItem><DropdownMenuSeparator /><DropdownMenuItem onClick={() => setDeleteCandidate(rule)} variant="destructive"><Trash2 />{t("actions.delete")}</DropdownMenuItem></DropdownMenuContent></DropdownMenu> : null}</TableCell>
                 </TableRow>;
@@ -148,7 +150,7 @@ export function RulesSurface({ agentId }: { agentId?: string } = {}) {
             </TableBody>
           </Table>
         </TableCard>
-        {loading ? <DataTablePaginationSkeleton /> : <DataTablePagination labels={{ rowsPerPage: t("pagination.rowsPerPage"), pageOf: (page, total) => t("pagination.pageOf", { page, total }), firstPage: t("pagination.firstPage"), previousPage: t("pagination.previousPage"), nextPage: t("pagination.nextPage"), lastPage: t("pagination.lastPage"), goToPage: (page) => t("pagination.goToPage", { page }) }} table={table} />}
+        {loading ? <DataTablePaginationSkeleton rowsPerPage={paginationLabels.rowsPerPage} /> : <DataTablePagination labels={paginationLabels} table={table} />}
         <RuleDialog editingRule={editingRule} onOpenChange={(open) => { setDialogOpen(open); if (!open) setEditingRule(null); }} open={dialogOpen} pending={createRule.isPending || updateRule.isPending} save={async (input) => { if (editingRule) await updateRule.mutateAsync({ ruleId: editingRule.id, ...input }); else await createRule.mutateAsync(input); setDialogOpen(false); setEditingRule(null); }} />
         <ConfirmActionDialog confirmVariant="destructive" cancelLabel={t("actions.deleteCancel")} confirmLabel={t("actions.delete")} description={t("actions.deleteDescription")} onConfirm={async () => { if (!deleteCandidate) return; await deleteRule.mutateAsync(deleteCandidate.id); toast.success(t("actions.deleted")); }} onOpenChange={(open) => { if (!open) setDeleteCandidate(null); }} open={deleteCandidate !== null} pending={deleteRule.isPending} title={t("actions.deleteTitle")} />
       </div>

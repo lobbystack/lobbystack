@@ -16,7 +16,6 @@ import { LiveNotificationSettingsSurface } from "./live-notification-settings-su
 import { PageSurface } from "./page-surface";
 import { SectionBlock } from "./section-block";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
-import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
@@ -31,6 +30,8 @@ import { Textarea } from "./ui/textarea";
 import { readableOn } from "./widget/widget-parts";
 import { WidgetPreview } from "./widget/widget-preview";
 import { intlLocale } from "@/lib/locale";
+import { Status } from "@/components/ui/status";
+import { WIDGET_KEY_STATUS_VARIANTS } from "@/lib/status-variants";
 
 
 /** Languages the widget interface can be forced to, with their settings label keys. */
@@ -257,7 +258,6 @@ export function LiveWidgetSettingsSurface({ agentId, startAdding = false }: { ag
   );
 }
 
-const STATUS_DOT: Record<WidgetKeyRecord["status"], string> = { active: "bg-emerald-500", disabled: "bg-amber-500", revoked: "bg-muted-foreground/50" };
 
 function WidgetKeyCard({ row, name, busy, embedOrigin, locale, onEdit, onStatus, onRevoke, t }: { row: WidgetKeyRecord; name: string; busy: boolean; embedOrigin: string; locale: string; onEdit: () => void; onStatus: (status: "active" | "disabled") => void; onRevoke: () => void; t: TFunction<"settings"> }) {
   const [copied, copy] = useCopy();
@@ -271,7 +271,7 @@ function WidgetKeyCard({ row, name, busy, embedOrigin, locale, onEdit, onStatus,
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <h3 className="type-item-title truncate">{name}</h3>
-            <Badge variant="outline"><span className={cn("size-1.5 rounded-full", STATUS_DOT[row.status])} aria-hidden="true" />{t(`widget.status.${row.status}`)}</Badge>
+            <Status variant={WIDGET_KEY_STATUS_VARIANTS[row.status]}>{t(`widget.status.${row.status}`)}</Status>
           </div>
           <p className="flex min-w-0 items-center gap-1.5 text-sm text-muted-foreground"><Globe className="size-3.5 shrink-0" aria-hidden="true" /><span className="truncate">{row.allowedOrigins.join(", ")}</span></p>
           <p className="text-xs text-muted-foreground">{row.lastUsedAt ? t("widget.keys.lastUsed", { date: new Intl.DateTimeFormat(intlLocale(locale), { dateStyle: "medium" }).format(new Date(row.lastUsedAt)) }) : t("widget:manage.neverUsed")}</p>

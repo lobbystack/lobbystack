@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Item, ItemActions, ItemContent, ItemDescription, ItemTitle } from "@/components/ui/item";
 import { useAgents, type AgentListItem } from "@/hooks/use-agents";
 import { intlLocale } from "@/lib/locale";
+import { Status } from "@/components/ui/status";
+import { AGENT_STATUS_VARIANTS } from "@/lib/status-variants";
 
 export function AgentAvatar({ name, size = "sm" }: { name: string; size?: "sm" | "default" }) {
   return <Avatar size={size}><AvatarFallback>{name.trim().charAt(0).toUpperCase() || "A"}</AvatarFallback></Avatar>;
@@ -19,7 +21,7 @@ export function AgentStatusBadges({ agent }: { agent: Pick<AgentListItem, "isDef
   const { t } = useTranslation("nav");
   return <>
     {agent.isDefault ? <Badge variant="secondary">{t("agents.default")}</Badge> : null}
-    {agent.paused ? <Badge className="border-amber-200 bg-amber-100 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/20 dark:text-amber-200" variant="outline">{t("agents.paused")}</Badge> : null}
+    {agent.paused ? <Status variant={AGENT_STATUS_VARIANTS.paused}>{t("agents.paused")}</Status> : null}
   </>;
 }
 

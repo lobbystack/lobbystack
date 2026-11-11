@@ -27,7 +27,7 @@ import { LiveSetupGuideSurface, useSetupGuide } from "@/components/live-setup-gu
 import { needsHoursForBooking, useBusinessHours } from "@/components/business-hours-section";
 import { AppointmentDetailsSheet } from "@/components/appointment-details-sheet";
 import { appointmentSummary } from "@/components/cancel-appointment-button";
-import { HiddenTextSkeleton, ResultsRowSkeleton, SetupGuideSkeleton } from "@/components/loading-skeletons";
+import { HiddenTextSkeleton, ResultsRowSkeleton, SetupGuideSkeleton, StatusSkeleton } from "@/components/loading-skeletons";
 import { RowChevron } from "@/components/row-chevron";
 import { formatBookedValue, formatTimeSaved } from "@/lib/analytics-results";
 import type { AnalyticsResultsViewModel } from "@/lib/page-view-models";
@@ -41,6 +41,8 @@ import { fetchUnansweredQuestions, UNANSWERED_QUESTIONS_ANCHOR, unansweredQuesti
 import { useBusinessCan } from "@/components/business-capabilities-provider";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { isSetupGuideFinished, SETUP_STEP_ORDER, showsSetupGuide } from "@/lib/setup-guide";
+import { Status } from "@/components/ui/status";
+import { appointmentStatusVariant, REQUEST_STATUS_VARIANTS } from "@/lib/status-variants";
 
 const OverviewCallChart = dynamic(() => import("./overview-call-chart").then((module) => module.OverviewCallChart), {
   loading: () => <Skeleton className="h-[350px] w-full" />,
@@ -181,13 +183,13 @@ export function LiveOverviewSurface() {
                                       )}
                                     </div>
                                     <ItemActions className="hidden w-auto shrink-0 justify-end self-start sm:flex">
-                                      <Badge variant="secondary">
+                                      <Status variant={REQUEST_STATUS_VARIANTS.kind}>
                                         {requestKindLabel}
-                                      </Badge>
+                                      </Status>
                                       {isUrgentFollowUpValue(details.urgency) ? (
-                                        <Badge variant="destructive">
+                                        <Status variant={REQUEST_STATUS_VARIANTS.urgent}>
                                           {t("home.actionRequired.urgent")}
-                                        </Badge>
+                                        </Status>
                                       ) : null}
                                     </ItemActions>
                                   </ItemHeader>
@@ -213,13 +215,13 @@ export function LiveOverviewSurface() {
                                       })}
                                     </span>
                                     <span className="flex items-center gap-2 sm:hidden">
-                                      <Badge variant="secondary">
+                                      <Status variant={REQUEST_STATUS_VARIANTS.kind}>
                                         {requestKindLabel}
-                                      </Badge>
+                                      </Status>
                                       {isUrgentFollowUpValue(details.urgency) ? (
-                                        <Badge variant="destructive">
+                                        <Status variant={REQUEST_STATUS_VARIANTS.urgent}>
                                           {t("home.actionRequired.urgent")}
-                                        </Badge>
+                                        </Status>
                                       ) : null}
                                     </span>
                                   </ItemFooter>
@@ -242,7 +244,7 @@ export function LiveOverviewSurface() {
                   return <div key={appointment.id}>
                     {/* The whole row opens the appointment's details, as a row on the appointments page does. */}
                     <button className="-mx-2 grid w-[calc(100%+1rem)] grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1.5 rounded-md px-2 py-2 text-left outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background" onClick={() => setDetailsId(appointment.id)} type="button">
-                      <span className="flex min-w-0 flex-wrap items-center gap-2"><span className="inline-flex min-w-0 items-center gap-1"><span className="type-item-title">{contactName}</span><RowChevron /></span><Badge variant="outline">{getAppointmentStatusLabel(appointment.status, t)}</Badge><Badge variant="secondary">{getChannelLabel(appointment.sourceChannel, t)}</Badge></span>
+                      <span className="flex min-w-0 flex-wrap items-center gap-2"><span className="inline-flex min-w-0 items-center gap-1"><span className="type-item-title">{contactName}</span><RowChevron /></span><Status variant={appointmentStatusVariant(appointment.status)}>{getAppointmentStatusLabel(appointment.status, t)}</Status><Badge variant="secondary">{getChannelLabel(appointment.sourceChannel, t)}</Badge></span>
                       <span className="type-item-title text-right">{formatDateTime(appointment.startsAt, i18n.language, { weekday: "short", month: "short", day: "numeric", timeZone: appointment.timezone })}</span>
                       <span className="type-body-muted flex min-w-0 items-center gap-1.5">
                         <span className="truncate">{appointment.serviceName ?? t("home.upcoming.unknownService")}</span>
@@ -331,7 +333,7 @@ function ActionRequiredSkeleton() {
                 <ItemContent className="min-w-0">
                   <div className="flex items-start justify-between gap-3">
                     <Skeleton className="h-4 w-3/5" />
-                    <Skeleton className="hidden h-5 w-16 rounded-full sm:block" />
+                    <StatusSkeleton className="max-sm:hidden" />
                   </div>
                   <Skeleton className="h-3 w-1/2" />
                   <Skeleton className="h-3 w-1/3" />
@@ -354,7 +356,7 @@ function UpcomingSkeleton() {
             <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1.5 py-2">
               <div className="flex items-center gap-2">
                 <Skeleton className="h-4 w-28" />
-                <Skeleton className="h-5 w-16 rounded-full" />
+                <StatusSkeleton />
               </div>
               <Skeleton className="h-4 w-24 justify-self-end" />
               <Skeleton className="h-3 w-40" />

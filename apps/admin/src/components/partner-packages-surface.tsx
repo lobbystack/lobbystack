@@ -13,7 +13,6 @@ import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { PageHeader } from "@/components/page-header";
 import { useConsolePartner } from "@/components/partner-shell";
 import { useTelemetry } from "@/components/product-analytics";
-import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -25,6 +24,8 @@ import { Surface } from "@/components/ui/surface";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { parsePriceInput } from "@/lib/price-input";
 import { requestJson } from "@/lib/request-json";
+import { Status } from "@/components/ui/status";
+import { PACKAGE_STATUS_VARIANTS } from "@/lib/status-variants";
 
 /** A package as GET /api/partner/packages lists it. Amounts are in the currency's smallest unit. */
 type PartnerPackage = {
@@ -238,38 +239,38 @@ export function PartnerPackagesSurface() {
         <Surface className="overflow-hidden p-0">
           <Table>
             <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="h-12 px-6 text-sm font-medium text-foreground">{t("packages.table.package")}</TableHead>
-                <TableHead className="h-12 px-6 text-sm font-medium text-foreground">{t("packages.table.price")}</TableHead>
-                <TableHead className="h-12 px-6 text-sm font-medium text-foreground">{t("packages.table.allowance")}</TableHead>
-                <TableHead className="w-12 px-6" />
+              <TableRow>
+                <TableHead>{t("packages.table.package")}</TableHead>
+                <TableHead>{t("packages.table.price")}</TableHead>
+                <TableHead>{t("packages.table.allowance")}</TableHead>
+                <TableHead className="w-12" />
               </TableRow>
             </TableHeader>
             <TableBody>
               {data.packages.map((item) => (
-                <TableRow className="hover:bg-transparent" key={item.packageId}>
-                  <TableCell className="px-6 py-5 whitespace-normal [overflow-wrap:anywhere]">
+                <TableRow key={item.packageId}>
+                  <TableCell className="whitespace-normal [overflow-wrap:anywhere]">
                     <div className="flex flex-col gap-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="text-sm font-medium">{item.name}</p>
-                        {item.onConnectedAccount ? null : <Badge variant="outline">{t("packages.oldAccount")}</Badge>}
+                        {item.onConnectedAccount ? null : <Status variant={PACKAGE_STATUS_VARIANTS.oldAccount}>{t("packages.oldAccount")}</Status>}
                       </div>
                       <p className="text-sm text-muted-foreground">{t("packages.createdOn", { date: formatDate(item.createdAt) })}</p>
                     </div>
                   </TableCell>
-                  <TableCell className="px-6 py-5 whitespace-normal">
+                  <TableCell className="whitespace-normal">
                     <div className="flex flex-col gap-1 tabular-nums">
                       <p className="text-sm">{t("packages.perMonth", { amount: formatAmount(item.monthlyPriceMinor, item.currency) })}</p>
                       <p className="text-sm text-muted-foreground">{item.setupFeeMinor === null ? t("packages.noSetupFee") : t("packages.setupFee", { amount: formatAmount(item.setupFeeMinor, item.currency) })}</p>
                     </div>
                   </TableCell>
-                  <TableCell className="px-6 py-5 whitespace-normal">
+                  <TableCell className="whitespace-normal">
                     <div className="flex flex-col gap-1 tabular-nums">
                       <p className="text-sm">{t("packages.minutes", { count: item.allowance.voiceMinutes, amount: formatCount(item.allowance.voiceMinutes) })}</p>
                       <p className="text-sm">{t("packages.chats", { count: item.allowance.chats, amount: formatCount(item.allowance.chats) })}</p>
                     </div>
                   </TableCell>
-                  <TableCell className="px-6 py-5">
+                  <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger render={<Button aria-label={t("packages.moreOptions", { name: item.name })} disabled={rename.isPending || archive.isPending} size="icon-sm" variant="ghost"><MoreHorizontal /></Button>} />
                       <DropdownMenuContent align="end">

@@ -13,7 +13,8 @@
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
-  --table-header: var(--card);
+  /* Polar's DataTable header row (clients/packages/orbit/src/components/datatable/DataTable.tsx): bg-gray-50. */
+  --table-header: oklch(0.985 0.002 247.839);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
   --primary: oklch(0.205 0 0);
@@ -42,6 +43,20 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  /* Polar's Status colors (clients/packages/orbit/src/components/Status.tsx): gray-200/500, emerald-100/500, yellow-100/500, red-100/500 and indigo-100/500. */
+  --status-neutral: oklch(0.928 0.006 264.531);
+  --status-neutral-foreground: oklch(0.551 0.027 264.364);
+  --status-success: oklch(0.95 0.052 163.051);
+  --status-success-foreground: oklch(0.696 0.17 162.48);
+  --status-warning: oklch(0.973 0.071 103.193);
+  --status-warning-foreground: oklch(0.795 0.184 86.047);
+  --status-danger: oklch(0.936 0.032 17.717);
+  --status-danger-foreground: oklch(0.637 0.237 25.331);
+  --status-info: oklch(0.93 0.034 272.788);
+  --status-info-foreground: oklch(0.585 0.233 277.117);
+  /* Polar's gray Pill (clients/packages/orbit/src/components/Pill.tsx): gray-100 and gray-600. */
+  --pill: oklch(0.967 0.003 264.542);
+  --pill-foreground: oklch(0.446 0.03 256.802);
 }
 
 .dark {
@@ -78,6 +93,20 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+  /* Polar's dark Status colors: polar-700/500, then the 950 shade behind the 500 text. */
+  --status-neutral: hsl(0 0% 13%);
+  --status-neutral-foreground: hsl(0 0% 46%);
+  --status-success: oklch(0.262 0.051 172.552);
+  --status-success-foreground: oklch(0.696 0.17 162.48);
+  --status-warning: oklch(0.286 0.066 53.813);
+  --status-warning-foreground: oklch(0.795 0.184 86.047);
+  --status-danger: oklch(0.258 0.092 26.042);
+  --status-danger-foreground: oklch(0.637 0.237 25.331);
+  --status-info: oklch(0.257 0.09 281.288);
+  --status-info-foreground: oklch(0.585 0.233 277.117);
+  /* Polar's dark gray Pill: polar-700 and polar-300. */
+  --pill: hsl(0 0% 13%);
+  --pill-foreground: hsl(0 0% 62%);
 }
 
 @theme inline {
@@ -115,6 +144,18 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-status-neutral: var(--status-neutral);
+  --color-status-neutral-foreground: var(--status-neutral-foreground);
+  --color-status-success: var(--status-success);
+  --color-status-success-foreground: var(--status-success-foreground);
+  --color-status-warning: var(--status-warning);
+  --color-status-warning-foreground: var(--status-warning-foreground);
+  --color-status-danger: var(--status-danger);
+  --color-status-danger-foreground: var(--status-danger-foreground);
+  --color-status-info: var(--status-info);
+  --color-status-info-foreground: var(--status-info-foreground);
+  --color-pill: var(--pill);
+  --color-pill-foreground: var(--pill-foreground);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);

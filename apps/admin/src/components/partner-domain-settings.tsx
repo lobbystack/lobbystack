@@ -12,7 +12,6 @@ import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { useBranding } from "@/components/branding-provider";
 import { useCopiedField } from "@/components/detail-fields";
 import { useConsolePartner } from "@/components/partner-shell";
-import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Field, FieldError, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -21,6 +20,8 @@ import { Surface } from "@/components/ui/surface";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatDateTime } from "@/lib/locale";
 import { requestJson } from "@/lib/request-json";
+import { Status } from "@/components/ui/status";
+import { CUSTOM_DOMAIN_STATUS_VARIANTS } from "@/lib/status-variants";
 
 /** What GET, POST and DELETE /api/partner/domain answer. */
 export type PartnerDomains = {
@@ -48,12 +49,6 @@ const ERROR_KEYS: Record<string, string> = {
   paid_tier_required: "branding.domain.own.errors.paidTier",
   custom_domains_unavailable: "branding.domain.own.errors.unavailable",
   forbidden: "branding.domain.own.errors.forbidden",
-};
-
-const STATUS_BADGE: Record<CustomDomainStatus, { variant: "secondary" | "outline" | "destructive"; className?: string }> = {
-  active: { variant: "secondary" },
-  pending: { variant: "outline", className: "border-amber-200 bg-amber-100 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/20 dark:text-amber-200" },
-  failed: { variant: "destructive" },
 };
 
 // While a domain waits for its DNS records, the worker checks it every minute
@@ -202,7 +197,7 @@ export function PartnerDomainSettings() {
                 <div className="flex flex-col gap-4">
                   <div className="flex flex-wrap items-center gap-3">
                     <span className="font-mono text-sm [overflow-wrap:anywhere]" dir="ltr">{custom.hostname}</span>
-                    <Badge className={STATUS_BADGE[custom.status].className} variant={STATUS_BADGE[custom.status].variant}>{t(`branding.domain.own.status.${custom.status}`)}</Badge>
+                    <Status variant={CUSTOM_DOMAIN_STATUS_VARIANTS[custom.status]}>{t(`branding.domain.own.status.${custom.status}`)}</Status>
                     {custom.url ? (
                       <a className={buttonVariants({ size: "sm", variant: "outline" })} href={custom.url} rel="noopener noreferrer" target="_blank">
                         <ExternalLink />

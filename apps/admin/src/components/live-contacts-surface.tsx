@@ -21,7 +21,7 @@ import { keepPreviousForBusiness } from "@/lib/keep-previous-for-business";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { EditContactDialog } from "@/components/edit-contact-dialog";
 import { NewContactButton } from "@/components/new-contact-dialog";
-import { DataTablePagination, paginationFeatures } from "@/components/data-table/pagination";
+import { DataTablePagination, paginationFeatures, useDataTablePaginationLabels } from "@/components/data-table/pagination";
 import { PageHeader } from "@/components/page-header";
 import { ContactRowsSkeleton, DataTablePaginationSkeleton } from "@/components/loading-skeletons";
 import { Badge } from "@/components/ui/badge";
@@ -33,6 +33,8 @@ import { getChannelLabel, getContactChannels, getContactDisplayName, getContactS
 import { formatDateTime } from "@/lib/locale";
 import { cn } from "@/lib/utils";
 import { useTelemetry } from "@/components/product-analytics";
+import { Status } from "@/components/ui/status";
+import { CONTACT_STATUS_VARIANTS } from "@/lib/status-variants";
 
 type Contact = {
   id: string;
@@ -52,6 +54,7 @@ type PendingBlock = { contact: Contact; nextBlocked: boolean };
 
 export function LiveContactsSurface() {
   const { i18n, t } = useTranslation("contacts");
+  const paginationLabels = useDataTablePaginationLabels("contacts");
   const router = useRouter();
   const telemetry = useTelemetry();
   const queryClient = useQueryClient();
@@ -102,7 +105,7 @@ export function LiveContactsSurface() {
       header: () => t("table.contact"),
       cell: ({ row }) => {
         const details = getContactSecondaryDetails(row.original, i18n.language);
-        return <div className="flex min-w-0 flex-col gap-1"><div className="flex min-w-0 items-center gap-2"><span className="ph-mask truncate font-semibold">{getContactDisplayName(row.original, i18n.language, t)}</span>{row.original.operatorBlockedAt ? <Badge variant="destructive">{t("table.status.blocked")}</Badge> : null}</div>{details.length ? <div className="ph-no-capture flex min-w-0 flex-col">{details.map((detail) => <span className="truncate text-sm text-muted-foreground" key={detail} title={detail}>{detail}</span>)}</div> : null}</div>;
+        return <div className="flex min-w-0 flex-col gap-1"><div className="flex min-w-0 items-center gap-2"><span className="ph-mask truncate font-semibold">{getContactDisplayName(row.original, i18n.language, t)}</span>{row.original.operatorBlockedAt ? <Status variant={CONTACT_STATUS_VARIANTS.blocked}>{t("table.status.blocked")}</Status> : null}</div>{details.length ? <div className="ph-no-capture flex min-w-0 flex-col">{details.map((detail) => <span className="truncate text-sm text-muted-foreground" key={detail} title={detail}>{detail}</span>)}</div> : null}</div>;
       },
     },
     {
@@ -158,12 +161,12 @@ export function LiveContactsSurface() {
           <TableHeader empty={!hasRows}>{table.getHeaderGroups().map((group) => <TableRow key={group.id}>{group.headers.map((header) => <TableHead className={cn(header.column.id === "lastInteraction" || header.column.id === "actions" ? "text-right" : header.column.id === "contact" ? "min-w-[12rem]" : header.column.id === "channels" ? "min-w-[8rem]" : header.column.id === "activity" ? "min-w-[10rem]" : header.column.id === "appointments" ? "min-w-[7rem] text-center" : undefined, !hasRows && "min-w-0")} key={header.id}>{header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}</TableHead>)}</TableRow>)}</TableHeader>
           <TableBody aria-busy={loading || undefined}>
             {loading ? <ContactRowsSkeleton rows={Math.min(pagination.pageSize, 10)} /> : null}
-            {loading ? null : table.getRowModel().rows.map((row) => <TableRow className="h-12 cursor-pointer transition-colors hover:bg-muted/40" key={row.id} onClick={() => { if (business) telemetry.track("web.contacts.contact_opened", { businessId: business.businessId, contactId: row.original.id }); router.push(`/contacts/${row.original.id}`); }}>{row.getAllCells().map((cell) => <TableCell className={cell.column.id === "lastInteraction" ? "min-w-[11rem] max-w-0 whitespace-nowrap text-right" : cell.column.id === "actions" ? "w-16 text-right" : cell.column.id === "contact" ? "min-w-[12rem]" : cell.column.id === "channels" ? "min-w-[8rem]" : cell.column.id === "activity" ? "min-w-[10rem]" : cell.column.id === "appointments" ? "min-w-[7rem] text-center" : undefined} key={cell.id} onClick={cell.column.id === "actions" ? (event) => event.stopPropagation() : undefined}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>)}</TableRow>)}
+            {loading ? null : table.getRowModel().rows.map((row) => <TableRow className="cursor-pointer" key={row.id} onClick={() => { if (business) telemetry.track("web.contacts.contact_opened", { businessId: business.businessId, contactId: row.original.id }); router.push(`/contacts/${row.original.id}`); }}>{row.getAllCells().map((cell) => <TableCell className={cell.column.id === "lastInteraction" ? "min-w-[11rem] max-w-0 whitespace-nowrap text-right" : cell.column.id === "actions" ? "w-16 text-right" : cell.column.id === "contact" ? "min-w-[12rem]" : cell.column.id === "channels" ? "min-w-[8rem]" : cell.column.id === "activity" ? "min-w-[10rem]" : cell.column.id === "appointments" ? "min-w-[7rem] text-center" : undefined} key={cell.id} onClick={cell.column.id === "actions" ? (event) => event.stopPropagation() : undefined}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>)}</TableRow>)}
             {!loading && table.getRowModel().rows.length === 0 ? <TableRow><TableCell className="h-24 text-center whitespace-normal text-muted-foreground" colSpan={6}>{t("table.empty")}</TableCell></TableRow> : null}
           </TableBody>
         </Table>
       </TableCard>
-      {loading ? <DataTablePaginationSkeleton /> : <DataTablePagination labels={{ rowsPerPage: t("pagination.rowsPerPage"), pageOf: (page, total) => t("pagination.pageOf", { page, total }), firstPage: t("pagination.firstPage"), previousPage: t("pagination.previousPage"), nextPage: t("pagination.nextPage"), lastPage: t("pagination.lastPage"), goToPage: (page) => t("pagination.goToPage", { page }) }} table={table} />}
+      {loading ? <DataTablePaginationSkeleton rowsPerPage={paginationLabels.rowsPerPage} /> : <DataTablePagination labels={paginationLabels} table={table} />}
       {business ? <EditContactDialog businessId={business.businessId} contact={editing} onOpenChange={(open) => { if (!open) setEditing(null); }} /> : null}
       <ConfirmActionDialog
         cancelLabel={t("table.actions.blockCancel")}

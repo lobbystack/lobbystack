@@ -195,24 +195,24 @@ export function PartnerTemplatesSurface() {
         <Surface className="overflow-hidden p-0">
           <Table>
             <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="h-12 px-6 text-sm font-medium text-foreground">{t("templates.table.template")}</TableHead>
-                <TableHead className="h-12 px-6 text-sm font-medium text-foreground">{t("templates.table.contents")}</TableHead>
-                {canManage ? <TableHead className="h-12 px-6"><span className="sr-only">{t("templates.table.actions")}</span></TableHead> : null}
+              <TableRow>
+                <TableHead>{t("templates.table.template")}</TableHead>
+                <TableHead>{t("templates.table.contents")}</TableHead>
+                {canManage ? <TableHead><span className="sr-only">{t("templates.table.actions")}</span></TableHead> : null}
               </TableRow>
             </TableHeader>
             <TableBody>
               {rows.map((template) => (
-                <TableRow className="hover:bg-transparent" key={template.templateId}>
-                  <TableCell className="px-6 py-5 whitespace-normal [overflow-wrap:anywhere]">
+                <TableRow key={template.templateId}>
+                  <TableCell className="whitespace-normal [overflow-wrap:anywhere]">
                     <div className="flex flex-col gap-1">
                       <p className="text-sm font-medium">{template.name}</p>
                       <p className="text-sm text-muted-foreground">{t("templates.savedOn", { date: formatDate(template.createdAt) })}</p>
                     </div>
                   </TableCell>
-                  <TableCell className="px-6 py-5 whitespace-normal"><TemplateContents template={template.template} /></TableCell>
+                  <TableCell className="whitespace-normal"><TemplateContents template={template.template} /></TableCell>
                   {canManage ? (
-                    <TableCell className="px-6 py-5">
+                    <TableCell>
                       <div className="flex items-center justify-end">
                         <DropdownMenu>
                           <DropdownMenuTrigger render={<Button aria-label={t("templates.actions.more", { name: template.name })} disabled={remove.isPending} size="icon-sm" variant="ghost"><MoreHorizontal /></Button>} />

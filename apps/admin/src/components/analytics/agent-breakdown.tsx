@@ -4,11 +4,12 @@ import { useTranslation } from "react-i18next";
 
 import { AgentAvatar } from "@/components/agents/agent-badges";
 import { HiddenTextSkeleton } from "@/components/loading-skeletons";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { intlLocale } from "@/lib/locale";
 import type { AnalyticsAgentViewModel } from "@/lib/page-view-models";
+import { Status } from "@/components/ui/status";
+import { AGENT_STATUS_VARIANTS } from "@/lib/status-variants";
 
 function Columns({ calls, chats }: { calls: React.ReactNode; chats: React.ReactNode }) {
   return <>
@@ -56,7 +57,7 @@ export function AgentBreakdown({ agents }: { agents: readonly AnalyticsAgentView
             <li className="flex items-center gap-3" key={agent.id}>
               <AgentAvatar name={agent.name} />
               <div className="flex min-w-0 flex-1 flex-col gap-1">
-                <span className="flex min-w-0 items-center gap-2 text-sm font-medium"><span className="truncate">{agent.name}</span>{agent.archived ? <Badge variant="outline">{t("home.analytics.agents.removed")}</Badge> : null}</span>
+                <span className="flex min-w-0 items-center gap-2 text-sm font-medium"><span className="truncate">{agent.name}</span>{agent.archived ? <Status variant={AGENT_STATUS_VARIANTS.removed}>{t("home.analytics.agents.removed")}</Status> : null}</span>
                 <div className="h-2.5 w-full rounded-full bg-muted"><div className="h-2.5 rounded-full bg-primary" style={{ width: `${Math.round(((agent.calls + agent.chats) / most) * 100)}%` }} /></div>
               </div>
               <Columns calls={<span className="text-sm tabular-nums">{number.format(agent.calls)}</span>} chats={<span className="text-sm tabular-nums">{number.format(agent.chats)}</span>} />

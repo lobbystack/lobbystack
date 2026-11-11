@@ -276,12 +276,14 @@
   },
   "pagination": {
     "rowsPerPage": "Redova po stranici",
-    "pageOf": "Stranica {{page}} od {{total}}",
+    "viewing": "Redovi {{start}}-{{end}} od {{total}}",
+    "viewingAll_one": "Prikazan {{count}} red",
+    "viewingAll_few": "Prikazana sva {{count}} reda",
+    "viewingAll_other": "Prikazano svih {{count}} redova",
     "firstPage": "Prva stranica",
     "previousPage": "Prethodna stranica",
     "nextPage": "Sledeća stranica",
-    "lastPage": "Poslednja stranica",
-    "goToPage": "Idi na stranicu {{page}}"
+    "lastPage": "Poslednja stranica"
   },
   "fields": {
     "defaults": {

@@ -181,20 +181,20 @@ function Transactions({ transactions, t, locale }: { transactions: Billing["tran
       <TableCard>
         <Table className="min-w-[42rem]">
           <TableHeader>
-            <TableRow className="hover:bg-transparent">
-              <TableHead className="text-[13px] font-medium text-muted-foreground">
+            <TableRow>
+              <TableHead>
                 {t("billing.transactions.columns.date")}
               </TableHead>
-              <TableHead className="text-[13px] font-medium text-muted-foreground">
+              <TableHead>
                 {t("billing.transactions.columns.description")}
               </TableHead>
-              <TableHead className="text-right text-[13px] font-medium text-muted-foreground">
+              <TableHead className="text-right">
                 {t("billing.transactions.columns.amount")}
               </TableHead>
-              <TableHead className="text-[13px] font-medium text-muted-foreground">
+              <TableHead>
                 {t("billing.transactions.columns.status")}
               </TableHead>
-              <TableHead className="text-right text-[13px] font-medium text-muted-foreground">
+              <TableHead className="text-right">
                 {t("billing.transactions.columns.invoice")}
               </TableHead>
             </TableRow>
@@ -335,20 +335,20 @@ function TransactionsSectionSkeleton({
       <TableCard>
         <Table className="min-w-[42rem]">
           <TableHeader>
-            <TableRow className="hover:bg-transparent">
-              <TableHead className="text-[13px] font-medium text-muted-foreground">
+            <TableRow>
+              <TableHead>
                 {t("billing.transactions.columns.date")}
               </TableHead>
-              <TableHead className="text-[13px] font-medium text-muted-foreground">
+              <TableHead>
                 {t("billing.transactions.columns.description")}
               </TableHead>
-              <TableHead className="text-right text-[13px] font-medium text-muted-foreground">
+              <TableHead className="text-right">
                 {t("billing.transactions.columns.amount")}
               </TableHead>
-              <TableHead className="text-[13px] font-medium text-muted-foreground">
+              <TableHead>
                 {t("billing.transactions.columns.status")}
               </TableHead>
-              <TableHead className="text-right text-[13px] font-medium text-muted-foreground">
+              <TableHead className="text-right">
                 {t("billing.transactions.columns.invoice")}
               </TableHead>
             </TableRow>
