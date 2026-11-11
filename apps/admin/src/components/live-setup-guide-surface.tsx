@@ -213,12 +213,11 @@ function CallNumberAction({ display, e164 }: { display: string; e164: string }) 
   return (
     <div className="flex min-w-0 items-center">
       <a className={cn(buttonVariants(), "pointer-fine:hidden")} href={`tel:${e164}`}>{t("setupGuide.stepActions.callNumber", { number: display })}</a>
-      <div className="hidden min-w-0 flex-wrap items-center gap-3 pointer-fine:flex" data-testid="call-number-desktop">
+      <div className="hidden min-w-0 items-center gap-2 pointer-fine:flex" data-testid="call-number-desktop">
         <span className="type-metric-sm">{display}</span>
-        <Button onClick={() => copy(e164, "number")} size="sm" type="button" variant="outline">
-          {copied ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}
-          {t(copied ? "setupGuide.stepActions.numberCopied" : "setupGuide.stepActions.copyNumber")}
-        </Button>
+        <button aria-label={t("setupGuide.stepActions.copyNumber")} className={cn("flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", copied && "text-emerald-500 hover:text-emerald-500")} onClick={() => copy(e164, "number")} type="button">
+          {copied ? <Check aria-hidden="true" className="size-4" /> : <Copy aria-hidden="true" className="size-4" />}
+        </button>
         <span className="sr-only" role="status">{copied ? t("setupGuide.stepActions.numberCopied") : ""}</span>
       </div>
     </div>
