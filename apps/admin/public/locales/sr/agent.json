@@ -411,9 +411,12 @@
   "staffFirst": {
     "title": "Osoblje se javlja prvo",
     "save": "Sačuvaj podešavanje za osoblje",
+    "setUp": "Podesi",
+    "state": "{{mode}} · {{number}}",
     "mode": {
       "label": "Prvo pozovi tim",
       "hint": "Vaš telefon zvoni prvi. Pritisnite 1 da preuzmete poziv. Ako to ne uradite, javlja se agent.",
+      "when": "Kada",
       "options": {
         "never": "Isključeno",
         "business_hours": "Tokom radnog vremena",

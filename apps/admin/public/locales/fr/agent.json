@@ -411,9 +411,12 @@
   "staffFirst": {
     "title": "Le personnel répond d'abord",
     "save": "Enregistrer le personnel répond d'abord",
+    "setUp": "Configurer",
+    "state": "{{mode}} · {{number}}",
     "mode": {
       "label": "Faire sonner votre équipe d'abord",
       "hint": "Votre téléphone sonne d'abord. Appuyez sur 1 pour prendre l'appel. Sinon, l'agent répond.",
+      "when": "Quand",
       "options": {
         "never": "Désactivé",
         "business_hours": "Pendant les heures d'ouverture",

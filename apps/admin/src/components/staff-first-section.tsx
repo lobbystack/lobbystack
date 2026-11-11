@@ -7,16 +7,19 @@ import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Field, FieldContent, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Item, ItemActions, ItemContent, ItemDescription, ItemTitle } from "@/components/ui/item";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Surface } from "@/components/ui/surface";
 import { Textarea } from "@/components/ui/textarea";
+import { SmallButtonSkeleton } from "@/components/loading-skeletons";
 import { useTelemetry } from "@/components/product-analytics";
 import { PhoneCountrySelect } from "@/components/phone-country-select";
 import { errorCode } from "@/lib/checkout-errors";
-import { getDefaultTransferCountry, getPhoneCountryOptions, inferPhoneCountry } from "@/lib/phone";
+import { formatPhoneNumberDisplay, getDefaultTransferCountry, getPhoneCountryOptions, inferPhoneCountry } from "@/lib/phone";
 
 export type StaffFirstProfile = {
   staffFirstMode?: string;
@@ -28,8 +31,6 @@ export type StaffFirstProfile = {
 };
 
 export type StaffFirstPatch = { staffFirstMode: StaffFirstMode; staffFirstNumber: string | null; staffFirstRingSeconds: number; staffFirstMessage: string | null; staffFirstHandoverMessage: string | null };
-
-const itemClassName = "rounded-none border-x-0 border-t-0 border-b border-border last:border-b-0";
 
 const saveErrors: Record<string, string> = {
   staff_first_number_required: "agent:staffFirst.errors.numberRequired",
@@ -45,7 +46,10 @@ const saveErrors: Record<string, string> = {
 /** Where an agent's page scrolls to Staff answers first, as Home's phone card links it. */
 export const STAFF_FIRST_ANCHOR = "staff-first";
 
-/** Staff answers first: which phone rings before the receptionist answers, and for how long. */
+/**
+ * Staff answers first: which phone rings before the receptionist answers, and for how long. The row says
+ * whether it's on and which phone rings; Set up or Edit opens the whole setting in a dialog.
+ */
 export function StaffFirstSection({ businessId, block, canManage, defaultLocale, isLoading, onSave, profile }: {
   businessId: string;
   block: "plan" | "carrier" | "setup" | null;
@@ -57,6 +61,7 @@ export function StaffFirstSection({ businessId, block, canManage, defaultLocale,
 }) {
   const { i18n, t } = useTranslation(["agent", "common"]);
   const telemetry = useTelemetry();
+  const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<StaffFirstMode>("never");
   const [number, setNumber] = useState("");
   const [rawNumber, setRawNumber] = useState("");
@@ -65,10 +70,12 @@ export function StaffFirstSection({ businessId, block, canManage, defaultLocale,
   const [handoverMessage, setHandoverMessage] = useState("");
   const [status, setStatus] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  // What the last save sent, shown in the row until other settings come back from the server.
+  const [lastSave, setLastSave] = useState<{ patch: StaffFirstPatch; profile: StaffFirstProfile | null | undefined } | null>(null);
+  const saved = lastSave && lastSave.profile === profile ? lastSave.patch : null;
   const defaultCountry = getDefaultTransferCountry(i18n.language) as Country;
   const countries = useMemo(() => getPhoneCountryOptions(i18n.language).filter((option) => isTransferCountry(option.code)), [i18n.language]);
   const [country, setCountry] = useState<Country>(defaultCountry);
-  const syncedBusinessId = useRef<string | null>(null);
   const sectionRef = useRef<HTMLElement>(null);
   const scrolled = useRef(false);
 
@@ -79,24 +86,25 @@ export function StaffFirstSection({ businessId, block, canManage, defaultLocale,
     if (window.location.hash === `#${STAFF_FIRST_ANCHOR}`) sectionRef.current?.scrollIntoView({ block: "start" });
   }, [isLoading]);
 
-  // Starts from the saved settings, with the transfer number filled in until a staff phone is saved. A refetch doesn't undo an edit.
-  useEffect(() => {
-    if (!profile || syncedBusinessId.current === businessId) return;
-    syncedBusinessId.current = businessId;
-    const phone = profile.staffFirstNumber ?? profile.transferNumber ?? "";
-    setMode(normalizeStaffFirstMode(profile.staffFirstMode));
-    setNumber(phone);
-    setRawNumber(phone);
-    setCountry((inferPhoneCountry(phone, defaultCountry) ?? defaultCountry) as Country);
-    setRingSeconds(profile.staffFirstRingSeconds ?? DEFAULT_STAFF_FIRST_RING_SECONDS);
-    setMessage(profile.staffFirstMessage ?? "");
-    setHandoverMessage(profile.staffFirstHandoverMessage ?? "");
-  }, [businessId, defaultCountry, profile]);
-
-  const savedMode = normalizeStaffFirstMode(profile?.staffFirstMode);
+  const savedMode = saved?.staffFirstMode ?? normalizeStaffFirstMode(profile?.staffFirstMode);
+  const savedNumber = saved ? saved.staffFirstNumber : profile?.staffFirstNumber ?? null;
   // A business that lost access can still turn the setting off.
   const disabled = !canManage || (block !== null && savedMode === "never");
   const typedNumber = rawNumber.trim();
+
+  /** Opens the dialog on the saved settings, with the transfer number filled in until a staff phone is saved. */
+  function openDialog() {
+    const phone = savedNumber ?? profile?.transferNumber ?? "";
+    setMode(savedMode);
+    setNumber(phone);
+    setRawNumber(phone);
+    setCountry((inferPhoneCountry(phone, defaultCountry) ?? defaultCountry) as Country);
+    setRingSeconds(saved?.staffFirstRingSeconds ?? profile?.staffFirstRingSeconds ?? DEFAULT_STAFF_FIRST_RING_SECONDS);
+    setMessage((saved ? saved.staffFirstMessage : profile?.staffFirstMessage) ?? "");
+    setHandoverMessage((saved ? saved.staffFirstHandoverMessage : profile?.staffFirstHandoverMessage) ?? "");
+    setStatus(null);
+    setOpen(true);
+  }
 
   async function save() {
     if (typedNumber && !number) {
@@ -110,7 +118,11 @@ export function StaffFirstSection({ businessId, block, canManage, defaultLocale,
     setIsSaving(true);
     setStatus(null);
     try {
-      await onSave({ staffFirstMode: mode, staffFirstNumber: typedNumber ? number : null, staffFirstRingSeconds: ringSeconds, staffFirstMessage: message.trim() || null, staffFirstHandoverMessage: handoverMessage.trim() || null });
+      const patch: StaffFirstPatch = { staffFirstMode: mode, staffFirstNumber: typedNumber ? number : null, staffFirstRingSeconds: ringSeconds, staffFirstMessage: message.trim() || null, staffFirstHandoverMessage: handoverMessage.trim() || null };
+      await onSave(patch);
+      // Kept against the settings it was made on: once the refetch brings new ones, they take over.
+      setLastSave({ patch, profile });
+      setOpen(false);
       telemetry.track("web.agent.settings_saved", { businessId, setting: "staff_first" });
       toast.success(t("agent:actions.saved"));
     } catch (error) {
@@ -122,93 +134,121 @@ export function StaffFirstSection({ businessId, block, canManage, defaultLocale,
     }
   }
 
+  const modeLabel = t(`agent:staffFirst.mode.options.${savedMode}`);
+  const state = savedMode === "never" ? modeLabel : savedNumber ? t("agent:staffFirst.state", { mode: modeLabel, number: formatPhoneNumberDisplay(savedNumber, i18n.language) }) : modeLabel;
+  const titleId = `${STAFF_FIRST_ANCHOR}-row-title`;
+  const serbian = defaultLocale === "sr";
+
   return (
     <section className="flex scroll-mt-20 flex-col gap-3 md:scroll-mt-6" id={STAFF_FIRST_ANCHOR} ref={sectionRef}>
       <h2 className="type-title">{t("agent:staffFirst.title")}</h2>
       <Surface className="flex flex-col">
-        <Item className={itemClassName} variant="default">
+        <Item variant="default">
           <ItemContent>
-            <ItemTitle>{t("agent:staffFirst.mode.label")}</ItemTitle>
-            <ItemDescription>{block ? t(`agent:staffFirst.unavailable.${block}`) : t("agent:staffFirst.mode.hint")}</ItemDescription>
+            <ItemTitle id={titleId}>{t("agent:staffFirst.mode.label")}</ItemTitle>
+            {isLoading || !profile ? (
+              <ItemDescription aria-hidden="true"><Skeleton className="inline-block h-4 w-40 max-w-full align-middle" /></ItemDescription>
+            ) : (
+              <>
+                {/* Off while blocked says why instead; a business that lost access still sees what's on. */}
+                {block && savedMode === "never" ? null : <ItemDescription>{state}</ItemDescription>}
+                {block ? <ItemDescription>{t(`agent:staffFirst.unavailable.${block}`)}</ItemDescription> : null}
+              </>
+            )}
           </ItemContent>
-          <ItemActions className="w-full sm:w-auto">
-            {isLoading ? <Skeleton className="h-10 w-full rounded-xl sm:w-48" /> : (
-              <Select disabled={disabled} items={staffFirstModes.map((value) => ({ value, label: t(`agent:staffFirst.mode.options.${value}`) }))} onValueChange={(next) => { if (next) setMode(next as StaffFirstMode); }} value={mode}>
-                <SelectTrigger aria-label={t("agent:staffFirst.mode.label")} className="w-full sm:w-48"><SelectValue /></SelectTrigger>
-                <SelectContent><SelectGroup>{staffFirstModes.map((value) => <SelectItem key={value} value={value}>{t(`agent:staffFirst.mode.options.${value}`)}</SelectItem>)}</SelectGroup></SelectContent>
-              </Select>
+          <ItemActions>
+            {isLoading || !profile ? <SmallButtonSkeleton label={t("agent:staffFirst.setUp")} /> : (
+              <Button aria-describedby={titleId} disabled={disabled} onClick={openDialog} size="sm" type="button" variant="outline">
+                {savedMode === "never" ? t("agent:staffFirst.setUp") : t("agent:actions.edit")}
+              </Button>
             )}
           </ItemActions>
         </Item>
-        {mode === "never" ? null : (
-          <>
-            <Item className={itemClassName} variant="default">
-              <ItemContent>
-                <ItemTitle>{t("agent:staffFirst.number.label")}</ItemTitle>
-                <ItemDescription>{t("agent:staffFirst.number.hint")}</ItemDescription>
-                <div className="flex w-full min-w-0 pt-2 sm:w-fit">
-                  <PhoneCountrySelect ariaLabel={t("agent:fields.transferNumber.country")} className="rounded-r-none px-4 font-medium text-muted-foreground" countries={countries} disabled={!canManage} onChange={(next) => { setCountry(next as Country); setNumber(""); setRawNumber(""); setStatus(null); }} value={country} />
-                  <PhoneInput
-                    aria-label={t("agent:staffFirst.number.label")}
-                    className="rounded-l-none border-l-0 sm:w-40"
-                    containerClassName="min-w-0 flex-1"
-                    country={country}
-                    disabled={!canManage}
-                    id="agent-staff-first-number"
-                    limitNationalDigits
-                    locale={i18n.language}
-                    maxLength={18}
-                    onChange={(next) => { setNumber(next ?? ""); setStatus(null); }}
-                    onRawValueChange={(next) => {
-                      setRawNumber(next);
-                      setStatus(null);
-                      if (next.trim().startsWith("+")) {
-                        const inferred = inferPhoneCountry(next, country);
-                        if (inferred && inferred !== country) setCountry(inferred as Country);
-                      }
-                    }}
-                    {...(number ? { value: number } : {})}
-                  />
-                </div>
-              </ItemContent>
-            </Item>
-            <Item className={itemClassName} variant="default">
-              <ItemContent>
-                <ItemTitle>{t("agent:staffFirst.ring.label")}</ItemTitle>
-                <ItemDescription>{t("agent:staffFirst.ring.hint")}</ItemDescription>
-              </ItemContent>
-              <ItemActions className="w-full sm:w-auto">
-                <Select disabled={!canManage} items={staffFirstRingSeconds.map((value) => ({ value: String(value), label: t("agent:staffFirst.ring.seconds", { count: value }) }))} onValueChange={(next) => { if (next) setRingSeconds(Number(next)); }} value={String(ringSeconds)}>
-                  <SelectTrigger aria-label={t("agent:staffFirst.ring.label")} className="w-full sm:w-48"><SelectValue /></SelectTrigger>
-                  <SelectContent><SelectGroup>{staffFirstRingSeconds.map((value) => <SelectItem key={value} value={String(value)}>{t("agent:staffFirst.ring.seconds", { count: value })}</SelectItem>)}</SelectGroup></SelectContent>
+      </Surface>
+      <Dialog onOpenChange={(next) => { if (!isSaving) setOpen(next); }} open={open}>
+        <DialogContent className="max-h-[calc(100dvh-2rem)] grid-rows-[auto_minmax(0,1fr)_auto]">
+          <DialogHeader>
+            <DialogTitle>{t("agent:staffFirst.mode.label")}</DialogTitle>
+            <DialogDescription>{t("agent:staffFirst.mode.hint")}</DialogDescription>
+          </DialogHeader>
+          {/* The padding keeps the focus rings clear of the scroll edge. */}
+          <div className="-m-1 min-h-0 overflow-y-auto p-1">
+            <FieldGroup>
+              <Field>
+                <FieldLabel htmlFor="agent-staff-first-mode">{t("agent:staffFirst.mode.when")}</FieldLabel>
+                <Select items={staffFirstModes.map((value) => ({ value, label: t(`agent:staffFirst.mode.options.${value}`) }))} onValueChange={(next) => { if (next) { setMode(next as StaffFirstMode); setStatus(null); } }} value={mode}>
+                  <SelectTrigger aria-label={t("agent:staffFirst.mode.when")} className="w-full" id="agent-staff-first-mode"><SelectValue /></SelectTrigger>
+                  <SelectContent><SelectGroup>{staffFirstModes.map((value) => <SelectItem key={value} value={value}>{t(`agent:staffFirst.mode.options.${value}`)}</SelectItem>)}</SelectGroup></SelectContent>
                 </Select>
-              </ItemActions>
-            </Item>
-            <Item className={itemClassName} variant="default">
-              <ItemContent>
-                <ItemTitle>{t("agent:staffFirst.message.label")}</ItemTitle>
-                <ItemDescription>{defaultLocale === "sr" ? t("agent:staffFirst.message.noSerbianVoice") : t("agent:staffFirst.message.hint")}</ItemDescription>
-                <Textarea aria-label={t("agent:staffFirst.message.label")} className="mt-2" disabled={!canManage} maxLength={STAFF_FIRST_MESSAGE_MAX_LENGTH} onChange={(event) => setMessage(event.target.value)} rows={2} value={message} />
-              </ItemContent>
-            </Item>
-            <Item className={itemClassName} variant="default">
-              <ItemContent>
-                <ItemTitle>{t("agent:staffFirst.handover.label")}</ItemTitle>
-                <ItemDescription>{defaultLocale === "sr" ? t("agent:staffFirst.message.noSerbianVoice") : t("agent:staffFirst.handover.hint")}</ItemDescription>
-                <Textarea aria-label={t("agent:staffFirst.handover.label")} className="mt-2" disabled={!canManage} maxLength={STAFF_FIRST_MESSAGE_MAX_LENGTH} onChange={(event) => setHandoverMessage(event.target.value)} rows={2} value={handoverMessage} />
-              </ItemContent>
-            </Item>
-          </>
-        )}
-        {block && disabled ? null : (
-          <div className="flex items-center justify-end gap-3 p-4">
-            {status ? <p className="type-body text-destructive">{status}</p> : null}
-            <Button aria-label={t("agent:staffFirst.save")} disabled={isLoading || isSaving || disabled || !profile} onClick={() => void save()} size="sm" type="button" variant="outline">
+              </Field>
+              {mode === "never" ? null : (
+                <>
+                  <Field>
+                    <FieldContent>
+                      <FieldLabel htmlFor="agent-staff-first-number">{t("agent:staffFirst.number.label")}</FieldLabel>
+                      <FieldDescription>{t("agent:staffFirst.number.hint")}</FieldDescription>
+                    </FieldContent>
+                    <div className="flex w-full min-w-0">
+                      <PhoneCountrySelect ariaLabel={t("agent:fields.transferNumber.country")} className="rounded-r-none px-4 font-medium text-muted-foreground" countries={countries} onChange={(next) => { setCountry(next as Country); setNumber(""); setRawNumber(""); setStatus(null); }} value={country} />
+                      <PhoneInput
+                        aria-label={t("agent:staffFirst.number.label")}
+                        className="rounded-l-none border-l-0"
+                        containerClassName="min-w-0 flex-1"
+                        country={country}
+                        id="agent-staff-first-number"
+                        limitNationalDigits
+                        locale={i18n.language}
+                        maxLength={18}
+                        onChange={(next) => { setNumber(next ?? ""); setStatus(null); }}
+                        onRawValueChange={(next) => {
+                          setRawNumber(next);
+                          setStatus(null);
+                          if (next.trim().startsWith("+")) {
+                            const inferred = inferPhoneCountry(next, country);
+                            if (inferred && inferred !== country) setCountry(inferred as Country);
+                          }
+                        }}
+                        {...(number ? { value: number } : {})}
+                      />
+                    </div>
+                  </Field>
+                  <Field>
+                    <FieldContent>
+                      <FieldLabel htmlFor="agent-staff-first-ring">{t("agent:staffFirst.ring.label")}</FieldLabel>
+                      <FieldDescription>{t("agent:staffFirst.ring.hint")}</FieldDescription>
+                    </FieldContent>
+                    <Select items={staffFirstRingSeconds.map((value) => ({ value: String(value), label: t("agent:staffFirst.ring.seconds", { count: value }) }))} onValueChange={(next) => { if (next) setRingSeconds(Number(next)); }} value={String(ringSeconds)}>
+                      <SelectTrigger aria-label={t("agent:staffFirst.ring.label")} className="w-full" id="agent-staff-first-ring"><SelectValue /></SelectTrigger>
+                      <SelectContent><SelectGroup>{staffFirstRingSeconds.map((value) => <SelectItem key={value} value={String(value)}>{t("agent:staffFirst.ring.seconds", { count: value })}</SelectItem>)}</SelectGroup></SelectContent>
+                    </Select>
+                  </Field>
+                  <Field>
+                    <FieldContent>
+                      <FieldLabel htmlFor="agent-staff-first-message">{t("agent:staffFirst.message.label")}</FieldLabel>
+                      <FieldDescription>{serbian ? t("agent:staffFirst.message.noSerbianVoice") : t("agent:staffFirst.message.hint")}</FieldDescription>
+                    </FieldContent>
+                    <Textarea aria-label={t("agent:staffFirst.message.label")} id="agent-staff-first-message" maxLength={STAFF_FIRST_MESSAGE_MAX_LENGTH} onChange={(event) => setMessage(event.target.value)} rows={2} value={message} />
+                  </Field>
+                  <Field>
+                    <FieldContent>
+                      <FieldLabel htmlFor="agent-staff-first-handover">{t("agent:staffFirst.handover.label")}</FieldLabel>
+                      <FieldDescription>{serbian ? t("agent:staffFirst.message.noSerbianVoice") : t("agent:staffFirst.handover.hint")}</FieldDescription>
+                    </FieldContent>
+                    <Textarea aria-label={t("agent:staffFirst.handover.label")} id="agent-staff-first-handover" maxLength={STAFF_FIRST_MESSAGE_MAX_LENGTH} onChange={(event) => setHandoverMessage(event.target.value)} rows={2} value={handoverMessage} />
+                  </Field>
+                </>
+              )}
+              {status ? <p className="type-body text-destructive" role="alert">{status}</p> : null}
+            </FieldGroup>
+          </div>
+          <DialogFooter>
+            <Button disabled={isSaving} onClick={() => setOpen(false)} type="button" variant="outline">{t("agent:actions.cancel")}</Button>
+            <Button aria-label={t("agent:staffFirst.save")} disabled={isSaving} onClick={() => void save()} type="button">
               {isSaving ? t("agent:actions.saving") : t("agent:actions.save")}
             </Button>
-          </div>
-        )}
-      </Surface>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }

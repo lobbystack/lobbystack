@@ -411,9 +411,12 @@
   "staffFirst": {
     "title": "El personal responde primero",
     "save": "Guardar el personal responde primero",
+    "setUp": "Configurar",
+    "state": "{{mode}} · {{number}}",
     "mode": {
       "label": "Llamar primero a su equipo",
       "hint": "Su teléfono suena primero. Pulse 1 para atender la llamada. Si no, responde el agente.",
+      "when": "Cuándo",
       "options": {
         "never": "Desactivado",
         "business_hours": "En horario de atención",
