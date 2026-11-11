@@ -111,18 +111,6 @@ test("a phone opens the Inbox from the tab bar, an agent's Rules from the menu s
     expect(gaps.filter((gap) => gap !== 4)).toHaveLength(1);
     expect(await sheet.locator('[data-slot="separator"]').count()).toBe(1);
     expect(new Set(rows.map((row) => Math.round(row.labelLeft))).size).toBe(1);
-    // Every row, the email's included, has the same height and the same gap to the next, and their labels share one left edge.
-    const rows = await sheet.locator("[data-sidebar=menu-button], [data-account-email]").evaluateAll((elements) => elements.map((element) => {
-      const box = element.getBoundingClientRect();
-      const label = [...element.querySelectorAll("span:not([data-slot^=avatar])")].find((span) => span.textContent?.trim())!.getBoundingClientRect();
-      return { top: box.top, height: box.height, labelLeft: label.left };
-    }));
-    expect(new Set(rows.map((row) => row.height))).toEqual(new Set([44]));
-    const gaps = rows.slice(1).map((row, index) => Math.round(row.top - rows[index]!.top - rows[index]!.height));
-    // One line, between Settings and the email, takes the only wider gap.
-    expect(gaps.filter((gap) => gap !== 4)).toHaveLength(1);
-    expect(await sheet.locator('[data-slot="separator"]').count()).toBe(1);
-    expect(new Set(rows.map((row) => Math.round(row.labelLeft))).size).toBe(1);
     await sheet.getByRole("button", { name: navCopy.sidebar.signOut, exact: true }).click();
     await expect(page).toHaveURL(/\/en\/login$/);
   } finally {
