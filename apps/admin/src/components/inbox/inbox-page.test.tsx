@@ -96,6 +96,34 @@ describe("the Inbox", () => {
     expect(screen.getByLabelText("inbox:back").getAttribute("href")).toBe("/inbox");
   });
 
+  describe("list and detail by the Inbox's own width", () => {
+    const classes = (slot: string) => document.querySelector(`[data-slot='${slot}']`)!.className.split(" ");
+
+    it("sizes against its own width, so a sidebar or a narrow window counts", async () => {
+      setup();
+      await screen.findByText("Marie");
+      expect(classes("inbox")).toContain("@container/inbox");
+      expect(classes("inbox-list")).toEqual(expect.arrayContaining(["w-full", "@min-[50rem]/inbox:w-72", "2xl:w-80"]));
+    });
+
+    it("shows only the list while nothing is open when narrow, and both side by side from 50rem", async () => {
+      setup();
+      await screen.findByText("Marie");
+      expect(classes("inbox-list")).not.toContain("hidden");
+      expect(classes("inbox-detail")).toEqual(expect.arrayContaining(["hidden", "@min-[50rem]/inbox:flex"]));
+    });
+
+    it("shows only the open item when narrow, with a back link that only shows then", async () => {
+      route.search = "call=k1";
+      setup();
+      await screen.findByText("call k1 embedded");
+      expect(classes("inbox-list")).toEqual(expect.arrayContaining(["hidden", "@min-[50rem]/inbox:flex"]));
+      expect(classes("inbox-detail")).toContain("flex");
+      expect(classes("inbox-detail")).not.toContain("hidden");
+      expect(screen.getByLabelText("inbox:back").className.split(" ")).toContain("@min-[50rem]/inbox:hidden");
+    });
+  });
+
   it("names the agent without a link for someone who only sees activity", async () => {
     route.search = "conversation=c1";
     setup({ capabilities: ["activity"] });

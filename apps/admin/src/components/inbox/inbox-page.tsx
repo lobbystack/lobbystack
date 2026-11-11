@@ -98,8 +98,10 @@ function RowsSkeleton() {
 
 /**
  * Every call, text, website chat and Instagram thread in one list. The URL
- * holds the filters and the open item, so any page can link into it. On a
- * phone the open item fills the screen, with a way back to the list.
+ * holds the filters and the open item, so any page can link into it. When the
+ * page is too narrow for the list and a readable detail side by side (under
+ * 50rem, which keeps the detail at least 30rem wide), it shows one at a time:
+ * the open item fills the page, with a way back to the list.
  */
 export function InboxPage() {
   const params = useSearchParams();
@@ -121,14 +123,14 @@ export function InboxPage() {
   const href = (change: Record<string, string | null>) => inboxHref(pathname, params, change);
   const filterBy = (change: Record<string, string | null>) => router.replace(href(change), { scroll: false });
   const closeHref = href({ call: null, conversation: null });
-  const back = <Button aria-label={t("inbox:back")} className="sm:hidden" nativeButton={false} role="link" render={<Link href={closeHref} scroll={false} />} size="icon-sm" variant="ghost"><ArrowLeft /></Button>;
+  const back = <Button aria-label={t("inbox:back")} className="@min-[50rem]/inbox:hidden" nativeButton={false} role="link" render={<Link href={closeHref} scroll={false} />} size="icon-sm" variant="ghost"><ArrowLeft /></Button>;
   const trackOpen = (item: InboxItem) => {
     if (business && item.kind === "conversation") telemetry.track("web.messages.thread_opened", { businessId: business.businessId, conversationId: item.id, channel: item.channel });
   };
 
   return (
-    <section className="flex h-full min-w-0 gap-6">
-      <div className={cn("flex w-full min-w-0 flex-col gap-3 sm:w-72 2xl:w-80", open && "hidden sm:flex")}>
+    <section className="@container/inbox flex h-full min-w-0 gap-6" data-slot="inbox">
+      <div className={cn("flex w-full min-w-0 flex-col gap-3 @min-[50rem]/inbox:w-72 2xl:w-80", open && "hidden @min-[50rem]/inbox:flex")} data-slot="inbox-list">
         <PageHeader className="py-0" title={t("inbox:title")} />
         <div aria-label={t("inbox:filters.label")} className="flex flex-wrap items-center gap-1" role="group">
           <Button aria-pressed={!filters.channel} onClick={() => filterBy({ channel: null })} size="sm" variant={!filters.channel ? "secondary" : "ghost"}>{t("inbox:filters.all")}</Button>
@@ -147,9 +149,9 @@ export function InboxPage() {
           {inbox.hasNextPage ? <Button className="w-full" loading={inbox.isFetchingNextPage} onClick={() => void inbox.fetchNextPage()} size="sm" variant="ghost">{t("inbox:loadMore")}</Button> : null}
         </div>
       </div>
-      <div className={cn("min-w-0 flex-1 flex-col overflow-hidden rounded-xl border bg-background", open ? "flex" : "hidden sm:flex")}>
+      <div className={cn("min-w-0 flex-1 flex-col overflow-hidden rounded-xl border bg-background", open ? "flex" : "hidden @min-[50rem]/inbox:flex")} data-slot="inbox-detail">
         {open && openItem?.agent && hasChoice ? <HandledBy agent={openItem.agent} linked={canSetUp} /> : null}
-        {callId ? <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6"><div className="mb-4 sm:hidden">{back}</div><LiveCallDetailSurface callId={callId} embedded key={callId} /></div>
+        {callId ? <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6"><div className="mb-4 @min-[50rem]/inbox:hidden">{back}</div><LiveCallDetailSurface callId={callId} embedded key={callId} /></div>
           : conversationId ? <ConversationThread back={back} conversationId={conversationId} key={conversationId} />
           : loading ? <div className="m-auto p-8"><HiddenTextSkeleton className="type-body">{t("inbox:pick")}</HiddenTextSkeleton></div>
           : <div className="m-auto p-8 text-center type-body-muted">{t("inbox:pick")}</div>}
