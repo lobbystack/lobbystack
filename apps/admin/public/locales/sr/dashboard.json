@@ -19,6 +19,19 @@
   },
   "home": {
     "title": "Početna",
+    "phone": {
+      "title": "Telefonska linija",
+      "titleMany": "Telefonske linije",
+      "status": {
+        "waiting": "Čeka se prvi poziv",
+        "answering": "Prima pozive"
+      },
+      "answersFirst": {
+        "agent": "Vaš agent se javlja prvi",
+        "team": "Vaš tim se javlja prvi",
+        "teamDuringHours": "Vaš tim se javlja prvi tokom radnog vremena"
+      }
+    },
     "download": "Preuzmi",
     "liveCalls": "Uživo",
     "tabs": {

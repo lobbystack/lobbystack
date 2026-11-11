@@ -19,6 +19,19 @@
   },
   "home": {
     "title": "Accueil",
+    "phone": {
+      "title": "Ligne téléphonique",
+      "titleMany": "Lignes téléphoniques",
+      "status": {
+        "waiting": "En attente du premier appel",
+        "answering": "Répond aux appels"
+      },
+      "answersFirst": {
+        "agent": "Votre agent répond en premier",
+        "team": "Votre équipe répond en premier",
+        "teamDuringHours": "Votre équipe répond en premier pendant les heures d'ouverture"
+      }
+    },
     "download": "Télécharger",
     "liveCalls": "En direct",
     "tabs": {

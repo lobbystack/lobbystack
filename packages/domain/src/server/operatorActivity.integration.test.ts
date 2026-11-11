@@ -2,12 +2,12 @@ import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
-import { agents, appointments, businessMemberships, businesses, calls, contacts, conversations, createDatabaseClient, messages, services, staff, transcripts, users, widgetVisitors, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { agents, appointments, businessMemberships, phoneNumbers, businesses, calls, contacts, conversations, createDatabaseClient, messages, services, staff, transcripts, users, widgetVisitors, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 
 import { getAnalytics, readAnalyticsResults } from "./analytics";
 import { deleteContact, getContactDetail, listContacts } from "./contacts";
 import { appendMessage, getOrCreateWidgetConversation, registerWidgetVisitor } from "./conversations";
-import { listCurrentAppointments, listRecentCalls, listUpcomingAppointments } from "./operatorActivity";
+import { hasPhoneCall, listCurrentAppointments, listPhoneLines, listRecentCalls, listUpcomingAppointments } from "./operatorActivity";
 import { listCalls } from "./voice";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
@@ -472,6 +472,40 @@ describe.skipIf(!client)("website chat attribution under RLS", () => {
       expect(visitors.get(linked)).toBeInstanceOf(Date);
       expect(visitors.get(deletedContact)).toBeInstanceOf(Date);
       expect(visitors.get(anonymous)).toBeNull();
+    });
+  });
+});
+
+describe.skipIf(!client)("phone card on Home", () => {
+  it("lists each number callers can dial with its agent and who answers first, and waits for a call to one", async () => {
+    await rollbackTest(async (tx) => {
+      const businessId = randomUUID();
+      await tx.insert(businesses).values({ id: businessId, slug: businessId, name: "Phone lines test", timezone: "UTC", businessType: "test", telemetryEnabled: false });
+      const [frontDesk] = await tx.select().from(agents).where(and(eq(agents.businessId, businessId), eq(agents.isDefault, true)));
+      const { id: _id, isDefault: _isDefault, createdAt: _createdAt, updatedAt: _updatedAt, ...settings } = frontDesk!;
+      const [evening] = await tx.insert(agents).values({ ...settings, name: "Evening", isDefault: false, staffFirstMode: "business_hours" }).returning({ id: agents.id });
+      const [archived] = await tx.insert(agents).values({ ...settings, name: "Archived", isDefault: false, archivedAt: new Date() }).returning({ id: agents.id });
+      const number = (e164: string, minutesAgo: number, extra: Partial<typeof phoneNumbers.$inferInsert> = {}) => ({ businessId, e164, status: "active", voiceEnabled: true, smsEnabled: true, createdAt: new Date(Date.now() - minutesAgo * 60_000), ...extra });
+      const suffix = String(Math.floor(Math.random() * 1_000)).padStart(3, "0");
+      await tx.insert(phoneNumbers).values([
+        // The default agent answers a number with no agent of its own.
+        number(`+1416555${suffix}1`, 30),
+        number(`+1416555${suffix}2`, 20, { agentId: evening!.id }),
+        number(`+1416555${suffix}3`, 10, { status: "reclaimed" }),
+        number(`+1416555${suffix}4`, 9, { reclaimScheduledAt: new Date() }),
+        number(`+1416555${suffix}5`, 8, { agentId: archived!.id }),
+      ]);
+
+      expect(await listPhoneLines(tx, businessId)).toEqual([
+        { e164: `+1416555${suffix}1`, agentId: frontDesk!.id, agentName: frontDesk!.name, staffFirstMode: "never" },
+        { e164: `+1416555${suffix}2`, agentId: evening!.id, agentName: "Evening", staffFirstMode: "business_hours" },
+      ]);
+
+      // The operator's test call from the browser isn't a call to the number.
+      await tx.insert(calls).values({ businessId, provider: "openai_live", providerCallId: `rtc_${randomUUID()}`, transport: "web_voice", status: "completed", startedAt: new Date() });
+      expect(await hasPhoneCall(tx, businessId)).toBe(false);
+      await tx.insert(calls).values({ businessId, providerCallId: randomUUID(), transport: "voice", status: "completed", startedAt: new Date() });
+      expect(await hasPhoneCall(tx, businessId)).toBe(true);
     });
   });
 });

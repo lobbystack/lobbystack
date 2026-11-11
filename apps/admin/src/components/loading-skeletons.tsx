@@ -50,6 +50,34 @@ export function ResultsRowSkeleton({ titles }: { titles: ReadonlyArray<string> }
   );
 }
 
+/**
+ * Stands in for the phone card on Home: its title and status, then one number with who answers it first and
+ * its Test call. The text pieces hold their real labels, hidden. Home doesn't know yet whether the business
+ * has a number, so the placeholder holds the card's place either way. Without `testCall` it leaves the button out.
+ */
+export function PhoneLinesSkeleton({ labels }: { labels: { title: string; status: string; answersFirst: string; testCall?: string } }) {
+  return (
+    <section aria-busy="true" className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-1">
+        <HiddenTextSkeleton className="type-section-title">{labels.title}</HiddenTextSkeleton>
+        <div className="flex items-center gap-2">
+          <Skeleton aria-hidden="true" className="size-2 shrink-0 rounded-full" />
+          <HiddenTextSkeleton className="type-body-muted">{labels.status}</HiddenTextSkeleton>
+        </div>
+      </div>
+      <Surface>
+        <div className="flex flex-col gap-3 px-6 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+          <div className="flex min-w-0 flex-col gap-2">
+            <div aria-hidden="true" className="type-metric-sm"><Skeleton className="h-[1lh] w-44 max-w-full" /></div>
+            <Skeleton aria-hidden="true" className="inline-flex h-5 w-fit items-center gap-1 rounded-full px-1.5 type-label whitespace-nowrap"><span className="invisible">{labels.answersFirst}</span><span className="invisible size-3 shrink-0" /></Skeleton>
+          </div>
+          {labels.testCall ? <div className="flex shrink-0"><HeaderButtonSkeleton label={labels.testCall} /></div> : null}
+        </div>
+      </Surface>
+    </section>
+  );
+}
+
 export function TableCardSkeleton({ columns = 5 }: { columns?: number }) {
   return (
     <div className="flex flex-col gap-4">

@@ -42,6 +42,9 @@ const saveErrors: Record<string, string> = {
   trial_transfer_locked: "agent:staffFirst.errors.trialLocked",
 };
 
+/** Where an agent's page scrolls to Staff answers first, as Home's phone card links it. */
+export const STAFF_FIRST_ANCHOR = "staff-first";
+
 /** Staff answers first: which phone rings before the receptionist answers, and for how long. */
 export function StaffFirstSection({ businessId, block, canManage, defaultLocale, isLoading, onSave, profile }: {
   businessId: string;
@@ -66,6 +69,15 @@ export function StaffFirstSection({ businessId, block, canManage, defaultLocale,
   const countries = useMemo(() => getPhoneCountryOptions(i18n.language).filter((option) => isTransferCountry(option.code)), [i18n.language]);
   const [country, setCountry] = useState<Country>(defaultCountry);
   const syncedBusinessId = useRef<string | null>(null);
+  const sectionRef = useRef<HTMLElement>(null);
+  const scrolled = useRef(false);
+
+  // Home's phone card links here. The page scrolls once the settings have loaded, so the sections above stop moving.
+  useEffect(() => {
+    if (isLoading || scrolled.current) return;
+    scrolled.current = true;
+    if (window.location.hash === `#${STAFF_FIRST_ANCHOR}`) sectionRef.current?.scrollIntoView({ block: "start" });
+  }, [isLoading]);
 
   // Starts from the saved settings, with the transfer number filled in until a staff phone is saved. A refetch doesn't undo an edit.
   useEffect(() => {
@@ -111,7 +123,7 @@ export function StaffFirstSection({ businessId, block, canManage, defaultLocale,
   }
 
   return (
-    <section className="flex flex-col gap-3">
+    <section className="flex scroll-mt-20 flex-col gap-3 md:scroll-mt-6" id={STAFF_FIRST_ANCHOR} ref={sectionRef}>
       <h2 className="type-title">{t("agent:staffFirst.title")}</h2>
       <Surface className="flex flex-col">
         <Item className={itemClassName} variant="default">

@@ -21,7 +21,7 @@ vi.mock("./dashboard-activation-card", () => ({ DashboardActivationCard: () => n
 vi.mock("./call-forwarding-dialog", () => ({ CallForwardingFromLink: () => null }));
 const clients: QueryClient[] = [];
 afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals(); });
-type Overrides = { upcoming?: Array<Record<string, unknown>>; recentCalls?: Array<Record<string, unknown>>; actionRequired?: Array<Record<string, unknown>>; role?: string; capabilities?: Capability[]; unansweredCount?: number; actionRequiredCount?: number; loading?: boolean; results?: Record<string, unknown> };
+type Overrides = { phoneLines?: Array<Record<string, unknown>>; upcoming?: Array<Record<string, unknown>>; recentCalls?: Array<Record<string, unknown>>; actionRequired?: Array<Record<string, unknown>>; role?: string; capabilities?: Capability[]; unansweredCount?: number; actionRequiredCount?: number; loading?: boolean; results?: Record<string, unknown> };
 async function setup(locale: "en" | "fr", callId: string | null, overrides: Overrides = {}) {
   vi.stubGlobal("localStorage", { getItem: () => null, setItem: vi.fn(), removeItem: vi.fn() });
   vi.stubGlobal("EventSource", class { addEventListener() {} removeEventListener() {} close() {} });
@@ -35,6 +35,7 @@ async function setup(locale: "en" | "fr", callId: string | null, overrides: Over
   if (!overrides.loading) client.setQueryData(["dashboard"], {
     businessId: "business", results: overrides.results ?? { bookedValue: { currency: "USD", current: 0, previous: 0 }, timeSavedSeconds: { current: 0, previous: 0 }, callsWithoutTransferPercent: { current: null, previous: null } }, monthlyCalls: [], recentCalls: overrides.recentCalls ?? [],
     ...(overrides.actionRequiredCount === undefined ? {} : { actionRequiredCount: overrides.actionRequiredCount }),
+    ...(overrides.phoneLines ? { phoneLines: overrides.phoneLines, phoneCalled: false } : {}),
     actionRequired: overrides.actionRequired ?? [{ id: "follow-up", kind: "voice_message", title: "Voice message from Alex", body: "Please call back.\nCallback: +14165550199\nUrgency: high", callId, createdAt: "2026-09-04T14:30:00Z" }],
     upcoming: overrides.upcoming ?? [{ id: "appointment", startsAt: "2099-09-07T14:30:00Z", endsAt: "2099-09-07T15:00:00Z", timezone: "UTC", status: "confirmed", sourceChannel: "voice", calendarSyncState: "synced", contactName: "Alex", serviceName: "Consultation", staffName: "Front desk" }],
   });
@@ -231,6 +232,22 @@ describe("Upcoming rows on Home", () => {
   });
 });
 
+describe("phone card on Home", () => {
+  it("keeps Test call in the card, under the page title, rather than beside the title", async () => {
+    const i18n = await setup("en", null, { role: "business_owner", phoneLines: [{ e164: "+14165550100", agentId: "agent-1", agentName: "Front desk", staffFirstMode: "never" }] });
+    const card = screen.getByRole("heading", { name: i18n.t("home.phone.title") }).closest("section")!;
+    expect(within(card).getByText(i18n.t("home.phone.status.waiting"))).toBeTruthy();
+    expect(within(card).getByRole("link", { name: i18n.t("home.phone.answersFirst.agent") }).getAttribute("href")).toBe("/agents/agent-1#staff-first");
+    // The page header carries the title alone.
+    expect(screen.getByRole("heading", { level: 1 }).parentElement!.parentElement!.querySelector("[data-slot='skeleton'], button")).toBeNull();
+  });
+
+  it("leaves the card out while the business has no number", async () => {
+    const i18n = await setup("en", null, { role: "business_owner", phoneLines: [] });
+    expect(screen.queryByRole("heading", { name: i18n.t("home.phone.title") })).toBeNull();
+  });
+});
+
 describe("Home while it loads", () => {
   it("keeps the chart titles, holds the metric titles hidden, and marks each loading block busy", async () => {
     vi.stubGlobal("localStorage", { getItem: () => null, setItem: vi.fn(), removeItem: vi.fn() });
@@ -244,7 +261,9 @@ describe("Home while it loads", () => {
     for (const title of ["bookedValue", "timeSaved", "withoutTransfer"]) expect(screen.getByText(i18n.t(`home.results.${title}`)).closest("[data-slot='skeleton']")).toBeTruthy();
     expect(screen.getByText(i18n.t("home.chart.title"))).toBeTruthy();
     expect(screen.getByText(i18n.t("home.recentCalls.title"))).toBeTruthy();
-    expect(container.querySelectorAll("[aria-busy='true']")).toHaveLength(4);
+    // The phone card's place is held before Home knows whether the business has a number.
+    for (const label of [i18n.t("home.phone.title"), i18n.t("home.phone.status.waiting"), i18n.t("home.phone.answersFirst.agent"), i18n.t("common:testCall.trigger")]) expect(screen.getByText(label).closest("[data-slot='skeleton']")).toBeTruthy();
+    expect(container.querySelectorAll("[aria-busy='true']")).toHaveLength(5);
   });
 
   it("holds the setup guide's place while it loads, so the page doesn't jump", async () => {

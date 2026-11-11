@@ -19,6 +19,19 @@
   },
   "home": {
     "title": "Inicio",
+    "phone": {
+      "title": "Línea telefónica",
+      "titleMany": "Líneas telefónicas",
+      "status": {
+        "waiting": "Esperando la primera llamada",
+        "answering": "Atendiendo llamadas"
+      },
+      "answersFirst": {
+        "agent": "Su agente responde primero",
+        "team": "Su equipo responde primero",
+        "teamDuringHours": "Su equipo responde primero en horario de atención"
+      }
+    },
     "download": "Descargar",
     "liveCalls": "En vivo",
     "tabs": {

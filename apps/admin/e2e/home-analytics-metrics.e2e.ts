@@ -3,9 +3,11 @@ import { randomUUID } from "node:crypto";
 
 import { appointments, calls, contacts, conversations, services, staff } from "@lobbystack/db";
 
+import agentCopy from "../public/locales/en/agent.json" with { type: "json" };
+import commonCopy from "../public/locales/en/common.json" with { type: "json" };
 import dashboardCopy from "../public/locales/en/dashboard.json" with { type: "json" };
 
-import { migrator, removeFixtures, signUpOwner } from "./fixtures/full-stack";
+import { holdNumber, migrator, removeFixtures, signUpOwner } from "./fixtures/full-stack";
 
 // Home shows what the agent booked and saved over the last 30 days, and
 // Analytics opens on calls, today and call length for the dates picked.
@@ -52,6 +54,49 @@ test("Home shows booked value and an Upcoming row with a chevron, and Analytics 
     await expect(page.getByRole("heading", { name: dashboardCopy.home.analytics.overview.today.title, exact: true })).toBeVisible();
     await expect(page.getByRole("heading", { name: dashboardCopy.home.analytics.overview.averageDuration.title, exact: true }).locator("../..")).toContainText("2m");
     await expect(page.getByRole("heading", { name: dashboardCopy.home.results.bookedValue, exact: true })).toHaveCount(0);
+  } finally {
+    await removeFixtures(database, fixtures);
+    await database.pool.end();
+  }
+});
+
+test("Home's phone card shows the number, waits for the first call, says who answers first and holds the Test call", async ({ page }, testInfo) => {
+  test.setTimeout(120_000);
+  const database = migrator();
+  const fixtures = { emails: [] as string[], businessIds: [] as string[] };
+  try {
+    const owner = await signUpOwner(database, page, testInfo, `${prefix}-phone`);
+    fixtures.emails.push(owner.email);
+    fixtures.businessIds.push(owner.businessId);
+    const { businessId } = owner;
+
+    // Without a number Home has no phone card.
+    await page.goto("/");
+    await expect(page.getByRole("heading", { name: dashboardCopy.home.title, exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: dashboardCopy.home.actionRequired.title, exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: dashboardCopy.home.phone.title, exact: true })).toHaveCount(0);
+
+    const { e164 } = await holdNumber(database, businessId, { carrier: "twilio" });
+    await page.goto("/");
+    const card = page.getByRole("region", { name: dashboardCopy.home.phone.title, exact: true });
+    await expect(card).toContainText(`(${e164.slice(2, 5)}) ${e164.slice(5, 8)}-${e164.slice(8)}`);
+    await expect(card).toContainText(dashboardCopy.home.phone.status.waiting);
+    // Home has one Test call, in the card.
+    await expect(page.getByRole("button", { name: commonCopy.testCall.trigger, exact: true })).toHaveCount(1);
+    await card.getByRole("button", { name: commonCopy.testCall.trigger, exact: true }).click();
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+
+    // A first call to the number turns the status live.
+    await database.db.insert(calls).values({ businessId, providerCallId: randomUUID(), transport: "voice", status: "completed", startedAt: new Date(Date.now() - 60_000), endedAt: new Date() });
+    await page.reload();
+    await expect(card).toContainText(dashboardCopy.home.phone.status.answering);
+
+    // The chip opens the agent's Staff answers first setting.
+    await card.getByRole("link", { name: dashboardCopy.home.phone.answersFirst.agent, exact: true }).click();
+    await expect(page).toHaveURL(/\/agents\/[0-9a-f-]+#staff-first$/);
+    await expect(page.getByRole("heading", { name: agentCopy.staffFirst.title, exact: true })).toBeInViewport();
   } finally {
     await removeFixtures(database, fixtures);
     await database.pool.end();

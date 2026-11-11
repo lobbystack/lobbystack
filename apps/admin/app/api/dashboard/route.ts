@@ -9,7 +9,7 @@ import {
   contacts,
   conversations,
 } from "@lobbystack/db";
-import { countOpenVoiceFollowUps, listOpenVoiceFollowUps, readAnalyticsResults, listRecentCalls, listUpcomingAppointments, readFirstRealConversationAt } from "@lobbystack/domain";
+import { countOpenVoiceFollowUps, hasPhoneCall, listOpenVoiceFollowUps, listPhoneLines, readAnalyticsResults, listRecentCalls, listUpcomingAppointments, readFirstRealConversationAt } from "@lobbystack/domain";
 import { lastDaysBounds } from "@/lib/analytics-range";
 import { operatorRoute } from "@/lib/operator-request";
 
@@ -52,6 +52,9 @@ export const GET = operatorRoute(async ({ businessId, transaction }) => NextResp
   const openFollowUps = await countOpenVoiceFollowUps(tx, businessId);
   const [openHandoffs] = await tx.select({ count: count() }).from(conversations).where(and(eq(conversations.businessId, businessId), eq(conversations.automationState, "human_handoff")));
   const firstRealConversationAt = await readFirstRealConversationAt(tx, businessId);
+  const phoneLines = await listPhoneLines(tx, businessId);
+  // The phone card waits for a first call only while the business has a number to call.
+  const phoneCalled = phoneLines.length > 0 && await hasPhoneCall(tx, businessId);
 
   const monthlyTotals = new Map((aggregates?.monthlyCalls ?? []).map((bucket) => [bucket.month, bucket.total]));
   const monthlyCalls = Array.from({ length: 12 }, (_, index) => {
@@ -65,6 +68,8 @@ export const GET = operatorRoute(async ({ businessId, transaction }) => NextResp
   return {
     businessId,
     firstRealConversationAt,
+    phoneLines,
+    phoneCalled,
     results,
     liveCalls: Number(liveCallCount[0]?.count ?? 0),
     monthlyCalls,

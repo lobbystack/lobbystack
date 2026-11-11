@@ -1,12 +1,38 @@
-import { and, asc, desc, eq, gt, gte, lt, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, gte, isNull, lt, ne, notInArray, sql } from "drizzle-orm";
 
-import { appointments, calls, contacts, services, staff, type DatabaseTransaction } from "@lobbystack/db";
+import { agentOfRow, agents, appointments, calls, contacts, phoneNumbers, services, staff, type DatabaseTransaction } from "@lobbystack/db";
+import { normalizeStaffFirstMode, type StaffFirstMode } from "@lobbystack/shared";
 
 /**
  * Lists for the operator dashboard. Each row carries the contact's name, phone,
  * and email plus the channel, so the dashboard can label contacts without a
  * saved name. Callers run these inside an operator business transaction.
  */
+
+/** Browser calls: the operator's test call, demos and the website widget. None of them came in on a number. */
+const BROWSER_TRANSPORTS = ["web_voice", "web", "webrtc"];
+
+export type PhoneLine = { e164: string; agentId: string; agentName: string; staffFirstMode: StaffFirstMode };
+
+/**
+ * The numbers callers dial, each with the agent that answers it and whether
+ * the team's phone rings first, for the phone card on Home. The oldest number
+ * comes first, so the card keeps its order as numbers are added.
+ */
+export async function listPhoneLines(tx: DatabaseTransaction, businessId: string): Promise<PhoneLine[]> {
+  const rows = await tx.select({ e164: phoneNumbers.e164, agentId: agents.id, agentName: agents.name, staffFirstMode: agents.staffFirstMode })
+    .from(phoneNumbers)
+    .innerJoin(agents, agentOfRow(phoneNumbers.businessId, phoneNumbers.agentId))
+    .where(and(eq(phoneNumbers.businessId, businessId), eq(phoneNumbers.status, "active"), eq(phoneNumbers.voiceEnabled, true), isNull(phoneNumbers.reclaimScheduledAt), isNull(agents.archivedAt)))
+    .orderBy(asc(phoneNumbers.createdAt), asc(phoneNumbers.id));
+  return rows.map((row) => ({ ...row, staffFirstMode: normalizeStaffFirstMode(row.staffFirstMode) }));
+}
+
+/** Whether anyone has called one of the business's numbers yet, answered by the agent or the team. */
+export async function hasPhoneCall(tx: DatabaseTransaction, businessId: string): Promise<boolean> {
+  const [call] = await tx.select({ id: calls.id }).from(calls).where(and(eq(calls.businessId, businessId), notInArray(calls.transport, BROWSER_TRANSPORTS), isNull(calls.prospectDemoId))).limit(1);
+  return Boolean(call);
+}
 
 /** The most recent calls for the home page. */
 export async function listRecentCalls(tx: DatabaseTransaction, businessId: string, limit = 5) {

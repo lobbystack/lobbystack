@@ -21,13 +21,13 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/page-header";
 import { CallForwardingFromLink } from "@/components/call-forwarding-dialog";
-import { TestCallButton } from "@/components/navigation/test-call-button";
+import { ANSWERS_FIRST_KEYS, HomePhoneCard, type HomePhoneLine } from "@/components/home-phone-card";
 import { DashboardActivationCard } from "@/components/dashboard-activation-card";
 import { LiveSetupGuideSurface, useSetupGuide } from "@/components/live-setup-guide-surface";
 import { needsHoursForBooking, useBusinessHours } from "@/components/business-hours-section";
 import { AppointmentDetailsSheet } from "@/components/appointment-details-sheet";
 import { appointmentSummary } from "@/components/cancel-appointment-button";
-import { ResultsRowSkeleton, SetupGuideSkeleton, StatusSkeleton } from "@/components/loading-skeletons";
+import { PhoneLinesSkeleton, ResultsRowSkeleton, SetupGuideSkeleton, StatusSkeleton } from "@/components/loading-skeletons";
 import { RowChevron } from "@/components/row-chevron";
 import { formatBookedValue, formatTimeSaved } from "@/lib/analytics-results";
 import type { AnalyticsResultsViewModel } from "@/lib/page-view-models";
@@ -61,6 +61,10 @@ type DashboardSummary = {
   upcoming: Array<{ id: string; startsAt: string; endsAt: string; timezone: string; status: string; sourceChannel: string; calendarSyncState: string; staffId?: string; contactName: string | null; contactPhone?: string | null; contactEmail?: string | null; serviceName: string | null; staffName: string | null; employeeName?: string | null }>;
   /** Null until the business's first real conversation. */
   firstRealConversationAt?: string | null;
+  /** The numbers callers dial, oldest first; empty while the business has none. */
+  phoneLines?: HomePhoneLine[];
+  /** Whether anyone has called one of those numbers yet. */
+  phoneCalled?: boolean;
 };
 
 
@@ -119,7 +123,9 @@ export function LiveOverviewSurface() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader actions={<TestCallButton />} title={t("home.title")} />
+      <PageHeader title={t("home.title")} />
+      {/* The card holds Home's Test call, one per number. */}
+      {summary.isLoading ? <PhoneLinesSkeleton labels={{ title: t("home.phone.title"), status: t("home.phone.status.waiting"), answersFirst: t(ANSWERS_FIRST_KEYS.never), ...(canSetUp ? { testCall: t("common:testCall.trigger") } : {}) }} /> : <HomePhoneCard called={summary.data?.phoneCalled ?? false} canSetUp={canSetUp} lines={summary.data?.phoneLines ?? []} />}
       {/* The extra margin makes the visible gap match the one between the page title and Getting started. */}
       {showGuide ? (
         <div className="mb-4"><LiveSetupGuideSurface businessId={businessId!} /></div>

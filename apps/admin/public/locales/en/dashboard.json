@@ -19,6 +19,19 @@
   },
   "home": {
     "title": "Home",
+    "phone": {
+      "title": "Phone line",
+      "titleMany": "Phone lines",
+      "status": {
+        "waiting": "Waiting for the first call",
+        "answering": "Answering calls"
+      },
+      "answersFirst": {
+        "agent": "Your agent answers first",
+        "team": "Your team answers first",
+        "teamDuringHours": "Your team answers first during business hours"
+      }
+    },
     "download": "Download",
     "liveCalls": "Live",
     "tabs": {
