@@ -46,8 +46,12 @@ test("an owner picks a trial number without verifying a mobile", async ({ page }
     const firstNumber = page.getByRole("listitem").filter({ has: page.getByRole("button", { name: onboarding.number.select }) }).first();
     await expect(firstNumber).toBeVisible();
     await firstNumber.getByRole("button", { name: onboarding.number.select }).click();
-    // Once the number is live, the picker moves on to the next step.
-    await expect(page).toHaveURL("/onboarding/attribution", { timeout: 120_000 });
+    // Once the number is live, the plans follow, with nothing to close them. The trial already runs.
+    await expect(page).toHaveURL("/onboarding/plan", { timeout: 120_000 });
+    await expect(page.getByRole("button", { name: onboarding.plan.subscribe })).toHaveCount(2);
+    await expect(page.getByRole("button", { name: "Close" })).toHaveCount(0);
+    await page.getByRole("button", { name: onboarding.plan.trial.start }).click();
+    await expect(page).toHaveURL("/onboarding/attribution");
 
     const [trial] = await database.db.select({ verifiedPhone: numberTrials.verifiedPhone, ipHash: numberTrials.ipHash, status: numberTrials.status }).from(numberTrials).where(eq(numberTrials.businessId, businessId));
     expect(trial).toMatchObject({ verifiedPhone: null, status: "active" });

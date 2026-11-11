@@ -19,7 +19,7 @@ const DESCRIBED = new Set(["brand"]);
 
 // The stage each page belongs to, for keeping a restored browser-back page on
 // the step the workspace has reached.
-const ROUTE_STAGE: Record<string, OnboardingStage> = { businessName: "create_business", website: "website", language: "language", reading: "verify_phone", verifyPhone: "verify_phone", number: "phone_number", attribution: "attribution", meet: "meet" };
+const ROUTE_STAGE: Record<string, OnboardingStage> = { businessName: "create_business", website: "website", language: "language", reading: "verify_phone", verifyPhone: "verify_phone", number: "phone_number", plan: "choose_plan", attribution: "attribution", meet: "meet" };
 
 export function OnboardingRouteShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -32,7 +32,7 @@ export function OnboardingRouteShell({ children }: { children: React.ReactNode }
   const partnerAccessLevel = business?.partnerAccessLevel;
   const phones = useQuery({ queryKey: ["onboarding-primary-number", business?.businessId], enabled: route.key === "number" && Boolean(business), queryFn: () => requestJson<Numbers>(`/api/phone-numbers?businessId=${encodeURIComponent(business!.businessId)}`) });
   const hasPrimaryNumber = Boolean(phones.data?.phoneNumbers.some(number => !number.reclaimScheduledAt));
-  const selectedNumber = route.key === "number" && hasPrimaryNumber && ["attribution", "meet", "complete"].includes(stage ?? "");
+  const selectedNumber = route.key === "number" && hasPrimaryNumber && ["choose_plan", "attribution", "meet", "complete"].includes(stage ?? "");
   // A browser back may restore an earlier page without asking the server, so
   // send it forward too. Only a history traversal runs this check: the stage
   // also moves after a form submits and after a normal navigation starts, and
@@ -54,7 +54,7 @@ export function OnboardingRouteShell({ children }: { children: React.ReactNode }
     // The wait follows the website, which leads a direct owner to the number.
     const expected = route.key === "reading" && !partnerAccessLevel ? "phone_number" : ROUTE_STAGE[route.key];
     if (!expected) return;
-    const numberPickerStaysOpen = route.key === "number" && ["phone_number", "phone_number_claiming", "attribution", "meet", "complete"].includes(stageNow);
+    const numberPickerStaysOpen = route.key === "number" && ["phone_number", "phone_number_claiming", "choose_plan", "attribution", "meet", "complete"].includes(stageNow);
     if (!numberPickerStaysOpen && onboardingStages.indexOf(stageNow) > onboardingStages.indexOf(expected)) router.replace(resolveOnboardingRoute(stageNow));
   }, [partnerAccessLevel, pathname, route.key, router]);
   return (

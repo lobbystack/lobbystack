@@ -18,24 +18,33 @@ type TrialState =
   | { status: "active"; e164: string; daysLeft: number; minutesExhausted: boolean; forwardTo: string | null }
   | { status: "ended"; e164: string };
 
-/** The trial number's countdown, across the top of every dashboard page in the trial's last week, until the owner picks a plan. */
+/**
+ * The trial number's state, for people who can see billing. Keeping the
+ * number takes one of the host's plans, so a business without billing, such
+ * as a partner's, never reads it.
+ */
+export function useNumberTrial(): TrialState | undefined {
+  const { business } = useActiveBusiness();
+  const can = useBusinessCan();
+  const trial = useQuery({ queryKey: ["number-trial", business?.businessId], enabled: Boolean(business) && can("billing"), refetchInterval: 5 * 60_000, queryFn: () => requestJson<{ trial: TrialState }>(`/api/number-trial?businessId=${encodeURIComponent(business!.businessId)}`) });
+  return can("billing") ? trial.data?.trial : undefined;
+}
+
+/**
+ * Across the top of every dashboard page while the trial number needs the
+ * owner: it ran out of minutes, so calls already go to them, or the trial
+ * ended and the number is still theirs to keep. The days left show in the
+ * sidebar's chip instead, so the banner never counts down.
+ */
 export function NumberTrialBanner() {
   const { t } = useTranslation("common");
   const openUpgrade = useOpenUpgradePlanDialog();
-  const { business } = useActiveBusiness();
-  // Keeping the number takes one of the host's plans, so a business without billing, such as a partner's, never shows it.
-  const can = useBusinessCan();
-  const trial = useQuery({ queryKey: ["number-trial", business?.businessId], enabled: Boolean(business) && can("billing"), refetchInterval: 5 * 60_000, queryFn: () => requestJson<{ trial: TrialState }>(`/api/number-trial?businessId=${encodeURIComponent(business!.businessId)}`) });
-  const state = can("billing") ? trial.data?.trial : undefined;
+  const state = useNumberTrial();
   if (!state || state.status === "none" || state.status === "available" || state.status === "over") return null;
-  // The countdown waits for the last week; running out of minutes shows at once, since calls already go to the owner.
-  if (state.status === "active" && state.daysLeft > 7 && !(state.minutesExhausted && state.forwardTo)) return null;
-  const number = formatPhoneNumberDisplay(state.e164);
+  if (state.status === "active" && !(state.minutesExhausted && state.forwardTo)) return null;
   const [message, action] = state.status === "ended"
-    ? [t("numberTrial.stillAvailable", { number }), t("numberTrial.getNumberBack")]
-    : state.minutesExhausted && state.forwardTo
-      ? [t("numberTrial.outOfMinutes", { forwardTo: formatPhoneNumberDisplay(state.forwardTo) }), t("numberTrial.getReceptionistBack")]
-      : [t("numberTrial.daysLeft", { number, count: state.daysLeft }), t("numberTrial.keepNumber")];
+    ? [t("numberTrial.stillAvailable", { number: formatPhoneNumberDisplay(state.e164) }), t("numberTrial.getNumberBack")]
+    : [t("numberTrial.outOfMinutes", { forwardTo: formatPhoneNumberDisplay(state.forwardTo!) }), t("numberTrial.getReceptionistBack")];
   return (
     <div aria-live="polite" className="relative z-30 w-full shrink-0 border-b border-amber-500/30 bg-amber-500/10 text-amber-950 dark:text-amber-100" role="status">
       <div className="flex w-full flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between md:px-6">

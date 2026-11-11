@@ -44,6 +44,12 @@ describe("onboarding stages", () => {
     expect(isValidOnboardingTransition("verify_phone", "attribution")).toBe(true);
     expect(isValidOnboardingTransition("phone_number", "attribution")).toBe(true);
     expect(isValidOnboardingTransition("phone_number_claiming", "attribution")).toBe(true);
+    // A trial number leads to the plans, which lead to attribution.
+    expect(isValidOnboardingTransition("phone_number_claiming", "choose_plan")).toBe(true);
+    expect(isValidOnboardingTransition("choose_plan", "attribution")).toBe(true);
+    expect(isValidOnboardingTransition("phone_number", "choose_plan")).toBe(false);
+    expect(isValidOnboardingTransition("choose_plan", "meet")).toBe(false);
+    expect(resolveOnboardingRoute("choose_plan")).toBe("/onboarding/plan");
     expect(isValidOnboardingTransition("attribution", "meet")).toBe(true);
     expect(isValidOnboardingTransition("meet", "complete")).toBe(true);
     expect(isValidOnboardingTransition("attribution", "complete")).toBe(false);
@@ -53,7 +59,7 @@ describe("onboarding stages", () => {
   it("skips the business, the number and attribution for a partner's business", () => {
     const partner = { partnerId: "partner", accessLevel: "full" } as const;
     const activity = { ...partner, accessLevel: "activity" } as const;
-    expect(onboardingSteps(null)).toEqual(["create_business", "website", "language", "phone_number", "attribution", "meet"]);
+    expect(onboardingSteps(null)).toEqual(["create_business", "website", "language", "phone_number", "choose_plan", "attribution", "meet"]);
     expect(onboardingSteps({ partnerId: null, accessLevel: "activity" })).toEqual(onboardingSteps(null));
     expect(onboardingSteps(partner)).toEqual(["website", "language", "verify_phone", "meet"]);
     expect(onboardingSteps(activity)).toEqual(["verify_phone"]);

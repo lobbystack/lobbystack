@@ -81,14 +81,18 @@ export function BillingSuccessSurface() {
   });
   const number = numbers.data?.phoneNumbers.find((candidate) => !candidate.reclaimScheduledAt) ?? null;
 
-  // The number step only opens once onboarding moves past the plan. Moving
-  // again is a no-op, so the effect and the button can both ask.
+  // From the plans after a trial number, onboarding goes on to attribution.
+  // From the number step's plans, it goes back to the number. Moving again is
+  // a no-op, so the effect and the button can both ask.
+  // Once the stage has moved past the plans, it stays where it went.
+  const stage = business?.onboardingStage;
+  const nextStep = stage === "choose_plan" ? { stage: "attribution", route: "/onboarding/attribution" } : stage === "attribution" || stage === "meet" ? { stage, route: `/onboarding/${stage}` } : { stage: "phone_number", route: "/onboarding/number" };
   const advance = useRef<Promise<unknown> | null>(null);
   const advanceOnboarding = useCallback(() => {
-    advance.current ??= requestJson(`/api/onboarding/stage?businessId=${encodeURIComponent(businessId ?? "")}`, { method: "POST", body: JSON.stringify({ to: "phone_number" }) })
+    advance.current ??= requestJson(`/api/onboarding/stage?businessId=${encodeURIComponent(businessId ?? "")}`, { method: "POST", body: JSON.stringify({ to: nextStep.stage }) })
       .catch((error: unknown) => { advance.current = null; throw error; });
     return advance.current;
-  }, [businessId]);
+  }, [businessId, nextStep.stage]);
 
   useEffect(() => {
     if (!businessId || !requestId || !plan || !onboarding) return;
@@ -105,7 +109,7 @@ export function BillingSuccessSurface() {
       router.push("/agents/primary/channels/phone");
       return;
     }
-    void advanceOnboarding().then(() => router.push("/onboarding/number"), () => toast.error(t("common:errors.unexpected")));
+    void advanceOnboarding().then(() => router.push(nextStep.route), () => toast.error(t("common:errors.unexpected")));
   }
 
   if (!requestId || businesses.isError || (checkout.isError && !checkout.data)) {

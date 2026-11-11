@@ -281,7 +281,12 @@
     "continue": "Continuer",
     "continuing": "Continuer...",
     "continueFailed": "Impossible de continuer maintenant. Réessayez.",
-    "backToPlans": "Retour aux forfaits"
+    "backToPlans": "Retour aux forfaits",
+    "subscribe": "S'abonner",
+    "trial": {
+      "description": "14 jours, sans carte",
+      "start": "Commencer l'essai gratuit de 14 jours"
+    }
   },
   "noBusinesses": {
     "title": "Aucun espace de travail ici pour l'instant",

@@ -281,7 +281,12 @@
     "continue": "Nastavi",
     "continuing": "Nastavljanje...",
     "continueFailed": "Trenutno ne možemo da nastavimo. Pokušajte ponovo.",
-    "backToPlans": "Nazad na pakete"
+    "backToPlans": "Nazad na pakete",
+    "subscribe": "Pretplatite se",
+    "trial": {
+      "description": "14 dana, bez kartice",
+      "start": "Započnite besplatnu probu od 14 dana"
+    }
   },
   "noBusinesses": {
     "title": "Ovde još nemate radni prostor",

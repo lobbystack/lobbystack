@@ -7,6 +7,8 @@ describe("onboardingProgress", () => {
     expect(ONBOARDING_DOT_COUNT).toBe(6);
     expect(onboardingProgress("/onboarding/website", null)).toEqual({ current: 3, total: 6 });
     expect(onboardingProgress("/onboarding/number", null)).toEqual({ current: 4, total: 6 });
+    // The plans after the number share its dot.
+    expect(onboardingProgress("/onboarding/plan", null)).toEqual({ current: 4, total: 6 });
     expect(onboardingProgress("/onboarding/attribution", null)).toEqual({ current: 5, total: 6 });
     expect(onboardingProgress("/onboarding/meet", null)).toEqual({ current: 6, total: 6 });
     expect(onboardingProgress("/onboarding/verify-phone", null)).toBeNull();

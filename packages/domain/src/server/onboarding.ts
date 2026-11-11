@@ -38,7 +38,8 @@ const transitions: Record<OnboardingStage, readonly OnboardingStage[]> = {
   language: ["phone_number"],
   verify_phone: ["phone_number", "attribution"],
   phone_number: ["attribution"],
-  phone_number_claiming: ["phone_number", "attribution"],
+  phone_number_claiming: ["phone_number", "choose_plan", "attribution"],
+  choose_plan: ["attribution"],
   attribution: ["meet"],
   meet: ["complete"],
   complete: [],
@@ -56,6 +57,7 @@ const partnerTransitions: Record<OnboardingStage, readonly OnboardingStage[]> = 
   verify_phone: ["meet"],
   phone_number: ["meet"],
   phone_number_claiming: ["meet"],
+  choose_plan: ["meet"],
   attribution: ["meet"],
 };
 const activityTransitions: Record<OnboardingStage, readonly OnboardingStage[]> = {
@@ -63,6 +65,7 @@ const activityTransitions: Record<OnboardingStage, readonly OnboardingStage[]> =
   verify_phone: ["complete"],
   phone_number: ["complete"],
   phone_number_claiming: ["complete"],
+  choose_plan: ["complete"],
   attribution: ["complete"],
 };
 
@@ -71,7 +74,7 @@ const activityTransitions: Record<OnboardingStage, readonly OnboardingStage[]> =
  * app.reserve_trial_number_claim does: from the number step on. A partner's
  * business has no number step, so its claims wait for its owner's onboarding.
  */
-export const NUMBER_CLAIM_STAGES: readonly OnboardingStage[] = ["phone_number", "attribution", "meet", "complete"];
+export const NUMBER_CLAIM_STAGES: readonly OnboardingStage[] = ["phone_number", "choose_plan", "attribution", "meet", "complete"];
 
 /**
  * The stage a new business starts at, since creating it is done: its
@@ -181,7 +184,7 @@ export async function advanceOnboardingStage(
 ): Promise<void> {
   await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
-    const current = (await tx.select({ onboardingStage: businesses.onboardingStage, partnerId: businesses.partnerId, accessLevel: businesses.partnerAccessLevel, attribution: businesses.onboardingAttribution }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1).for("update"))[0];
+    const current = (await tx.select({ onboardingStage: businesses.onboardingStage, partnerId: businesses.partnerId, accessLevel: businesses.partnerAccessLevel, attribution: businesses.onboardingAttribution, deploymentMode: businesses.deploymentMode }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1).for("update"))[0];
     if (!current) throw new Error("Business onboarding state was not found.");
     const currentStage = normalizeOnboardingStage(current.onboardingStage, current);
     // Repair a legacy verification stage before reading or advancing it so the
@@ -196,10 +199,19 @@ export async function advanceOnboardingStage(
     if (canVisitOnboardingStage(currentStage, to)) return;
     // The attribution question has no skip: only an answer moves past it.
     if (currentStage === "attribution" && !current.attribution?.trim()) throw attributionRequired();
+    // A direct cloud owner gets past the number with a number, or through the
+    // country fallback, which skipOnboardingNumber checks. A self-hosted
+    // business keeps its skip.
+    if (!current.partnerId && current.deploymentMode === "cloud" && (currentStage === "phone_number" || currentStage === "verify_phone")) throw numberRequired();
     await advanceOnboardingStageInTransaction(tx, { ...input, to, from: currentStage, partnerId: current.partnerId, accessLevel: current.accessLevel });
     // Meet your agent is the last screen, so leaving it sends the welcome email.
     if (input.to === "complete") await scheduleWelcomeEmailInTransaction(tx, input.businessId, new Date());
   });
+}
+
+/** A direct cloud business can't move past the number step without one. */
+export function numberRequired(): Error {
+  return Object.assign(new Error("Pick a phone number to continue."), { status: 409, code: "number_required" });
 }
 
 function attributionRequired(): Error {

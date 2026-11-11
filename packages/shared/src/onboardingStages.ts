@@ -1,4 +1,4 @@
-export const onboardingStages = ["create_business", "website", "language", "verify_phone", "phone_number", "phone_number_claiming", "attribution", "meet", "complete"] as const;
+export const onboardingStages = ["create_business", "website", "language", "verify_phone", "phone_number", "phone_number_claiming", "choose_plan", "attribution", "meet", "complete"] as const;
 
 export type OnboardingStage = (typeof onboardingStages)[number];
 
@@ -12,6 +12,7 @@ const stageRoutes: Record<OnboardingStage, string> = {
   verify_phone: "/onboarding/verify-phone",
   phone_number: "/onboarding/number",
   phone_number_claiming: "/onboarding/number",
+  choose_plan: "/onboarding/plan",
   attribution: "/onboarding/attribution",
   meet: "/onboarding/meet",
   complete: "/",
@@ -20,9 +21,10 @@ const stageRoutes: Record<OnboardingStage, string> = {
 /** The wait screen has no stage: the website step has already moved on, and the import runs behind it. */
 export const ONBOARDING_READING_ROUTE = "/onboarding/reading";
 
-// A direct owner picks a number right after the website. Only a partner's
-// owner verifies a mobile, because the partner's calls forward to it.
-const directSteps: readonly OnboardingStage[] = ["create_business", "website", "language", "phone_number", "attribution", "meet"];
+// A direct owner picks a number right after the website, then a plan when the
+// number started a free trial. Only a partner's owner verifies a mobile,
+// because the partner's calls forward to it.
+const directSteps: readonly OnboardingStage[] = ["create_business", "website", "language", "phone_number", "choose_plan", "attribution", "meet"];
 const partnerSteps: readonly OnboardingStage[] = ["website", "language", "verify_phone", "meet"];
 const activitySteps: readonly OnboardingStage[] = ["verify_phone"];
 
@@ -79,6 +81,11 @@ function stagePlace(stage: OnboardingStage): number {
   return onboardingStages.indexOf(stage === "phone_number_claiming" ? "phone_number" : stage);
 }
 
+/** Whether the owner is past the number step: the plans after it, or a later step. */
+export function isPastNumberStage(stage: OnboardingStage): boolean {
+  return stagePlace(stage) > stagePlace("phone_number");
+}
+
 export function canVisitOnboardingStage(current: OnboardingStage, target: OnboardingStage): boolean {
   return stagePlace(target) <= stagePlace(current);
 }
@@ -94,7 +101,8 @@ const PARTNER_DOTS = ["/onboarding/website", "/onboarding/verify-phone", "/onboa
 /** The dots sign-up and every later direct step show. */
 export const ONBOARDING_DOT_COUNT = DIRECT_DOTS.length + 1;
 
-const dotRoute = (route: string) => route === "/onboarding/language" || route === ONBOARDING_READING_ROUTE ? "/onboarding/website" : route === "/onboarding/brand" ? "/onboarding/business" : route;
+// The plans after the number share its dot, so the count stays the same with or without a trial.
+const dotRoute = (route: string) => route === "/onboarding/language" || route === ONBOARDING_READING_ROUTE ? "/onboarding/website" : route === "/onboarding/brand" ? "/onboarding/business" : route === "/onboarding/plan" ? "/onboarding/number" : route;
 
 export type OnboardingProgress = { current: number; total: number };
 

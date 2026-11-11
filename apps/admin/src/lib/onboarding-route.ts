@@ -19,6 +19,7 @@ const routeStages: Record<string, OnboardingStage> = {
   [ONBOARDING_READING_ROUTE]: "verify_phone",
   "/onboarding/verify-phone": "verify_phone",
   "/onboarding/number": "phone_number",
+  "/onboarding/plan": "choose_plan",
   "/onboarding/attribution": "attribution",
   "/onboarding/meet": "meet",
 };
@@ -53,7 +54,7 @@ export async function requireOnboardingStage(pathname: string, options: { allowC
   // Onboarding goes forward only: a browser back or an old link to an earlier
   // step lands on the step the workspace is on. The number picker stays open
   // from later steps, since the dashboard uses it to add a number.
-  const revisitsNumber = expected === "phone_number" && ["phone_number_claiming", "attribution", "meet", "complete"].includes(state.stage);
+  const revisitsNumber = expected === "phone_number" && ["phone_number_claiming", "choose_plan", "attribution", "meet", "complete"].includes(state.stage);
   if (state.stage !== expected && !revisitsNumber) redirect(current);
 }
 

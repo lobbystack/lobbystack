@@ -280,7 +280,12 @@
     "continue": "Continue",
     "continuing": "Continuing...",
     "continueFailed": "We couldn't continue right now. Please try again.",
-    "backToPlans": "Back to plans"
+    "backToPlans": "Back to plans",
+    "subscribe": "Subscribe",
+    "trial": {
+      "description": "14 days, no card needed",
+      "start": "Start 14-day free trial"
+    }
   },
   "noBusinesses": {
     "title": "No workspace here yet",

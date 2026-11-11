@@ -45,6 +45,7 @@ export const WEB_EVENT_NAMES = [
   "web.onboarding.number_claim_completed",
   "web.onboarding.number_unavailable",
   "web.onboarding.plan_selected",
+  "web.onboarding.trial_started",
   "web.onboarding.plan_checkout_started",
   "web.onboarding.attribution_submitted",
   "web.onboarding.meet_completed",
@@ -321,6 +322,8 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
   // code: why the number step offers the plans, such as trial_already_used.
   "web.onboarding.number_unavailable": ["businessId", "deploymentMode", "code"],
   "web.onboarding.plan_selected": ["businessId", "deploymentMode", "plan"],
+  // The owner went on with the 14-day trial from the plans after their number.
+  "web.onboarding.trial_started": ["businessId", "deploymentMode"],
   "web.onboarding.plan_checkout_started": ["businessId", "deploymentMode", "plan"],
   "web.onboarding.plan_checkout_completed": ["businessId", "deploymentMode", "plan"],
   "web.onboarding.attribution_submitted": ["businessId", "deploymentMode", "source"],

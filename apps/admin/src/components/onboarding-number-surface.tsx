@@ -27,7 +27,7 @@ const REFUSAL_KEYS: Record<string, string> = {
   email_verification_required: "number.refusals.emailVerification",
 };
 
-type NumberOutlook = { trialRefusal: string | null; countries: string[]; suggestedCountry: string | null };
+type NumberOutlook = { trialRefusal: string | null; countries: string[]; suggestedCountry: string | null; numberRequired?: boolean };
 
 function errorCode(error: unknown): string | undefined {
   const code = error && typeof error === "object" ? (error as { code?: unknown }).code : undefined;
@@ -51,7 +51,12 @@ export function OnboardingNumberSurface() {
   const primary = phones.data?.phoneNumbers[0];
   // Past the number already, as someone who bought a plan from a later step is, the owner returns to where they were.
   const stage = business?.onboardingStage;
-  const afterNumber = stage === "complete" ? "/" : stage === "meet" ? resolveOnboardingRoute(stage) : "/onboarding/attribution";
+  const returnTo = stage === "complete" ? "/" : stage === "choose_plan" || stage === "attribution" || stage === "meet" ? resolveOnboardingRoute(stage) : null;
+  // A new number goes on to the plans, which send a paid plan on to attribution. Going on without one skips them.
+  const afterNumber = returnTo ?? "/onboarding/plan";
+  const withoutNumber = returnTo ?? "/onboarding/attribution";
+  // Only a self-hosted install, which has no trial to guard, can go on without a number from anywhere.
+  const skipAllowed = outlook.data?.numberRequired === false;
   const refusalCode = refusal ?? outlook.data?.trialRefusal ?? null;
   // The refusal stays here with the plans.
   const refuse = useCallback((error: unknown) => {
@@ -80,7 +85,7 @@ export function OnboardingNumberSurface() {
     } finally { setClaiming(false); }
   }, [refuse]);
   const getErrorMessage = useCallback((error: unknown, fallback: string) => getSafeOnboardingErrorMessage(error, t, fallback), [t]);
-  const skip = useMutation({ mutationFn: () => requestJson(`/api/onboarding/phone-numbers/skip?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST" }), onSuccess: () => router.push(afterNumber), meta: { inlineError: true } });
+  const skip = useMutation({ mutationFn: () => requestJson(`/api/onboarding/phone-numbers/skip?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST" }), onSuccess: () => router.push(withoutNumber), meta: { inlineError: true } });
 
   // Meet your agent shows the number to call, so a number moves straight on.
   useEffect(() => {
@@ -93,15 +98,15 @@ export function OnboardingNumberSurface() {
   const suggested = outlook.data?.suggestedCountry ?? null;
   const showsCountryFallback = Boolean(outlook.data) && (countries.length === 0 || (countryFallback ?? Boolean(suggested && !countries.includes(suggested))));
   if (!phones.data || (!claiming && phones.data.activeClaim) || outlook.isLoading || primary) return <div className="mx-auto w-full max-w-lg"><PhoneNumberChooserSkeleton labels={{ country: t("number.countryLabel"), areaCode: t("number.areaCodeLabel"), search: t("number.search"), phoneNumber: t("number.tableHeaders.phoneNumber") }} /></div>;
-  if (business && showsCountryFallback) return <OnboardingNumberCountryFallback businessId={business.businessId} initialCountry={suggested} numberCountries={countries} onBack={countries.length ? () => setCountryFallback(false) : null} onSkipped={() => router.push(afterNumber)} />;
+  if (business && showsCountryFallback) return <OnboardingNumberCountryFallback businessId={business.businessId} initialCountry={suggested} numberCountries={countries} onBack={countries.length ? () => setCountryFallback(false) : null} onSkipped={() => router.push(withoutNumber)} />;
   if (refusalCode) {
     return (
       <div className="flex flex-col gap-6">
         <p className="text-center text-sm text-muted-foreground">{t(REFUSAL_KEYS[refusalCode] ?? "number.planRequired")}</p>
-        <OnboardingPlanSurface />
+        <OnboardingPlanSurface variant="paid" />
         {business ? <div className="flex flex-col items-center gap-3">
           <button className="text-sm font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground" onClick={() => setCountryFallback(true)} type="button">{t("number.country.notListed")}</button>
-          <button className="text-sm font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground disabled:opacity-50" disabled={skip.isPending || claiming} onClick={() => skip.mutate()} type="button">{skip.isPending ? t("number.skipping") : t("number.skipLater")}</button>
+          {skipAllowed ? <button className="text-sm font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground disabled:opacity-50" disabled={skip.isPending || claiming} onClick={() => skip.mutate()} type="button">{skip.isPending ? t("number.skipping") : t("number.skipLater")}</button> : null}
           {skip.isError ? <FieldError>{t("number.skipFailed")}</FieldError> : null}
         </div> : null}
       </div>
@@ -111,7 +116,7 @@ export function OnboardingNumberSurface() {
     {business ? <PhoneNumberChooser businessId={business.businessId} getInitialNumberSuggestion={chooser.getInitialNumberSuggestion} searchAvailableNumbers={chooser.searchAvailableNumbers} claimNumber={claimNumber} getErrorMessage={getErrorMessage} onClaimStarted={(number) => { telemetry.track("web.onboarding.number_claim_started", { businessId: business.businessId, countryCode: number.selectionContext.countryCode, selectionMode: number.selectionContext.mode, numberKind: number.kind }); }} onClaimCompleted={(number) => { telemetry.track("web.onboarding.number_claim_completed", { businessId: business.businessId, countryCode: number.selectionContext.countryCode, selectionMode: number.selectionContext.mode, numberKind: number.kind }); }} onClaimed={() => { setClaiming(false); void phones.refetch(); }} labels={{ countryLabel: t("number.countryLabel"), areaCodeLabel: t("number.areaCodeLabel"), areaCodePlaceholder: t("number.areaCodePlaceholder"), search: t("number.search"), searching: t("number.searching"), phoneNumberHeader: t("number.tableHeaders.phoneNumber"), select: t("number.select"), loadMore: t("number.loadMore"), empty: t("number.empty"), loadFailed: "number.loadFailed", searchFailed: "number.searchFailed", claimFailed: "number.claimFailed", unavailable: t("number.unavailable") }} /> : null}
     {business ? <div className="flex flex-col items-center gap-3">
       <button className="text-sm font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground disabled:opacity-50" disabled={claiming} onClick={() => setCountryFallback(true)} type="button">{t("number.country.notListed")}</button>
-      <button className="text-sm font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground disabled:opacity-50" disabled={!business || skip.isPending || claiming} onClick={() => skip.mutate()} type="button">{skip.isPending ? t("number.skipping") : t("number.skipLater")}</button>
+      {skipAllowed || returnTo ? <button className="text-sm font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground disabled:opacity-50" disabled={!business || skip.isPending || claiming} onClick={() => skip.mutate()} type="button">{skip.isPending ? t("number.skipping") : t("number.skipLater")}</button> : null}
     </div> : null}
     {skip.isError ? <FieldError>{t("number.skipFailed")}</FieldError> : null}
   </div>;

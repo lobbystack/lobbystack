@@ -14,11 +14,11 @@ vi.mock("./onboarding-plan-surface", () => ({ OnboardingPlanSurface: () => <div>
 const clients: QueryClient[] = [];
 afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals(); });
 beforeEach(() => { telemetryRef.current = createRecordedBrowserTelemetry(); navigation.push.mockReset(); navigation.replace.mockReset(); });
-function setup(stage: string, primary = false, pending = false, suggestion?: () => Response, trialRefusal: string | null = null, suggestedCountry = "CA") {
+function setup(stage: string, primary = false, pending = false, suggestion?: () => Response, trialRefusal: string | null = null, suggestedCountry = "CA", numberRequired = true) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } }); clients.push(client);
   client.setQueryData(["businesses"], { businesses: [{ businessId: "business-1", active: true, onboardingStage: stage }] });
   client.setQueryData(["onboarding-primary-number", "business-1"], { activeClaim: pending ? { id: "claim-1", status: "provisioning" } : null, phoneNumbers: primary ? [{ id: "phone-1", e164: "+15815550102", reclaimScheduledAt: null }] : [] });
-  client.setQueryData(["onboarding-number-countries", "business-1"], { countries: ["US", "CA"], trialCountries: ["US", "CA"], suggestedCountry, verifyPhone: false, trialRefusal, verifiedPhone: null });
+  client.setQueryData(["onboarding-number-countries", "business-1"], { countries: ["US", "CA"], trialCountries: ["US", "CA"], suggestedCountry, verifyPhone: false, trialRefusal, verifiedPhone: null, numberRequired });
   const fetchMock = vi.fn(async (input: string) => {
     if (input.includes("/api/phone-numbers?")) return Response.json({ activeClaim: null, phoneNumbers: [{ id: "phone-1", e164: "+14165550100", reclaimScheduledAt: null }] });
     if (input.includes("/suggestion?")) return suggestion ? suggestion() : Response.json({ numbers: [{ phoneE164: "+14165550100", countryCode: "CA", claimToken: "signed-offer", capabilities: { sms: true, voice: true } }] });
@@ -37,12 +37,12 @@ describe("onboarding number API adapter", () => {
     const fetchMock = setup("phone_number", false, true);
     expect(screen.queryByRole("button", { name: "number.select" })).toBeNull();
     expect(screen.queryByRole("button", { name: "number.skipLater" })).toBeNull();
-    await waitFor(() => expect(navigation.replace).toHaveBeenCalledWith("/onboarding/attribution"), { timeout: 2500 });
+    await waitFor(() => expect(navigation.replace).toHaveBeenCalledWith("/onboarding/plan"), { timeout: 2500 });
     expect(fetchMock.mock.calls.every(([url]) => url.includes("/api/phone-numbers?"))).toBe(true);
   });
-  it("moves straight on once the business has a number", async () => {
+  it("moves straight on to the plans once the business has a number", async () => {
     const fetchMock = setup("phone_number", true);
-    await waitFor(() => expect(navigation.replace).toHaveBeenCalledWith("/onboarding/attribution"));
+    await waitFor(() => expect(navigation.replace).toHaveBeenCalledWith("/onboarding/plan"));
     expect(fetchMock).not.toHaveBeenCalled();
   });
   it("returns to attribution when revisiting with a number", async () => {
@@ -72,13 +72,23 @@ describe("onboarding number API adapter", () => {
     expect(screen.getByText("plans")).toBeTruthy();
     telemetryRef.current!.expectEvent("web.onboarding.number_unavailable", { businessId: "business-1", code: "dedicated_number_requires_paid_plan" });
   });
-  it("shows the plans before a search when the trial is already used, and still lets the owner continue", async () => {
+  it("shows the paid plans before a search when the trial is already used, with no way on but a country without numbers", async () => {
     const fetchMock = setup("phone_number", false, false, undefined, "trial_already_used");
     expect(await screen.findByText("number.refusals.trialUsed")).toBeTruthy();
     expect(screen.getByText("plans")).toBeTruthy();
     expect(fetchMock.mock.calls.some(([url]) => url.includes("/suggestion?"))).toBe(false);
     telemetryRef.current!.expectEvent("web.onboarding.number_unavailable", { businessId: "business-1", code: "trial_already_used" });
-    await userEvent.click(screen.getByRole("button", { name: "number.skipLater" }));
+    expect(screen.queryByRole("button", { name: "number.skipLater" })).toBeNull();
+    expect(screen.getByRole("button", { name: "number.country.notListed" })).toBeTruthy();
+  });
+  it("offers no skip to a cloud owner during onboarding", async () => {
+    setup("phone_number");
+    expect(await screen.findByRole("button", { name: "number.country.notListed" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "number.skipLater" })).toBeNull();
+  });
+  it("keeps the skip at a self-hosted install, which has no trial to guard", async () => {
+    const fetchMock = setup("phone_number", false, false, undefined, null, "CA", false);
+    await userEvent.click(await screen.findByRole("button", { name: "number.skipLater" }));
     await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => url.includes("/skip?"))).toBe(true));
     expect(navigation.push).toHaveBeenCalledWith("/onboarding/attribution");
   });

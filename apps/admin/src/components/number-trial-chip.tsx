@@ -1,0 +1,29 @@
+"use client";
+
+import { Clock } from "lucide-react";
+import { useTranslation } from "react-i18next";
+
+import { Button } from "@/components/ui/button";
+import { useOpenUpgradePlanDialog } from "@/components/upgrade-plan-dialog-context";
+import { useNumberTrial } from "@/components/number-trial-banner";
+
+/**
+ * The trial's countdown in the sidebar footer, for as long as the trial runs,
+ * with the plans one click away. Like the banner, only people who can see
+ * billing get it, so a partner's business never shows it.
+ */
+export function NumberTrialChip() {
+  const { t } = useTranslation("common");
+  const openUpgrade = useOpenUpgradePlanDialog();
+  const state = useNumberTrial();
+  if (state?.status !== "active") return null;
+  return (
+    <div className="flex items-center justify-between gap-2 rounded-xl border border-sidebar-border bg-sidebar-accent/40 px-3 py-2 group-data-[collapsible=icon]:hidden" role="status">
+      <span className="flex min-w-0 items-center gap-2 text-xs font-medium text-sidebar-foreground">
+        <Clock aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground" />
+        <span className="truncate">{t("numberTrial.chip", { count: state.daysLeft })}</span>
+      </span>
+      <Button className="h-auto shrink-0 px-0 text-xs" onClick={openUpgrade} type="button" variant="link">{t("numberTrial.viewPlans")}</Button>
+    </div>
+  );
+}
