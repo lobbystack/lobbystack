@@ -99,7 +99,7 @@ export function WorkspaceSwitcher() {
  */
 function WorkspaceInitial({ name }: { name: string | undefined }) {
   return (
-    <Avatar aria-hidden="true" className="shadow-xs" size="sm">
+    <Avatar aria-hidden="true" size="sm">
       <AvatarFallback>{name?.trim().charAt(0).toUpperCase() || "?"}</AvatarFallback>
     </Avatar>
   );

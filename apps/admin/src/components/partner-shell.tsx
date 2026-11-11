@@ -163,7 +163,7 @@ function PartnerNavigation({ billingPage, partnerId, payments, role }: { billing
 
 function Initial({ value }: { value: string }) {
   return (
-    <Avatar aria-hidden="true" className="shadow-xs" size="sm">
+    <Avatar aria-hidden="true" size="sm">
       <AvatarFallback>{value.trim().charAt(0).toUpperCase() || "?"}</AvatarFallback>
     </Avatar>
   );

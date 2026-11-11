@@ -291,7 +291,7 @@ export function PartnerBillingSurface() {
               {(["monthly", "annual"] as const).map((option) => (
                 <Button
                   aria-selected={interval === option}
-                  className={cn(interval === option ? "bg-background text-foreground shadow-sm hover:bg-background" : "border-transparent bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground")}
+                  className={cn(interval === option ? "bg-background text-foreground shadow-xs hover:bg-background" : "border-transparent bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground")}
                   key={option}
                   onClick={() => setInterval(option)}
                   role="tab"

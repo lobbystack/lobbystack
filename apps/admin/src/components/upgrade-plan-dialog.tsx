@@ -125,7 +125,7 @@ export function UpgradePlanDialog({
                 aria-selected={selectedBillingInterval === interval}
                 className={cn(
                   selectedBillingInterval === interval
-                    ? "bg-background text-foreground shadow-sm hover:bg-background"
+                    ? "bg-background text-foreground shadow-xs hover:bg-background"
                     : "border-transparent bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground",
                 )}
                 key={interval}

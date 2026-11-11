@@ -81,7 +81,7 @@ export function NavUser({
               />
             }
           >
-            <Avatar className="shadow-xs" size="sm">
+            <Avatar size="sm">
               <AvatarFallback>{emailInitial}</AvatarFallback>
             </Avatar>
             <div className="grid flex-1 text-start text-sm leading-tight group-data-[collapsible=icon]:hidden">
