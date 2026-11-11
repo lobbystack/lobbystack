@@ -185,7 +185,7 @@ export function LiveEmployeesSurface() {
       cell: ({ row }) => (
         <DropdownMenu>
           <DropdownMenuTrigger render={<Button aria-label={t("table.actions.moreOptions")} size="icon-sm" title={t("table.actions.moreOptions")} type="button" variant="ghost" />}><MoreHorizontal /></DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="min-w-0 w-fit p-1" side="bottom" sideOffset={8}>
+          <DropdownMenuContent align="end" className="min-w-0 w-fit" side="bottom" sideOffset={8}>
             <DropdownMenuItem disabled={!canMutate} onClick={() => openEditor(row.original)}><Pencil />{t("table.actions.editEmployee")}</DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem disabled={!canMutate} onClick={() => setPendingDelete(row.original)} variant="destructive"><Trash2 />{t("table.actions.deleteEmployee")}</DropdownMenuItem>

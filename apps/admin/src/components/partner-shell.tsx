@@ -197,7 +197,7 @@ function PartnerSwitcher({ partner, partners }: { partner: ConsolePartner; partn
           <DropdownMenuContent align="start" className="min-w-56" side={isMobile ? "bottom" : "right"} sideOffset={4}>
             <DropdownMenuGroup>
               {partners.map((option) => (
-                <DropdownMenuItem className="gap-2.5 px-3 py-2" key={option.partnerId} render={<Link href={`/partner/${option.partnerId}/businesses`} />}>
+                <DropdownMenuItem key={option.partnerId} render={<Link href={`/partner/${option.partnerId}/businesses`} />}>
                   {option.partnerId === partner.partnerId ? <Check className="size-4" /> : <span className="size-4" />}
                   <span className="ph-mask truncate">{option.name}</span>
                 </DropdownMenuItem>
@@ -205,7 +205,7 @@ function PartnerSwitcher({ partner, partners }: { partner: ConsolePartner; partn
             </DropdownMenuGroup>
             {onPartnerHost ? null : <>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="gap-2.5 px-3 py-2" render={<Link href="/partner/signup" />}>
+              <DropdownMenuItem render={<Link href="/partner/signup" />}>
                 <Plus className="size-4" />
                 {t("shell.signUpAnother")}
               </DropdownMenuItem>

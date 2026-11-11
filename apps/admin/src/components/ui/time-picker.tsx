@@ -66,7 +66,7 @@ function TimePicker({ value, onChange, hourCycle = "24h", locale, minuteStep = 5
         {formatTime(hour, minute, hourCycle, locale)}
       </PopoverTrigger>
       {/* The popup takes a fixed height that fits the screen, so the columns scroll inside it on small viewports too. */}
-      <PopoverContent align="start" className="h-[min(18rem,var(--available-height))] w-auto flex-row gap-1 p-2">
+      <PopoverContent align="start" className="h-[min(18rem,var(--available-height))] w-auto flex-row gap-1 p-1">
         <TimeColumn
           label={columnLabels.hours}
           onSelect={(next) => set(twelveHour ? (next % 12) + (pm ? 12 : 0) : next, minute)}
@@ -100,7 +100,7 @@ function TimeColumn({ label, onSelect, open, options, render, selected, title }:
         <button
           aria-selected={option === selected}
           className={cn(
-            "shrink-0 rounded-xs px-2 py-1.5 text-center text-sm tabular-nums outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+            "shrink-0 rounded-md px-2 py-1.5 text-center text-sm tabular-nums outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
             option === selected && "bg-primary text-primary-foreground hover:bg-primary/90",
           )}
           key={option}

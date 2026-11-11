@@ -177,7 +177,7 @@ function SearchPanel({ businessId, onClose }: { businessId: string | undefined; 
               return (
                 <div
                   aria-selected={current}
-                  className={cn("flex w-full cursor-pointer items-center gap-3 rounded-xs px-3 py-2 text-left text-sm", current && "bg-accent text-accent-foreground")}
+                  className={cn("flex w-full cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-left text-sm", current && "bg-accent text-accent-foreground")}
                   id={optionId(result)}
                   key={result.id}
                   onClick={() => go(result)}

@@ -60,7 +60,7 @@ function DurationPicker({ value, onChange, locale, maxHours = 12, minuteStep = 5
         <Timer className="text-muted-foreground" data-icon="inline-start" />
         {formatDuration(value, locale)}
       </PopoverTrigger>
-      <PopoverContent align="start" className="h-[min(18rem,var(--available-height))] w-auto flex-row gap-1 p-2">
+      <PopoverContent align="start" className="h-[min(18rem,var(--available-height))] w-auto flex-row gap-1 p-1">
         <TimeColumn label={columnLabels.hours} onSelect={(next) => onChange(next * 60 + minute)} open={open} options={hourOptions} render={String} selected={hours} title={columnTitles.hours} />
         <TimeColumn label={columnLabels.minutes} onSelect={(next) => onChange(hours * 60 + next)} open={open} options={minuteOptions} render={(option) => String(option).padStart(2, "0")} selected={minute} title={columnTitles.minutes} />
       </PopoverContent>
