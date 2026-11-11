@@ -74,6 +74,8 @@ Rules becomes the one place for what an agent should do. A rule gains an optiona
 - An e2e spec: an owner adds an SMS-only rule and sees its badge, and the old Instructions URL lands on Rules.
 - `pnpm voice:eval`, since GPT-Live's instructions change, on the demo snapshot and on the demo snapshot as the migration leaves it. The `silent` scenario takes any natural check-in (`SILENCE_CHECK_IN` in `scripts/voice/scenarios.ts`): "still there", "still with me", "still on the line", "can you hear me", "are you there", or a line opening with "Hello?". A call with no check-in still fails.
 
+  Results with the wider pattern: the demo snapshot passed 23 of 24 runs, and the migrated one 23 of 24, with `silent` at 3 of 3 on both. The one failure on each side was a call left open after a goodbye (`trailing-goodbye` on the demo, `good-day` on the migrated snapshot), and a rerun of those two scenarios passed 6 of 6 on each snapshot.
+
 ## Release notes
 
 - During a rolling deploy, a worker on the old code can read a snapshot built by the new code. It ignores `channel` and follows channel rules on every channel until it restarts. The window lasts minutes, and those rules hold text the owner wrote for the agent. The product owner accepted this.
