@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import type { Capability } from "@lobbystack/domain";
@@ -14,7 +14,6 @@ import { Main } from "@/components/layout/main";
 import { MobileNavigation } from "@/components/navigation/mobile-navigation";
 import { NavigationSidebar } from "@/components/navigation/navigation-sidebar";
 import { ShellRuntime } from "@/components/navigation/shell-runtime";
-import { PageTitleTargetContext } from "@/components/page-header";
 import { PageIntrosProvider } from "@/components/page-intros/page-intros-provider";
 import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
@@ -51,13 +50,6 @@ export function DashboardShell({ agents = null, capabilities = ALL_CAPABILITIES,
   const pathname = usePathname();
   const contentScrollRef = useRef<HTMLElement>(null);
   const isMobile = useIsMobile();
-  // The page's title heading, which the phone top bar names once it scrolls away.
-  const [titleHeading, setTitleHeading] = useState<HTMLHeadingElement | null>(null);
-  const registerTitle = useCallback((heading: HTMLHeadingElement | null) => {
-    if (!heading) return;
-    setTitleHeading(heading);
-    return () => setTitleHeading((current) => (current === heading ? null : current));
-  }, []);
 
   useLayoutEffect(() => {
     const contentScroll = contentScrollRef.current;
@@ -88,11 +80,9 @@ export function DashboardShell({ agents = null, capabilities = ALL_CAPABILITIES,
           ref={contentScrollRef}
           className="@container/content min-h-0 overflow-x-hidden overflow-y-auto overscroll-contain has-data-[layout=fixed]:h-full peer-data-[variant=inset]:has-data-[layout=fixed]:h-[calc(100%-(var(--spacing)*4))]"
         >
-          <SiteHeader fixed scrollContainerRef={contentScrollRef} titleHeading={titleHeading} />
+          <SiteHeader fixed />
           <Main id="dashboard-main-content" tabIndex={-1} className="flex flex-1 flex-col" fixed={pathname === "/inbox"}>
-            <PageTitleTargetContext.Provider value={registerTitle}>
-              <PageAccess>{children}</PageAccess>
-            </PageTitleTargetContext.Provider>
+            <PageAccess>{children}</PageAccess>
           </Main>
         </SidebarInset>
         <ShellRuntime />
