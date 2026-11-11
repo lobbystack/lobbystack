@@ -174,7 +174,7 @@ Raphael settled these:
 
 | # | Decision | Answer | Slice |
 |---|---|---|---|
-| 1 | What's an existing business's default agent called, in all 8 caller languages? | "Agent", translated. Callers never hear it. | 1 |
+| 1 | What's an existing business's default agent called, in all 8 caller languages? | "Agent", translated. Callers never hear it. Migration 0202 renamed it "Default agent", because "Agent" read like a label in the agent switcher. | 1 |
 | 2 | Are booking mode, booking policy, transfers, staff-first calling and the appointment policy agent-level or workspace-level? | Agent-level, because an after-hours agent needs its own. The prototype's shared card changes to match. Staff-first calling arrived from main after this decision and follows transfers. | 1 |
 | 3 | What happens to extra agents after a downgrade to Free? | They stay paused. Only the default agent answers, and their channels fall back to it. Upgrading restores them. | 5 |
 | 4 | Does each agent have one instructions field or several? | Voice, chat and text. The decision was to hide text until two-way text existed, and main now has it. | 5 |

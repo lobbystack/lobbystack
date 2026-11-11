@@ -95,7 +95,7 @@ describe.skipIf(!client)("several agents in a business", () => {
 
   it("names an agent for a language tag, and for a value it doesn't know", async () => {
     const { rows } = await client!.db.execute<{ tag: string; other: string }>(sql`select app.default_agent_name('pt-BR') as tag, app.default_agent_name('ja') as other`);
-    expect(rows).toEqual([{ tag: "Agente", other: "Agent" }]);
+    expect(rows).toEqual([{ tag: "Agente padrão", other: "Default agent" }]);
   });
 });
 
@@ -114,7 +114,7 @@ describe.skipIf(!client)("a business's default agent", () => {
   }
   const agentOf = async (businessId: string) => await client!.db.select({ name: agents.name, isDefault: agents.isDefault, greeting: agents.greeting }).from(agents).where(eq(agents.businessId, businessId));
 
-  it.each([[undefined, "Agent"], ["fr", "Agent"], ["es", "Agente"], ["pt-BR", "Agente"], ["it", "Agente"]])("starts in the language %s", async (locale, name) => {
+  it.each([[undefined, "Default agent"], ["fr", "Agent par défaut"], ["es", "Agente predeterminado"], ["pt-BR", "Agente padrão"], ["it", "Agente predefinito"]])("starts in the language %s", async (locale, name) => {
     const [agent] = await agentOf(await newBusiness(locale));
     expect(agent).toMatchObject({ name, isDefault: true });
   });
@@ -123,9 +123,9 @@ describe.skipIf(!client)("a business's default agent", () => {
     const businessId = await newBusiness();
     const change = async (defaultLocale: string) => await as("lobbystack_app", { businessId, actorType: "system" }, async (tx) => await updateBusinessInTransaction(tx, { businessId, defaultLocale }));
     await change("es");
-    expect((await agentOf(businessId))[0]?.name).toBe("Agente");
+    expect((await agentOf(businessId))[0]?.name).toBe("Agente predeterminado");
     await change("de");
-    expect((await agentOf(businessId))[0]?.name).toBe("Agent");
+    expect((await agentOf(businessId))[0]?.name).toBe("Standard-Agent");
     await client!.db.update(agents).set({ name: "Front desk" }).where(eq(agents.businessId, businessId));
     await change("es");
     expect((await agentOf(businessId))[0]?.name).toBe("Front desk");
@@ -136,7 +136,7 @@ describe.skipIf(!client)("a business's default agent", () => {
     await client!.db.update(agents).set({ greeting: "Our own words", updatedAt: new Date("2026-01-01T00:00:00Z") }).where(eq(agents.businessId, businessId));
     await as("lobbystack_app", { businessId, actorType: "system" }, async (tx) => await updateBusinessInTransaction(tx, { businessId, defaultLocale: "it" }));
     expect((await client!.db.select({ name: agents.name, greeting: agents.greeting, updatedAt: agents.updatedAt }).from(agents).where(eq(agents.businessId, businessId)))[0])
-      .toEqual({ name: "Agente", greeting: "Our own words", updatedAt: new Date("2026-01-01T00:00:00Z") });
+      .toEqual({ name: "Agente predefinito", greeting: "Our own words", updatedAt: new Date("2026-01-01T00:00:00Z") });
   });
 
   it("saves a first profile as the default agent, with its language's name", async () => {
@@ -144,6 +144,6 @@ describe.skipIf(!client)("a business's default agent", () => {
     created.push(businessId);
     await client!.db.insert(businesses).values({ id: businessId, slug: `first-${businessId}`, name: "Roma", timezone: "UTC", businessType: "test", defaultLocale: "it" });
     await as("lobbystack_worker", { businessId, actorType: "worker" }, async (tx) => await saveReceptionistProfileInTransaction(tx, { businessId, businessName: "Roma", locale: "it", patch: { tone: "warm" } }));
-    expect(await agentOf(businessId)).toEqual([{ name: "Agente", isDefault: true, greeting: defaultGreeting("Roma", "it") }]);
+    expect(await agentOf(businessId)).toEqual([{ name: "Agente predefinito", isDefault: true, greeting: defaultGreeting("Roma", "it") }]);
   });
 });

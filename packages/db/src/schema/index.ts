@@ -723,7 +723,7 @@ export const agents = pgTable(
     businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
     // Operators see this. Callers never hear it. Pass defaultAgentName(locale)
     // for a business's first agent; the default covers code that can't.
-    name: text("name").default("Agent").notNull(),
+    name: text("name").default("Default agent").notNull(),
     // One per business, which answers where no other agent does. An insert
     // for a business's first agent sets it.
     isDefault: boolean("is_default").default(false).notNull(),

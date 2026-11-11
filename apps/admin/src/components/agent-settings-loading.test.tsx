@@ -29,7 +29,7 @@ function renderPage(fetchMock: typeof fetch) {
   return client;
 }
 
-const settings = { business: { defaultLocale: "en", timezone: "America/Toronto" }, profile: { id: "agent-1", name: "Agent", greeting: "Hi", summary: "Clinic", summarySource: "operator", transferNumber: null, transferMode: "on_request", appointmentChangePolicy: null, bookingMode: "instant" } };
+const settings = { business: { defaultLocale: "en", timezone: "America/Toronto" }, profile: { id: "agent-1", name: "Default agent", greeting: "Hi", summary: "Clinic", summarySource: "operator", transferNumber: null, transferMode: "on_request", appointmentChangePolicy: null, bookingMode: "instant" } };
 
 it("marks every section busy, with each row's titles in place, until the settings load", async () => {
   const client = renderPage(vi.fn(() => new Promise<Response>(() => undefined)) as unknown as typeof fetch);
