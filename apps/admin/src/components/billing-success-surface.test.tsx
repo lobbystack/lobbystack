@@ -68,6 +68,14 @@ describe("billing success page", () => {
     expect(stageRequests(fetchMock)).toHaveLength(1);
   });
 
+  it("finishes onboarding from the plans after Meet your agent, and goes on to Home", async () => {
+    const fetchMock = setup({ stage: "choose_plan", number: "+15815550102" });
+    await waitFor(() => expect(stageRequests(fetchMock)).toHaveLength(1));
+    expect(stageRequests(fetchMock)[0]![1]).toEqual(expect.objectContaining({ body: JSON.stringify({ to: "complete" }) }));
+    await userEvent.click(await screen.findByRole("button", { name: "billing.success.continue" }));
+    await waitFor(() => expect(route.router.push).toHaveBeenCalledWith("/"));
+  });
+
   it("lists the steps, holding back the AI settings link until onboarding is done", async () => {
     setup();
     await screen.findByRole("heading", { name: "billing.success.title" });

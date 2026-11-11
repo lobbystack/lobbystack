@@ -9,6 +9,7 @@ import { useActiveBusiness } from "@/hooks/use-active-business";
 import { useBranding } from "@/components/branding-provider";
 import { SidebarTeamSkeleton } from "@/components/loading-skeletons";
 import { agentPathAfterBusinessSwitch } from "@/lib/agent-pages";
+import { rememberOnboardingReturn } from "@/lib/onboarding-return";
 import { recordPendingWorkspaceSwitch } from "@/lib/workspace-analytics";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -81,7 +82,7 @@ export function WorkspaceSwitcher() {
             </DropdownMenuGroup>
             {partner ? null : <>
               <DropdownMenuSeparator />
-              <DropdownMenuItem render={<Link href="/onboarding/business?create=true" />}>
+              <DropdownMenuItem onClick={() => rememberOnboardingReturn(active?.businessId)} render={<Link href="/onboarding/business?create=true" />}>
                 <Plus className="size-4" />
                 {t("sidebar.createBusiness")}
               </DropdownMenuItem>

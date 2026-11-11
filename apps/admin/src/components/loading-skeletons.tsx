@@ -308,11 +308,12 @@ export function ContactRowsSkeleton({ rows = 10 }: { rows?: number }) {
 }
 
 /** Placeholder rows for the knowledge table, with the fixed column layout of the real rows. */
-export function KnowledgeRowsSkeleton({ rows = 10 }: { rows?: number }) {
+export function KnowledgeRowsSkeleton({ rows = 10, columns = {} }: { rows?: number; columns?: { checkbox?: boolean; toggle?: boolean; menu?: boolean } }) {
   return (
     <>
       {Array.from({ length: rows }).map((_, index) => (
         <TableRow className="hover:bg-transparent" key={index}>
+          {columns.checkbox ? <TableCell><Skeleton className="size-4" /></TableCell> : null}
           <TableCell>
             <div className="flex items-center gap-2">
               <Skeleton className="size-5 shrink-0" />
@@ -322,10 +323,60 @@ export function KnowledgeRowsSkeleton({ rows = 10 }: { rows?: number }) {
           <TableCell className="max-w-0"><Skeleton className="h-4 w-3/4" /></TableCell>
           <TableCell><StatusSkeleton /></TableCell>
           <TableCell><Skeleton className="ms-auto h-4 w-32" /></TableCell>
-          <TableCell><Skeleton className="size-8" /></TableCell>
+          {columns.toggle ? <TableCell><Skeleton className="ms-auto h-[18px] w-8 rounded-full" /></TableCell> : null}
+          {columns.menu === false ? null : <TableCell><Skeleton className="size-8" /></TableCell>}
         </TableRow>
       ))}
     </>
+  );
+}
+
+/**
+ * The Specific knowledge page of an agent before its data arrives: the
+ * agent's own sources, then the shared ones with this agent's switch, each
+ * section's title and Select button in place.
+ */
+export function AgentKnowledgeSkeleton({ labels }: { labels: { own: string; shared: string; select: string; manageShared: string; headings: [title: string, preview: string, status: string, added: string]; toggle: string; rowsPerPage: string } }) {
+  const section = (title: string, extra: string | null, toggle: boolean) => (
+    <section className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-1">
+        <HiddenTextSkeleton className="type-section-title">{title}</HiddenTextSkeleton>
+        <div className="flex items-center gap-2">
+          {extra ? <HiddenTextSkeleton className="type-button-sm" skeletonClassName="h-8 px-3 rounded-full">{extra}</HiddenTextSkeleton> : null}
+          <HiddenTextSkeleton className="type-button-sm" skeletonClassName="h-8 px-3 rounded-full">{labels.select}</HiddenTextSkeleton>
+        </div>
+      </div>
+      <TableCard>
+        <Table className="min-w-[60rem] w-full table-fixed">
+          <colgroup><col className="w-[22%]" /><col className="w-[42%]" /><col className="w-[12%]" /><col className="w-[18%]" />{toggle ? <col className="w-28" /> : null}<TableActionsColumn /></colgroup>
+          <TableHeader>
+            <TableRow>
+              {labels.headings.map((heading, index) => <TableHead className={index === 3 ? "text-right" : undefined} key={heading}>{heading}</TableHead>)}
+              {toggle ? <TableHead className="text-right">{labels.toggle}</TableHead> : null}
+              <TableHead />
+            </TableRow>
+          </TableHeader>
+          <TableBody><KnowledgeRowsSkeleton columns={{ toggle }} rows={3} /></TableBody>
+        </Table>
+      </TableCard>
+      <DataTablePaginationSkeleton rowsPerPage={labels.rowsPerPage} />
+    </section>
+  );
+  return <div aria-busy="true" className="flex w-full flex-col gap-10">{section(labels.own, null, false)}{section(labels.shared, labels.manageShared, true)}</div>;
+}
+
+/** A website's pages in its dialog, before they arrive: a row per page with its address and switch. */
+export function WebsitePagesSkeleton({ rows = 4 }: { rows?: number }) {
+  return (
+    <div aria-busy="true" className="flex flex-col divide-y divide-border/70">
+      {Array.from({ length: rows }, (_, index) => (
+        <div className="flex items-center gap-3 py-3" key={index}>
+          <div className="flex min-w-0 flex-1 flex-col gap-1.5"><Skeleton className="h-4 w-1/3" /><Skeleton className="h-3 w-2/3" /></div>
+          <Skeleton className="h-[18px] w-8 rounded-full" />
+          <Skeleton className="size-8" />
+        </div>
+      ))}
+    </div>
   );
 }
 

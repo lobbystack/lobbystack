@@ -38,6 +38,7 @@ KEEP=0
 SKIP_BUILD=0
 TESTS=(
   e2e/affiliate-program.e2e.ts
+  e2e/agent-knowledge.e2e.ts
   e2e/agents.e2e.ts
   e2e/appointment-reschedule.e2e.ts
   e2e/appointments-calendar.e2e.ts

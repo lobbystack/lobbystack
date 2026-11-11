@@ -19,7 +19,7 @@
     "agents": {
       "title": "Réglez la façon dont chaque agent répond",
       "what": "Chaque agent a son numéro, son accueil, sa voix, ses règles, ses réservations et ses transferts.",
-      "shared": "Tous vos agents partagent les informations de votre entreprise, vos services et vos connaissances.",
+      "shared": "Tous vos agents partagent les informations de votre entreprise, vos services et vos connaissances, et chacun peut ajouter ses propres connaissances.",
       "does": "L'agent par défaut répond à tout ce que vous n'avez pas confié à un autre agent.",
       "how": "Faites un changement, puis cliquez sur Appel test pour l'entendre."
     },
@@ -37,7 +37,7 @@
     },
     "knowledge": {
       "title": "Ce que votre agent sait de votre entreprise",
-      "what": "Votre agent répond à partir de votre site web, de vos fichiers et de vos FAQ.",
+      "what": "Vos agents répondent à partir de vos sites web, de vos fichiers et de vos FAQ, et chaque agent peut ajouter les siens.",
       "does": "Consultez les questions sans réponse pour savoir quoi ajouter.",
       "how": "Ajoutez une page web, un fichier ou une FAQ pour combler un manque."
     },

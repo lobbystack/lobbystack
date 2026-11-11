@@ -184,6 +184,14 @@ Raphael settled these:
 | 8 | How do we hold slice 7 for one release? | One integration branch. | 7 |
 | 9 | What does the number add-on cost? | The carrier's monthly cost for that country, with no markup. | 9 |
 
+## After slice 7: agent-specific knowledge
+
+[`agent-knowledge.md`](agent-knowledge.md) builds on slice 7, and the [ADR 0012 amendment](../adr/0012-agents-share-a-workspace.md#amendment-2026-11-10-knowledge-can-belong-to-one-agent) records the decision. It changes slice 7's agent menu:
+
+- The **Shared with every agent** row and page are gone. Each agent has a **Specific knowledge** row between Rules and Channels, at `/agents/[agentId]/knowledge`.
+- `/agents/[agentId]/shared` redirects there temporarily.
+- The snapshot's flat `knowledgeSnippets` and `knowledgeDigest` stay the default agent's. An entry in `agents[]` carries its own only when they differ, and `snapshotForAgent` projects them.
+
 ## Still open
 
 - **Production counts:** we still don't have the row counts for `calls` and `conversations`. Slice 2's backfill runs in batches, so the release doesn't depend on them. The counts decide whether it finishes inside its 20-minute limit in one release.

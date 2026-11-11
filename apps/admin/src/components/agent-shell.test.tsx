@@ -29,7 +29,7 @@ describe("agent page headings", () => {
   });
 
   it("titles each section page with the section", () => {
-    for (const [pathname, title] of [["/agents/agent-1/shared", "nav:agentPages.shared"], ["/agents/agent-1/channels/phone", "nav:agentPages.phone"], ["/agents/agent-1/rules", "nav:agentPages.rules"]]) {
+    for (const [pathname, title] of [["/agents/agent-1/knowledge", "nav:agentPages.knowledge"], ["/agents/agent-1/channels/phone", "nav:agentPages.phone"], ["/agents/agent-1/rules", "nav:agentPages.rules"]]) {
       route.pathname = pathname!;
       render(withQueries(<AgentShell agent={agent}>content</AgentShell>));
       expect(screen.getByRole("heading").textContent).toBe(title);

@@ -486,14 +486,18 @@ export async function trialEmailInTransaction(tx: DatabaseTransaction, userId: s
 }
 
 /**
- * Whether this request's network and country are enough to start a trial
- * without a text: the same once-per-network rule the claim applies, read
- * through the definer function that sees other workspaces' trials.
+ * Why a direct owner's network can't start a trial, or null when it can: the
+ * same once-per-network rule the claim applies, read through the definer
+ * function that sees other workspaces' trials. A direct owner has no phone
+ * step to prove themselves with instead, so the number step offers the
+ * plans: trial_ip_limited when the network started a trial in the last 30
+ * days, and trial_not_available when there's no trusted address or country
+ * to check.
  */
-export async function trialNetworkNeedsPhoneVerificationInTransaction(tx: DatabaseTransaction, input: { userId: string; businessId: string; ipHash?: string | null | undefined; ipCountry?: string | null | undefined }): Promise<boolean> {
-  if (trialNeedsPhoneVerification(input)) return true;
+export async function directTrialNetworkRefusalInTransaction(tx: DatabaseTransaction, input: { userId: string; businessId: string; ipHash?: string | null | undefined; ipCountry?: string | null | undefined }): Promise<"trial_ip_limited" | "trial_not_available" | null> {
+  if (trialNeedsPhoneVerification(input)) return "trial_not_available";
   const limited = await tx.execute(sql`SELECT app.number_trial_ip_used(${input.businessId}::uuid, ${input.userId}::uuid, ${input.ipHash}) AS used`);
-  return Boolean((limited.rows[0] as { used?: boolean } | undefined)?.used);
+  return (limited.rows[0] as { used?: boolean } | undefined)?.used ? "trial_ip_limited" : null;
 }
 
 /**
@@ -527,9 +531,9 @@ export async function onboardingNumberTrialOutlookInTransaction(tx: DatabaseTran
   if ((used.rows[0] as { used?: boolean } | undefined)?.used) return { verificationNeeded: false, refusal: "trial_already_used" };
   const countries = trialCountries();
   if (countries.length === 0) return { verificationNeeded: false, refusal: "trial_not_available" };
-  // The number's country comes from the search's selection, so the step only
-  // needs to know whether the network can start a trial without a text.
-  return { verificationNeeded: await trialNetworkNeedsPhoneVerificationInTransaction(tx, input), refusal: null };
+  // The number's country comes from the search's selection. A direct owner
+  // has no phone step, so a network that can't start a trial gets the plans.
+  return { verificationNeeded: false, refusal: await directTrialNetworkRefusalInTransaction(tx, input) };
 }
 
 export async function onboardingNumberTrialOutlook(context: DomainContext, input: { userId: string; businessId: string; ipHash?: string | null | undefined; ipCountry?: string | null | undefined }): Promise<OnboardingNumberTrialOutlook> {

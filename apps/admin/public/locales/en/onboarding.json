@@ -3,7 +3,8 @@
     "signOut": "Sign out",
     "terms": "Terms",
     "privacy": "Privacy",
-    "support": "Support"
+    "support": "Support",
+    "backToDashboard": "Back to dashboard"
   },
   "errors": {
     "tooManyBusinesses": "You already own 10 workspaces, the limit for one account."
@@ -154,11 +155,6 @@
       "changeNumber": "Use another number"
     },
     "unavailable": {
-      "title": "We don't offer numbers in this country yet ({{country}}).",
-      "body": "You can still use your agent in the browser, and we can email you when numbers arrive there.",
-      "notify": "Email me when they're available",
-      "joined": "Done. We'll email you.",
-      "continue": "Continue without a number",
       "failed": "Something went wrong. Try again.",
       "partnerTitle": "We can't verify phones in this country yet ({{country}}).",
       "partnerBody": "You can finish setup without a verified phone.",
@@ -176,7 +172,7 @@
       "verification": "A free number needs a verified phone.",
       "emailVerification": "Verify your email address before you choose a trial number."
     },
-    "title": "Pick your AI's phone number",
+    "title": "Pick your agent's phone number",
     "countryLabel": "Country",
     "kindLocal": "Local",
     "kindTollFree": "Toll-free",
@@ -208,22 +204,20 @@
     "skipFailed": "We couldn't skip this step right now. Please try again.",
     "tooManySearches": "Too many searches. Please wait a bit and try again.",
     "unavailable": "That number was just taken. Pick another one from the refreshed list.",
-    "selectedTitle": "Your AI's phone number",
+    "selectedTitle": "Your agent's phone number",
     "selectedNumberLabel": "Selected number",
-    "numbersUnavailable": "Phone numbers aren't set up on this dashboard yet. Ask whoever runs it to connect a phone provider."
-  },
-  "goal": {
-    "title": "What do you want your agent to do first?",
-    "options": {
-      "answer_calls": "Answer my calls",
-      "book_appointments": "Book appointments",
-      "answer_website_visitors": "Answer website visitors",
-      "answer_instagram_messages": "Answer Instagram messages"
-    },
-    "continue": "Continue",
-    "saving": "Saving...",
-    "skip": "Skip",
-    "submitFailed": "We couldn't save that right now. Please try again."
+    "numbersUnavailable": "Phone numbers aren't set up on this dashboard yet. Ask whoever runs it to connect a phone provider.",
+    "country": {
+      "title": "We don't offer numbers in this country yet ({{country}}).",
+      "body": "You can still use your agent in the browser, and we can email you when numbers arrive there.",
+      "notify": "Email me when they're available",
+      "joined": "Done. We'll email you.",
+      "continue": "Continue without a number",
+      "failed": "Something went wrong. Try again.",
+      "label": "Country",
+      "back": "Back to the numbers",
+      "other": "Other country"
+    }
   },
   "attribution": {
     "title": "How did you hear about {{appName}}?",
@@ -244,7 +238,6 @@
       "tiktok": "TikTok",
       "other": "Other"
     },
-    "skip": "Skip",
     "label": "Source",
     "preferNot": "Prefer not to say",
     "search": "Search engine",
@@ -288,7 +281,12 @@
     "continue": "Continue",
     "continuing": "Continuing...",
     "continueFailed": "We couldn't continue right now. Please try again.",
-    "backToPlans": "Back to plans"
+    "backToPlans": "Back to plans",
+    "subscribe": "Subscribe",
+    "trial": {
+      "description": "14 days, no card needed",
+      "start": "Start 14-day free trial"
+    }
   },
   "noBusinesses": {
     "title": "No workspace here yet",

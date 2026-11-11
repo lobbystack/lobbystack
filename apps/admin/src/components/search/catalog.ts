@@ -49,6 +49,7 @@ const AGENT_TAGS: Partial<Record<AgentPage["section"], SearchTag[]>> = {
   "": ["voice", "handling"],
   // The Instructions page joined Rules, so its words find Rules (nav.json's search.synonyms.rules).
   rules: ["rules"],
+  knowledge: ["knowledge"],
   channels: [],
   "channels/phone": ["phone"],
   "channels/widget": ["widget"],

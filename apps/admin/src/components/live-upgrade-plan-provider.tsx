@@ -13,7 +13,7 @@ import { rememberedPlan } from "@/lib/remembered-plan";
 import { setUpgradeInProgress } from "@/lib/upgrade-in-progress";
 import type { WorkspaceViewModel } from "@/lib/page-view-models";
 import { UpgradePlanDialog, type HostedUpgradePlan } from "./upgrade-plan-dialog";
-import { UpgradePlanDialogProvider, type PlanOfferCallbacks } from "./upgrade-plan-dialog-context";
+import { UpgradePlanDialogProvider } from "./upgrade-plan-dialog-context";
 
 type WorkspaceResponse = { businesses: WorkspaceViewModel[] };
 type Billing = {
@@ -33,8 +33,6 @@ export function LiveUpgradePlanProvider({ children }: { children: ReactNode }) {
   const [slowCheckout, setSlowCheckout] = useState(false);
   const [checkoutUnavailable, setCheckoutUnavailable] = useState(false);
   const [leaving, setLeaving] = useState(false);
-  // Set while the dialog opened by itself after a test rather than from a button.
-  const [offer, setOffer] = useState<PlanOfferCallbacks | null>(null);
   // Redirect once per checkout. A page restored from the browser's cache can rerun the
   // effect with the old ready checkout and send them straight back to it.
   const redirectedRequestId = useRef<string | null>(null);
@@ -116,11 +114,10 @@ export function LiveUpgradePlanProvider({ children }: { children: ReactNode }) {
     setCheckoutUnavailable(false);
   };
   const changeOpen = (next: boolean) => {
-    if (!next && offer) { offer.onDismiss(); setOffer(null); }
     if (!next && checkoutUnavailable) dismissCheckout();
     setOpen(next);
   };
-  return <UpgradePlanDialogProvider onOffer={(callbacks) => { setOffer(callbacks); openDialog(); }} onOpen={openDialog}>
+  return <UpgradePlanDialogProvider onOpen={openDialog}>
     {children}
     {businessId && billing.data ? <UpgradePlanDialog
       availableCheckoutPlans={billing.data.availableCheckoutPlans ?? []}
@@ -136,8 +133,6 @@ export function LiveUpgradePlanProvider({ children }: { children: ReactNode }) {
       onDismissCheckout={() => changeOpen(false)}
       onOpenChange={changeOpen}
       onStartCheckout={(target, billingInterval) => {
-        offer?.onPlanClicked(target);
-        setOffer(null);
         mutation.mutate({ businessId, target, billingInterval });
       }}
       open={open}

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // The onboarding stages each kind of business's owner goes through.
-const DIRECT = ["create_business", "website", "language", "verify_phone", "phone_number", "goal", "attribution", "meet"];
+const DIRECT = ["create_business", "website", "language", "phone_number", "attribution", "meet"];
 const PARTNER = ["website", "language", "verify_phone", "meet"];
 
 const fixture = vi.hoisted(() => ({
@@ -92,35 +92,35 @@ describe("onboarding stages", () => {
   });
 
   it("sends a browser back to an earlier step to the current one", async () => {
-    fixture.state = { businessId: "business-1", stage: "goal", steps: DIRECT };
+    fixture.state = { businessId: "business-1", stage: "attribution", steps: DIRECT };
     for (const path of ["/onboarding/business", "/onboarding/website", "/onboarding/language", "/onboarding/verify-phone"]) {
-      await expect(requireOnboardingStage(path)).rejects.toThrow("redirect:/onboarding/goal");
+      await expect(requireOnboardingStage(path)).rejects.toThrow("redirect:/onboarding/attribution");
     }
-    await expect(requireOnboardingStage("/onboarding/goal")).resolves.toBeUndefined();
+    await expect(requireOnboardingStage("/onboarding/attribution")).resolves.toBeUndefined();
   });
 
   it("opens the first step to create another workspace from any step", async () => {
-    for (const stage of ["website", "goal", "complete"]) {
+    for (const stage of ["website", "attribution", "complete"]) {
       fixture.state = { businessId: "business-1", stage, steps: DIRECT };
       await expect(requireOnboardingStage("/onboarding/business", { allowCreate: true })).resolves.toBeUndefined();
     }
   });
 
   it("keeps the number picker open from later steps", async () => {
-    fixture.state = { businessId: "business-1", stage: "goal", steps: DIRECT };
+    fixture.state = { businessId: "business-1", stage: "attribution", steps: DIRECT };
     await expect(requireOnboardingStage("/onboarding/number")).resolves.toBeUndefined();
   });
 
   it("opens the wait once the website step has moved on", async () => {
-    fixture.state = { businessId: "business-1", stage: "verify_phone", steps: DIRECT };
+    fixture.state = { businessId: "business-1", stage: "phone_number", steps: DIRECT };
     await expect(requireOnboardingStage("/onboarding/reading")).resolves.toBeUndefined();
     fixture.state = { businessId: "business-1", stage: "website", steps: DIRECT };
     await expect(requireOnboardingStage("/onboarding/reading")).rejects.toThrow("redirect:/onboarding/website");
   });
 
   it("sends a page that left onboarding to the current step", async () => {
-    fixture.state = { businessId: "business-1", stage: "goal", steps: DIRECT };
-    await expect(requireOnboardingStage("/onboarding/removed")).rejects.toThrow("redirect:/onboarding/goal");
+    fixture.state = { businessId: "business-1", stage: "attribution", steps: DIRECT };
+    await expect(requireOnboardingStage("/onboarding/removed")).rejects.toThrow("redirect:/onboarding/attribution");
   });
 });
 
@@ -147,7 +147,7 @@ describe("on a partner's host", () => {
 
   it("skips creating the business, the number and attribution for the partner's business, and keeps the phone", async () => {
     fixture.state = { businessId: "business-1", stage: "verify_phone", steps: PARTNER };
-    for (const path of ["/onboarding/business", "/onboarding/number", "/onboarding/goal", "/onboarding/attribution"]) {
+    for (const path of ["/onboarding/business", "/onboarding/number", "/onboarding/attribution", "/onboarding/attribution"]) {
       await expect(requireOnboardingStage(path)).rejects.toThrow("redirect:/onboarding/verify-phone");
     }
     await expect(requireOnboardingStage("/onboarding/business", { allowCreate: true })).rejects.toThrow("redirect:/onboarding/verify-phone");

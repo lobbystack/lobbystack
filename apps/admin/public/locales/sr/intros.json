@@ -19,7 +19,7 @@
     "agents": {
       "title": "Podesite kako svaki agent odgovara",
       "what": "Svaki agent ima svoj broj, pozdrav, glas, pravila, zakazivanje i prebacivanje poziva.",
-      "shared": "Svi vaši agenti dele podatke o poslovanju, usluge i znanje.",
+      "shared": "Svi vaši agenti dele podatke o poslovanju, usluge i znanje, a svaki može da doda sopstveno znanje.",
       "does": "Podrazumevani agent odgovara na sve što niste dodelili drugom agentu.",
       "how": "Napravite izmenu, pa kliknite na Probni poziv da je čujete."
     },
@@ -37,7 +37,7 @@
     },
     "knowledge": {
       "title": "Šta vaš agent zna o vašem poslovanju",
-      "what": "Vaš agent odgovara na osnovu vašeg sajta, fajlova i čestih pitanja.",
+      "what": "Vaši agenti odgovaraju na osnovu vaših sajtova, fajlova i čestih pitanja, a svaki agent može da doda svoje.",
       "does": "Pogledajte pitanja bez odgovora da vidite šta da dodate.",
       "how": "Dodajte veb stranicu, fajl ili često pitanje da popunite prazninu."
     },

@@ -19,7 +19,7 @@
     "agents": {
       "title": "Configura cómo responde cada agente",
       "what": "Cada agente tiene su propio número, saludo, voz, reglas, reservas y transferencias.",
-      "shared": "Todos tus agentes comparten los datos de tu negocio, tus servicios y tu conocimiento.",
+      "shared": "Todos tus agentes comparten los datos de tu negocio, tus servicios y tu conocimiento, y cada uno puede añadir conocimiento propio.",
       "does": "El agente predeterminado atiende todo lo que no hayas asignado a otro agente.",
       "how": "Haz un cambio y luego pulsa Llamada de prueba para escucharlo."
     },
@@ -37,7 +37,7 @@
     },
     "knowledge": {
       "title": "Lo que tu agente sabe de tu negocio",
-      "what": "Tu agente responde con lo que hay en tu sitio web, tus archivos y tus preguntas frecuentes.",
+      "what": "Tus agentes responden con lo que hay en tus sitios web, tus archivos y tus preguntas frecuentes, y cada agente puede añadir lo suyo.",
       "does": "Revisa las preguntas sin respuesta para ver qué añadir.",
       "how": "Añade una página web, un archivo o una pregunta frecuente para cubrir lo que falte."
     },

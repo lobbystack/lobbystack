@@ -19,7 +19,7 @@
     "agents": {
       "title": "Set up how each agent answers",
       "what": "Each agent has its own number, greeting, voice, rules, booking and transfers.",
-      "shared": "All your agents share your business details, services and knowledge.",
+      "shared": "All your agents share your business details, services and knowledge, and each can add knowledge of its own.",
       "does": "The default agent answers anything you haven't given to another agent.",
       "how": "Make a change, then click Test Call to hear it."
     },
@@ -37,7 +37,7 @@
     },
     "knowledge": {
       "title": "What your agent knows about your business",
-      "what": "Your agent answers from your website, files and FAQs.",
+      "what": "Your agents answer from your websites, files and FAQs, and each agent can add its own.",
       "does": "Check unanswered questions to see what to add.",
       "how": "Add a web page, a file or an FAQ to fill a gap."
     },

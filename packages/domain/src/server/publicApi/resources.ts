@@ -480,8 +480,8 @@ export async function listMessageResources(tx: DatabaseTransaction, businessId: 
 /** An FAQ is a snippet with this tag; the API shows it as the entry's type, not as a label. */
 export const FAQ_TAG = "faq";
 
-export function serializeKnowledgeEntry(row: Pick<typeof knowledgeSnippets.$inferSelect, "id" | "title" | "content" | "tags" | "priority" | "active" | "createdAt" | "updatedAt">): ApiKnowledgeEntry {
-  return { id: row.id, type: row.tags.includes(FAQ_TAG) ? "faq" : "text", title: row.title, content: row.content, tags: row.tags.filter((tag) => tag !== FAQ_TAG), priority: row.priority, active: row.active, created_at: iso(row.createdAt), updated_at: iso(row.updatedAt) };
+export function serializeKnowledgeEntry(row: Pick<typeof knowledgeSnippets.$inferSelect, "id" | "title" | "content" | "tags" | "priority" | "active" | "createdAt" | "updatedAt"> & { agentId?: string | null }): ApiKnowledgeEntry {
+  return { id: row.id, type: row.tags.includes(FAQ_TAG) ? "faq" : "text", title: row.title, content: row.content, tags: row.tags.filter((tag) => tag !== FAQ_TAG), priority: row.priority, active: row.active, agent_id: row.agentId ?? null, created_at: iso(row.createdAt), updated_at: iso(row.updatedAt) };
 }
 
 function isFaq(): SQL {
@@ -503,7 +503,7 @@ export async function loadKnowledgeEntryResource(tx: DatabaseTransaction, busine
   return row ? serializeKnowledgeEntry(row) : null;
 }
 
-type KnowledgeSourceRow = Pick<typeof knowledgeDocuments.$inferSelect, "id" | "title" | "sourceType" | "sourceUrl" | "status" | "error" | "active" | "createdAt" | "updatedAt"> & { jobId: string | null; pageLimit: number | null };
+type KnowledgeSourceRow = Pick<typeof knowledgeDocuments.$inferSelect, "id" | "title" | "sourceType" | "sourceUrl" | "status" | "error" | "active" | "createdAt" | "updatedAt"> & { jobId: string | null; pageLimit: number | null; agentId?: string | null };
 
 const knowledgeSourceStatuses = ["pending", "processing", "indexed", "error", "cancelled"] as const;
 
@@ -517,12 +517,12 @@ export function serializeKnowledgeSource(row: KnowledgeSourceRow): ApiKnowledgeS
   const type = knowledgeSourceType(row);
   // A status this API does not know yet reads as still processing.
   const status = (knowledgeSourceStatuses as readonly string[]).includes(row.status) ? row.status as ApiKnowledgeSource["status"] : "processing";
-  return { id: row.id, type, title: row.title, url: type === "file" ? null : row.sourceUrl, status, error: status === "error" ? row.error : null, active: row.active, page_limit: type === "website" ? row.pageLimit : null, created_at: iso(row.createdAt), updated_at: iso(row.updatedAt) };
+  return { id: row.id, type, title: row.title, url: type === "file" ? null : row.sourceUrl, status, error: status === "error" ? row.error : null, active: row.active, page_limit: type === "website" ? row.pageLimit : null, agent_id: row.agentId ?? null, created_at: iso(row.createdAt), updated_at: iso(row.updatedAt) };
 }
 
 function selectKnowledgeSourceRows(tx: DatabaseTransaction, businessId: string) {
   return tx
-    .select({ id: knowledgeDocuments.id, title: knowledgeDocuments.title, sourceType: knowledgeDocuments.sourceType, sourceUrl: knowledgeDocuments.sourceUrl, status: knowledgeDocuments.status, error: knowledgeDocuments.error, active: knowledgeDocuments.active, createdAt: knowledgeDocuments.createdAt, updatedAt: knowledgeDocuments.updatedAt, jobId: websiteIngestionJobs.id, pageLimit: websiteIngestionJobs.pageLimit })
+    .select({ id: knowledgeDocuments.id, title: knowledgeDocuments.title, sourceType: knowledgeDocuments.sourceType, sourceUrl: knowledgeDocuments.sourceUrl, status: knowledgeDocuments.status, error: knowledgeDocuments.error, active: knowledgeDocuments.active, agentId: knowledgeDocuments.agentId, createdAt: knowledgeDocuments.createdAt, updatedAt: knowledgeDocuments.updatedAt, jobId: websiteIngestionJobs.id, pageLimit: websiteIngestionJobs.pageLimit })
     .from(knowledgeDocuments)
     .leftJoin(websiteIngestionJobs, and(eq(websiteIngestionJobs.rootDocumentId, knowledgeDocuments.id), eq(websiteIngestionJobs.businessId, businessId)));
 }

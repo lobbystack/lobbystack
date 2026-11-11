@@ -291,35 +291,32 @@
       "hours": "Dodajte radno vreme",
       "testCall": "Čujte svog agenta",
       "phoneNumber": "Povežite broj telefona",
-      "forwardCalls": "Preusmerite pozive"
+      "forwardCalls": "Preusmerite pozive",
+      "callNumber": "Pozovite svoj broj",
+      "forwardFromCurrent": "Preusmerite pozive sa svog sadašnjeg broja"
     },
     "stepDescriptions": {
       "fullScan": "Agent je pročitao deo Vašeg sajta.",
-      "sources": {
-        "answer_calls": "Otpremite pravila, česta pitanja i cene o kojima pozivaoci pitaju.",
-        "book_appointments": "Otpremite usluge, cene i pravila zakazivanja.",
-        "answer_website_visitors": "Otpremite česta pitanja i pravila o kojima pitaju posetioci sajta.",
-        "answer_instagram_messages": "Otpremite česta pitanja i cene o kojima Vas pitaju na Instagramu.",
-        "none": "Otpremite pravila, česta pitanja ili cene."
-      },
+      "sources": "Otpremite pravila, česta pitanja ili cene.",
       "hours": "Agent zakazuje termine samo u ovom radnom vremenu.",
-      "testCall": {
-        "answer_calls": "Pitajte ono što Vas klijenti najčešće pitaju.",
-        "book_appointments": "Zamolite ga da zakaže termin.",
-        "answer_website_visitors": "Pitajte ono što ljudi pitaju na Vašem sajtu.",
-        "answer_instagram_messages": "Pitajte ono što ljudi pitaju na Instagramu.",
-        "none": "Pitajte ono što Vas klijenti najčešće pitaju."
-      },
+      "testCall": "Pitajte ono što Vas klijenti najčešće pitaju.",
       "phoneNumber": "Dodelite agentu sopstveni broj da bi odgovarao pravim pozivaocima.",
-      "phoneNumberTrial": "Odgovarajte na propuštene pozive besplatno 14 dana, bez kartice."
+      "phoneNumberTrial": "Odgovarajte na propuštene pozive besplatno 14 dana, bez kartice.",
+      "forwardCalls": "Pošaljite na {{number}} pozive sa broja koji Vaši klijenti znaju.",
+      "numberLost": "Besplatna proba je istekla. Izaberite paket da biste vratili svoj broj."
     },
     "stepActions": {
       "fullScan": "Pročitaj ostatak",
       "sources": "Otpremi dokument",
       "hours": "Dodaj radno vreme",
       "testCall": "Započni poziv",
-      "phoneNumber": "Izaberi broj"
-    }
+      "phoneNumber": "Izaberi broj",
+      "callNumber": "Pozovi {{number}}",
+      "forwardCalls": "Podesite preusmeravanje",
+      "choosePlan": "Izaberite paket"
+    },
+    "forwardingFrom": "Preusmeravanje sa broja {{number}}",
+    "forwardingWorks": "Preusmeravanje radi"
   },
   "forwarding": {
     "title": "Preusmerite pozive na {{number}}",
@@ -384,6 +381,7 @@
     "general": {
       "missed": "Na mobilnom otvorite podešavanja poziva i preusmerite neodgovorene pozive na {{number}}. Za fiksnu liniju ili poslovni telefonski sistem zamolite operatera da to uradi.",
       "all": "Na mobilnom otvorite podešavanja poziva i preusmerite sve pozive na {{number}}. Za fiksnu liniju ili poslovni telefonski sistem zamolite operatera da to uradi."
-    }
+    },
+    "itWorks": "Radi"
   }
 }

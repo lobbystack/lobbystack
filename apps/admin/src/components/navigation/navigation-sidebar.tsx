@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 
 import { WorkspaceSwitcher } from "@/components/layout/workspace-switcher";
 import { NotificationBell } from "@/components/notifications/notification-bell";
+import { NumberTrialChip } from "@/components/number-trial-chip";
 import { Separator } from "@/components/ui/separator";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarRail } from "@/components/ui/sidebar";
 import { useAgents } from "@/hooks/use-agents";
@@ -135,6 +136,7 @@ export function NavigationSidebar({ partnerConsole = false, user }: { partnerCon
         </div>
       </SidebarContent>
       <SidebarFooter>
+        <NumberTrialChip />
         <AccountMenu partnerConsole={partnerConsole} user={user} />
       </SidebarFooter>
       <SidebarRail />

@@ -39,7 +39,8 @@ export function PageHeader({
         {titleAside}
       </div>
       {actions ? (
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
+        // Pushed right, so actions that wrap under the title stay on the right.
+        <div className="ml-auto flex shrink-0 flex-wrap items-center justify-end gap-2">
           {actions}
         </div>
       ) : null}

@@ -18,7 +18,7 @@ import { agentPageOf } from "@/lib/agent-pages";
  * The header of an agent's pages: the agent's name on its own page, else the
  * section's title, with a Test call button for this agent and, for people
  * who manage the business, the agent's actions. A paused agent says so above
- * every page. Rules puts an add button in the header once the slot below
+ * every page. Rules and Specific knowledge put an add button in the header once the slot below
  * exists; until then, which includes the server render, the header shows its
  * placeholder.
  */
@@ -29,11 +29,11 @@ export function AgentShell({ agent, children }: { agent: { id: string; name: str
   // A rename shows here once it's saved.
   const name = useAgentSettingsQuery(businessId, businessId ? agent.id : "").data?.profile?.name ?? agent.name;
   const page = agentPageOf(pathname);
-  const hasActions = page?.section === "rules";
+  const hasActions = page?.section === "rules" || page?.section === "knowledge";
   const [actionsSlot, setActionsSlot] = useState<HTMLElement | null>(null);
   return (
     <section className="flex flex-1 flex-col gap-6">
-      <PageHeader actions={<>{/* Adding, removing and the default belong to the agent's own page, not each section. */}{canManage && !page?.section ? <AgentActionsMenu agentId={agent.id} /> : null}<TestCallButton agentId={agent.id} /><div className="contents" ref={setActionsSlot} />{hasActions && !actionsSlot ? <HeaderButtonSkeleton label={t("agent:sections.rules.addKnowledge")} /> : null}</>} title={page && page.section ? t(`nav:${page.titleKey}`) : name} />
+      <PageHeader actions={<>{/* Adding, removing and the default belong to the agent's own page, not each section. */}{canManage && !page?.section ? <AgentActionsMenu agentId={agent.id} /> : null}<TestCallButton agentId={agent.id} /><div className="contents" ref={setActionsSlot} />{hasActions && !actionsSlot ? page?.section === "knowledge" ? <HeaderButtonSkeleton label={t("agent:sections.knowledge.addKnowledge")} trailingIcon /> : <HeaderButtonSkeleton label={t("agent:sections.rules.addKnowledge")} /> : null}</>} title={page && page.section ? t(`nav:${page.titleKey}`) : name} />
       <PausedAgentNotice agentId={agent.id} />
       <div className="w-full"><HeaderActionsSlotContext.Provider value={actionsSlot}><NestedPageSurfaceProvider>{children}</NestedPageSurfaceProvider></HeaderActionsSlotContext.Provider></div>
     </section>

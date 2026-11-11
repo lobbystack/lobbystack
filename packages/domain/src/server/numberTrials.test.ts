@@ -101,14 +101,14 @@ describe("the number step's trial outlook", () => {
     expect(result).toEqual({ verificationNeeded: false, refusal: null });
   });
 
-  it("asks for a phone when the request has no trusted client address", async () => {
+  it("offers the plans when the request has no trusted client address", async () => {
     const { result } = await outlook({ ipHash: null });
-    expect(result).toEqual({ verificationNeeded: true, refusal: null });
+    expect(result).toEqual({ verificationNeeded: false, refusal: "trial_not_available" });
   });
 
-  it.each([null, "", "X", "XX", "T1"])("asks for a phone when cf-ipcountry is %s", async (ipCountry) => {
+  it.each([null, "", "X", "XX", "T1"])("offers the plans when cf-ipcountry is %s", async (ipCountry) => {
     const { result } = await outlook({ ipCountry });
-    expect(result).toEqual({ verificationNeeded: true, refusal: null });
+    expect(result).toEqual({ verificationNeeded: false, refusal: "trial_not_available" });
   });
 
   it("accepts any real country Cloudflare reports, not only the number's", async () => {
@@ -116,9 +116,9 @@ describe("the number step's trial outlook", () => {
     expect(result).toEqual({ verificationNeeded: false, refusal: null });
   });
 
-  it("asks for a phone when this network already started a trial in the last 30 days", async () => {
+  it("offers the plans when this network already started a trial in the last 30 days", async () => {
     const { result } = await outlook({ ipLimited: true });
-    expect(result).toEqual({ verificationNeeded: true, refusal: null });
+    expect(result).toEqual({ verificationNeeded: false, refusal: "trial_ip_limited" });
   });
 
   it("sends an unverified email to the plans until it verifies", async () => {

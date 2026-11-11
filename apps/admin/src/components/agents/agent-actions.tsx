@@ -48,6 +48,7 @@ export function RemoveAgentDialog({ agent, onOpenChange, open }: { agent: AgentL
       pending={archive.isPending}
       title={t("agents.removeTitle", { name: agent.name })}
     >
+      <p className="type-body-muted">{t("agents.removeKnowledge")}</p>
       {others.length > 1 && destination ? (
         <Field>
           <FieldLabel htmlFor={`remove-${agent.id}-destination`}>{t("agents.moveTo")}</FieldLabel>

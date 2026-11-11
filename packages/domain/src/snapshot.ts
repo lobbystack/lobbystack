@@ -64,6 +64,11 @@ export const MAX_AGENT_RULE_CONTENT_CHARS = RULE_CONTENT_CALL_MAX_LENGTH;
 // Knowledge search matches all of these; prompts list only the top few (agent-core's PROMPT_MAX_FAQS).
 export const MAX_KNOWLEDGE_SNIPPETS_PER_SNAPSHOT = 50;
 
+/** The snippets a snapshot keeps, highest priority first. */
+export function snapshotSnippets(snippets: Array<KnowledgeSnippet>): Array<KnowledgeSnippet> {
+  return snippets.slice().sort((left, right) => right.priority - left.priority).slice(0, MAX_KNOWLEDGE_SNIPPETS_PER_SNAPSHOT);
+}
+
 /** A rule kept to one channel holds what that channel's instructions did, so calls read as much of it as they read of those. */
 export function snapshotRules(rules: Array<AgentRuleSummary> | undefined): Array<AgentRuleSummary> {
   return (rules ?? [])
@@ -137,11 +142,8 @@ export function buildBusinessContextSnapshot(
     services: input.services,
     ...(input.employees?.length ? { employees: input.employees } : {}),
     rules: snapshotRules(input.rules),
-    ...(input.agents ? { agents: input.agents.map((agent) => ({ ...agent, ...instructions(agent), rules: snapshotRules(agent.rules) })) } : {}),
-    knowledgeSnippets: input.snippets
-      .slice()
-      .sort((left, right) => right.priority - left.priority)
-      .slice(0, MAX_KNOWLEDGE_SNIPPETS_PER_SNAPSHOT),
+    ...(input.agents ? { agents: input.agents.map((agent) => ({ ...agent, ...instructions(agent), rules: snapshotRules(agent.rules), ...(agent.knowledgeSnippets ? { knowledgeSnippets: snapshotSnippets(agent.knowledgeSnippets) } : {}) })) } : {}),
+    knowledgeSnippets: snapshotSnippets(input.snippets),
     contactChannels: {
       ...(input.phoneNumber ? { phoneNumber: input.phoneNumber } : {}),
       ...(input.smsNumber ? { smsNumber: input.smsNumber } : {}),
@@ -186,6 +188,9 @@ export function snapshotForAgent(snapshot: BusinessContextSnapshot, agentId?: st
     ...(agent.staffFirstPolicy ? { staffFirstPolicy: agent.staffFirstPolicy } : {}),
     ...(agent.appointmentChangePolicy ? { appointmentChangePolicy: agent.appointmentChangePolicy } : {}),
     rules: agent.rules,
+    // An agent whose knowledge matches the default agent's carries none of its own.
+    ...(agent.knowledgeSnippets ? { knowledgeSnippets: agent.knowledgeSnippets } : {}),
+    ...(agent.knowledgeDigest !== undefined ? { knowledgeDigest: agent.knowledgeDigest } : {}),
   };
 }
 

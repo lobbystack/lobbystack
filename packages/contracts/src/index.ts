@@ -78,6 +78,8 @@ export const uploadFinalizeRequestSchema = z.object({
   length: z.number().int().positive(),
   checksum: z.string().max(255).optional(),
   contentType: z.string().min(1).max(255),
+  /** Makes an uploaded knowledge file this agent's alone. */
+  agentId: z.guid().optional(),
 });
 
 export const uploadDownloadRequestSchema = z.object({

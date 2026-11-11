@@ -1,6 +1,13 @@
 {
-  "accessibility": { "close": "Close", "toggleSidebar": "Toggle sidebar", "skipToContent": "Skip to main content", "clearSearch": "Clear search" },
-  "errors": { "unexpected": "Something went wrong. Please try again." },
+  "accessibility": {
+    "close": "Close",
+    "toggleSidebar": "Toggle sidebar",
+    "skipToContent": "Skip to main content",
+    "clearSearch": "Clear search"
+  },
+  "errors": {
+    "unexpected": "Something went wrong. Please try again."
+  },
   "loading": {
     "title": "Loading...",
     "retry": "Retry loading",
@@ -93,13 +100,13 @@
     }
   },
   "numberTrial": {
-    "daysLeft_one": "{{number}} is yours for {{count}} more day. Choose a plan to keep it.",
-    "daysLeft_other": "{{number}} is yours for {{count}} more days. Choose a plan to keep it.",
     "outOfMinutes": "You're out of minutes. Calls now go to {{forwardTo}}.",
     "stillAvailable": "{{number}} is still available. Subscribe now to get it back.",
-    "keepNumber": "Keep my number",
     "getReceptionistBack": "Get my agent back",
-    "getNumberBack": "Get my number back"
+    "getNumberBack": "Get my number back",
+    "chip_one": "Free trial · {{count}}d left",
+    "chip_other": "Free trial · {{count}}d left",
+    "viewPlans": "View plans"
   },
   "testWindow": {
     "orCall": "Or call",
@@ -266,7 +273,7 @@
       "cancelled": "Cancelled"
     },
     "actions": "Actions",
-      "rowActions": "Actions for {{time}}",
+    "rowActions": "Actions for {{time}}",
     "cancel": {
       "action": "Cancel",
       "actionLabel": "Cancel appointment: {{time}}",
@@ -378,6 +385,6 @@
     "doneHint_other": "{{count}} pages are ready for questions.",
     "failedTitle": "We couldn't read {{host}}",
     "failedHint": "Add your business details by hand, or try the import again from your dashboard.",
-    "inlineRunning": "Reading {{host}}. Pages read so far: {{count}}."
+    "inlineRunning": "Reading {{host}}. Pages read so far: {{count}}"
   }
 }

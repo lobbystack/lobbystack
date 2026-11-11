@@ -110,7 +110,7 @@ import { ContactPhoneTakenError, insertContactInTransaction } from "../contacts"
 import type { BusinessSetupDependencies } from "../businessTemplates";
 import type { DomainContext } from "../context";
 import { loadEntitlement } from "../entitlement";
-import { cancelKnowledgeDocumentInTransaction, createKnowledgeDocumentInTransaction, createKnowledgeSnippetInTransaction, deleteKnowledgeDocumentInTransaction, deleteKnowledgeSnippetInTransaction, expandWebsiteCrawlInTransaction, KnowledgeStorageLimitError, ONBOARDING_CRAWL_PAGE_LIMIT, retryKnowledgeDocumentInTransaction, setKnowledgeDocumentActiveInTransaction, updateKnowledgeSnippetInTransaction } from "../knowledge";
+import { assertWebsiteScopeFree, cancelKnowledgeDocumentInTransaction, createKnowledgeDocumentInTransaction, createKnowledgeSnippetInTransaction, deleteKnowledgeDocumentInTransaction, deleteKnowledgeSnippetInTransaction, expandWebsiteCrawlInTransaction, KnowledgeStorageLimitError, ONBOARDING_CRAWL_PAGE_LIMIT, retryKnowledgeDocumentInTransaction, setKnowledgeDocumentActiveInTransaction, updateKnowledgeSnippetInTransaction } from "../knowledge";
 import { normalizeWebsiteSourceUrl } from "../knowledgeUrl";
 import { normalizeOnboardingStage, scheduleWelcomeEmailInTransaction } from "../onboarding";
 import { createPartnerBusiness } from "../partners";
@@ -2038,11 +2038,11 @@ export function apiErrorFromDomain(error: unknown, what: string): unknown {
   return error;
 }
 
-type KnowledgeSourceState = { id: string; sourceType: string; status: string; jobId: string | null; pageLimit: number | null };
+type KnowledgeSourceState = { id: string; sourceType: string; status: string; jobId: string | null; pageLimit: number | null; agentId: string | null };
 
 function selectKnowledgeSource(tx: DatabaseTransaction, businessId: string) {
   return tx
-    .select({ id: knowledgeDocuments.id, sourceType: knowledgeDocuments.sourceType, status: knowledgeDocuments.status, jobId: websiteIngestionJobs.id, pageLimit: websiteIngestionJobs.pageLimit })
+    .select({ id: knowledgeDocuments.id, sourceType: knowledgeDocuments.sourceType, status: knowledgeDocuments.status, agentId: knowledgeDocuments.agentId, jobId: websiteIngestionJobs.id, pageLimit: websiteIngestionJobs.pageLimit })
     .from(knowledgeDocuments)
     .leftJoin(websiteIngestionJobs, and(eq(websiteIngestionJobs.rootDocumentId, knowledgeDocuments.id), eq(websiteIngestionJobs.businessId, businessId)));
 }
@@ -2088,6 +2088,12 @@ export async function createKnowledgeSourceForApi(context: DomainContext, caller
       throw apiErrorFromDomain(error, "Knowledge source");
     }
     const [existing] = await selectKnowledgeSource(tx, caller.businessId).where(and(eq(knowledgeDocuments.businessId, caller.businessId), eq(knowledgeDocuments.sourceUrl, url))).limit(1);
+    // The API adds shared knowledge. A website one agent holds stays that agent's.
+    try {
+      await assertWebsiteScopeFree(tx, { businessId: caller.businessId, sourceUrl: url, agentId: null, existing: existing ? { agentId: existing.agentId } : undefined });
+    } catch (error) {
+      throw apiErrorFromDomain(error, "Knowledge source");
+    }
     if (existing && !existing.jobId) throw conflict(`This address is already source ${existing.id}, a page with no crawl of its own. Delete that source, then add the address again.`);
     let documentId: string;
     if (existing) {

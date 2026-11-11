@@ -89,10 +89,10 @@
   "agentPages": {
     "general": "General",
     "rules": "Rules",
+    "knowledge": "Specific knowledge",
     "channels": "Channels",
     "phone": "Phone number",
-    "widget": "Website widget",
-    "shared": "Shared with every agent"
+    "widget": "Website widget"
   },
   "businessPages": {
     "details": "Details"
@@ -150,6 +150,7 @@
     "removeTitle": "Remove {{name}}?",
     "removeDescription": "Its channels and open conversations move to {{name}}.",
     "removeDescriptionPick": "Its channels and open conversations move to the agent you pick.",
+    "removeKnowledge": "Its own knowledge will be deleted.",
     "moveTo": "Move to",
     "removed": "{{name}} removed",
     "removeFailed": "We couldn't remove the agent."

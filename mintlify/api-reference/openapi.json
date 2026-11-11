@@ -20234,6 +20234,19 @@
             "type": "boolean",
             "description": "Whether the receptionist answers from it."
           },
+          "agent_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "description": "Stable identifier (UUID)."
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The one agent that answers from it. Null when every agent does."
+          },
           "created_at": {
             "type": "string",
             "format": "date-time",
@@ -20253,6 +20266,7 @@
           "tags",
           "priority",
           "active",
+          "agent_id",
           "created_at",
           "updated_at"
         ],
@@ -20412,6 +20426,19 @@
             ],
             "description": "How many pages a website's crawl reads: a sample at first, the full site after POST /knowledge/sources/{source_id}/expand. Null for a page or a file."
           },
+          "agent_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "description": "Stable identifier (UUID)."
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The one agent that answers from it. Null when every agent does."
+          },
           "created_at": {
             "type": "string",
             "format": "date-time",
@@ -20432,6 +20459,7 @@
           "error",
           "active",
           "page_limit",
+          "agent_id",
           "created_at",
           "updated_at"
         ],

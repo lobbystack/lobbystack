@@ -10,6 +10,11 @@
       "description": "Message d'accueil et paramètres de transfert de votre agent."
     },
     "knowledge": {
+      "selection": {"select": "Sélectionner", "count_one": "{{count}} sélectionnée", "count_other": "{{count}} sélectionnées", "selectAll": "Tout sélectionner", "selectRow": "Sélectionner {{title}}", "cancel": "Annuler", "count_many": "{{count}} sélectionnées"},
+      "batch": {"delete": "Supprimer", "disable": "Désactiver", "enable": "Activer", "reimport": "Réimporter", "agentDisable": "Désactiver pour cet agent", "agentEnable": "Activer", "deleteTitle_one": "Supprimer cette source ?", "deleteTitle_other": "Supprimer {{count}} sources ?", "deleteDescription": "Vous ne pourrez pas annuler.", "done": {"delete_one": "Source supprimée.", "delete_other": "{{count}} sources supprimées.", "disable_one": "Source désactivée.", "disable_other": "{{count}} sources désactivées.", "enable_one": "Source activée.", "enable_other": "{{count}} sources activées.", "reimport_one": "Réimportation lancée.", "reimport_other": "Réimportation lancée pour {{count}} sites.", "delete_many": "{{count}} sources supprimées.", "disable_many": "{{count}} sources désactivées.", "enable_many": "{{count}} sources activées.", "reimport_many": "Réimportation lancée pour {{count}} sites."}, "deleteTitle_many": "Supprimer {{count}} sources ?"},
+      "website": {"pages_one": "{{count}} page", "pages_other": "{{count}} pages", "pagesOff_one": "{{count}} désactivée", "pagesOff_other": "{{count}} désactivées", "pages_many": "{{count}} pages", "pagesOff_many": "{{count}} désactivées"},
+      "pagesDialog": {"title": "Site web", "listLabel": "Pages", "usePage": "Utiliser {{title}}", "remove": "Retirer {{title}}", "removeAddress": "Supprimez le site pour retirer sa page d'adresse.", "removeConfirm": "Retirer", "removeTitle": "Retirer {{title}} ?", "removeDescription": "Une réimportation peut la ramener.", "offForBusiness": "Désactivée pour tous les agents"},
+      "agent": {"ownTitle": "Cet agent seulement", "sharedTitle": "Partagées avec tous les agents", "ownEmpty": "Rien d'ajouté pour cet agent.", "sharedEmpty": "Aucune connaissance partagée.", "manageShared": "Gérer les connaissances partagées", "toggleHeading": "Cet agent", "useSource": "Utiliser {{title}} pour cet agent"},
       "title": "Connaissances",
       "description": "Informations et directives que votre agent utilise pour répondre aux questions.",
       "listTitle": "Base de connaissances",
@@ -23,7 +28,7 @@
       "deleteWebsite": { "action": "Tout supprimer", "title": "Supprimer toutes les pages de ce site ?", "description": "Toutes les pages importées depuis {{host}} seront définitivement supprimées.", "deleted": "Toutes les pages de {{host}} ont été supprimées." },
       "toast": { "added": "Connaissance ajoutée.", "updated": "Connaissance mise à jour.", "uploaded": "Document importé. Il sera bientôt prêt.", "deleted": "Connaissance supprimée.", "enabled": "Connaissance activée.", "disabled": "Connaissance désactivée." },
       "uploadDocument": "Téléverser un document",
-      "websiteImport": {
+      "websiteImport": { "inShared": "Ce site web est déjà dans vos connaissances partagées. Désactivez-le pour les agents qui ne doivent pas s'en servir.", "inAgent": "Ce site web est déjà dans les connaissances de {{name}}.",
         "badge": "Site web",
         "title": "Importer un site web",
         "description": "Explorez les pages publiques de votre site web pour que votre agent puisse les utiliser comme connaissances.",

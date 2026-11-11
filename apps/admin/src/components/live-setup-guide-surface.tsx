@@ -8,15 +8,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
-import type { OnboardingGoal } from "@lobbystack/domain";
 import { useBusinessCan } from "@/components/business-capabilities-provider";
-import { ForwardingGuide } from "@/components/call-forwarding-dialog";
+import { CallForwardingDialog, ForwardingGuide } from "@/components/call-forwarding-dialog";
 import { phoneNumberChooserText } from "@/components/live-phone-number-settings-surface";
 import { PhoneNumberChooser, phoneNumberChooserApi } from "@/components/phone-number-chooser";
 import { useTelemetry } from "@/components/product-analytics";
 import { TrialPhoneVerification } from "@/components/trial-phone-verification";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Item, ItemActions, ItemContent, ItemDescription, ItemTitle } from "@/components/ui/item";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Surface } from "@/components/ui/surface";
@@ -26,9 +25,9 @@ import { forwardingCountry } from "@/lib/call-forwarding";
 import { formatDuration } from "@/lib/duration";
 import { formatDateTime } from "@/lib/locale";
 import type { BillingUsageViewModel, PhoneNumberViewModel } from "@/lib/page-view-models";
-import { inferPhoneCountry } from "@/lib/phone";
+import { formatPhoneNumberDisplay, inferPhoneCountry } from "@/lib/phone";
 import { requestJson } from "@/lib/request-json";
-import { isSetupStepDone, numberPath, SETUP_STEP_ORDER, type NumberPath, type SetupGuide, type SetupStep, type SetupStepId } from "@/lib/setup-guide";
+import { isSetupStepDone, numberPath, setupStepOrder, type NumberPath, type SetupGuide, type SetupStep, type SetupStepId } from "@/lib/setup-guide";
 import { openTestWindow, useTestWindowReady } from "@/lib/test-window";
 import { useCallSettleRefetch } from "@/lib/use-call-settle-refetch";
 import { useSetupAction } from "@/lib/use-setup-action";
@@ -56,7 +55,7 @@ export function useSetupGuide(businessId: string | undefined, importing = false)
 }
 
 /** Getting started, which Home shows in place of its daily view. */
-export function LiveSetupGuideSurface({ businessId, goal }: { businessId: string; goal: OnboardingGoal | null }) {
+export function LiveSetupGuideSurface({ businessId }: { businessId: string }) {
   const { t } = useTranslation("dashboard");
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -65,34 +64,40 @@ export function LiveSetupGuideSurface({ businessId, goal }: { businessId: string
   const importing = isWebsiteImportRunning(job);
   const setup = useSetupGuide(businessId, importing);
   // Instant booking with no opening hours books nothing, so a business that
-  // books instantly and has none gets a step for them after its sources. Hours
-  // the website scan found hide it.
+  // books instantly and has none gets a step for them: after its sources in
+  // the classic list, before them in the number list. Hours the website scan
+  // found hide it.
   const hours = useBusinessHours(businessId);
   const skippedSteps = useMemo(() => setup.data?.skippedSteps ?? [], [setup.data?.skippedSteps]);
   // Only skipping finishes the hours step: hours themselves hide it.
   const done = useCallback((step: GuideStep) => step.id === "hours" ? skippedSteps.includes("hours") : isSetupStepDone(step as SetupStep, skippedSteps), [skippedSteps]);
   // Finished steps move to the top, so what's left reads in order below them.
+  const numberList = setup.data?.variant === "number";
+  const order = setupStepOrder(setup.data);
   const steps = useMemo<GuideStep[]>(() => {
-    const serverSteps: GuideStep[] = SETUP_STEP_ORDER.flatMap((id) => setup.data?.steps.find((step) => step.id === id) ?? []);
-    const after = serverSteps.findIndex((step) => step.id === "sources");
-    const listed = needsHoursForBooking(hours.data) ? [...serverSteps.slice(0, after + 1), { id: "hours" as const, status: "needs setup" }, ...serverSteps.slice(after + 1)] : serverSteps;
+    const serverSteps: GuideStep[] = setupStepOrder({ variant: numberList ? "number" : "classic" }).flatMap((id) => setup.data?.steps.find((step) => step.id === id) ?? []);
+    const sources = serverSteps.findIndex((step) => step.id === "sources");
+    const at = numberList ? sources : sources + 1;
+    const listed = needsHoursForBooking(hours.data) ? [...serverSteps.slice(0, at), { id: "hours" as const, status: "needs setup" }, ...serverSteps.slice(at)] : serverSteps;
     return [...listed.filter(done), ...listed.filter((step) => !done(step))];
-  }, [done, hours.data, setup.data?.steps]);
-  // A finished step stays shut, except that the test call keeps its transcript in reach.
-  const opens = useCallback((step: GuideStep) => !done(step) || (step.id === "testCall" && Boolean(activation?.lastTestCall)), [activation?.lastTestCall, done]);
+  }, [done, hours.data, numberList, setup.data?.steps]);
+  // A finished step stays shut, except that the test call keeps its transcript
+  // in reach and the forwarding step shows the line it learned.
+  const opens = useCallback((step: GuideStep) => !done(step) || (step.id === "testCall" && Boolean(activation?.lastTestCall)) || (step.id === "forwardCalls" && step.status === "complete"), [activation?.lastTestCall, done]);
   const completed = steps.filter(done).length;
-  const active = steps.find((step) => !done(step))?.id ?? SETUP_STEP_ORDER[0]!;
+  const active = steps.find((step) => !done(step))?.id ?? order[0]!;
   // The operator's own pick holds until the current step changes.
   const [picked, setPicked] = useState<{ step: GuideStepId; during: GuideStepId } | null>(null);
   const pickedStep = picked?.during === active ? steps.find((step) => step.id === picked.step) : undefined;
   const openStep = pickedStep && opens(pickedStep) ? pickedStep.id : active;
   // A link such as the welcome email's (`/?setup=phoneNumber`) opens its step, as a click on it would.
   useSetupAction(Boolean(setup.data), useCallback((action: string) => {
-    const step = steps.find((item) => item.id === action);
+    // The number list's forwarding step stands for the classic number step.
+    const step = steps.find((item) => item.id === (numberList && action === "phoneNumber" ? "forwardCalls" : action));
     if (!step || !opens(step)) return false;
     setPicked({ step: step.id, during: active });
     return true;
-  }, [active, opens, steps]));
+  }, [active, numberList, opens, steps]));
   const expand = useMutation({
     mutationFn: (documentId: string) => requestJson(`/api/knowledge/${encodeURIComponent(documentId)}?businessId=${encodeURIComponent(businessId)}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "expand" }) }),
     onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ["setup", businessId] }); router.push("/business/knowledge"); },
@@ -113,7 +118,7 @@ export function LiveSetupGuideSurface({ businessId, goal }: { businessId: string
             const locked = !opens(step);
             const skipLink = finished ? null : <Button className="h-auto px-0 underline underline-offset-4" disabled={skip.isPending} onClick={() => skip.mutate(step.id)} variant="link">{t("setupGuide.skipStep")}</Button>;
             return <AccordionItem key={step.id} value={step.id}>
-              <AccordionTrigger aria-disabled={locked || undefined} className={locked ? "min-h-16 cursor-default px-6 [&_[data-icon=inline-end]]:opacity-0" : "min-h-16 px-6"} tabIndex={locked ? -1 : undefined}><span className="flex min-w-0 items-center gap-4"><StepMarker completed={finished} /><span className={finished ? "truncate type-body-lg text-muted-foreground line-through decoration-muted-foreground/70" : "truncate type-body-lg"}>{t(step.id === "phoneNumber" && step.status !== "needs setup" && !skippedSteps.includes(step.id) ? "setupGuide.steps.forwardCalls" : `setupGuide.steps.${step.id}`)}</span></span></AccordionTrigger>
+              <AccordionTrigger aria-disabled={locked || undefined} className={locked ? "min-h-16 cursor-default px-6 [&_[data-icon=inline-end]]:opacity-0" : "min-h-16 px-6"} tabIndex={locked ? -1 : undefined}><span className="flex min-w-0 items-center gap-4"><StepMarker completed={finished} /><span className={finished ? "truncate type-body-lg text-muted-foreground line-through decoration-muted-foreground/70" : "truncate type-body-lg"}>{t(stepTitleKey(step, skippedSteps))}</span></span></AccordionTrigger>
               <AccordionContent aria-labelledby="" className="px-6"><div className="flex gap-4"><span className="size-6 shrink-0" /><div className="flex min-w-0 flex-1 flex-col gap-4">
                 {step.id === "fullScan" ? (
                   <>
@@ -122,7 +127,7 @@ export function LiveSetupGuideSurface({ businessId, goal }: { businessId: string
                   </>
                 ) : step.id === "sources" ? (
                   <>
-                    <StepDescription>{t(`setupGuide.stepDescriptions.sources.${goal ?? "none"}`)}</StepDescription>
+                    <StepDescription>{t("setupGuide.stepDescriptions.sources")}</StepDescription>
                     <StepActions primary={<Button onClick={() => router.push("/business/knowledge?setup=upload")}>{t("setupGuide.stepActions.sources")}</Button>} skip={skipLink} />
                   </>
                 ) : step.id === "hours" ? (
@@ -131,9 +136,11 @@ export function LiveSetupGuideSurface({ businessId, goal }: { businessId: string
                     <StepActions primary={<Button nativeButton={false} render={<Link href={HOURS_EDITOR_HREF} />}>{t("setupGuide.stepActions.hours")}</Button>} skip={skipLink} />
                   </>
                 ) : step.id === "testCall" ? (
-                  <TestCallStep call={activation?.lastTestCall ?? null} goal={goal} skip={skipLink} />
+                  <TestCallStep call={activation?.lastTestCall ?? null} skip={skipLink} />
                 ) : step.id === "phoneNumber" ? (
                   <NumberStep activation={activation} businessId={businessId} needsNumberClaim={needsNumberClaim} skip={skipLink} trialAvailable={trialAvailable} upgrade={upgrade} />
+                ) : step.id === "callNumber" || step.id === "forwardCalls" ? (
+                  <NumberListStep businessId={businessId} guide={setup.data!} skip={skipLink} step={step} upgrade={upgrade} />
                 ) : null}
               </div></div></AccordionContent>
             </AccordionItem>;
@@ -141,6 +148,54 @@ export function LiveSetupGuideSurface({ businessId, goal }: { businessId: string
         </Accordion>
       </Surface>
     </section>
+  );
+}
+
+/** A step's title. The classic number step reads as forwarding once there's a number; the number list words its forwarding step for the owner's current line. */
+function stepTitleKey(step: GuideStep, skippedSteps: readonly string[]): string {
+  if (step.id === "phoneNumber" && step.status !== "needs setup" && !skippedSteps.includes(step.id)) return "setupGuide.steps.forwardCalls";
+  if (step.id === "forwardCalls") return "setupGuide.steps.forwardFromCurrent";
+  return `setupGuide.steps.${step.id}`;
+}
+
+/**
+ * The number list's own steps: calling the number, and forwarding the
+ * owner's current line to it. After a trial that ended without a plan the
+ * number is gone, so both offer the plans instead.
+ */
+function NumberListStep({ businessId, guide, skip, step, upgrade }: { businessId: string; guide: SetupGuide; skip: ReactNode; step: GuideStep; upgrade: () => void }) {
+  const { i18n, t } = useTranslation("dashboard");
+  const queryClient = useQueryClient();
+  const telemetry = useTelemetry();
+  const [forwardingOpen, setForwardingOpen] = useState(false);
+  const numbers = useQuery({ queryKey: ["phone-numbers", businessId], queryFn: () => requestJson<NumbersResponse>(`/api/phone-numbers?businessId=${encodeURIComponent(businessId)}`) });
+  const confirm = useMutation({
+    mutationFn: () => requestJson(`/api/setup/forwarding?businessId=${encodeURIComponent(businessId)}`, { method: "POST" }),
+    onSuccess: async () => {
+      telemetry.track("web.activation.forwarding_confirmed", { businessId });
+      setForwardingOpen(false);
+      await queryClient.invalidateQueries({ queryKey: ["setup", businessId] });
+    },
+  });
+  const done = step.status === "complete";
+  if (guide.numberLost && !done) return <><StepDescription>{t("setupGuide.stepDescriptions.numberLost")}</StepDescription><StepActions primary={<Button onClick={upgrade} type="button">{t("setupGuide.stepActions.choosePlan")}</Button>} skip={skip} /></>;
+  if (!numbers.data) return <Skeleton className="h-24 rounded-xl" />;
+  const number = numbers.data.phoneNumbers[0];
+  if (!number) return <><StepDescription>{t("setupGuide.stepDescriptions.numberLost")}</StepDescription><StepActions primary={<Button onClick={upgrade} type="button">{t("setupGuide.stepActions.choosePlan")}</Button>} skip={skip} /></>;
+  const display = formatPhoneNumberDisplay(number.e164, i18n.language);
+  if (step.id === "callNumber") {
+    return <><StepDescription>{t("setupGuide.stepDescriptions.testCall")}</StepDescription><StepActions primary={<a className={buttonVariants()} href={`tel:${number.e164}`}>{t("setupGuide.stepActions.callNumber", { number: display })}</a>} skip={skip} /></>;
+  }
+  if (done) {
+    const from = guide.forwarding?.forwardedFrom;
+    return <StepDescription>{from ? t("setupGuide.forwardingFrom", { number: formatPhoneNumberDisplay(from, i18n.language) }) : t("setupGuide.forwardingWorks")}</StepDescription>;
+  }
+  return (
+    <>
+      <StepDescription>{t("setupGuide.stepDescriptions.forwardCalls", { number: display })}</StepDescription>
+      <StepActions primary={<Button onClick={() => setForwardingOpen(true)} type="button">{t("setupGuide.stepActions.forwardCalls")}</Button>} skip={skip} />
+      <CallForwardingDialog confirming={confirm.isPending} e164={number.e164} onConfirm={() => confirm.mutate()} onOpenChange={setForwardingOpen} open={forwardingOpen} />
+    </>
   );
 }
 
@@ -152,12 +207,12 @@ function StepActions({ primary, skip }: { primary?: ReactNode; skip: ReactNode }
   return <div className="flex items-center justify-between gap-4">{primary ?? <span />}{skip}</div>;
 }
 
-function TestCallStep({ call, goal, skip }: { call: NonNullable<Activation["lastTestCall"]> | null; goal: OnboardingGoal | null; skip: ReactNode }) {
+function TestCallStep({ call, skip }: { call: NonNullable<Activation["lastTestCall"]> | null; skip: ReactNode }) {
   const { i18n, t } = useTranslation("dashboard");
   const testWindowReady = useTestWindowReady();
   return (
     <>
-      <StepDescription>{t(`setupGuide.stepDescriptions.testCall.${goal ?? "none"}`)}</StepDescription>
+      <StepDescription>{t("setupGuide.stepDescriptions.testCall")}</StepDescription>
       {call ? (
         <Item render={<Link href={`/inbox?call=${encodeURIComponent(call.id)}`} />} variant="outline">
           <ItemContent>

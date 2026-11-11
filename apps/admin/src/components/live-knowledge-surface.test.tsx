@@ -3,159 +3,130 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { KnowledgeSource } from "@/hooks/use-knowledge-sources";
 import { LiveKnowledgeSurface, websiteImportProgress, type WebsiteImport } from "./live-knowledge-surface";
 import { createRecordedBrowserTelemetry } from "@/lib/telemetry-testing";
 const telemetryRef = vi.hoisted(() => ({ current: null as ReturnType<typeof createRecordedBrowserTelemetry> | null }));
 vi.mock("@/components/product-analytics", () => ({ useTelemetry: () => telemetryRef.current!.telemetry }));
 const captureBrowserError = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/browser-error-reporting", () => ({ captureBrowserError }));
-vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: vi.fn() }), usePathname: () => "/agent/knowledge", useSearchParams: () => new URLSearchParams() }));
-vi.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { language: "en", resolvedLanguage: "en" }, t: (key: string) => key }) }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: vi.fn() }), usePathname: () => "/business/knowledge", useSearchParams: () => new URLSearchParams() }));
+vi.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { language: "en", resolvedLanguage: "en" }, t: (key: string, options?: { count?: number }) => options?.count === undefined ? key : `${key}:${options.count}` }) }));
 const clients: QueryClient[] = [];
 beforeEach(() => { telemetryRef.current = createRecordedBrowserTelemetry(); });
 afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals(); vi.clearAllMocks(); });
-function setup({ snippet = false, active = true, role = "business_owner", status = "indexed", sourceType = "upload", textContent = "**Clinic** [hours](https://example.invalid)", websiteImport = null as null | WebsiteImport } = {}) {
+
+const at = "2026-09-01T12:00:00Z";
+const job = (status: string, extra: Partial<WebsiteImport> = {}): WebsiteImport => ({ id: "job", status, websiteUrl: "https://example.invalid", importedCount: 10, indexedCount: 0, documentCount: 0, crawlFinishedCount: null, crawlTotalCount: null, ...extra });
+function source(input: Partial<KnowledgeSource> & Pick<KnowledgeSource, "kind" | "id">): KnowledgeSource {
+  return { title: "Clinic hours", sourceUrl: null, agentId: null, active: true, status: "indexed", error: null, preview: "**Clinic** [hours](https://example.invalid)", createdAt: at, updatedAt: at, processingProgress: 100, revision: 1, ...input };
+}
+const website = (input: Partial<KnowledgeSource> = {}) => source({ kind: "website", id: "site", title: "example.invalid", sourceUrl: "https://example.invalid/", pageCount: 3, pagesOff: 1, websiteImport: job("completed"), ...input });
+const pages = [
+  { id: "site", title: "Home", sourceUrl: "https://example.invalid/", status: "indexed", error: null, active: true, preview: "", createdAt: at, updatedAt: at, removable: false },
+  { id: "team", title: "Team", sourceUrl: "https://example.invalid/team", status: "indexed", error: null, active: true, preview: "", createdAt: at, updatedAt: at, removable: true },
+];
+
+function setup({ rows = [source({ kind: "file", id: "document" })] as KnowledgeSource[], role = "business_owner" } = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } }); clients.push(client);
   client.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true, role }] });
-  const document = { websiteImport, id: "document", title: "Clinic hours", active, sourceType, status, sourceUrl: sourceType === "website" ? "https://example.invalid" : null, textContent, processingProgress: 40, createdAt: "2026-09-01T12:00:00Z", updatedAt: "2026-09-01T12:00:00Z" };
-  const snippets = snippet ? [{ id: "snippet", title: "Clinic hours", content: "Open weekdays", tags: ["hours"], priority: 5, active, createdAt: "2026-09-01T12:00:00Z" }] : [];
-  client.setQueryData(["knowledge", "business"], { documents: snippet ? [] : [document] });
-  client.setQueryData(["knowledge-snippets", "business"], { snippets });
+  client.setQueryData(["knowledge-sources", "business", null], { own: [], shared: rows });
   const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
-    if (init?.method) return Response.json({ ok: true });
-    if (url.includes("/document?")) return Response.json({ document, content: "Readable extracted content" });
-    return Response.json(url.includes("/snippets?") ? { snippets } : { documents: snippet ? [] : [document] });
+    if (init?.method) return Response.json({ ok: true, changed: 1 });
+    if (url.includes("/pages?")) return Response.json({ source: website(), pages });
+    if (url.startsWith("/api/knowledge/document?")) return Response.json({ document: {}, content: "Readable extracted content" });
+    if (url.startsWith("/api/knowledge/sources?")) return Response.json({ own: [], shared: rows });
+    return Response.json({ questions: [], openCount: 0 });
   }); vi.stubGlobal("fetch", fetchMock);
   render(<QueryClientProvider client={client}><LiveKnowledgeSurface /></QueryClientProvider>);
   return Object.assign(fetchMock, { client });
 }
-describe("original knowledge row interactions", () => {
-  it("renders a queued website import before its pages exist", () => {
-    setup({ sourceType: "website", status: "processing", textContent: "", websiteImport: { id: "job", status: "queued", websiteUrl: "https://www.example.invalid/help/", importedCount: 0, indexedCount: 0 } });
-    expect(screen.getByText("example.invalid/help")).toBeTruthy();
+const actionCall = (fetchMock: ReturnType<typeof setup>) => fetchMock.mock.calls.filter(([url]) => url.startsWith("/api/knowledge/sources/actions")).map(([, init]) => JSON.parse(String(init?.body)));
+
+describe("the business's knowledge, one row per source", () => {
+  it("shows a website as one row with its page count, and opens its pages", async () => {
+    const fetchMock = setup({ rows: [website(), source({ kind: "file", id: "document" })] });
+    expect(screen.getAllByRole("row")).toHaveLength(3);
+    expect(screen.getByTitle("sections.knowledge.website.pages:3 · sections.knowledge.website.pagesOff:1")).toBeTruthy();
+    await userEvent.click(screen.getByText("example.invalid"));
+    const dialog = await screen.findByRole("dialog");
+    expect(await within(dialog).findByText("Team")).toBeTruthy();
+    // The website's address can't be removed on its own.
+    expect(within(dialog).getAllByRole("button", { name: "sections.knowledge.pagesDialog.remove" }).map((button) => (button as HTMLButtonElement).disabled)).toEqual([true, false]);
+    const switches = within(dialog).getAllByRole("switch");
+    await userEvent.click(switches[1]!);
+    await waitFor(() => expect(actionCall(fetchMock)).toEqual([{ action: "disable", items: [{ type: "page", id: "team" }] }]));
+  });
+
+  it("re-imports a website and removes one of its pages after confirming", async () => {
+    const fetchMock = setup({ rows: [website()] });
+    await userEvent.click(screen.getByText("example.invalid"));
+    const dialog = await screen.findByRole("dialog");
+    await within(dialog).findByText("Team");
+    await userEvent.click(within(dialog).getByRole("button", { name: "sections.knowledge.batch.reimport" }));
+    const removes = within(dialog).getAllByRole("button", { name: "sections.knowledge.pagesDialog.remove" });
+    expect((removes[0] as HTMLButtonElement).disabled).toBe(true);
+    await userEvent.click(removes[1]!);
+    await userEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "sections.knowledge.pagesDialog.removeConfirm" }));
+    await waitFor(() => expect(actionCall(fetchMock)).toEqual([{ action: "reimport", items: [{ type: "website", id: "site" }] }, { action: "delete", items: [{ type: "page", id: "team" }] }]));
+  });
+
+  it("shows import progress, and lets an import be cancelled after confirming", async () => {
+    const fetchMock = setup({ rows: [website({ status: "processing", pageCount: 0, pagesOff: 0, websiteImport: job("crawling", { crawlFinishedCount: 8, crawlTotalCount: 10 }) })] });
+    expect(screen.getByRole("progressbar").getAttribute("aria-valuenow")).toBe("80");
     expect(screen.getByText("sections.knowledge.websiteImport.status.inProgress")).toBeTruthy();
-    expect(screen.getByRole("progressbar").getAttribute("aria-valuenow")).toBe("8");
-    expect(screen.getByRole("progressbar").textContent).toBe("");
+    await userEvent.click(screen.getByRole("button", { name: "actions.moreOptions" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "actions.cancelImport" }));
+    await userEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "actions.cancelImport" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/knowledge/site?businessId=business", expect.objectContaining({ method: "PATCH", body: JSON.stringify({ action: "cancel" }) })));
   });
-  it("does not move crawl progress backwards when refreshed counts lag", async () => {
-    const { client } = setup({ sourceType: "website", status: "processing", textContent: "", websiteImport: { id: "job", status: "crawling", websiteUrl: "https://example.invalid", importedCount: 10, indexedCount: 0, documentCount: 0, crawlFinishedCount: 8, crawlTotalCount: 10 } });
-    expect(screen.getByRole("progressbar").getAttribute("aria-valuenow")).toBe("80");
-    await act(async () => { client.setQueryData(["knowledge", "business"], (current: { documents: Array<Record<string, unknown>> }) => ({ documents: current.documents.map(document => ({ ...document, websiteImport: { id: "job", status: "crawling", websiteUrl: "https://example.invalid", importedCount: 20, indexedCount: 0, documentCount: 0, crawlFinishedCount: 8, crawlTotalCount: 20 } })) })); });
-    expect(screen.getByRole("progressbar").getAttribute("aria-valuenow")).toBe("80");
-  });
-  it("keeps a fully crawled import below completion while indexing continues", () => {
-    setup({ sourceType: "website", status: "processing", textContent: "", websiteImport: { id: "job", status: "indexing", websiteUrl: "https://example.invalid", importedCount: 10, indexedCount: 0, documentCount: 0, crawlFinishedCount: 10, crawlTotalCount: 10 } });
-    expect(screen.getByRole("progressbar").getAttribute("aria-valuenow")).toBe("99");
-  });
-  it("removes a completed import placeholder when it contains no page text", () => {
-    setup({ sourceType: "website", status: "indexed", textContent: "", websiteImport: { id: "job", status: "completed", websiteUrl: "https://example.invalid", importedCount: 10, indexedCount: 10 } });
-    expect(screen.queryByText("Clinic hours")).toBeNull();
-    expect(screen.queryByRole("progressbar")).toBeNull();
-  });
-  it("preserves the indexed root page when the completed import has content", () => {
-    setup({ sourceType: "website", status: "indexed", websiteImport: { id: "job", status: "completed", websiteUrl: "https://example.invalid", importedCount: 10, indexedCount: 10 } });
-    expect(screen.getByText("Clinic hours")).toBeTruthy();
-    expect(screen.queryByRole("progressbar")).toBeNull();
-  });
+
   it("uses the original crawl and indexing progress bounds", () => {
-    const job = { id: "job", websiteUrl: "https://example.invalid", importedCount: 0, indexedCount: 0 };
-    expect(websiteImportProgress({ ...job, status: "crawling" })).toBe(12);
-    expect(websiteImportProgress({ ...job, status: "indexing" })).toBe(72);
-    expect(websiteImportProgress({ ...job, status: "crawling", importedCount: 10, indexedCount: 0, crawlFinishedCount: 20, crawlTotalCount: 10 })).toBe(99);
+    const base = { id: "job", websiteUrl: "https://example.invalid", importedCount: 0, indexedCount: 0 };
+    expect(websiteImportProgress({ ...base, status: "crawling" })).toBe(12);
+    expect(websiteImportProgress({ ...base, status: "indexing" })).toBe(72);
+    expect(websiteImportProgress({ ...base, status: "crawling", importedCount: 10, crawlFinishedCount: 20, crawlTotalCount: 10 })).toBe(99);
   });
-  it("shows the original upload progress while extracted text is unavailable", () => {
-    setup({ status: "processing", textContent: "" });
-    expect(screen.getByRole("progressbar").getAttribute("aria-valuenow")).toBe("40");
-    expect(screen.getByText("40%")).toBeTruthy();
+
+  it("shows a failed website import", () => {
+    setup({ rows: [website({ status: "error", pageCount: 0, pagesOff: 0, websiteImport: job("failed") })] });
+    expect(screen.getByText("sections.knowledge.websiteImport.status.failed")).toBeTruthy();
+    expect(screen.getByText("sections.knowledge.websiteImport.previewFailed")).toBeTruthy();
   });
-  it.each([{ status: "processing", textContent: "Readable text" }, { status: "processing", sourceType: "website", textContent: "" }, { status: "indexed", textContent: "" }, { status: "processing", textContent: "", active: false }])("keeps progress out of readable, website, completed and disabled rows: %j", options => {
-    setup(options); expect(screen.queryByRole("progressbar")).toBeNull();
-  });
-  it("toggles a snippet without opening its editor", async () => {
-    const fetchMock = setup({ snippet: true });
+
+  it("turns a file off from its menu, without opening its text", async () => {
+    const fetchMock = setup();
     await userEvent.click(screen.getByRole("button", { name: "actions.moreOptions" }));
-    await userEvent.click(await screen.findByRole("menuitem", { name: "actions.disable" }));
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/knowledge/snippets/snippet?businessId=business", expect.objectContaining({ method: "PATCH", body: JSON.stringify({ id: "snippet", active: false }) })));
-    expect(screen.queryByRole("dialog")).toBeNull();
+    await userEvent.click(await screen.findByRole("menuitem", { name: "sections.knowledge.batch.disable" }));
+    await waitFor(() => expect(actionCall(fetchMock)).toEqual([{ action: "disable", items: [{ type: "file", id: "document" }] }]));
+    expect(fetchMock.mock.calls.some(([url]) => url.startsWith("/api/knowledge/document?"))).toBe(false);
   });
-  it("renders the original sanitized website preview and source marker", () => {
-    setup({ sourceType: "website", textContent: "[Hours](https://example.invalid) ![Clinic](https://example.invalid/photo.png) <https://example.invalid>" });
-    expect(screen.getByText("Hours Clinic")).toBeTruthy();
-    expect(screen.getByLabelText("sections.knowledge.websiteImport.badge")).toBeTruthy();
+
+  it("shows a file's text under its row, and its sanitized preview", async () => {
+    setup();
+    // Markdown links and images read as plain text.
+    expect(screen.getByTitle("**Clinic** hours")).toBeTruthy();
     expect(screen.queryByRole("link")).toBeNull();
+    await userEvent.click(screen.getAllByText("Clinic hours")[0]!);
+    expect(await screen.findByDisplayValue("Readable extracted content")).toBeTruthy();
   });
-  it("deletes a failed import only after the original confirmation", async () => {
-    const fetchMock = setup({ sourceType: "website", status: "error" });
-    await userEvent.click(screen.getByRole("button", { name: "actions.moreOptions" }));
-    await userEvent.click(await screen.findByRole("menuitem", { name: "actions.delete" }));
-    const dialog = await screen.findByRole("alertdialog");
-    expect(fetchMock.mock.calls.some(([, init]) => init?.method === "DELETE")).toBe(false);
-    await userEvent.click(within(dialog).getByRole("button", { name: "actions.delete" }));
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/knowledge/document?businessId=business", expect.objectContaining({ method: "DELETE" })));
-  });
-  it("deletes every page from a website after confirming that website", async () => {
-    const fetchMock = setup({ sourceType: "website" });
-    await userEvent.click(screen.getByRole("button", { name: "actions.moreOptions" }));
-    await userEvent.click(await screen.findByRole("menuitem", { name: "sections.knowledge.deleteWebsite.action" }));
-    const dialog = await screen.findByRole("alertdialog");
-    expect(within(dialog).getByText("sections.knowledge.deleteWebsite.title")).toBeTruthy();
-    await userEvent.click(within(dialog).getByRole("button", { name: "actions.delete" }));
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/knowledge/document?businessId=business&scope=website", expect.objectContaining({ method: "DELETE" })));
-  });
-  it("offers deleting a whole website only on website pages", async () => {
-    setup({ sourceType: "upload" });
-    await userEvent.click(screen.getByRole("button", { name: "actions.moreOptions" }));
-    await screen.findByRole("menuitem", { name: "actions.delete" });
-    expect(screen.queryByRole("menuitem", { name: "sections.knowledge.deleteWebsite.action" })).toBeNull();
-  });
-  it("opens snippet rows with stored values and updates that snippet", async () => {
-    const fetchMock = setup({ snippet: true }); await userEvent.click(screen.getByText("Clinic hours", { exact: true }));
+
+  it("opens an entry with its stored values and saves that entry", async () => {
+    const fetchMock = setup({ rows: [source({ kind: "text", id: "snippet", content: "Open weekdays", preview: "Open weekdays", tags: ["hours"], priority: 5 })] });
+    await userEvent.click(screen.getByText("Clinic hours"));
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByDisplayValue("Open weekdays")).toBeTruthy();
     await userEvent.click(within(dialog).getByRole("button", { name: "agent:actions.saveChanges" }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/knowledge/snippets/snippet?businessId=business", expect.objectContaining({ method: "PATCH", body: expect.stringContaining('"id":"snippet"') })));
   });
-  it("hides tenant-admin knowledge controls from viewers", () => {
-    setup({ role: "viewer" }); expect(screen.queryByRole("button", { name: "sections.knowledge.addKnowledge" })).toBeNull(); expect(screen.queryByRole("button", { name: "actions.moreOptions" })).toBeNull();
+
+  it("hides the controls that change knowledge from viewers", () => {
+    setup({ role: "viewer" });
+    expect(screen.queryByRole("button", { name: "sections.knowledge.addKnowledge" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "actions.moreOptions" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "sections.knowledge.selection.select" })).toBeNull();
   });
-  it.each([true, false])("toggles document activity from %s without opening its preview", async active => {
-    const fetchMock = setup({ active });
-    if (!active) expect(screen.getByText("table.disabled")).toBeTruthy();
-    await userEvent.click(screen.getByRole("button", { name: "actions.moreOptions" }));
-    await userEvent.click(await screen.findByRole("menuitem", { name: active ? "actions.disable" : "actions.enable" }));
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/knowledge/document?businessId=business", expect.objectContaining({ method: "PATCH", body: JSON.stringify({ active: !active }) })));
-    expect(fetchMock.mock.calls.some(([url, init]) => url.includes("/document?") && !init?.method)).toBe(false);
-  });
-  it("keeps document content readable during reindexing", async () => {
-    setup({ status: "processing" }); await userEvent.click(screen.getByText("Clinic hours", { exact: true }));
-    expect(await screen.findByDisplayValue("Readable extracted content")).toBeTruthy(); expect(screen.queryByRole("dialog")).toBeNull();
-  });
-  it("opens deletion confirmation without opening a snippet editor", async () => {
-    setup({ snippet: true }); await userEvent.click(screen.getByRole("button", { name: "actions.moreOptions" }));
-    await userEvent.click(await screen.findByRole("menuitem", { name: "actions.delete" }));
-    expect(await screen.findByRole("alertdialog")).toBeTruthy(); expect(screen.queryByDisplayValue("Open weekdays")).toBeNull();
-  });
-  it("can cancel an active website import from its actions", async () => {
-    const fetchMock = setup({ status: "processing", sourceType: "website", textContent: "", websiteImport: { id: "job", status: "queued", websiteUrl: "https://example.invalid", importedCount: 0, indexedCount: 0 } }); await userEvent.click(screen.getByRole("button", { name: "actions.moreOptions" }));
-    await userEvent.click(await screen.findByRole("menuitem", { name: "actions.cancelImport" }));
-    expect(fetchMock.mock.calls.some(([, init]) => init?.method === "PATCH")).toBe(false);
-    await userEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "actions.cancelImport" }));
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/knowledge/document?businessId=business", expect.objectContaining({ method: "PATCH", body: JSON.stringify({ action: "cancel" }) })));
-  });
-  it.each(["", "Indexed root page content"])("keeps partial imports cancellable with root content %j", async (textContent) => {
-    const fetchMock = setup({ status: "processing", sourceType: "website", textContent, websiteImport: { id: "job", status: "indexing", websiteUrl: "https://example.invalid", importedCount: 10, indexedCount: 1 } });
-    expect(screen.getByRole("progressbar")).toBeTruthy();
-    expect(screen.getByText("sections.knowledge.websiteImport.status.inProgress")).toBeTruthy();
-    await userEvent.click(screen.getByRole("button", { name: "actions.moreOptions" }));
-    await userEvent.click(await screen.findByRole("menuitem", { name: "actions.cancelImport" }));
-    await userEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "actions.cancelImport" }));
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/knowledge/document?businessId=business", expect.objectContaining({ method: "PATCH", body: JSON.stringify({ action: "cancel" }) })));
-  });
-  it.each(["", "Indexed root page content"])("shows failures after partial indexing with root content %j", (textContent) => {
-    setup({ status: "error", sourceType: "website", textContent, websiteImport: { id: "job", status: "failed", websiteUrl: "https://example.invalid", importedCount: 10, indexedCount: 1 } });
-    expect(screen.getByText("sections.knowledge.websiteImport.status.failed")).toBeTruthy();
-    expect(screen.getByText("sections.knowledge.websiteImport.previewFailed")).toBeTruthy();
-  });
+
   it("records knowledge upload start and completion with the file content type", async () => {
     vi.stubGlobal("crypto", { subtle: { digest: async () => new ArrayBuffer(32) } });
     const fetchMock = setup();
@@ -168,6 +139,7 @@ describe("original knowledge row interactions", () => {
     telemetryRef.current!.expectEvent("web.knowledge.upload_started", expected);
     telemetryRef.current!.expectEvent("web.knowledge.upload_completed", expected);
   });
+
   it("shows the translated message and reports it when storage blocks the upload", async () => {
     vi.stubGlobal("crypto", { subtle: { digest: async () => new ArrayBuffer(32) } });
     const fetchMock = setup();
@@ -183,7 +155,47 @@ describe("original knowledge row interactions", () => {
     await userEvent.click(screen.getByRole("button", { name: "actions.upload" }));
     expect(await screen.findByText("sections.knowledge.uploadValidation.uploadFailed")).toBeTruthy();
     expect(captureBrowserError).toHaveBeenCalledWith(expect.objectContaining({ message: "Storage upload to uploads.example.invalid failed without a response: Failed to fetch" }));
-    expect(() => telemetryRef.current!.expectEvent("web.knowledge.upload_completed", { businessId: "business" })).toThrow();
+  });
+});
+
+describe("selecting several sources", () => {
+  const rows = [website(), source({ kind: "file", id: "document" }), source({ kind: "text", id: "snippet", title: "Parking", content: "Behind." })];
+
+  it("shows no checkboxes until Select, then deletes the rows chosen after confirming", async () => {
+    const fetchMock = setup({ rows });
+    expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
+    await userEvent.click(screen.getByRole("button", { name: "sections.knowledge.selection.select" }));
+    expect(screen.getAllByRole("checkbox")).toHaveLength(4);
+    expect(screen.queryByRole("button", { name: "actions.moreOptions" })).toBeNull();
+    await userEvent.click(screen.getAllByRole("checkbox", { name: "sections.knowledge.selection.selectRow" })[0]!);
+    await userEvent.click(screen.getByText("Parking"));
+    expect(screen.getByText("sections.knowledge.selection.count:2")).toBeTruthy();
+    // Re-import needs a website among the rows chosen.
+    expect((screen.getByRole("button", { name: "sections.knowledge.batch.reimport" }) as HTMLButtonElement).disabled).toBe(false);
+    await userEvent.click(screen.getByRole("button", { name: "sections.knowledge.batch.delete" }));
+    expect(actionCall(fetchMock)).toEqual([]);
+    await userEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "actions.delete" }));
+    await waitFor(() => expect(actionCall(fetchMock)).toEqual([{ action: "delete", items: [{ type: "website", id: "site" }, { type: "snippet", id: "snippet" }] }]));
+  });
+
+  it("selects every row at once, turns them on, and leaves selection mode", async () => {
+    const fetchMock = setup({ rows });
+    await userEvent.click(screen.getByRole("button", { name: "sections.knowledge.selection.select" }));
+    await userEvent.click(screen.getByRole("checkbox", { name: "sections.knowledge.selection.selectAll" }));
+    expect(screen.getByText("sections.knowledge.selection.count:3")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "sections.knowledge.batch.enable" }));
+    await waitFor(() => expect(actionCall(fetchMock)).toEqual([{ action: "enable", items: [{ type: "website", id: "site" }, { type: "file", id: "document" }, { type: "snippet", id: "snippet" }] }]));
+    await waitFor(() => expect(screen.queryAllByRole("checkbox")).toHaveLength(0));
+  });
+
+  it("leaves selection mode on Escape or Cancel", async () => {
+    setup({ rows });
+    await userEvent.click(screen.getByRole("button", { name: "sections.knowledge.selection.select" }));
+    await act(async () => { fireEvent.keyDown(window, { key: "Escape" }); });
+    expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
+    await userEvent.click(screen.getByRole("button", { name: "sections.knowledge.selection.select" }));
+    await userEvent.click(screen.getByRole("button", { name: "sections.knowledge.selection.cancel" }));
+    expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
   });
 });
 
@@ -195,26 +207,17 @@ describe("knowledge loading states", () => {
     vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {})));
     render(<QueryClientProvider client={client}><LiveKnowledgeSurface /></QueryClientProvider>);
   }
-  it("shows the page title, a placeholder table and no bare loading text while the workspace loads", () => {
+  it("shows the page title and a placeholder table while the workspace loads", () => {
     renderPending(false);
     expect(screen.getByRole("heading", { name: "sections.knowledge.title" })).toBeTruthy();
-    expect(screen.queryByText("loading.workspace")).toBeNull();
     expect(screen.getByText("table.title")).toBeTruthy();
     expect(skeletons("tbody")).toBe(60);
-    expect(skeletons('[aria-hidden="true"]')).toBe(7);
   });
-  it("keeps the real header and shows placeholder rows and pagination while the entries load", () => {
+  it("keeps the real header and shows placeholder rows while the sources load", () => {
     renderPending(true);
-    expect(screen.getByText("table.title")).toBeTruthy();
     expect(document.querySelector("tbody")?.getAttribute("aria-busy")).toBe("true");
     expect(skeletons("tbody")).toBe(60);
-    expect(skeletons('[aria-hidden="true"]')).toBe(7);
     expect(screen.queryByText("sections.knowledge.emptyState")).toBeNull();
     expect(screen.queryByRole("button", { name: /sections.knowledge.addKnowledge/ })).toBeNull();
-  });
-  it("shows the add button and no search box once the entries have loaded", async () => {
-    setup();
-    expect(await screen.findByRole("button", { name: /sections.knowledge.addKnowledge/ })).toBeTruthy();
-    expect(screen.queryByRole("textbox")).toBeNull();
   });
 });

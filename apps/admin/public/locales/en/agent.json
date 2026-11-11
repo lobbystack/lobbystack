@@ -10,6 +10,11 @@
       "description": "Greeting and transfer settings for your agent."
     },
     "knowledge": {
+      "selection": {"select": "Select", "count_one": "{{count}} selected", "count_other": "{{count}} selected", "selectAll": "Select all", "selectRow": "Select {{title}}", "cancel": "Cancel"},
+      "batch": {"delete": "Delete", "disable": "Turn off", "enable": "Turn on", "reimport": "Re-import", "agentDisable": "Turn off for this agent", "agentEnable": "Turn on", "deleteTitle_one": "Delete this source?", "deleteTitle_other": "Delete {{count}} sources?", "deleteDescription": "You can't undo this.", "done": {"delete_one": "Source deleted.", "delete_other": "{{count}} sources deleted.", "disable_one": "Source turned off.", "disable_other": "{{count}} sources turned off.", "enable_one": "Source turned on.", "enable_other": "{{count}} sources turned on.", "reimport_one": "Re-import started.", "reimport_other": "Re-import started for {{count}} websites."}},
+      "website": {"pages_one": "{{count}} page", "pages_other": "{{count}} pages", "pagesOff_one": "{{count}} off", "pagesOff_other": "{{count}} off"},
+      "pagesDialog": {"title": "Website", "listLabel": "Pages", "usePage": "Use {{title}}", "remove": "Remove {{title}}", "removeAddress": "Delete the website to remove its address page.", "removeConfirm": "Remove", "removeTitle": "Remove {{title}}?", "removeDescription": "A re-import can bring it back.", "offForBusiness": "Off for every agent"},
+      "agent": {"ownTitle": "Only this agent", "sharedTitle": "Shared with every agent", "ownEmpty": "Nothing added for this agent yet.", "sharedEmpty": "No shared knowledge yet.", "manageShared": "Manage shared knowledge", "toggleHeading": "This agent", "useSource": "Use {{title}} for this agent"},
       "title": "Knowledge",
       "description": "Information and guidelines your agent uses to answer questions.",
       "listTitle": "Knowledge Base",
@@ -23,7 +28,7 @@
       "deleteWebsite": { "action": "Delete all pages", "title": "Delete all pages from this website?", "description": "This will permanently remove every page imported from {{host}}.", "deleted": "All pages from {{host}} deleted." },
       "toast": { "added": "Knowledge added.", "updated": "Knowledge updated.", "uploaded": "Document uploaded. It will be ready shortly.", "deleted": "Knowledge deleted.", "enabled": "Knowledge enabled.", "disabled": "Knowledge disabled." },
       "uploadDocument": "Upload Document",
-      "websiteImport": {
+      "websiteImport": { "inShared": "This website is already in your shared knowledge. Turn it off for the agents that shouldn't use it.", "inAgent": "This website is already in {{name}}'s knowledge.",
         "badge": "Website",
         "title": "Import Website",
         "description": "Crawl the public pages of your website so your agent can use them as knowledge.",

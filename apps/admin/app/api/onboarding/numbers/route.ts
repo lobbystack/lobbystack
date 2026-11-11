@@ -25,7 +25,8 @@ export const GET = operatorRoute(async ({ request, userId, businessId, transacti
   const suggestedCountry = countryCodeForBusinessTimezone(business?.timezone) ?? null;
   const trial = await onboardingNumberTrialOutlook(domain, { userId, businessId, ipHash: numbersConfigured() ? requestIpHash(request) : null, ipCountry: trustedClientCountry(request) });
   // verifiedPhone lets an owner who comes back see the phone they already verified.
-  return NextResponse.json({ countries: numberCountries(), trialCountries: trialCountries(), suggestedCountry, verifyPhone: trial.verificationNeeded, trialRefusal: trial.refusal, verifiedPhone: verified?.phone ?? null });
+  // numberRequired: a direct cloud owner goes on without a number only where we sell none. Self-hosted keeps its skip.
+  return NextResponse.json({ countries: numberCountries(), trialCountries: trialCountries(), suggestedCountry, verifyPhone: trial.verificationNeeded, trialRefusal: trial.refusal, verifiedPhone: verified?.phone ?? null, numberRequired: business?.deploymentMode === "cloud" });
 });
 
 // An owner in a country without numbers asks to hear when numbers arrive there.

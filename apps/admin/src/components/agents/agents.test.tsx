@@ -105,6 +105,8 @@ it("removes an agent after confirming, moving its channels to the agent picked",
   fireEvent.click(within(menu).getByRole("menuitem", { name: /agents.remove/u }));
   const dialog = await screen.findByRole("alertdialog");
   expect(within(dialog).getByText("agents.removeDescriptionPick")).toBeTruthy();
+  // Its own knowledge doesn't move: removing it deletes it.
+  expect(within(dialog).getByText("agents.removeKnowledge")).toBeTruthy();
   expect(calls("DELETE")).toHaveLength(0);
   fireEvent.click(within(dialog).getByRole("button", { name: "agents.remove" }));
   await waitFor(() => expect(calls("DELETE")).toHaveLength(1));

@@ -1,12 +1,13 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useState, type ReactNode, type RefObject } from "react";
+import { Fragment, useState, type ReactNode, type RefObject } from "react";
 import { ChevronRight, ExternalLink, LayoutList, SearchIcon, XIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { WorkspaceSwitcher } from "@/components/layout/workspace-switcher";
 import { NotificationBell } from "@/components/notifications/notification-bell";
+import { NumberTrialChip } from "@/components/number-trial-chip";
 import { accountItemLink, useAccountMenuGroups, type AccountMenuItem } from "@/components/nav-user";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -145,9 +146,13 @@ function AccountSection({ closeThen, onFeedback, partnerConsole, user }: { close
         <span className="min-w-0 truncate" title={user.email}>{user.email}</span>
       </SidebarGroupLabel>
       {groups.map((group, index) => (
-        <SidebarMenu className={index > 0 ? "mt-2 border-t border-sidebar-border pt-2" : undefined} key={group[0]!.key}>
-          {group.map((item) => <AccountRow closeThen={closeThen} item={item} key={item.key} />)}
-        </SidebarMenu>
+        <Fragment key={group[0]!.key}>
+          {/* The group's padding plus this inset lines it up with the sheet's other group lines. */}
+          {index > 0 ? <Separator className="mx-3 my-2 w-auto! bg-sidebar-border" data-account-separator="" /> : null}
+          <SidebarMenu>
+            {group.map((item) => <AccountRow closeThen={closeThen} item={item} key={item.key} />)}
+          </SidebarMenu>
+        </Fragment>
       ))}
     </SidebarGroup>
   );
@@ -187,10 +192,12 @@ function SheetMenus({ closeThen, onFeedback, partnerConsole, user }: { closeThen
       <div className={`flex flex-col duration-200 ease-out motion-reduce:animate-none ${state.direction ? SLIDE[state.direction] : ""}`} data-menu-level={shown} key={shown}>
         {menu}
       </div>
-      {shown === "root" ? <>
+      {shown === "root" ? <div className="mt-auto flex flex-col">
+        {/* The plans open once the sheet has closed, so they don't open under it. */}
+        <NumberTrialChip className="mx-4 mb-2" openWith={(openPlans) => closeThen(openPlans)} />
         <Separator className="mx-5 w-auto! bg-sidebar-border" />
         <AccountSection closeThen={closeThen} onFeedback={onFeedback} partnerConsole={partnerConsole} user={user} />
-      </> : null}
+      </div> : null}
     </div>
   );
 }

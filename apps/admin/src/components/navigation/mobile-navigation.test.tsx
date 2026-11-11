@@ -45,6 +45,9 @@ describe("the phone menu sheet", () => {
     expect(within(account).getByRole("link", { name: "sidebar.accountSettings" }).getAttribute("href")).toBe("/account");
     expect(within(account).getByRole("link", { name: "items.affiliate" }).getAttribute("href")).toBe("/affiliate");
     for (const name of ["feedback.trigger", "sidebar.toggleTheme", "sidebar.signOut"]) expect(within(account).getByRole("button", { name })).toBeTruthy();
+    // The same groups as the sidebar's account menu, with a line between each.
+    const outline = [...account.querySelectorAll("[data-sidebar=menu-button], [data-account-separator]")].map((element) => element.hasAttribute("data-account-separator") ? "—" : element.textContent);
+    expect(outline).toEqual(["sidebar.accountSettings", "—", "feedback.trigger", "feedback.helpCenter", "items.affiliate", "—", "sidebar.toggleTheme", "—", "sidebar.signOut"]);
   });
 
   it("drills into Settings and Business with a back row, as the sidebar does", async () => {
@@ -126,6 +129,22 @@ describe("the phone menu sheet", () => {
     route.pathname = "/contacts";
     view.rerender();
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  it("shows the trial's countdown, and opens the plans once the sheet has closed", async () => {
+    const onUpgrade = vi.fn(() => expect(screen.queryByRole("dialog")).toBeNull());
+    setup({ trial: { status: "active", e164: "+15815550102", daysLeft: 9, minutesExhausted: false, forwardTo: null }, onUpgrade });
+    const sheet = await openMenu();
+    expect(within(sheet).getByText("numberTrial.chip")).toBeTruthy();
+    await userEvent.click(within(sheet).getByRole("button", { name: "numberTrial.viewPlans" }));
+    await waitFor(() => expect(onUpgrade).toHaveBeenCalledOnce());
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("shows no trial countdown without a running trial", async () => {
+    setup();
+    const sheet = await openMenu();
+    expect(within(sheet).queryByRole("button", { name: "numberTrial.viewPlans" })).toBeNull();
   });
 
   it("opens search, and signs out, once the sheet has closed", async () => {

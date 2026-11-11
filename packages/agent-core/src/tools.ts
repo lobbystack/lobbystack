@@ -203,7 +203,8 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
   async function searchKnowledge(query: string): Promise<{ outcome: string; matches: KnowledgeMatch[] }> {
     const fallback = snapshotKnowledgeMatches(snapshot, query);
     try {
-      const evidence = await searchKnowledgeEvidence(domain, { businessId, query, limit: 6, ...(context.callId ? { callId: context.callId } : {}) });
+      // The agent answering searches its own sources and the shared ones still on for it.
+      const evidence = await searchKnowledgeEvidence(domain, { businessId, query, limit: 6, agentId: snapshot.agentId ?? null, ...(context.callId ? { callId: context.callId } : {}) });
       // Evidence first. Snippets only fill the slots and tokens it leaves.
       const matches = withSnippetsInBudget(evidence.matches.map((match) => ({ title: match.title, text: match.content })), fallback);
       return { outcome: matches.length ? "found" : evidence.outcome, matches };

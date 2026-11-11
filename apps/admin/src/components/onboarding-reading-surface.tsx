@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { resolveOnboardingRoute, stageAfterWebsite } from "@lobbystack/shared";
 
 import { WebsiteImportProgressSkeleton } from "@/components/loading-skeletons";
 import { ImportWaitSlides, useImportWait } from "@/components/onboarding-import-wait";
@@ -12,7 +13,6 @@ import { useActiveBusiness } from "@/hooks/use-active-business";
 import { requestJson } from "@/lib/request-json";
 import { useStepNavigation } from "@/lib/use-step-navigation";
 
-const NEXT_STEP = "/onboarding/verify-phone";
 
 type KnowledgeDocument = { id: string; createdAt?: string; websiteImport?: WebsiteImportSummary | null };
 
@@ -27,7 +27,9 @@ export function OnboardingReadingSurface({ documentId }: { documentId?: string |
   const { navigate, prefetch } = useStepNavigation();
   const { business } = useActiveBusiness();
   const businessId = business?.businessId;
-  useEffect(() => { prefetch(NEXT_STEP); }, [prefetch]);
+  // The phone step for a partner's owner, the number for a direct one.
+  const nextStep = resolveOnboardingRoute(stageAfterWebsite(business ? { partnerId: business.partnerAccessLevel ? "partner" : null } : null));
+  useEffect(() => { prefetch(nextStep); }, [nextStep, prefetch]);
   // A failed check must not hold anyone here, so it doesn't retry.
   const documents = useQuery({
     queryKey: ["onboarding-knowledge", businessId],
@@ -52,7 +54,7 @@ export function OnboardingReadingSurface({ documentId }: { documentId?: string |
   const websiteImport = documentId ? submittedImport : currentWebsiteImport(documents.data?.documents, business?.websiteUrl);
   const { phase, stopWaiting } = useImportWait(websiteImport, documents.isSuccess || documents.isError, Boolean(documentId));
   const over = phase === "ready" || phase === "waited";
-  useEffect(() => { if (over) navigate(NEXT_STEP); }, [navigate, over]);
+  useEffect(() => { if (over) navigate(nextStep); }, [navigate, nextStep, over]);
 
   if (phase !== "waiting") return null;
   return (

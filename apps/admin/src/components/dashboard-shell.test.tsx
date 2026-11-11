@@ -9,7 +9,7 @@ import { DashboardShell } from "./dashboard-shell";
 import { UpgradePlanDialogProvider } from "./upgrade-plan-dialog-context";
 const route = vi.hoisted(() => ({ pathname: "/", search: "", router: { push: vi.fn(), refresh: vi.fn(), replace: vi.fn() } }));
 vi.mock("@/components/product-analytics", () => ({ useTelemetry: () => ({ track: vi.fn(), identify: vi.fn(), reset: vi.fn(), setOptOut: vi.fn(), setSensitiveRoute: vi.fn() }) }));
-vi.mock("next/navigation", () => ({ usePathname: () => route.pathname, useRouter: () => route.router, useSearchParams: () => new URLSearchParams(route.search) }));
+vi.mock("next/navigation", () => ({ useParams: () => ({ agentId: /^\/agents\/([^/]+)/.exec(route.pathname)?.[1] }), usePathname: () => route.pathname, useRouter: () => route.router, useSearchParams: () => new URLSearchParams(route.search) }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { language: "en" }, t: (key: string, values?: { place?: string }) => values?.place ? `${key}:${values.place}` : key }) }));
 vi.mock("./live-upgrade-plan-provider", () => ({ LiveUpgradePlanProvider: ({ children }: { children: ReactNode }) => <UpgradePlanDialogProvider onOpen={vi.fn()}>{children}</UpgradePlanDialogProvider> }));
 vi.mock("@/components/navigation/shell-runtime", () => ({ ShellRuntime: () => null }));
@@ -122,7 +122,7 @@ describe("drilling into an agent, Business and Settings", () => {
     expect(menu().className).toContain("slide-in-from-right");
     expect(within(menu() as HTMLElement).getByRole("button", { name: "items.agents" }).hasAttribute("data-back-row")).toBe(true);
     expect(within(menu() as HTMLElement).getByText("Front desk")).toBeTruthy();
-    expect(within(menu() as HTMLElement).getAllByRole("link").map(link => link.getAttribute("href"))).toEqual(["/agents/agent-1", "/agents/agent-1/rules", "/agents/agent-1/channels", "/agents/agent-1/shared"]);
+    expect(within(menu() as HTMLElement).getAllByRole("link").map(link => link.getAttribute("href"))).toEqual(["/agents/agent-1", "/agents/agent-1/rules", "/agents/agent-1/knowledge", "/agents/agent-1/channels"]);
     // The phone number page keeps Channels lit.
     view.navigate("/agents/agent-1/channels/phone");
     expect(screen.getByRole("link", { name: /agentPages\.channels/ }).hasAttribute("data-active")).toBe(true);

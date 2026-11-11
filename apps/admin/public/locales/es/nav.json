@@ -90,10 +90,10 @@
   "agentPages": {
     "general": "General",
     "rules": "Reglas",
+    "knowledge": "Conocimiento específico",
     "channels": "Canales",
     "phone": "Número de teléfono",
-    "widget": "Widget del sitio web",
-    "shared": "Compartido con todos los agentes"
+    "widget": "Widget del sitio web"
   },
   "businessPages": {
     "details": "Datos"
@@ -153,6 +153,7 @@
     "removeTitle": "¿Eliminar a {{name}}?",
     "removeDescription": "Sus canales y conversaciones abiertas pasan a {{name}}.",
     "removeDescriptionPick": "Sus canales y conversaciones abiertas pasan al agente que elija.",
+    "removeKnowledge": "Su propio conocimiento se eliminará.",
     "moveTo": "Pasar a",
     "removed": "{{name}} eliminado",
     "removeFailed": "No pudimos eliminar el agente."

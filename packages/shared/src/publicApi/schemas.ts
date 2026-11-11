@@ -717,6 +717,7 @@ export const apiKnowledgeEntrySchema = z.object({
   tags: z.array(z.string()).describe("Your own labels for the entry."),
   priority: z.number().int().describe("Entries with higher numbers come first when the receptionist picks the entries it keeps ready on every call. Defaults to 0."),
   active: z.boolean().describe("Whether the receptionist answers from it."),
+  agent_id: id.nullable().describe("The one agent that answers from it. Null when every agent does."),
   created_at: timestamp,
   updated_at: timestamp,
 }).describe("A text entry or FAQ the receptionist answers from.");
@@ -744,6 +745,7 @@ export const apiKnowledgeSourceSchema = z.object({
   error: z.string().nullable().describe("Why reading failed, when status is error."),
   active: z.boolean().describe("Whether the receptionist answers from it. An inactive source stays indexed but unused."),
   page_limit: z.number().int().nullable().describe("How many pages a website's crawl reads: a sample at first, the full site after POST /knowledge/sources/{source_id}/expand. Null for a page or a file."),
+  agent_id: id.nullable().describe("The one agent that answers from it. Null when every agent does."),
   created_at: timestamp,
   updated_at: timestamp,
 }).describe("A website, page or file the receptionist learns from.");
