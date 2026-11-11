@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 import { useDataTablePaginationLabels } from "@/components/data-table/pagination";
 import { HeaderActions } from "@/components/header-actions";
 import { AgentKnowledgeSkeleton, HeaderButtonSkeleton } from "@/components/loading-skeletons";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useManagedBusiness } from "@/hooks/use-agent-settings";
 import { useKnowledgeSources, type KnowledgeSource } from "@/hooks/use-knowledge-sources";
@@ -88,7 +88,7 @@ export function AgentKnowledgeSurface({ agentId }: { agentId: string }) {
       />
     </Section>
     <Section actions={<>
-      <Button nativeButton={false} render={<Link href="/business/knowledge" />} size="sm" variant="ghost">{t("sections.knowledge.agent.manageShared")}</Button>
+      <Link className={buttonVariants({ size: "sm", variant: "ghost" })} href="/business/knowledge">{t("sections.knowledge.agent.manageShared")}</Link>
       {canManage ? <SelectionBar actions={[
         { id: "agent_disable", label: t("sections.knowledge.batch.agentDisable"), onClick: () => void actions.run("agent_disable", pick(shared, sharedSelection.selected)).then(sharedSelection.stop) },
         { id: "agent_enable", label: t("sections.knowledge.batch.agentEnable"), onClick: () => void actions.run("agent_enable", pick(shared, sharedSelection.selected)).then(sharedSelection.stop) },
