@@ -34,6 +34,7 @@ describe("employeeTimeOff", () => {
   it("reads a list of first and last days, treats a missing one as none, and rejects anything else", () => {
     expect(employeeTimeOff([{ startsOn: "2026-10-20", endsOn: "2026-10-24", extra: 1 }])).toEqual([{ startsOn: "2026-10-20", endsOn: "2026-10-24" }]);
     for (const value of [undefined, null]) expect(employeeTimeOff(value)).toEqual([]);
-    for (const value of ["2026-10-20", [{ startsOn: "2026-10-20" }], [{ startsOn: 1, endsOn: 2 }], [null]]) expect(employeeTimeOff(value)).toBeUndefined();
+    for (const value of ["2026-10-20", [{ startsOn: "2026-10-20" }], [{ startsOn: 1, endsOn: 2 }], [null], [{ startsOn: "2026-10-20", endsOn: "2026-10-24", name: 3 }], [{ startsOn: "2026-10-20", endsOn: "2026-10-24", note: false }]]) expect(employeeTimeOff(value)).toBeUndefined();
+    expect(employeeTimeOff([{ startsOn: "2026-10-20", endsOn: "2026-10-24", name: "Holiday", note: null }])).toEqual([{ startsOn: "2026-10-20", endsOn: "2026-10-24", name: "Holiday", note: null }]);
   });
 });

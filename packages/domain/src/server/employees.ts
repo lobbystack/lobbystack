@@ -5,9 +5,10 @@ import { businesses, businessHours, closures, enqueueOutbox, inOrder, services, 
 import type { HoursWindow } from "@lobbystack/shared";
 
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
-import { MAX_CLOSURES, normalizeClosures, normalizeHoursWindows } from "../hours";
+import { MAX_CLOSURE_REASON_LENGTH, MAX_CLOSURES, normalizeClosures, normalizeHoursWindows } from "../hours";
 import type { DomainContext } from "./context";
 import { assertTransferNumberAllowed, trialTransferNumberInTransaction } from "./numberTrials";
+import { MAX_TIME_OFF_NOTE_LENGTH } from "./timeOff";
 
 // Employees are the staff members a business lists by name. Deleted ones stay as inactive staff for their past appointments.
 // Their working hours are business_hours rows with their staff_id (none: the business's hours), and their time off is
@@ -16,6 +17,13 @@ const employeeColumns = { id: staff.id, name: staff.name, phone: staff.transferN
 
 /** Days off, inclusive, as YYYY-MM-DD in the business's timezone. */
 export type EmployeeTimeOff = { startsOn: string; endsOn: string };
+
+/**
+ * Time off as the employee editor saves it: its days, and optionally its name
+ * (the closure's reason) and staff-only note. A field left out keeps what the
+ * time off on those days already has.
+ */
+export type EmployeeTimeOffInput = EmployeeTimeOff & { name?: string | undefined; note?: string | null | undefined };
 
 /** Working, off today, or not bookable because they do no service. */
 export type EmployeeStatus = "working" | "off" | "no_services";
@@ -43,13 +51,22 @@ const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
  * since the editor lists part-day time off the calendar added as the days it
  * covers. replaceSchedule checks the rest against what's saved already.
  */
-function requireSchedule(input: { hours: HoursWindow[] | null; timeOff: EmployeeTimeOff[] }) {
+function requireSchedule(input: { hours: HoursWindow[] | null; timeOff: EmployeeTimeOffInput[] }) {
   if (input.hours && !input.hours.length) throw Object.assign(new Error("Add at least one working day, or use the business's hours."), { status: 400, code: "employee_hours_required" });
   const hours = input.hours ? normalizeHoursWindows(input.hours) : null;
   for (const entry of input.timeOff) {
     if (![entry.startsOn, entry.endsOn].every((day) => ISO_DAY.test(day) && DateTime.fromISO(day).isValid) || entry.endsOn < entry.startsOn) throw invalidTimeOff("Choose the first and last day of each time off.");
+    if (entry.name !== undefined && entry.name.trim().length > MAX_CLOSURE_REASON_LENGTH) throw invalidTimeOff(`A time off name can be up to ${MAX_CLOSURE_REASON_LENGTH} characters.`);
+    if (entry.note && entry.note.trim().length > MAX_TIME_OFF_NOTE_LENGTH) throw invalidTimeOff(`A reason can be up to ${MAX_TIME_OFF_NOTE_LENGTH} characters.`);
   }
-  const timeOff = input.timeOff.filter((entry, index) => input.timeOff.findIndex((other) => sameDays(other, entry)) === index);
+  // Entries for the same days merge, each field from the last one that sends it.
+  const timeOff: Array<EmployeeTimeOff & { name?: string; note?: string | null }> = [];
+  for (const entry of input.timeOff) {
+    const fields = { ...(entry.name !== undefined ? { name: entry.name.trim() } : {}), ...(entry.note !== undefined ? { note: entry.note?.trim() || null } : {}) };
+    const same = timeOff.find((other) => sameDays(other, entry));
+    if (same) Object.assign(same, fields);
+    else timeOff.push({ startsOn: entry.startsOn, endsOn: entry.endsOn, ...fields });
+  }
   return { hours, timeOff };
 }
 
@@ -60,7 +77,8 @@ const invalidTimeOff = (message: string) => Object.assign(new Error(message), { 
  * and the calendar can add part of a day, so every saved row whose days match
  * an entry stays as it is, with its hours and note, and isn't checked again:
  * two part-day time offs on one day, or one overnight and another the next
- * day, survive a save untouched. Only entries for new days follow the rules
+ * day, survive a save untouched, apart from a name or note the entry sends,
+ * which goes to every row on its days. Only entries for new days follow the rules
  * of the business's closures: no overlap with each other or with time off
  * kept, none already over, none ending more than two years ahead. Time off
  * that already ended isn't listed, so a save drops it, as with the business's
@@ -70,7 +88,7 @@ async function replaceSchedule(tx: DatabaseTransaction, businessId: string, staf
   await tx.delete(businessHours).where(and(eq(businessHours.businessId, businessId), eq(businessHours.staffId, staffId)));
   if (schedule.hours) await tx.insert(businessHours).values(schedule.hours.map((window) => ({ businessId, staffId, ...window })));
   const now = new Date();
-  const current = await tx.select({ id: closures.id, startsAt: closures.startsAt, endsAt: closures.endsAt }).from(closures).where(and(eq(closures.businessId, businessId), eq(closures.staffId, staffId)));
+  const current = await tx.select({ id: closures.id, startsAt: closures.startsAt, endsAt: closures.endsAt, reason: closures.reason, note: closures.note }).from(closures).where(and(eq(closures.businessId, businessId), eq(closures.staffId, staffId)));
   const upcoming = current.filter((row) => row.endsAt > now);
   const kept = upcoming.filter((row) => schedule.timeOff.some((entry) => sameDays(timeOffDays(row, timezone), entry)));
   const wanted = schedule.timeOff.filter((entry) => !kept.some((row) => sameDays(timeOffDays(row, timezone), entry)));
@@ -84,7 +102,16 @@ async function replaceSchedule(tx: DatabaseTransaction, businessId: string, staf
   if (added.some((entry) => kept.some((row) => entry.startsAt < row.endsAt && row.startsAt < entry.endsAt))) throw invalidTimeOff("Closures can't overlap.");
   const removed = current.filter((row) => !kept.includes(row)).map((row) => row.id);
   if (removed.length) await tx.delete(closures).where(and(eq(closures.businessId, businessId), inArray(closures.id, removed)));
-  if (added.length) await tx.insert(closures).values(added.map((entry) => ({ businessId, staffId, ...entry })));
+  // normalizeClosures sorted the new entries by when they start, so each finds its name and note by its days.
+  if (added.length) await tx.insert(closures).values(added.map((entry) => {
+    const sent = wanted.find((candidate) => sameDays(candidate, timeOffDays(entry, timezone)));
+    return { businessId, staffId, startsAt: entry.startsAt, endsAt: entry.endsAt, reason: sent?.name ?? "", note: sent?.note ?? null };
+  }));
+  for (const row of kept) {
+    const sent = schedule.timeOff.find((entry) => sameDays(timeOffDays(row, timezone), entry))!;
+    const changes = { ...(sent.name !== undefined && sent.name !== row.reason ? { reason: sent.name } : {}), ...(sent.note !== undefined && sent.note !== row.note ? { note: sent.note } : {}) };
+    if (Object.keys(changes).length) await tx.update(closures).set({ ...changes, updatedAt: new Date() }).where(and(eq(closures.businessId, businessId), eq(closures.id, row.id)));
+  }
 }
 
 const sameDays = (left: EmployeeTimeOff, right: EmployeeTimeOff) => left.startsOn === right.startsOn && left.endsOn === right.endsOn;
@@ -183,7 +210,7 @@ export async function listEmployees(
   });
 }
 
-type EmployeeFields = { name: string; phone: string | null; serviceIds: string[]; hours: HoursWindow[] | null; timeOff: EmployeeTimeOff[] };
+type EmployeeFields = { name: string; phone: string | null; serviceIds: string[]; hours: HoursWindow[] | null; timeOff: EmployeeTimeOffInput[] };
 
 /** Adds an employee: a staff member bookings for their services can be assigned to. `phone` is E.164, or null when calls for them go to the business. */
 export async function createEmployee(
