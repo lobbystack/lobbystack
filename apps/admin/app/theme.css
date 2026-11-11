@@ -169,6 +169,8 @@
   --shadow-xl: 0 0px 30px rgba(0 0 0 / 0.04), 0 0px 10px rgba(0 0 0 / 0.06);
   --shadow-3xl: 0 0 50px rgba(0 0 0 / 0.02), 0 0 50px rgba(0 0 0 / 0.04);
   --font-heading: var(--font-sans);
+  /* Polar's body weight (book, between Orbit's regular and medium), so font-normal matches the text around it. */
+  --font-weight-normal: 450;
 }
 
 @layer base {
@@ -187,6 +189,13 @@
     @apply min-h-svh w-full antialiased bg-background text-foreground;
     /* iOS Safari positions the drawer overlay absolutely; it needs a positioned body to cover the scrolled viewport. */
     position: relative;
+  }
+
+  /* Polar's body text (clients/apps/web/src/styles/globals.css), which Geist Variable can draw. The website widget keeps its own. */
+  body:not([data-widget]) {
+    text-rendering: optimizeLegibility;
+    font-weight: 450;
+    letter-spacing: 0.015em;
   }
 
   #root {
@@ -216,60 +225,105 @@
   padding-inline: 2rem;
 }
 
-@utility type-page-title {
-  @apply font-heading text-3xl leading-tight font-semibold tracking-tight text-foreground;
+/*
+ * Polar's type scale: Orbit's text roles (clients/packages/orbit/src/tokens/semantics.stylex.ts) on its
+ * font sizes, line heights and weights (value.stylex.ts). Geist Sans stands in for PP Neue Montreal, so the
+ * headings take the medium weight Polar's dashboard titles use, and drop the body's tracking.
+ * Role utilities leave color to the context; the named ones below them set it.
+ */
+@utility type-heading-xs {
+  @apply font-heading text-xl leading-snug font-medium tracking-normal md:text-2xl;
 }
 
-@utility type-page-description {
-  @apply text-[15px] leading-7 text-muted-foreground;
+@utility type-heading-xxs {
+  @apply font-heading text-lg leading-snug font-medium tracking-normal md:text-xl;
 }
 
-@utility type-section-title {
-  @apply font-heading text-xl leading-tight font-semibold tracking-tight text-foreground;
+@utility type-body-lg {
+  @apply text-base leading-normal;
 }
 
-@utility type-section-description {
-  @apply text-[15px] leading-7 text-muted-foreground;
-}
-
-@utility type-item-title {
-  @apply font-heading text-base leading-6 font-medium text-foreground;
+@utility type-title {
+  @apply text-sm leading-normal font-medium;
 }
 
 @utility type-body {
-  @apply text-[15px] leading-6 text-foreground;
+  @apply text-sm leading-normal;
+}
+
+@utility type-label {
+  @apply text-xs leading-snug font-medium;
+}
+
+@utility type-caption {
+  @apply text-xs leading-snug;
+}
+
+/* Polar's Orbit Button label (clients/packages/orbit/src/components/Button.tsx), for buttons and their placeholders. */
+@utility type-button {
+  @apply text-sm tracking-[0.01em];
+  font-weight: 550;
+}
+
+@utility type-button-sm {
+  @apply text-xs tracking-[0.01em];
+  font-weight: 550;
+}
+
+@utility type-page-title {
+  @apply type-heading-xs text-foreground;
+}
+
+@utility type-section-title {
+  @apply type-heading-xxs text-foreground;
+}
+
+@utility type-section-description {
+  @apply type-body text-muted-foreground;
+}
+
+/* Polar's compact metric chart title: Orbit's body size at the title weight. */
+@utility type-card-title {
+  @apply text-base leading-normal font-medium;
+}
+
+@utility type-item-title {
+  @apply type-title text-foreground;
 }
 
 @utility type-body-muted {
-  @apply text-[15px] leading-6 text-muted-foreground;
+  @apply type-body text-muted-foreground;
 }
 
 @utility type-technical-value {
-  @apply text-sm leading-6 font-mono text-foreground;
-}
-
-@utility type-control {
-  @apply text-[15px] leading-6;
+  @apply type-body font-mono tracking-normal;
 }
 
 @utility type-meta {
-  @apply text-xs font-medium text-muted-foreground;
+  @apply type-label text-muted-foreground;
 }
 
 @utility type-table-head {
-  @apply text-[13px] font-medium text-muted-foreground;
+  @apply type-title text-muted-foreground;
 }
 
+/* Polar's metric chart number (MetricChartBox): Orbit's heading-l at the book weight, with figures that line up. */
 @utility type-metric {
-  @apply text-2xl leading-none font-semibold tracking-tight text-foreground;
+  @apply text-4xl leading-tight tracking-normal text-foreground tabular-nums md:text-5xl;
+  font-weight: 350;
+}
+
+/* Polar's metric tile number (MiniMetricChartBox): 24px at the body weight. */
+@utility type-metric-sm {
+  @apply text-2xl leading-tight font-normal tracking-normal text-foreground tabular-nums;
 }
 
 @utility type-empty-title {
-  @apply text-base leading-6 font-medium text-foreground;
+  @apply type-title text-foreground;
 }
 
 @utility type-empty-description {
-  @apply text-[15px] leading-6 text-muted-foreground;
+  @apply type-body text-muted-foreground;
 }
 
 @utility no-scrollbar {

@@ -94,13 +94,13 @@ function TimeColumn({ label, onSelect, open, options, render, selected, title }:
   return (
     <div className="flex min-h-0 w-14 flex-col gap-1">
     {/* An empty title keeps the AM/PM column aligned with the titled ones. */}
-    <span aria-hidden="true" className="h-6 shrink-0 border-b border-border text-center text-xs leading-6 font-medium text-muted-foreground">{title}</span>
+    <span aria-hidden="true" className="flex h-6 shrink-0 items-center justify-center border-b border-border type-label text-muted-foreground">{title}</span>
     <div aria-label={label} className="flex min-h-0 flex-1 touch-pan-y flex-col gap-1 overflow-y-auto overscroll-contain [scrollbar-width:none]" ref={listRef} role="listbox">
       {options.map((option) => (
         <button
           aria-selected={option === selected}
           className={cn(
-            "shrink-0 rounded-md px-2 py-1.5 text-center text-sm tabular-nums outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+            "shrink-0 rounded-md px-2 py-1.5 text-center type-body tabular-nums outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
             option === selected && "bg-primary text-primary-foreground hover:bg-primary/90",
           )}
           key={option}
