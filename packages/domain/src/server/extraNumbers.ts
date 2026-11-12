@@ -195,7 +195,7 @@ export async function createExtraNumbersCheckoutRequestInTransaction(tx: Databas
   const availability = await extraNumberAvailabilityInTransaction(tx, input.businessId);
   if (!availability.available) throw refused(availability.refusal);
   if (!availability.priced) throw conflictError("Extra numbers are free on this server, so there's nothing to subscribe to.", "extra_numbers_free");
-  if (availability.subscribed) throw conflictError("Monthly billing for extra numbers is already set up.", "extra_numbers_subscribed");
+  if (availability.subscribed) throw conflictError("The extra phone numbers add-on is already active.", "extra_numbers_subscribed");
   if (input.agentId) {
     const [agent] = await tx.select({ id: agents.id }).from(agents).where(and(eq(agents.businessId, input.businessId), eq(agents.id, input.agentId), isNull(agents.archivedAt))).limit(1);
     if (!agent) throw refused("agent_not_found");

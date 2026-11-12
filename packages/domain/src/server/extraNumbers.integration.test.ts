@@ -365,7 +365,7 @@ describe.skipIf(!testUrl)("extra numbers against dedicated PostgreSQL roles", ()
       const failure = async (run: Promise<unknown>) => await run.then(() => "ok", (error: unknown) => `${(error as { status?: number }).status} ${(error as { code?: string }).code}`);
 
       const [offer] = await api(async (context) => await searchExtraPhoneNumbersForApi(context, caller, { country: "CA" }, { provider: inventory, claimTokenSecret }));
-      expect(offer).toMatchObject({ country: "CA", kind: "local", monthly_price: { amount_cents: 115, currency: "USD" }, billing_set_up: false });
+      expect(offer).toMatchObject({ country: "CA", kind: "local", monthly_price: { amount_cents: 115, currency: "USD" }, add_on_active: false });
       const claim = (accept: number | null, agentId = owner.agentId) => api(async (context) => await claimExtraPhoneNumberForApi(context, caller, { offer_token: offer!.offer_token, agent_id: agentId, accept_monthly_price_cents: accept }, { claimTokenSecret }));
       // The caller repeats the price, so a script can't buy at one it didn't read.
       expect(await failure(claim(null))).toBe("400 invalid_request");
@@ -373,7 +373,7 @@ describe.skipIf(!testUrl)("extra numbers against dedicated PostgreSQL roles", ()
       // Billing for extra numbers comes first.
       expect(await failure(claim(115))).toBe("409 conflict");
       const checkout = await api(async (context) => await createExtraNumbersCheckoutForApi(context, caller, { agent_id: owner.agentId }, { available: true }));
-      expect(checkout).toMatchObject({ status: "pending", billing_set_up: false });
+      expect(checkout).toMatchObject({ status: "pending", add_on_active: false });
       expect(await api(async (context) => await getExtraNumbersCheckoutForApi(context, caller, checkout.id))).toMatchObject({ id: checkout.id });
       await subscribe(tx, owner.businessId);
       expect(await failure(api(async (context) => await createExtraNumbersCheckoutForApi(context, caller, {}, { available: true })))).toBe("409 conflict");

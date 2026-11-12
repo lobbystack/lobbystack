@@ -2382,8 +2382,8 @@
     "/billing/extra-numbers/checkout": {
       "post": {
         "operationId": "createExtraNumbersCheckout",
-        "summary": "Set up billing for extra numbers",
-        "description": "Asks Polar for a page where the customer sets up the monthly billing that extra numbers need, apart from the plan and charged every month, on an annual plan too. Poll GET /billing/extra-numbers/checkout/{checkout_id} until status is ready, send them checkout_url, then poll until billing_set_up is true. Only a business that can buy a priced extra number and hasn't set this up gets one; billing already set up, a business that can't buy extra numbers, someone else's open checkout and a deployment that doesn't sell extra numbers are a 409. With a platform key the checkout is made out to the business's owner.",
+        "summary": "Get the extra phone numbers add-on",
+        "description": "Asks Polar for a page where the customer pays for the extra phone numbers add-on, which bills extra numbers every month apart from the plan, on an annual plan too. Poll GET /billing/extra-numbers/checkout/{checkout_id} until status is ready, send them checkout_url, then poll until add_on_active is true. Only a business that can buy a priced extra number and doesn't have the add-on gets one; an active add-on, a business that can't buy extra numbers, someone else's open checkout and a deployment that doesn't sell extra numbers are a 409. With a platform key the checkout is made out to the business's owner.",
         "tags": [
           "Billing"
         ],
@@ -2526,7 +2526,7 @@
     "/billing/extra-numbers/checkout/{checkout_id}": {
       "get": {
         "operationId": "getExtraNumbersCheckout",
-        "summary": "Check a billing setup for extra numbers",
+        "summary": "Check an add-on checkout",
         "tags": [
           "Billing"
         ],
@@ -3284,7 +3284,7 @@
       "post": {
         "operationId": "searchExtraPhoneNumbers",
         "summary": "Find extra numbers to buy",
-        "description": "Searches the carrier for numbers a business that has its first number can buy for another of its agents. Starter, Pro and Enterprise sell them, each at the carrier's monthly price for its country and kind with no markup, billed monthly apart from the plan; monthly_price says what each costs. A self-hosted server's cost nothing extra. A business without a paid plan, without a number yet, or a partner's business is a 409. Each offer expires after 5 minutes, and searches count against the same limit as POST /phone-numbers/search. Partner platform keys can't buy extra numbers.",
+        "description": "Searches the carrier for numbers a business that has its first number can buy for another of its agents. Starter, Pro and Enterprise sell them, each at the carrier's monthly price for its country and kind with no markup, billed monthly through the extra phone numbers add-on; monthly_price says what each costs. A self-hosted server's cost nothing extra. A business without a paid plan, without a number yet, or a partner's business is a 409. Each offer expires after 5 minutes, and searches count against the same limit as POST /phone-numbers/search. Partner platform keys can't buy extra numbers.",
         "tags": [
           "Phone numbers"
         ],
@@ -3424,7 +3424,7 @@
       "post": {
         "operationId": "createExtraPhoneNumberClaim",
         "summary": "Buy an extra number",
-        "description": "Buys the offered number for the agent and adds its monthly price to the business's bill, with the same checks as the dashboard. It costs money every month, so Idempotency-Key is required and accept_monthly_price_cents must repeat the offer's price, or null for a free offer: anything else is a 400. Until monthly billing for extra numbers is set up with POST /billing/extra-numbers/checkout, a priced offer is a 409. A price that changed since the search is a 409 too; search again. Returns the claim at once; poll GET /phone-numbers/claims/{claim_id} until its status is claimed or failed. Claims are limited to 3 an hour, 2 a day and 5 in 30 days, past which they are a 429.",
+        "description": "Buys the offered number for the agent and adds its monthly price to the business's bill, with the same checks as the dashboard. It costs money every month, so Idempotency-Key is required and accept_monthly_price_cents must repeat the offer's price, or null for a free offer: anything else is a 400. Without the extra phone numbers add-on, from POST /billing/extra-numbers/checkout, a priced offer is a 409. A price that changed since the search is a 409 too; search again. Returns the claim at once; poll GET /phone-numbers/claims/{claim_id} until its status is claimed or failed. Claims are limited to 3 an hour, 2 a day and 5 in 30 days, past which they are a 429.",
         "tags": [
           "Phone numbers"
         ],
@@ -19663,7 +19663,7 @@
                 "type": "null"
               }
             ],
-            "description": "When LobbyStack releases an active number: when DELETE asked for it, 30 days after a replacement went live, or 30 days after monthly billing for extra numbers ended. Null when no release is planned."
+            "description": "When LobbyStack releases an active number: when DELETE asked for it, 30 days after a replacement went live, or 30 days after the extra phone numbers add-on ended. Null when no release is planned."
           },
           "agent_id": {
             "anyOf": [
@@ -20098,9 +20098,9 @@
             ],
             "description": "What the number costs each month, the carrier's price for its country and kind with no markup. Null on a self-hosted server, where extra numbers cost nothing extra."
           },
-          "billing_set_up": {
+          "add_on_active": {
             "type": "boolean",
-            "description": "Whether the business's monthly billing for extra numbers is set up. A priced number can't be bought until it is: start it with POST /billing/extra-numbers/checkout."
+            "description": "Whether the business has the extra phone numbers add-on, which bills its extra numbers monthly. A priced number can't be bought without it: get it with POST /billing/extra-numbers/checkout."
           },
           "offer_token": {
             "type": "string",
@@ -20120,7 +20120,7 @@
           "region",
           "capabilities",
           "monthly_price",
-          "billing_set_up",
+          "add_on_active",
           "offer_token",
           "expires_at"
         ],
@@ -20166,7 +20166,7 @@
         "type": "object",
         "properties": {
           "agent_id": {
-            "description": "The agent whose phone page Polar sends the payer back to. Left out, they land on the agents list.",
+            "description": "The agent whose phone page Polar sends the payer back to. Left out, they land on the billing page.",
             "type": "string",
             "format": "uuid"
           }
@@ -20192,7 +20192,7 @@
             "description": "pending or processing: Polar is making the page. ready: checkout_url is set. error: making the page failed; start another checkout."
           },
           "checkout_url": {
-            "description": "The Polar page where the customer sets up monthly billing for extra numbers. Send it to them.",
+            "description": "The Polar page where the customer pays for the extra phone numbers add-on. Send it to them.",
             "type": [
               "string",
               "null"
@@ -20204,9 +20204,9 @@
               "null"
             ]
           },
-          "billing_set_up": {
+          "add_on_active": {
             "type": "boolean",
-            "description": "true once Polar confirmed the payment and extra numbers bill monthly."
+            "description": "true once Polar confirmed the payment and the add-on is active."
           },
           "created_at": {
             "type": "string",
@@ -20224,12 +20224,12 @@
           "status",
           "checkout_url",
           "error",
-          "billing_set_up",
+          "add_on_active",
           "created_at",
           "updated_at"
         ],
         "additionalProperties": false,
-        "description": "A Polar checkout for the monthly billing that extra numbers need."
+        "description": "A Polar checkout for the extra phone numbers add-on."
       },
       "Receptionist": {
         "type": "object",

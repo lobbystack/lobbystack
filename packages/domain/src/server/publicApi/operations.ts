@@ -702,7 +702,7 @@ export async function releasePhoneNumberForApi(context: DomainContext, caller: A
 
 /** The API's wording for the extra number refusals that differ from the dashboard's. */
 const extraNumberRefusalMessages: Record<string, string> = {
-  extra_numbers_subscription_required: "Set up monthly billing for extra numbers first: POST /billing/extra-numbers/checkout, then send the customer its checkout_url.",
+  extra_numbers_subscription_required: "This number needs the extra phone numbers add-on first: POST /billing/extra-numbers/checkout, then send the customer its checkout_url.",
   extra_numbers_unavailable: "This business can't buy extra numbers. A partner's business gets its numbers from its partner's tier.",
   business_number_required: "This business needs its first number before it buys another. Claim it with POST /phone-numbers/claims.",
   dedicated_number_requires_paid_plan: `Extra numbers need a Starter, Pro or Enterprise plan. ${checkout}`,
@@ -756,7 +756,7 @@ export async function searchExtraPhoneNumbersForApi(context: DomainContext, call
     region: offer.region ?? null,
     capabilities: { voice: offer.capabilities.voice, sms: offer.capabilities.sms },
     monthly_price: monthlyPrice,
-    billing_set_up: result.subscribed,
+    add_on_active: result.subscribed,
     offer_token: offer.claimToken,
     expires_at: offer.expiresAt.toISOString(),
   }));
@@ -795,10 +795,10 @@ export async function claimExtraPhoneNumberForApi(context: DomainContext, caller
 }
 
 function serializeExtraNumbersCheckout(checkout: ExtraNumbersCheckout): ApiExtraNumbersCheckout {
-  return { id: checkout.id, status: checkout.status, checkout_url: checkout.checkoutUrl, error: checkout.status === "error" ? checkout.error ?? "The checkout could not be created." : null, billing_set_up: checkout.subscribed, created_at: checkout.createdAt.toISOString(), updated_at: checkout.updatedAt.toISOString() };
+  return { id: checkout.id, status: checkout.status, checkout_url: checkout.checkoutUrl, error: checkout.status === "error" ? checkout.error ?? "The checkout could not be created." : null, add_on_active: checkout.subscribed, created_at: checkout.createdAt.toISOString(), updated_at: checkout.updatedAt.toISOString() };
 }
 
-/** Asks Polar for the page where the customer sets up monthly billing for extra numbers. Callers say whether this deployment sells it. */
+/** Asks Polar for the page where the customer pays for the extra phone numbers add-on. Callers say whether this deployment sells it. */
 export async function createExtraNumbersCheckoutForApi(context: DomainContext, caller: ApiCaller, input: ApiExtraNumbersCheckoutCreate, options: { available: boolean }): Promise<ApiExtraNumbersCheckout> {
   refusePartnerPlatformKey(caller, "extra_numbers");
   if (!options.available) throw conflict("This deployment doesn't sell extra numbers.");

@@ -258,7 +258,7 @@ export const apiPhoneNumberSchema = z.object({
   id,
   phone_number: e164,
   status: z.enum(["active", "releasing", "released"]).describe("active: calls and texts to the number reach the receptionist, even while a release is scheduled. releasing: LobbyStack is giving the number back to the carrier. released: the business no longer has it."),
-  release_scheduled_at: nullableTimestamp.describe("When LobbyStack releases an active number: when DELETE asked for it, 30 days after a replacement went live, or 30 days after monthly billing for extra numbers ended. Null when no release is planned."),
+  release_scheduled_at: nullableTimestamp.describe("When LobbyStack releases an active number: when DELETE asked for it, 30 days after a replacement went live, or 30 days after the extra phone numbers add-on ended. Null when no release is planned."),
   agent_id: z.uuid().nullable().describe("The agent whose calls the number takes."),
   monthly_price: z.object({ amount_cents: z.number().int(), currency: z.literal("USD") }).nullable().describe("What an extra number costs each month, billed monthly apart from the plan. Null for the number the plan includes and for numbers that cost nothing extra."),
   created_at: timestamp,
@@ -283,7 +283,7 @@ export const apiExtraPhoneNumberOfferSchema = z.object({
   region: z.string().nullable(),
   capabilities: z.object({ voice: z.boolean(), sms: z.boolean() }),
   monthly_price: z.object({ amount_cents: z.number().int(), currency: z.literal("USD") }).nullable().describe("What the number costs each month, the carrier's price for its country and kind with no markup. Null on a self-hosted server, where extra numbers cost nothing extra."),
-  billing_set_up: z.boolean().describe("Whether the business's monthly billing for extra numbers is set up. A priced number can't be bought until it is: start it with POST /billing/extra-numbers/checkout."),
+  add_on_active: z.boolean().describe("Whether the business has the extra phone numbers add-on, which bills its extra numbers monthly. A priced number can't be bought without it: get it with POST /billing/extra-numbers/checkout."),
   offer_token: z.string().describe("Buy the number with this before expires_at. Only this business and the account the key acts as can use it."),
   expires_at: timestamp,
 }).describe("A number the business can buy for one of its agents, on top of the one its plan includes.");
@@ -295,18 +295,18 @@ export const apiExtraPhoneNumberClaimCreateSchema = z.strictObject({
 });
 
 export const apiExtraNumbersCheckoutCreateSchema = z.strictObject({
-  agent_id: z.uuid().optional().describe("The agent whose phone page Polar sends the payer back to. Left out, they land on the agents list."),
+  agent_id: z.uuid().optional().describe("The agent whose phone page Polar sends the payer back to. Left out, they land on the billing page."),
 });
 
 export const apiExtraNumbersCheckoutSchema = z.object({
   id,
   status: z.enum(["pending", "processing", "ready", "error"]).describe("pending or processing: Polar is making the page. ready: checkout_url is set. error: making the page failed; start another checkout."),
-  checkout_url: z.string().nullable().describe("The Polar page where the customer sets up monthly billing for extra numbers. Send it to them."),
+  checkout_url: z.string().nullable().describe("The Polar page where the customer pays for the extra phone numbers add-on. Send it to them."),
   error: z.string().nullable(),
-  billing_set_up: z.boolean().describe("true once Polar confirmed the payment and extra numbers bill monthly."),
+  add_on_active: z.boolean().describe("true once Polar confirmed the payment and the add-on is active."),
   created_at: timestamp,
   updated_at: timestamp,
-}).describe("A Polar checkout for the monthly billing that extra numbers need.");
+}).describe("A Polar checkout for the extra phone numbers add-on.");
 
 export const apiPhoneNumberSearchSchema = z.strictObject({
   country: z.enum(phoneNumberCountries).optional().describe("Defaults to the country of the business's time zone, or US. When the account the key acts as verified a mobile number for this business, that number's country decides. A deployment offers US, CA and PR, and GB, AU and NZ once its carrier is set up for them."),
