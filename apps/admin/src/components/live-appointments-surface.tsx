@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslation } from "react-i18next";
 
@@ -10,7 +10,8 @@ import { MoveAppointmentButton } from "./move-appointment-dialog";
 import { AppointmentDetailsSheet } from "./appointment-details-sheet";
 import { AppointmentsCalendar, calendarTitle, type CalendarDraft } from "./appointments-calendar";
 import type { AppointmentDraft } from "./appointment-form";
-import { NewAppointmentPanel } from "./new-appointment-panel";
+import { NewAppointmentDialog } from "./new-appointment-dialog";
+import { NewAppointmentPopover, NewAppointmentSheet } from "./new-appointment-panel";
 import { PageSurface } from "./page-surface";
 import { TIME_OFF_ROLES, TimeOffDialog } from "./time-off-dialog";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
@@ -92,10 +93,14 @@ export function LiveAppointmentsSurface() {
   const now = useNow();
   const [anchor, setAnchor] = useState<string | null>(null);
   const [detailsId, setDetailsId] = useState<string | null>(null);
-  const [creating, setCreating] = useState<{ key: number; startsAt: string | null } | null>(null);
+  // A booking from a clicked slot. It outlives `slotOpen`, so the popover keeps its form while it closes.
+  const [slotBooking, setSlotBooking] = useState<{ key: number; startsAt: string } | null>(null);
+  const [slotOpen, setSlotOpen] = useState(false);
+  const [slotElement, setSlotElement] = useState<HTMLElement | null>(null);
+  const [draftElement, setDraftElement] = useState<HTMLDivElement | null>(null);
+  const [dialogBooking, setDialogBooking] = useState<{ key: number; startsAt: string | null } | null>(null);
   const [draft, setDraft] = useState<AppointmentDraft | null>(null);
   const [timeOffDialog, setTimeOffDialog] = useState<{ entry?: TimeOff } | null>(null);
-  const calendarArea = useRef<HTMLDivElement>(null);
   const businessId = business?.businessId;
   const canBook = Boolean(business && APPOINTMENT_ROLES.includes(business.role));
   const canManageTimeOff = Boolean(business && TIME_OFF_ROLES.includes(business.role));
@@ -139,10 +144,15 @@ export function LiveAppointmentsSurface() {
   // Looked up by id, so the panel follows live changes and closes once its appointment is gone.
   const details = detailsId ? calendarRows.find((appointment) => appointment.id === detailsId) ?? rows.find((appointment) => appointment.id === detailsId) : undefined;
 
-  const closePanel = useCallback(() => { setCreating(null); setDraft(null); }, []);
+  const closePanel = useCallback(() => { setSlotOpen(false); setDraft(null); }, []);
   const unavailable = useCallback((startsAt: string, endsAt: string) => overlapping(startsAt, endsAt, closures)?.name ?? null, [closures]);
-  const startBooking = (startsAt: string | null) => setCreating((current) => ({ key: current?.key ?? Date.now(), startsAt }));
-  const calendarDraft: CalendarDraft | null = creating && draft?.startsAt ? { startsAt: draft.startsAt, endsAt: new Date(Date.parse(draft.startsAt) + draft.durationMinutes * 60_000).toISOString(), colorKey: draft.serviceId ?? undefined } : null;
+  // Another slot while one is open moves that booking, keeping what's been filled in.
+  const startBooking = (startsAt: string, slot: HTMLElement) => {
+    setSlotElement(slot);
+    setSlotBooking((current) => ({ key: slotOpen && current ? current.key : Date.now(), startsAt }));
+    setSlotOpen(true);
+  };
+  const calendarDraft: CalendarDraft | null = slotOpen && draft?.startsAt ? { startsAt: draft.startsAt, endsAt: new Date(Date.parse(draft.startsAt) + draft.durationMinutes * 60_000).toISOString(), colorKey: draft.serviceId ?? undefined } : null;
 
   const viewTabs = <Tabs onValueChange={(value) => setParam("view", value as View, "calendar")} value={view}>
     <TabsList aria-label={t("appointments.views.label")}>
@@ -167,13 +177,12 @@ export function LiveAppointmentsSurface() {
   const calendarSkeleton = <AppointmentsCalendarSkeleton days={range === "day" ? 1 : 7} label={t("appointments.loading")} labels={{ today: t("appointments.calendarView.today"), title: isClient ? calendarTitle(range, day, days, i18n.language) : t("appointments.views.calendar") }} tabs={{ range: [t("appointments.calendarView.day"), t("appointments.calendarView.week"), t("appointments.calendarView.month")], view: viewLabels }} view={range} />;
   const actions = <div className="flex flex-wrap items-center gap-2">
     {canManageTimeOff ? <Button onClick={() => setTimeOffDialog({})} variant="outline"><CalendarOff data-icon="inline-start" />{t("appointments.timeOff.action")}</Button> : null}
-    {canBook ? <Button onClick={() => { setCreating(null); setDraft(null); startBooking(nextOpenSlot({ today, timeZone, now, hours, closures })); }}><Plus data-icon="inline-start" />{t("appointments.create.action")}</Button> : null}
+    {canBook ? <Button onClick={() => { closePanel(); setDialogBooking({ key: Date.now(), startsAt: nextOpenSlot({ today, timeZone, now, hours, closures }) }); }}><Plus data-icon="inline-start" />{t("appointments.create.action")}</Button> : null}
   </div>;
 
   return <PageSurface actions={actions} title={t("appointments.title")}><div className="flex w-full flex-col gap-6">
     {!business && !businesses.isLoading ? <p className="type-section-description">{t("appointments.chooseWorkspace")}</p> : whenTabs || employeeFilter || view === "list" ? <div className="flex flex-wrap items-center justify-end gap-2">{loading && view === "list" ? <><TabsListSkeleton labels={[t("appointments.when.upcoming"), t("appointments.when.past")]} /><TabsListSkeleton labels={viewLabels} /></> : <>{whenTabs}{employeeFilter}{view === "list" ? viewTabs : null}</>}</div> : null}
-    <div className="flex flex-col gap-4 md:flex-row md:items-start">
-      <div className="min-w-0 flex-1" ref={calendarArea}>
+    <div className="min-w-0">
         {view === "calendar" ? !isClient || calendarLoading ? calendarSkeleton : calendarAppointments.isError && !calendarAppointments.data ? <p className="rounded-xl border border-dashed p-10 text-center text-destructive">{t("appointments.unavailable")}</p> : <AppointmentsCalendar
           anchor={day}
           appointments={calendarByEmployee}
@@ -181,6 +190,7 @@ export function LiveAppointmentsSurface() {
           contactName={contactName}
           days={days}
           draft={calendarDraft}
+          draftRef={setDraftElement}
           hours={hours}
           now={now}
           onAnchorChange={setAnchor}
@@ -200,9 +210,10 @@ export function LiveAppointmentsSurface() {
         <DropdownMenuItem onClick={openCancel} variant="destructive"><CalendarX2 />{t("appointments.cancel.action")}</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu></div>} />} />}</TableCell></TableRow>; }) : <TableRow><TableCell className="h-24 text-center whitespace-normal text-muted-foreground" colSpan={columns}>{t(when === "past" ? "appointments.when.pastEmpty" : "appointments.empty")}</TableCell></TableRow>}</TableBody></Table></TableCard></>}
-      </div>
-      {creating && businessId ? <NewAppointmentPanel businessId={businessId} keepOpenWithin={calendarArea} key={creating.key} onClose={closePanel} onDraftChange={setDraft} phone={isMobile} startsAt={creating.startsAt} timeZone={timeZone} unavailable={unavailable} /> : null}
     </div>
+    {businessId && isMobile && slotOpen && slotBooking ? <NewAppointmentSheet businessId={businessId} key={slotBooking.key} onClose={closePanel} onDraftChange={setDraft} startsAt={slotBooking.startsAt} timeZone={timeZone} unavailable={unavailable} /> : null}
+    {businessId && !isMobile ? <NewAppointmentPopover anchor={draftElement ?? slotElement} businessId={businessId} formKey={slotBooking?.key} onClose={closePanel} onDraftChange={setDraft} open={slotOpen && Boolean(slotBooking)} returnFocus={slotElement} startsAt={slotBooking?.startsAt ?? null} timeZone={timeZone} unavailable={unavailable} /> : null}
+    {dialogBooking && businessId ? <NewAppointmentDialog businessId={businessId} key={dialogBooking.key} onOpenChange={(open) => { if (!open) setDialogBooking(null); }} startsAt={dialogBooking.startsAt} timeZone={timeZone} unavailable={unavailable} /> : null}
     <AppointmentDetailsSheet appointment={details} contactName={details ? contactName(details) : ""} onOpenChange={(open) => { if (!open) setDetailsId(null); }} />
     {timeOffDialog && businessId ? <TimeOffDialog businessId={businessId} day={day < today ? today : day} entry={timeOffDialog.entry} onOpenChange={(open) => { if (!open) setTimeOffDialog(null); }} timeZone={timeZone} /> : null}
   </div></PageSurface>;
