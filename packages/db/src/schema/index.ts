@@ -64,6 +64,8 @@ export const users = pgTable(
     platformRole: varchar("platform_role", { length: 32 }).default("operator").notNull(),
     activeBusinessId: uuid("active_business_id"),
     preferredLocale: varchar("preferred_locale", { length: 8 }).default("en").notNull(),
+    /** When the person unsubscribed from the host's marketing emails; null while they get them. */
+    marketingEmailsUnsubscribedAt: timestamp("marketing_emails_unsubscribed_at", { withTimezone: true }),
     ...legacyId,
     ...timestamps,
   },
