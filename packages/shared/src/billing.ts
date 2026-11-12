@@ -247,7 +247,10 @@ export const billingMeterEventNames = {
   partnerPoolVoiceOverage: "billing.partner_pool_voice_overage",
   /** Website chats a partner's businesses used past its pool, priced at its tier's chat rate. The quantity is that price, in US cents. */
   partnerPoolChatOverage: "billing.partner_pool_chat_overage",
-  /** A month of a number a business on Starter or Pro holds past its plan's included one. The quantity is its price from extraNumberPrices, in US cents. */
+  /**
+   * A month of a number a business on Starter, Pro or Enterprise holds past its plan's included one. The quantity is its
+   * price from extraNumberPrices, in US cents. Only the monthly extra numbers product carries a metered price for it.
+   */
   extraNumbers: "billing.extra_numbers",
 } as const;
 
@@ -255,33 +258,66 @@ export const billingMeterEventNames = {
 export const extraNumberCountries = ["US", "CA", "PR", "GB", "AU", "NZ"] as const;
 export type ExtraNumberCountry = (typeof extraNumberCountries)[number];
 
+/** The kinds of number the carrier sells, as a number search names them. */
+export type ExtraNumberKind = "local" | "mobile" | "toll_free";
+
 /**
- * What an extra number costs each month on Starter or Pro, in US cents: what
- * the carrier charges the host for the kind of number we sell in that country,
- * with no markup. The operator sees it before they buy, and it stays the
- * number's price, so a subscription bills a stable amount. When a carrier
- * changes its price, update it here; numbers already bought keep theirs.
+ * What an extra number costs each month on Starter, Pro or Enterprise, in US
+ * cents, by country and kind of number: Twilio's monthly price for it, from its
+ * Pricing API, with no markup. The operator sees it before they buy, and it
+ * stays the number's price, so the add-on bills a stable amount. When Twilio
+ * changes a price, update it here; numbers already bought keep theirs. A kind
+ * missing from a country isn't sold there as an extra number.
  */
 export const extraNumberPrices = {
-  US: { kind: "local", monthlyCents: 115 },
-  CA: { kind: "local", monthlyCents: 115 },
-  PR: { kind: "local", monthlyCents: 115 },
-  GB: { kind: "mobile", monthlyCents: 115 },
-  AU: { kind: "mobile", monthlyCents: 650 },
-  NZ: { kind: "local", monthlyCents: 315 },
-} as const satisfies Record<ExtraNumberCountry, { kind: "local" | "mobile"; monthlyCents: number }>;
+  US: { local: 115, toll_free: 215 },
+  CA: { local: 115, toll_free: 215 },
+  PR: { local: 325 },
+  GB: { local: 115, mobile: 250, toll_free: 270 },
+  AU: { local: 300, mobile: 825, toll_free: 2_000 },
+  NZ: { local: 315, toll_free: 4_000 },
+} as const satisfies Record<ExtraNumberCountry, Partial<Record<ExtraNumberKind, number>>>;
 
 export function isExtraNumberCountry(value: string | null | undefined): value is ExtraNumberCountry {
   return (extraNumberCountries as readonly (string | null | undefined)[]).includes(value);
 }
 
 /**
- * Whether a direct business's plan sells extra numbers, which Starter and Pro
- * do. A plan with no number limit, such as Enterprise or self-hosting, gets
- * them free, and Free gets none.
+ * The kind of number a search in the country returns: mobile in GB and AU,
+ * whose registrations cover mobile numbers only, local in NZ, and otherwise
+ * the kind asked for, local by default.
+ */
+export function soldNumberKind(countryCode: string, requested?: ExtraNumberKind | undefined): ExtraNumberKind {
+  if (countryCode === "GB" || countryCode === "AU") return "mobile";
+  if (countryCode === "NZ") return "local";
+  return requested ?? "local";
+}
+
+/** An extra number's monthly price in US cents, or undefined when that kind isn't sold in the country. */
+export function extraNumberMonthlyCents(countryCode: string, kind: ExtraNumberKind): number | undefined {
+  if (!isExtraNumberCountry(countryCode)) return undefined;
+  const prices: Partial<Record<ExtraNumberKind, number>> = extraNumberPrices[countryCode];
+  return prices[kind];
+}
+
+/**
+ * Whether a direct business's plan sells extra numbers, which Starter, Pro
+ * and Enterprise do, all at the same price. A self-hosted server bills no
+ * plan, so its numbers are free, and Free gets none.
  */
 export function planSellsExtraNumbers(plan: string | null | undefined): boolean {
-  return plan === "starter" || plan === "pro";
+  return plan === "starter" || plan === "pro" || plan === "enterprise";
+}
+
+/**
+ * The Polar product that bills extra numbers: a monthly product whose only
+ * price is metered on billing.extra_numbers. A business subscribes to it
+ * beside its plan, so extra numbers bill each month on an annual plan too.
+ * Undefined when the deployment doesn't sell extra numbers through Polar.
+ */
+export function extraNumbersProductId(env: Record<string, string | undefined>): string | undefined {
+  const id = env.POLAR_EXTRA_NUMBERS_PRODUCT_ID?.trim();
+  return id ? id : undefined;
 }
 
 export const billingPlanCatalog = {
@@ -368,7 +404,8 @@ export const billingPlanCatalog = {
     alertSmsSegmentsIncluded: null,
     outboundCallAttemptsIncluded: null,
     chatAiTokensIncluded: null,
-    includedBusinessNumbers: null,
+    // One number is included; more cost what they do on Starter and Pro.
+    includedBusinessNumbers: 1,
     includedAgents: null,
     overagesBillable: true,
     voiceOverageRatePerMinuteCents: null,

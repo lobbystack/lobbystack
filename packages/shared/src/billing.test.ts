@@ -19,7 +19,28 @@ import {
   partnerTierCatalog,
   partnerTierInForce,
   planEntitlement,
+  extraNumberMonthlyCents,
+  extraNumbersProductId,
+  planSellsExtraNumbers,
+  soldNumberKind,
 } from "./billing";
+
+describe("extra numbers", () => {
+  it("prices each country's numbers by kind at Twilio's monthly price", () => {
+    expect(["US", "CA", "PR", "GB", "AU", "NZ"].map((country) => [country, extraNumberMonthlyCents(country, soldNumberKind(country))])).toEqual([["US", 115], ["CA", 115], ["PR", 325], ["GB", 250], ["AU", 825], ["NZ", 315]]);
+    expect(extraNumberMonthlyCents("US", soldNumberKind("US", "toll_free"))).toBe(215);
+    expect(extraNumberMonthlyCents("PR", "toll_free")).toBeUndefined();
+    expect(extraNumberMonthlyCents("FR", "local")).toBeUndefined();
+    // GB and AU sell mobile numbers whatever the search asks for, and NZ local ones.
+    expect([soldNumberKind("GB", "local"), soldNumberKind("AU", "toll_free"), soldNumberKind("NZ", "toll_free")]).toEqual(["mobile", "mobile", "local"]);
+  });
+
+  it("sells them on Starter, Pro and Enterprise, through the add-on product when it's set", () => {
+    expect(["free_cloud", "starter", "pro", "enterprise", "self_host"].map(planSellsExtraNumbers)).toEqual([false, true, true, true, false]);
+    expect(extraNumbersProductId({ POLAR_EXTRA_NUMBERS_PRODUCT_ID: " prod_1 " })).toBe("prod_1");
+    expect(extraNumbersProductId({})).toBeUndefined();
+  });
+});
 
 describe("direct plan entitlements", () => {
   it("holds a live entitlement only on a paid plan whose subscription is live", () => {
@@ -35,7 +56,7 @@ describe("direct plan entitlements", () => {
     expect(planEntitlement("free_cloud")).toMatchObject({ source: "plan", allowance: { voiceSeconds: 1_800, chats: 5, alertSms: 10, outboundAttempts: 2 }, overage: { enabled: false }, includedNumbers: 0 });
     expect(planEntitlement("starter", { live: true, capMinor: 1_000 })).toMatchObject({ live: true, overage: { enabled: true, currency: "USD", rates: { voiceMinute: 20, chat: 0, alertSms: 2, outboundAttempt: 2 }, capMinor: 1_000 }, includedNumbers: 1 });
     expect(planEntitlement("pro").overage.rates).toEqual({ voiceMinute: 18, chat: 0, alertSms: 2, outboundAttempt: 2 });
-    expect(planEntitlement("enterprise")).toMatchObject({ source: "plan", allowance: { voiceSeconds: null, chats: null, alertSms: null, outboundAttempts: null }, overage: { enabled: true }, includedNumbers: null });
+    expect(planEntitlement("enterprise")).toMatchObject({ source: "plan", allowance: { voiceSeconds: null, chats: null, alertSms: null, outboundAttempts: null }, overage: { enabled: true }, includedNumbers: 1 });
     expect(planEntitlement("self_host")).toMatchObject({ source: "unlimited", overage: { enabled: false }, includedNumbers: null, poolPartnerId: null });
   });
 
