@@ -4,13 +4,14 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import AppearancePage from "../../app/(dashboard)/account/(level)/appearance/page";
-const mocks = vi.hoisted(() => ({ toast: vi.fn(), success: vi.fn(), timeFormatReady: true }));
+const mocks = vi.hoisted(() => ({ toast: vi.fn(), success: vi.fn(), setTheme: vi.fn(), timeFormatReady: true }));
 vi.mock("sonner", () => ({ toast: { error: mocks.toast, success: mocks.success } }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 vi.mock("./appearance-provider", () => ({ useAppearancePreference: () => ({ ready: mocks.timeFormatReady, timeFormatPreference: "24h", setTimeFormatPreference: vi.fn() }) }));
+vi.mock("./theme-provider", () => ({ useTheme: () => ({ resolvedTheme: "dark", setTheme: mocks.setTheme }) }));
 vi.mock("./replacement-locale-provider", () => ({ useLocalePreference: () => ({ locale: "en", setLocale: vi.fn(), isSaving: false }) }));
 const clients: QueryClient[] = [];
-afterEach(() => { mocks.timeFormatReady = true; cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals(); mocks.toast.mockReset(); mocks.success.mockReset(); });
+afterEach(() => { mocks.timeFormatReady = true; cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals(); mocks.toast.mockReset(); mocks.success.mockReset(); mocks.setTheme.mockReset(); });
 describe("appearance workspace mutation isolation", () => {
   it.each([true, false])("keeps the new workspace unchanged when the old request succeeds=%s", async succeeds => {
     const client = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity, retry: false } } }); clients.push(client);
@@ -55,8 +56,8 @@ describe("appearance loading states", () => {
 
   it.each([["the workspace", false], ["the saved preference", true]])("shows every row as a placeholder, controls and text included, while %s load", (_, workspace) => {
     renderPage({ workspace, preferences: false });
-    // A title, a description and a control for each of the three rows.
-    expect(skeletons()).toBe(9);
+    // A title, a description and a control for each of the four rows.
+    expect(skeletons()).toBe(12);
     expect(screen.queryByRole("switch")).toBeNull();
     expect(screen.queryByRole("combobox")).toBeNull();
     for (const row of ["language", "timeFormat", "telemetry"]) {
@@ -68,7 +69,7 @@ describe("appearance loading states", () => {
   it("keeps all the rows placeholders until the browser's saved time format has been read", () => {
     mocks.timeFormatReady = false;
     renderPage({ workspace: true, preferences: true });
-    expect(skeletons()).toBe(9);
+    expect(skeletons()).toBe(12);
     expect(screen.queryByRole("switch")).toBeNull();
     expect(screen.queryByRole("combobox")).toBeNull();
   });
@@ -80,5 +81,18 @@ describe("appearance loading states", () => {
     expect(screen.getByRole("combobox", { name: "common:language.ariaLabel" })).toBeTruthy();
     expect(screen.getByRole("combobox", { name: "appearance.timeFormat.label" })).toBeTruthy();
     expect(screen.getByRole("switch", { name: "appearance.telemetry.label" }).getAttribute("aria-checked")).toBe("false");
+  });
+
+  it("lets the person pick the dashboard theme", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity, retry: false } } }); clients.push(client);
+    client.setQueryData(["businesses"], { businesses: [{ businessId: "business-a", active: true }] });
+    client.setQueryData(["appearance-preferences", "business-a"], { telemetryEnabled: true, canManageTenant: true });
+    render(<QueryClientProvider client={client}><AppearancePage /></QueryClientProvider>);
+    const trigger = screen.getByRole("combobox", { name: "appearance.theme.label" });
+    expect(trigger.textContent).toContain("appearance.theme.dark");
+    await userEvent.click(trigger);
+    await userEvent.click(await screen.findByRole("option", { name: "appearance.theme.light" }));
+    expect(mocks.setTheme).toHaveBeenCalledExactlyOnceWith("light");
+    expect(mocks.success).toHaveBeenCalledWith("appearance.saved");
   });
 });
