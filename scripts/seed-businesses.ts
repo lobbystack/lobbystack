@@ -259,7 +259,7 @@ const businesses: BusinessSeed[] = [
     ],
   },
   {
-    key: "nail-salon",
+    key: "nails",
     name: "Blush & Polish Nail Studio",
     slug: "blush-and-polish-nail-studio",
     type: "nail salon",
@@ -387,7 +387,7 @@ const businesses: BusinessSeed[] = [
     ],
   },
   {
-    key: "dental-office",
+    key: "dental",
     name: "Brightside Family Dental",
     slug: "brightside-family-dental",
     type: "dental office",
