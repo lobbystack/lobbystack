@@ -917,7 +917,7 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       let checkout!: ProviderCheckout;
       try {
         const appUrl = (process.env.APP_BASE_URL ?? "http://localhost:3000").replace(/\/$/, "");
-        const pageUrl = request.agentId ? `${appUrl}/agents/${encodeURIComponent(request.agentId)}/channels/phone` : `${appUrl}/agents`;
+        const pageUrl = request.agentId ? `${appUrl}/agents/${encodeURIComponent(request.agentId)}/channels/phone` : `${appUrl}/workspace/billing`;
         checkout = await dependencies.polar.createCheckout({
           productId,
           customerEmail: request.customerEmail,

@@ -348,6 +348,20 @@
       },
       "continue": "Nastavite podešavanje",
       "dashboard": "Idi na kontrolnu tablu"
+    },
+    "addOns": {
+      "title": "Dodaci",
+      "active": "Aktivan",
+      "get": "Uzmi dodatak",
+      "checkoutFailed": "Plaćanje nije moglo da se otvori. Pokušajte ponovo.",
+      "extraNumbers": {
+        "title": "Dodatni brojevi",
+        "description": "Dajte agentu sopstveni broj.",
+        "price": "Od {{price}} po broju /mesečno",
+        "count_one": "{{count}} dodatni broj",
+        "count_few": "{{count}} dodatna broja",
+        "count_other": "{{count}} dodatnih brojeva"
+      }
     }
   },
   "subscription": {
@@ -395,7 +409,7 @@
       "title": "Ovaj broj će biti oslobođen {{date}}",
       "description": "Free paket ne uključuje namenski poslovni broj. Pređite na Starter ili Pro pre tog datuma da biste zadržali {{number}}.",
       "upgradeCta": "Nadogradite i zadržite broj",
-      "extraNumbersEnded": "Mesečna naplata dodatnih brojeva je završena. Podesite je ponovo pre tog datuma da biste zadržali {{number}}."
+      "extraNumbersEnded": "Dodatak Dodatni brojevi je istekao. Uzmite ga ponovo pre tog datuma da biste zadržali {{number}}."
     },
     "freeTrial": {
       "description": "Još nemate broj. Isprobajte ga besplatno 14 dana.",
@@ -480,16 +494,11 @@
       "select": "Kupi",
       "monthly": "{{price}} mesečno",
       "confirmTitle": "Kupiti {{number}}?",
-      "confirmDescription": "Košta {{price}} mesečno, naplaćuje se svakog meseca odvojeno od vašeg paketa.",
+      "confirmDescription": "Košta {{price}} mesečno.",
       "confirm": "Kupi broj",
       "cancel": "Otkaži",
       "priceChanged": "Cena se promenila. Pretražite ponovo da biste je videli.",
-      "unavailable": "Ovaj radni prostor ne može da kupi još brojeva.",
-      "billingDescription": "Dodatni brojevi se naplaćuju mesečno, odvojeno od vašeg paketa.",
-      "subscribe": "Podesi mesečnu naplatu",
-      "confirmingPayment": "Potvrđujemo vašu uplatu.",
-      "subscribed": "Mesečna naplata je podešena. Sada možete kupiti broj.",
-      "checkoutFailed": "Plaćanje nije moglo da se otvori. Pokušajte ponovo."
+      "unavailable": "Ovaj radni prostor ne može da kupi još brojeva."
     }
   },
   "appearance": {

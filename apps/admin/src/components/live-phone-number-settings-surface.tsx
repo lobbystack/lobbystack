@@ -22,7 +22,7 @@ import { requestJson } from "@/lib/request-json";
 import type { BillingUsageViewModel, PhoneNumberViewModel } from "@/lib/page-view-models";
 import { formatDateTime, intlLocale } from "@/lib/locale";
 import { extraNumberMonthlyCents, soldNumberKind } from "@lobbystack/shared";
-import { ExtraNumbersCheckoutButton, useExtraNumbersCheckoutReturn } from "./extra-numbers-checkout";
+import { useExtraNumbersCheckoutReturn, useStartExtraNumbersCheckout } from "./extra-numbers-checkout";
 
 type NumbersResponse = {
   phoneNumbers: PhoneNumberViewModel[];
@@ -115,7 +115,9 @@ export function LivePhoneNumberSettingsSurface({ agentId }: { agentId?: string }
   const extraPriced = Boolean(buysExtra && extraNumbers?.priced);
   // A priced extra number bills through its own monthly subscription, which a Polar checkout starts before the first one.
   const needsExtraNumbersBilling = Boolean(buysExtra && extraNumbers?.available && extraNumbers.priced && !extraNumbers.subscribed);
-  const confirmingExtraNumbersBilling = useExtraNumbersCheckoutReturn(businessId);
+  const addOnCheckout = useStartExtraNumbersCheckout(businessId, agentId);
+  // Back from the add-on's checkout, the picker opens once Polar confirms the payment.
+  const confirmingExtraNumbersBilling = useExtraNumbersCheckoutReturn(businessId, () => setIsDialogOpen(true));
   const replacedNumberId = primaryPhoneNumber?.id;
   const numberApi = useMemo(() => phoneNumberChooserApi(isReplacement, { phoneNumberId: replacedNumberId, extraForAgentId: buysExtra ? agentId : undefined }), [agentId, buysExtra, isReplacement, replacedNumberId]);
   const [confirming, setConfirming] = useState<AvailableNumberSummary | null>(null);
@@ -155,7 +157,7 @@ export function LivePhoneNumberSettingsSurface({ agentId }: { agentId?: string }
   // A trial number's release date isn't the owner's deadline: the trial banner says when it ends,
   // and keeping or changing the number takes a paid plan.
   const isTrialNumber = primaryPhoneNumber?.reclaimReason === "trial";
-  // An extra number whose monthly billing ended goes unless the operator sets it up again.
+  // An extra number whose add-on ended goes unless the operator gets the add-on again.
   const extraNumbersEnded = primaryPhoneNumber?.reclaimReason === "extra_numbers_ended";
   const reclaimScheduledAt = isTrialNumber ? null :
     (primaryPhoneNumber?.reclaimScheduledAt ? new Date(primaryPhoneNumber.reclaimScheduledAt).getTime() : null) ??
@@ -182,7 +184,7 @@ export function LivePhoneNumberSettingsSurface({ agentId }: { agentId?: string }
             </ItemContent>
             {businesses.isLoading || canManageTenant ? (
               <ItemActions>
-                <SmallButtonSkeleton label={[t("phoneNumber.actions.getNumber"), t("phoneNumber.extra.buy"), t("phoneNumber.extra.subscribe"), t("phoneNumber.actions.requestChange"), t("phoneNumber.freeTrial.cta"), t("phoneNumber.requiresPaidPlan.upgradeCta")].reduce((widest, label) => label.length > widest.length ? label : widest)} />
+                <SmallButtonSkeleton label={[t("phoneNumber.actions.getNumber"), t("phoneNumber.extra.buy"), t("phoneNumber.actions.requestChange"), t("phoneNumber.freeTrial.cta"), t("phoneNumber.requiresPaidPlan.upgradeCta")].reduce((widest, label) => label.length > widest.length ? label : widest)} />
               </ItemActions>
             ) : null}
           </Item>
@@ -215,7 +217,7 @@ export function LivePhoneNumberSettingsSurface({ agentId }: { agentId?: string }
               })}
             </p>
             {canManageTenant && extraNumbersEnded ? (
-              extraNumbers?.checkoutAvailable && !confirmingExtraNumbersBilling ? <div className="mt-3"><ExtraNumbersCheckoutButton agentId={agentId} businessId={businessId} label={t("phoneNumber.extra.subscribe")} /></div> : null
+              extraNumbers?.checkoutAvailable ? <Button className="mt-3" disabled={addOnCheckout.pending || confirmingExtraNumbersBilling} onClick={addOnCheckout.start} size="sm" variant="outline">{t("billing.addOns.get")}</Button> : null
             ) : canManageTenant ? (
               <Button
                 className="mt-3"
@@ -243,8 +245,6 @@ export function LivePhoneNumberSettingsSurface({ agentId }: { agentId?: string }
                 </>
               ) : buysExtra && (extraNumbers?.refusal === "extra_numbers_unavailable" || (needsExtraNumbersBilling && !extraNumbers?.checkoutAvailable)) ? (
                 <p className="type-body-muted">{t("phoneNumber.extra.unavailable")}</p>
-              ) : needsExtraNumbersBilling ? (
-                <p className="type-body-muted">{t(confirmingExtraNumbersBilling ? "phoneNumber.extra.confirmingPayment" : "phoneNumber.extra.billingDescription")}</p>
               ) : (
                 <p className="type-body-muted">
                   {offersFreeTrial || partnerNumbers?.trial
@@ -260,7 +260,7 @@ export function LivePhoneNumberSettingsSurface({ agentId }: { agentId?: string }
             {canManageTenant ? (
               <ItemActions>
                 {needsExtraNumbersBilling ? (
-                  extraNumbers?.checkoutAvailable && !confirmingExtraNumbersBilling ? <ExtraNumbersCheckoutButton agentId={agentId} businessId={businessId} label={t("phoneNumber.extra.subscribe")} /> : null
+                  extraNumbers?.checkoutAvailable ? <Button disabled={addOnCheckout.pending || confirmingExtraNumbersBilling} onClick={addOnCheckout.start} size="sm" type="button" variant="outline">{t("phoneNumber.extra.buy")}</Button> : null
                 ) : offersFreeTrial ? (
                   <Button onClick={() => void openNumberStep(businessId)} size="sm" type="button">
                     {t("phoneNumber.freeTrial.cta")}
