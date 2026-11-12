@@ -1,12 +1,14 @@
-// Seeds demo businesses, one per industry, into an account that already signed up:
-// a clinic, a restaurant and a barbershop, each with hours, services, staff, contacts,
-// appointments (past and upcoming), knowledge, rules and receptionist settings.
+// Seeds a demo business into an account that already signed up. Each one has hours, services,
+// staff, contacts, appointments (past and upcoming), knowledge, rules and receptionist settings.
 //
-//   pnpm seed:businesses [--email you@example.com] [--only clinic,restaurant,barbershop]
+//   pnpm seed:business <business...> [--email you@example.com]
+//   pnpm seed:business all
 //
-// Without --email it uses the only account in the database. A business whose slug exists
-// is skipped, so a rerun adds what is missing and never duplicates. Appointments are written
-// straight to the table, so seeding queues no texts, emails or calendar syncs.
+// A business is named by its key, its slug or its name, or any unique part of them:
+//   pnpm seed:business clinic "nail salon" dental
+// Run without arguments to list them. Without --email it uses the only account in the database.
+// A business the account already owns is skipped, so a rerun never duplicates. Appointments are
+// written straight to the table, so seeding queues no texts, emails or calendar syncs.
 import { resolve } from "node:path";
 import { parseArgs } from "node:util";
 
@@ -256,6 +258,198 @@ const businesses: BusinessSeed[] = [
       { title: "Late customers", content: "If a caller says they are running late, say 10 minutes is the limit. After that we may move them to the walk-in line." },
     ],
   },
+  {
+    key: "nail-salon",
+    name: "Blush & Polish Nail Studio",
+    slug: "blush-and-polish-nail-studio",
+    type: "nail salon",
+    timezone: "America/Los_Angeles",
+    currency: "USD",
+    locale: "en",
+    areaCode: "310",
+    hours: [...windows([MON, TUE, WED, THU, FRI, SAT], [["10:00", "14:00"], ["14:30", "19:00"]]), ...windows([SUN], [["11:00", "17:00"]])],
+    closure: { month: 1, day: 1, reason: "New Year's Day" },
+    summary:
+      "Blush & Polish Nail Studio is a clean, relaxed nail salon in Santa Monica offering manicures, pedicures, gel, dip powder and acrylic sets, and custom nail art. Four nail technicians work by appointment, and walk-ins are welcome when a technician is free.",
+    greeting: "Thanks for calling Blush & Polish Nail Studio! I can book a manicure or pedicure, check prices, or tell you about walk-ins. What can I do for you?",
+    tone: "Cheerful, warm and a little playful. Keep it short and easy to follow.",
+    bookingPolicy: "Ask which service the caller wants and whether they need gel or acrylic removal, which adds 20 minutes. Book in 15-minute steps. Ask them to arrive 5 minutes early. After 15 minutes late, the visit may have to be shortened or rebooked.",
+    services: [
+      { name: "Classic Manicure", slug: "classic-manicure", minutes: 30, description: "Shaping, cuticle care, a hand massage and regular polish.", price: { type: "fixed", minor: 2800 } },
+      { name: "Gel Manicure", slug: "gel-manicure", minutes: 45, description: "A manicure finished with long-wear gel color.", price: { type: "fixed", minor: 4500 } },
+      { name: "Classic Pedicure", slug: "classic-pedicure", minutes: 45, description: "A foot soak, shaping, cuticle care, a callus smoothing and regular polish.", price: { type: "fixed", minor: 4200 } },
+      { name: "Spa Pedicure", slug: "spa-pedicure", minutes: 60, description: "A classic pedicure with a scrub, a mask, hot towels and a longer massage.", price: { type: "fixed", minor: 6000 } },
+      { name: "Acrylic Full Set", slug: "acrylic-full-set", minutes: 75, description: "A full set of acrylic nails. The price depends on length and shape.", price: { type: "range", minor: 6500, maxMinor: 8500 } },
+      { name: "Acrylic Fill", slug: "acrylic-fill", minutes: 60, description: "A fill for growth on an acrylic set, within three weeks of the last visit.", price: { type: "fixed", minor: 5000 } },
+      { name: "Dip Powder Manicure", slug: "dip-powder-manicure", minutes: 60, description: "A lightweight, long-wear dip powder color on natural nails.", price: { type: "fixed", minor: 5500 } },
+      { name: "Nail Art Add-On", slug: "nail-art-add-on", minutes: 15, description: "Designs, chrome, French tips or charms added to any service. The price depends on the design.", price: { type: "range", minor: 1000, maxMinor: 4000 } },
+      { name: "Gel or Acrylic Removal", slug: "gel-acrylic-removal", minutes: 20, description: "A gentle removal of gel, dip or acrylic, with a nail treatment.", price: { type: "fixed", minor: 1500 } },
+      { name: "Mani + Pedi Combo", slug: "mani-pedi-combo", minutes: 90, description: "A gel manicure and a classic pedicure together.", price: { type: "fixed", minor: 8500 } },
+    ],
+    staff: [
+      { name: "Linh Tran", services: ["Classic Manicure", "Gel Manicure", "Classic Pedicure", "Spa Pedicure", "Acrylic Full Set", "Acrylic Fill", "Dip Powder Manicure", "Nail Art Add-On", "Gel or Acrylic Removal", "Mani + Pedi Combo"], hours: [...windows([MON, TUE, WED, THU, FRI, SAT], [["10:00", "14:00"], ["14:30", "19:00"]])] },
+      { name: "Maya Patel", services: ["Classic Manicure", "Gel Manicure", "Dip Powder Manicure", "Acrylic Full Set", "Acrylic Fill", "Nail Art Add-On", "Gel or Acrylic Removal"], hours: [...windows([TUE, WED, THU, FRI], [["10:00", "14:00"], ["14:30", "19:00"]]), ...windows([SUN], [["11:00", "17:00"]])], timeOffInDays: [8, 10, "Vacation"] },
+      { name: "Chloe Nguyen", services: ["Classic Pedicure", "Spa Pedicure", "Classic Manicure", "Gel Manicure", "Mani + Pedi Combo", "Gel or Acrylic Removal"], hours: [...windows([MON, WED, THU, SAT], [["10:00", "14:00"], ["14:30", "19:00"]]), ...windows([SUN], [["11:00", "17:00"]])] },
+      { name: "Jasmine Ortiz", services: ["Acrylic Full Set", "Acrylic Fill", "Dip Powder Manicure", "Gel Manicure", "Nail Art Add-On", "Gel or Acrylic Removal"], hours: [...windows([TUE, THU, FRI, SAT], [["11:00", "14:00"], ["14:30", "19:00"]])] },
+    ],
+    contacts: [
+      { name: "Ashley Monroe", email: "ashley.monroe@example.com" }, { name: "Brianna Cole" }, { name: "Camila Reyes", email: "camila.reyes@example.com" },
+      { name: "Destiny Powell" }, { name: "Emily Zhang", email: "emily.zhang@example.com" }, { name: "Fatima Rahman" },
+      { name: "Gianna Russo", email: "gianna.russo@example.com" }, { name: "Hailey Brooks" }, { name: "Isabel Cortez", email: "isabel.cortez@example.com" },
+      { name: "Jade Kimura" }, { name: "Kayla Thompson", email: "kayla.thompson@example.com" }, { name: "Lauren Whitfield" },
+      { name: "Mia Santos", email: "mia.santos@example.com" }, { name: "Naomi Fischer" }, { name: "Olivia Hart", email: "olivia.hart@example.com" },
+      { name: "Priya Desai" }, { name: "Quinn Delgado", email: "quinn.delgado@example.com" }, { name: "Rachel Stern" },
+    ],
+    notes: ["Same color as last time.", "Bringing a photo for the nail art.", "Needs her old gel removed first.", "Bridal party of four, same day.", "Prefers Linh.", "Short square shape, no length.", "Sensitive cuticles."],
+    internalNotes: ["Regular, every three weeks.", "Allergic to a brand of acrylic monomer, use the hypoallergenic one.", "Always tips well, loves chrome.", "Birthday this month."],
+    perStaffPerDay: [4, 7],
+    faqs: [
+      { title: "Do you take walk-ins?", content: "Yes, whenever a technician is free. Booked guests go first, so waits are longer on Fridays and Saturdays. Call ahead and we will tell you how busy it is.", tags: ["walk-ins"] },
+      { title: "How much are your services?", content: "A classic manicure is $28, a gel manicure is $45, a classic pedicure is $42 and a spa pedicure is $60. An acrylic full set starts at $65. The mani and pedi combo is $85. Nail art starts at $10.", tags: ["pricing"] },
+      { title: "What is your cancellation policy?", content: "Please cancel at least 24 hours ahead. Cancellations with less notice, and no-shows, are charged a $15 fee on the next visit.", tags: ["cancellation", "fees"] },
+      { title: "How long do gel and acrylic nails last?", content: "Gel color usually lasts two to three weeks, dip powder three to four weeks, and acrylics need a fill every two to three weeks. Your technician will suggest a schedule.", tags: ["gel", "acrylic", "care"] },
+      { title: "Do I need to remove my old nails first?", content: "If you have gel, dip or acrylic from another salon, we remove it before your new set. Removal takes about 20 minutes and costs $15. Tell us when you book so we leave enough time.", tags: ["removal"] },
+      { title: "Is your salon clean and safe?", content: "Yes. We sterilize metal tools in a hospital-grade autoclave, use a fresh file and buffer for every guest, and clean the pedicure basins between guests. We do not use blades on calluses.", tags: ["sanitation", "safety"] },
+      { title: "Can I bring a photo for nail art?", content: "Please do. Show it to your technician at the start, and we will tell you the price before we begin.", tags: ["nail art"] },
+      { title: "Do you take groups, bridal parties and kids?", content: "Yes. For groups of four or more, we take the details and the studio manager confirms the booking. Kids 12 and under can have a classic manicure or pedicure for $20 with a parent present.", tags: ["groups", "kids"] },
+      { title: "Where are you and can I park?", content: "We are at 1215 Montana Avenue in Santa Monica. There is free two-hour parking in the lot behind the building, and metered parking on the street.", tags: ["location", "parking"] },
+      { title: "Do you sell gift cards?", content: "Yes, in any amount at the front desk or through our website. They do not expire.", tags: ["gift cards"] },
+    ],
+    rules: [
+      { title: "Ask about removals and nail art", content: "Always ask whether the caller has existing gel, dip or acrylic that needs removal and whether they want nail art, because both add time." },
+      { title: "No medical advice", content: "If a caller describes pain, swelling, a nail infection or a skin condition, do not advise them. Suggest they see a doctor first and offer to rebook once it clears." },
+      { title: "Groups", content: "For parties of four or more, take the contact details and the date, and say the studio manager will confirm within one business day." },
+      { title: "Technician requests", content: "Note a technician request, but never promise it. If they are booked, offer the next opening or another technician." },
+      { title: "Late guests", content: "If a caller is running late, say the studio holds the spot for 15 minutes. After that, the service may be shortened or rebooked." },
+    ],
+  },
+  {
+    key: "bank",
+    name: "Cedar Ridge Community Bank",
+    slug: "cedar-ridge-community-bank",
+    type: "bank",
+    timezone: "America/Denver",
+    currency: "USD",
+    locale: "en",
+    areaCode: "303",
+    hours: [...windows([MON, TUE, WED, THU, FRI], [["09:00", "17:00"]]), ...windows([SAT], [["09:00", "12:00"]])],
+    closure: { month: 12, day: 25, reason: "Christmas Day" },
+    summary:
+      "Cedar Ridge Community Bank is a locally owned bank in Denver with personal, small business and mortgage banking. The main branch has a drive-through, 24-hour ATM and safe deposit boxes. Customers book in-branch appointments with a personal banker, loan officer, business banker or financial advisor.",
+    greeting: "Thank you for calling Cedar Ridge Community Bank. I can schedule a branch appointment and answer general questions. How can I help?",
+    tone: "Professional, calm and reassuring. Be precise, never casual about money, and never rush.",
+    bookingPolicy: "Ask what the caller needs and book with the right specialist. Appointments last 15 to 60 minutes. Ask callers to bring a government photo ID, and a list of documents for loan visits. Same-day visits are possible when someone is free.",
+    services: [
+      { name: "Open a New Account", slug: "open-a-new-account", minutes: 45, description: "Checking, savings, or both, with a personal banker.", price: { type: "in_person" } },
+      { name: "Mortgage Consultation", slug: "mortgage-consultation", minutes: 60, description: "Home purchase and refinance options with a loan officer.", price: { type: "in_person" } },
+      { name: "Personal & Auto Loan Consultation", slug: "personal-auto-loan-consultation", minutes: 45, description: "Options for a car, home project or other personal loan.", price: { type: "in_person" } },
+      { name: "Small Business Banking Review", slug: "small-business-banking-review", minutes: 60, description: "Business accounts, lending and merchant services with a business banker.", price: { type: "in_person" } },
+      { name: "Investment & Retirement Planning", slug: "investment-retirement-planning", minutes: 60, description: "A first conversation about IRAs, CDs and investing with a financial advisor.", price: { type: "in_person" } },
+      { name: "Fraud & Dispute Assistance", slug: "fraud-dispute-assistance", minutes: 30, description: "Help with a suspicious charge, a lost card or a disputed transaction.", price: { type: "in_person" } },
+      { name: "Safe Deposit Box Rental", slug: "safe-deposit-box-rental", minutes: 20, description: "Rent a box in three sizes and sign the access agreement.", price: { type: "in_person" } },
+      { name: "Notary Service", slug: "notary-service", minutes: 15, description: "A notary signing. Free for customers, with a photo ID.", price: { type: "fixed", minor: 1000 } },
+    ],
+    staff: [
+      { name: "Rachel Kim", services: ["Open a New Account", "Fraud & Dispute Assistance", "Safe Deposit Box Rental", "Notary Service"], hours: [...windows([MON, TUE, WED, THU, FRI], [["09:00", "12:30"], ["13:30", "17:00"]]), ...windows([SAT], [["09:00", "12:00"]])] },
+      { name: "Tom Alvarez", services: ["Mortgage Consultation", "Personal & Auto Loan Consultation"], hours: [...windows([MON, TUE, WED, THU], [["09:00", "12:00"], ["13:00", "17:00"]]), ...windows([SAT], [["09:00", "12:00"]])] },
+      { name: "Priya Shah", services: ["Small Business Banking Review", "Open a New Account", "Notary Service"], hours: [...windows([TUE, WED, THU, FRI], [["09:00", "12:00"], ["13:00", "17:00"]])], timeOffInDays: [9, 11, "Conference"] },
+      { name: "Daniel Whitfield", services: ["Investment & Retirement Planning"], hours: [...windows([MON, WED, FRI], [["09:00", "12:00"], ["13:00", "16:30"]])] },
+    ],
+    contacts: [
+      { name: "Walter Henderson", email: "walter.henderson@example.com" }, { name: "Maria Gutierrez" }, { name: "Kevin Brandt", email: "kevin.brandt@example.com" },
+      { name: "Susan Albright" }, { name: "Omar Haddad", email: "omar.haddad@example.com" }, { name: "Linda Park" },
+      { name: "Robert Castellano", email: "robert.castellano@example.com" }, { name: "Tanya Beckett" }, { name: "Greg Sorensen", email: "greg.sorensen@example.com" },
+      { name: "Patricia Nguyen" }, { name: "Dennis Okafor", email: "dennis.okafor@example.com" }, { name: "Alicia Morales" },
+      { name: "Frank Delaney", email: "frank.delaney@example.com" }, { name: "Joanne Whitaker" }, { name: "Victor Ramos", email: "victor.ramos@example.com" },
+      { name: "Elaine Fischer" }, { name: "Harold Mendez", email: "harold.mendez@example.com" }, { name: "Christine Bauer" },
+    ],
+    notes: ["First home purchase.", "Bringing the business formation documents.", "Opening an account for a teenager.", "Lost debit card yesterday.", "Needs a notary for a vehicle title.", "Prefers a morning appointment."],
+    internalNotes: ["Long-time customer, 15 years.", "Pre-approval letter was issued last month.", "Referred by a business customer.", "Hard of hearing, speak clearly."],
+    perStaffPerDay: [3, 6],
+    faqs: [
+      { title: "What do I need to open an account?", content: "Bring a government photo ID, your Social Security number or ITIN, and proof of your address, such as a utility bill or lease. A minimum opening deposit of $25 is needed for checking.", tags: ["accounts", "documents"] },
+      { title: "Are there monthly fees on checking?", content: "Everyday Checking has no monthly fee when you set up direct deposit or keep a $500 balance. Otherwise it is $8 a month. Student accounts have no monthly fee.", tags: ["fees", "checking"] },
+      { title: "What should I bring to a mortgage appointment?", content: "Bring your last two pay stubs, two years of W-2s or tax returns, two months of bank statements and a photo ID. Self-employed borrowers bring two years of business returns. The loan officer reviews your options and does not need a credit check for the first meeting.", tags: ["mortgage", "documents"] },
+      { title: "How do I report a lost or stolen card?", content: "Call our 24-hour card line at 1-800-555-0142 right away, and we will block the card. You can also visit a branch to get a replacement. Never share your card PIN with anyone, including the bank.", tags: ["cards", "fraud"] },
+      { title: "What are the branch and drive-through hours?", content: "The lobby is open Monday to Friday from 9 a.m. to 5 p.m. and Saturday from 9 a.m. to noon. The drive-through is open an hour later on weekdays. The ATM is available 24 hours.", tags: ["hours", "drive-through"] },
+      { title: "What documents does a business account need?", content: "Bring your formation documents, EIN confirmation, a business license if one applies, an operating agreement, and a photo ID for every owner with 25 percent or more.", tags: ["business", "documents"] },
+      { title: "Do you offer safe deposit boxes?", content: "Yes, in small, medium and large, from $45 to $140 a year. You need a photo ID and a checking or savings account with us.", tags: ["safe deposit"] },
+      { title: "When is the wire transfer cutoff?", content: "Outgoing domestic wires received by 3 p.m. Mountain time go out the same business day. Wires after that go the next business day.", tags: ["wires"] },
+      { title: "Is notary service free?", content: "Yes for customers, and $10 for everyone else. The signer must be present with a valid photo ID, and the document must not be signed beforehand.", tags: ["notary"] },
+      { title: "Where is the branch and where do I park?", content: "We are at 800 Cedar Street in downtown Denver, on the corner with 8th Street. A free customer lot is behind the building, and the light rail stops two blocks away.", tags: ["location", "parking"] },
+    ],
+    rules: [
+      { title: "Never ask for sensitive details", content: "Never ask for or accept a full Social Security number, account number, card number, PIN, password or one-time code. Say the banker will handle verification in person." },
+      { title: "Fraud and lost cards", content: "If a caller reports fraud or a lost card, give the 24-hour card line, 1-800-555-0142, first. Then offer a fraud assistance appointment." },
+      { title: "No financial advice or rates", content: "Never recommend a product or say what is best for someone. Never quote an interest rate, since rates change. Offer an appointment with the right specialist." },
+      { title: "Match the specialist", content: "Book mortgage and loan questions with a loan officer, business questions with the business banker, and investing questions with the financial advisor." },
+      { title: "Documents", content: "Always tell callers to bring a government photo ID, and mention the documents for mortgage, loan and business appointments." },
+    ],
+  },
+  {
+    key: "dental-office",
+    name: "Brightside Family Dental",
+    slug: "brightside-family-dental",
+    type: "dental office",
+    timezone: "America/Phoenix",
+    currency: "USD",
+    locale: "en",
+    areaCode: "602",
+    hours: [...windows([MON, TUE, WED, THU], [["08:00", "12:00"], ["13:00", "17:00"]]), ...windows([FRI], [["08:00", "13:00"]])],
+    closure: { month: 12, day: 24, reason: "Christmas Eve" },
+    summary:
+      "Brightside Family Dental is a family dental practice in Phoenix with two dentists and two hygienists. It treats adults and children with cleanings, exams, fillings, whitening and clear aligners, and keeps time open each day for dental emergencies. It accepts most major dental insurance plans.",
+    greeting: "Thank you for calling Brightside Family Dental. I can book a visit, help with a dental emergency or answer questions about insurance. How can I help?",
+    tone: "Kind, reassuring and unhurried. Many callers feel nervous about the dentist, so keep it gentle and clear.",
+    bookingPolicy: "Ask whether the caller is a new patient and whether they have pain or a dental emergency. New patients book a 60-minute exam. Ask for their insurance provider name and tell them to arrive 15 minutes early to complete forms.",
+    services: [
+      { name: "New Patient Exam & X-rays", slug: "new-patient-exam-xrays", minutes: 60, description: "A full exam, X-rays, an oral cancer screening and a treatment plan.", price: { type: "fixed", minor: 14500 } },
+      { name: "Routine Cleaning & Exam", slug: "routine-cleaning-exam", minutes: 60, description: "A hygienist cleaning followed by a dentist exam.", price: { type: "fixed", minor: 13500 } },
+      { name: "Children's Cleaning (12 & under)", slug: "childrens-cleaning", minutes: 30, description: "A gentle cleaning, fluoride and an exam for children 12 and under.", price: { type: "fixed", minor: 8500 } },
+      { name: "Same-Day Emergency Visit", slug: "same-day-emergency-visit", minutes: 30, description: "Toothaches, chipped or broken teeth, lost fillings and swelling. The price depends on the treatment.", price: { type: "range", minor: 9500, maxMinor: 18000 } },
+      { name: "Filling", slug: "filling", minutes: 60, description: "A tooth-colored filling for a cavity. The price depends on the size and number of surfaces.", price: { type: "range", minor: 15000, maxMinor: 32000 } },
+      { name: "Teeth Whitening", slug: "teeth-whitening", minutes: 60, description: "An in-office whitening treatment, usually several shades brighter in one visit.", price: { type: "fixed", minor: 32900 } },
+      { name: "Root Canal & Crown Consultation", slug: "root-canal-crown-consultation", minutes: 30, description: "An exam and a clear estimate for a root canal or a crown.", price: { type: "fixed", minor: 7500 } },
+      { name: "Clear Aligner Consultation", slug: "clear-aligner-consultation", minutes: 45, description: "A scan and a plan for straightening your teeth with clear aligners.", price: { type: "in_person" } },
+      { name: "Wisdom Teeth Consultation", slug: "wisdom-teeth-consultation", minutes: 30, description: "An X-ray and a discussion of whether and when to remove wisdom teeth.", price: { type: "fixed", minor: 7500 } },
+    ],
+    staff: [
+      { name: "Dr. Samantha Lee", services: ["New Patient Exam & X-rays", "Routine Cleaning & Exam", "Same-Day Emergency Visit", "Filling", "Root Canal & Crown Consultation", "Wisdom Teeth Consultation"], hours: [...windows([MON, TUE, WED, THU], [["08:00", "12:00"], ["13:00", "17:00"]])] },
+      { name: "Dr. Raj Mehta", services: ["New Patient Exam & X-rays", "Routine Cleaning & Exam", "Same-Day Emergency Visit", "Filling", "Teeth Whitening", "Clear Aligner Consultation", "Root Canal & Crown Consultation"], hours: [...windows([TUE, WED, THU], [["08:00", "12:00"], ["13:00", "17:00"]]), ...windows([FRI], [["08:00", "13:00"]])], timeOffInDays: [12, 14, "Dental conference"] },
+      { name: "Karen Alvarez, RDH", services: ["Routine Cleaning & Exam", "Children's Cleaning (12 & under)", "Teeth Whitening"], hours: [...windows([MON, TUE, WED, THU], [["08:00", "12:00"], ["13:00", "17:00"]]), ...windows([FRI], [["08:00", "13:00"]])] },
+      { name: "Tina Brooks, RDH", services: ["Routine Cleaning & Exam", "Children's Cleaning (12 & under)"], hours: [...windows([MON, WED, THU], [["08:00", "12:00"], ["13:00", "17:00"]]), ...windows([FRI], [["08:00", "13:00"]])] },
+    ],
+    contacts: [
+      { name: "Megan Sullivan", email: "megan.sullivan@example.com" }, { name: "Carlos Ibarra" }, { name: "Natalie Cho", email: "natalie.cho@example.com" },
+      { name: "Ethan Brooks" }, { name: "Valeria Moreno", email: "valeria.moreno@example.com" }, { name: "Jack Donnelly" },
+      { name: "Aisha Rahman", email: "aisha.rahman@example.com" }, { name: "Tyler Wagner" }, { name: "Sophia Ricci", email: "sophia.ricci@example.com" },
+      { name: "Daniel Okoye" }, { name: "Hannah Lindgren", email: "hannah.lindgren@example.com" }, { name: "Mateo Salazar" },
+      { name: "Grace Whitman", email: "grace.whitman@example.com" }, { name: "Benjamin Tran" }, { name: "Chloe Peterson", email: "chloe.peterson@example.com" },
+      { name: "Luis Herrera" }, { name: "Emma Kowalski", email: "emma.kowalski@example.com" }, { name: "Raymond Stone" },
+    ],
+    notes: ["Nervous about the dentist, please be gentle.", "Chipped a front tooth.", "Wants whitening before a wedding.", "New patient, insurance is Delta Dental.", "Bringing his daughter, age 7.", "Has a toothache for two days."],
+    internalNotes: ["Dental anxiety, offer extra time.", "Overdue for X-rays.", "Allergic to latex, use nitrile gloves.", "Interested in clear aligners."],
+    perStaffPerDay: [4, 8],
+    faqs: [
+      { title: "Are you accepting new patients?", content: "Yes. New patients book a 60-minute exam with X-rays. Arrive 15 minutes early, or fill out the forms online in advance.", tags: ["new patients"] },
+      { title: "Which insurance plans do you accept?", content: "We are in network with most major plans, including Delta Dental, Cigna, MetLife, Aetna and Guardian. Coverage depends on your plan, so we check your benefits before your visit and tell you the cost.", tags: ["insurance"] },
+      { title: "What if I don't have insurance?", content: "Our membership plan is $349 a year per adult and includes two cleanings, exams and X-rays, plus 20 percent off other treatment. We also accept CareCredit for payment plans.", tags: ["no insurance", "membership", "payment"] },
+      { title: "Do you handle dental emergencies?", content: "Yes. We keep time open each day for emergencies such as severe pain, a broken or knocked-out tooth, or swelling. Call as early as you can and we will see you the same day when we can.", tags: ["emergency"] },
+      { title: "What is your cancellation policy?", content: "Please give us 24 hours' notice to cancel or reschedule. Missed appointments without notice may be charged a $50 fee.", tags: ["cancellation", "fees"] },
+      { title: "Do you see children?", content: "Yes, from the first tooth. We recommend a first visit by age one, and children's cleanings are quick, gentle and include fluoride.", tags: ["kids"] },
+      { title: "I'm nervous about the dentist. What can you do?", content: "Tell us when you book. We can schedule extra time, explain each step, use numbing gel and take breaks. Nitrous oxide is available for a fee.", tags: ["anxiety", "sedation"] },
+      { title: "How does teeth whitening work?", content: "We use an in-office treatment that takes about an hour and usually brightens teeth several shades. Some people feel temporary sensitivity. We check your teeth and gums first.", tags: ["whitening"] },
+      { title: "How often should I get a cleaning?", content: "Most people should visit every six months. If you have gum disease or a higher risk of cavities, we may suggest every three or four months.", tags: ["cleaning"] },
+      { title: "Where is the office and where do I park?", content: "We are at 4120 North Central Avenue in Phoenix, in the building with the green awning. Free parking is in the lot out front, and the building has a step-free entrance.", tags: ["location", "parking"] },
+    ],
+    rules: [
+      { title: "Dental emergencies", content: "Ask if the caller has severe pain, swelling or a knocked-out tooth. For a knocked-out tooth, offer the earliest slot and tell them to keep it moist in milk. If they have swelling that affects their breathing or swallowing, or heavy bleeding, tell them to call 911 or go to the emergency room." },
+      { title: "No diagnosis or medical advice", content: "Never diagnose a problem, recommend treatment or say whether a medication is safe. Offer an appointment, or a message for the dentist." },
+      { title: "Insurance", content: "Ask for the insurance provider name, and say the office will verify benefits before the visit. Never promise what a plan covers or what the patient will pay." },
+      { title: "New patients", content: "Book new patients for a 60-minute exam, ask them to arrive 15 minutes early, and mention the online forms." },
+      { title: "Anxious patients", content: "If a caller says they are nervous, be gentle, say the team can schedule extra time, and note it on the appointment." },
+    ],
+  },
 ];
 
 // A small deterministic generator, so a rerun makes the same history.
@@ -437,10 +631,27 @@ async function seedBusiness(seed: BusinessSeed, account: { id: string; email: st
 }
 
 async function main() {
-  const { values } = parseArgs({ options: { email: { type: "string" }, only: { type: "string" } } });
-  const only = values.only ? values.only.split(",").map((key) => key.trim()) : null;
-  const unknown = only?.filter((key) => !businesses.some((business) => business.key === key));
-  if (unknown?.length) throw new Error(`Unknown --only value: ${unknown.join(", ")}. Use ${businesses.map((business) => business.key).join(", ")}.`);
+  const { values, positionals } = parseArgs({ allowPositionals: true, options: { email: { type: "string" } } });
+  if (!positionals.length) {
+    console.log("Usage: pnpm seed:business <business...> [--email you@example.com]\n       pnpm seed:business all\n\nBusinesses:");
+    for (const business of businesses) console.log(`  ${business.key.padEnd(14)} ${business.name}`);
+    return;
+  }
+  const squash = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, "");
+  const chosen = new Set<BusinessSeed>();
+  for (const argument of positionals) {
+    if (squash(argument) === "all") {
+      for (const business of businesses) chosen.add(business);
+      continue;
+    }
+    const wanted = squash(argument);
+    const exact = businesses.filter((business) => [business.key, business.slug, business.name].some((candidate) => squash(candidate) === wanted));
+    const matches = exact.length ? exact : businesses.filter((business) => [business.key, business.slug, business.name].some((candidate) => squash(candidate).includes(wanted)));
+    if (matches.length !== 1) {
+      throw new Error(matches.length ? `"${argument}" matches ${matches.map((business) => business.name).join(", ")}. Be more specific.` : `No business matches "${argument}". Run pnpm seed:business to list them.`);
+    }
+    chosen.add(matches[0]!);
+  }
 
   const auth = createDatabaseClient("lobbystack_auth");
   const app = createDatabaseClient("lobbystack_app");
@@ -453,9 +664,8 @@ async function main() {
       throw new Error(values.email ? `No account for ${values.email}.` : `Pass --email. Accounts: ${accounts.map((candidate) => candidate.email).join(", ") || "none"}.`);
     }
     console.log(`Seeding into ${account.email}.`);
-    for (const [index, seed] of businesses.entries()) {
-      if (only && !only.includes(seed.key)) continue;
-      await seedBusiness(seed, account, { db: app.db }, index);
+    for (const seed of businesses) {
+      if (chosen.has(seed)) await seedBusiness(seed, account, { db: app.db }, businesses.indexOf(seed));
     }
   } finally {
     await Promise.all([auth.pool.end(), app.pool.end()]);
