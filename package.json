@@ -22,6 +22,7 @@
     "docs:partner-tiers": "tsx --tsconfig scripts/tsconfig.json scripts/write-partner-tiers.ts",
     "docs:setup-prompts": "tsx --tsconfig scripts/tsconfig.json scripts/write-setup-prompts.ts",
     "dev:onboarding:website": "tsx --tsconfig scripts/tsconfig.json scripts/prepare-onboarding-website.ts",
+    "seed:businesses": "tsx --tsconfig scripts/tsconfig.json scripts/seed-businesses.ts",
     "prospect-demo": "tsx --tsconfig scripts/tsconfig.json scripts/prospect-demo.ts",
     "widget:embed:build": "pnpm --filter @lobbystack/embed build && node scripts/copy-widget-embed.mjs",
     "prospect-demo:create": "tsx --tsconfig scripts/tsconfig.json scripts/prospect-demo.ts create",
