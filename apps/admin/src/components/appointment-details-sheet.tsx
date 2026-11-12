@@ -72,7 +72,7 @@ function AppointmentDetails({ appointment, contactName, showClose }: { appointme
             {time(appointment.startsAt, { weekday: "long", month: "long", day: "numeric" })} · {time(appointment.startsAt, { hour: "numeric", minute: "2-digit" })}–{time(appointment.endsAt, { hour: "numeric", minute: "2-digit" })}
           </DrawerDescription>
         </DrawerHeader>
-        <div className="m-4 flex flex-1 flex-col gap-4 overflow-y-auto">
+        <div className="m-3 flex flex-1 flex-col gap-4 overflow-y-auto p-1">
           <dl className="ph-mask flex flex-col divide-y">
             {details.map(([label, value]) => (
               <div className="flex items-start justify-between gap-6 py-3" key={label}>
