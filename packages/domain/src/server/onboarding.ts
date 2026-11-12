@@ -10,6 +10,7 @@ import type { DomainContext } from "./context";
 import { attributeBusiness } from "./affiliates";
 import { businessShowsOnBrand, readBusinessAccess, type BrandScope } from "./businessAccess";
 import { businessGetsHostEmails } from "./hostEmails";
+import { marketingEmailRecipient } from "./marketingEmails";
 import { readActiveBusinessIdInTransaction } from "./tenancy";
 import { greetingName } from "./emailGreeting";
 import { schedulePlanReminderInTransaction } from "./planReminder";
@@ -354,6 +355,8 @@ export async function queueWelcomeEmail(context: DomainContext, input: { busines
     );
     const recipient = result.rows[0];
     if (!recipient) return { status: "skipped" };
+    // An owner who unsubscribed from marketing emails gets no welcome. The worker checks again as it sends it.
+    if ((await marketingEmailRecipient(tx, recipient.email))?.unsubscribed) return { status: "skipped" };
     const [business] = await tx.select({ goal: businesses.onboardingGoal }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1);
     const [number] = await tx.select({ e164: phoneNumbers.e164 }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.status, "active"))).orderBy(phoneNumbers.createdAt).limit(1);
     if (!number) {

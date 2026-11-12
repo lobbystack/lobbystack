@@ -9,7 +9,7 @@ import { queueDailyOperatorSummaries, queuePlanReminderEmail, queueWelcomeEmail 
 import { NUMBER_ORDER_MAX_WAIT_MS, claimNumberProvisioning, completeNumberProvisioning, deferNumberProvisioning, failNumberProvisioning, numberProvisioningLeaseEndsAt } from "@lobbystack/domain";
 import { PolarRequestError } from "@lobbystack/providers/polar/polarBilling";
 import { NumberOrderPendingError } from "@lobbystack/providers/telephony/types";
-import { brandForEmail, businessExists, businessGetsHostEmails, forgetCachedBrands, loadNumberReleaseEmail, loadNumberTrialEmail, type Brand } from "@lobbystack/domain";
+import { brandForEmail, businessExists, businessGetsHostEmails, forgetCachedBrands, marketingEmailRecipient, readMarketingUnsubscribeToken, loadNumberReleaseEmail, loadNumberTrialEmail, type Brand } from "@lobbystack/domain";
 import { advancePartnerLifecycles, claimPartnerCheckoutRequest, deferPartnerCheckoutRequest, keepPartnerTrialNumber, loadPartnerCheckoutRequest, loadPoolUsageEvent, markPartnerCheckoutCreated, markPartnerCheckoutFailed, partnerCheckoutLeaseEndsAt, PartnerLifecycleError, reconcilePartnerTier, settleExtraNumberCharges, settlePartnerNumberCharges } from "@lobbystack/domain";
 import { checkPartnerCustomDomains, provisionPartnerCustomDomain, removePartnerCustomHostname, syncBusinessOverage } from "@lobbystack/domain";
 import { FakeCustomHostnames, FakeTxtRecords } from "@lobbystack/providers/customHostnames/fakeCustomHostnames";
@@ -76,6 +76,8 @@ vi.mock("@lobbystack/domain", async (importOriginal) => {
     businessGetsHostEmails: vi.fn(async () => true),
     // And still exists.
     businessExists: vi.fn(async () => true),
+    // Every marketing email goes to someone who never unsubscribed unless a test says otherwise.
+    marketingEmailRecipient: vi.fn(async () => ({ userId: "7d0c2a51-1f7b-4bd4-9c43-2d1e3f4a5b6c", unsubscribed: false })),
   };
 });
 
@@ -343,6 +345,57 @@ describe("worker handlers", () => {
     const payload = { template: "welcome", to: "owner@example.test", subject: "Welcome to LobbyStack, Ryan", variables: { locale: "en", firstName: "Ryan", businessName: "Metroprint", goal: "", number: "", url: "https://app.example.test/?setup=phoneNumber" }, brand: { kind: "host" }, replyTo: null };
     await handleJob({ jobId: randomUUID(), businessId: randomUUID(), type: "email.send", queue: "default", payload, trace: {}, idempotencyKey: "onboarding-welcome:x:email", scheduled: false }, { domain: { db: savedBranding("Saved Desk") }, email });
     expect(sendMail.mock.lastCall?.[0]).toMatchObject({ from: "LobbyStack <no-reply@example.test>", replyTo: "support@example.test", subject: "Welcome to LobbyStack, Ryan", text: expect.stringContaining("Answer my missed calls: https://app.example.test/?setup=phoneNumber") });
+  });
+
+  describe("marketing emails", () => {
+    const userId = "7d0c2a51-1f7b-4bd4-9c43-2d1e3f4a5b6c";
+    const workerDb = savedBranding(null);
+    const welcome = { template: "welcome", to: "Owner@Example.test", subject: "Welcome to LobbyStack", variables: { locale: "fr", firstName: "Ryan", businessName: "Metroprint", goal: "", number: "", url: "https://app.example.test/?setup=phoneNumber" }, brand: { kind: "host" }, replyTo: null };
+    const reminder = { template: "plan_reminder", to: "owner@example.test", variables: { locale: "en", kind: "second", firstName: "Ryan", businessName: "Metroprint", number: "+15550100123", url: "https://app.example.test/onboarding/plan" }, brand: { kind: "host" }, replyTo: null };
+    function provider() {
+      const sendMail = vi.fn().mockResolvedValue({ messageId: "provider-id" });
+      return { sendMail, email: new SmtpEmailProvider({ host: "localhost", port: 1025, secure: false, username: "", password: "", from: "LobbyStack <no-reply@example.test>" }, { sendMail } as never) };
+    }
+    const send = (payload: Record<string, unknown>, email: Pick<SmtpEmailProvider, "sendTemplate">, businessId = randomUUID()) => handleJob({ jobId: randomUUID(), businessId, type: "email.send", queue: "default", payload, trace: {}, idempotencyKey: randomUUID(), scheduled: false }, { domain: { db: workerDb }, email });
+
+    it("send the welcome and the plan reminders with the recipient's own one-click unsubscribe and footer link", async () => {
+      vi.stubEnv("APP_BASE_URL", "https://app.example.test");
+      const { sendMail, email } = provider();
+      await expect(send(welcome, email)).resolves.toEqual({ status: "completed" });
+      expect(marketingEmailRecipient).toHaveBeenLastCalledWith(workerDb, "Owner@Example.test");
+      const sent = sendMail.mock.lastCall?.[0] as { headers: Record<string, string>; text: string; html: string };
+      expect(sent.headers["List-Unsubscribe-Post"]).toBe("List-Unsubscribe=One-Click");
+      const oneClick = /^<(https:\/\/app\.example\.test\/api\/email\/unsubscribe\?token=(.+))>$/.exec(sent.headers["List-Unsubscribe"]!);
+      expect(oneClick).not.toBeNull();
+      expect(readMarketingUnsubscribeToken(decodeURIComponent(oneClick![2]!))).toEqual({ userId });
+      // The footer opens the page in the recipient's language.
+      expect(sent.text).toMatch(/\n\nSe désabonner : https:\/\/app\.example\.test\/fr\/unsubscribe\/v1\.[^\s]+$/);
+      expect(sent.html).toContain(">Se désabonner</a>");
+      await expect(send(reminder, email)).resolves.toEqual({ status: "completed" });
+      expect((sendMail.mock.lastCall?.[0] as { headers: Record<string, string> }).headers["List-Unsubscribe"]).toMatch(/^<https:\/\/app\.example\.test\/api\/email\/unsubscribe\?token=/);
+    });
+
+    it("skip a marketing email to someone who unsubscribed, or to an address nobody has, whenever it was queued", async () => {
+      const { sendMail, email } = provider();
+      const businessId = randomUUID();
+      vi.mocked(marketingEmailRecipient).mockResolvedValueOnce({ userId, unsubscribed: true });
+      await expect(send(welcome, email, businessId)).resolves.toEqual({ status: "skipped", entityId: businessId });
+      vi.mocked(marketingEmailRecipient).mockResolvedValueOnce({ userId, unsubscribed: true });
+      await expect(send(reminder, email, businessId)).resolves.toEqual({ status: "skipped", entityId: businessId });
+      vi.mocked(marketingEmailRecipient).mockResolvedValueOnce(null);
+      await expect(send(reminder, email, businessId)).resolves.toEqual({ status: "skipped", entityId: businessId });
+      expect(sendMail).not.toHaveBeenCalled();
+    });
+
+    it("leave every other email as it was: no unsubscribe, and no opt-out check", async () => {
+      const { sendMail, email } = provider();
+      vi.mocked(marketingEmailRecipient).mockClear();
+      await send({ template: "operator_alert", to: "owner@example.test", subject: "Missed call", variables: { message: "Call back +14165550100." }, brand: { kind: "host" }, replyTo: null }, email);
+      const sent = sendMail.mock.lastCall?.[0] as { headers?: unknown; text: string };
+      expect(sent.headers).toBeUndefined();
+      expect(sent.text).not.toContain("Unsubscribe");
+      expect(marketingEmailRecipient).not.toHaveBeenCalled();
+    });
   });
 
   it("never sends the welcome email to a partner's business, even one queued already, while its own emails still go", async () => {

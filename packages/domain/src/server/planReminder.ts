@@ -9,6 +9,7 @@ import type { DomainContext } from "./context";
 import { greetingName } from "./emailGreeting";
 import { loadEntitlement } from "./entitlement";
 import { businessGetsHostEmails } from "./hostEmails";
+import { marketingEmailRecipient } from "./marketingEmails";
 
 // The plan reminder: one email to the owner of a direct cloud business that
 // claimed a trial number, met its agent, and left the plans without choosing.
@@ -100,6 +101,8 @@ export async function queuePlanReminderEmail(context: DomainContext, input: { bu
     if ((await loadEntitlement(tx, input.businessId)).live) return { status: "skipped" };
     const owner = (await tx.execute<{ email: string; name: string | null; preferred_locale: string; business_name: string }>(sql`select email, name, preferred_locale, business_name from app.resolve_business_owner_contact(${input.businessId}::uuid)`)).rows[0];
     if (!owner) return { status: "skipped" };
+    // An owner who unsubscribed from marketing emails gets no reminder. The worker checks again as it sends it.
+    if ((await marketingEmailRecipient(tx, owner.email))?.unsubscribed) return { status: "skipped" };
     const locale = normalizeInterfaceLocale(owner.preferred_locale) ?? "en";
     // The template writes the subject and formats the number in it and the body.
     await enqueueOutbox(tx, {

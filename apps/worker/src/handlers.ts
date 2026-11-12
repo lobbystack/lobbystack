@@ -18,9 +18,9 @@ import { applySiteLanguageInTransaction, closePassedAppointmentRequests, expireT
 import { syncBusinessOverage, PROVIDER_RETRY_WINDOW_MS, providerRetryDelayMs } from "@lobbystack/domain";
 import { advancePartnerLifecycles, claimPartnerCheckoutRequest, deferPartnerCheckoutRequest, keepPartnerTrialNumber, loadPartnerCheckoutRequest, loadPoolUsageEvent, markPartnerCheckoutCreated, markPartnerCheckoutFailed, partnerBillingKey, partnerCheckoutLeaseEndsAt, reconcilePartnerTier, settleExtraNumberCharges, settlePartnerNumberCharges } from "@lobbystack/domain";
 import { checkPartnerCustomDomains, provisionPartnerCustomDomain, removePartnerCustomHostname, type CustomDomainProviders } from "@lobbystack/domain";
-import { brandForEmail, businessExists, businessGetsHostEmails, hostBrandFromEnvironment, isHostOnlyEmailTemplate } from "@lobbystack/domain";
+import { brandForEmail, businessExists, businessGetsHostEmails, hostBrandFromEnvironment, isHostOnlyEmailTemplate, marketingEmailRecipient, marketingUnsubscribeLinks } from "@lobbystack/domain";
 import type { DomainContext } from "@lobbystack/domain";
-import { numberReleaseEmailSubject, numberTrialEmailSubject, isPermanentSmtpRejection, type SmtpEmailProvider } from "@lobbystack/providers/email/smtp";
+import { numberReleaseEmailSubject, numberTrialEmailSubject, isMarketingEmailTemplate, isPermanentSmtpRejection, type EmailUnsubscribeLinks, type SmtpEmailProvider } from "@lobbystack/providers/email/smtp";
 import { PolarRequestError } from "@lobbystack/providers/polar/polarBilling";
 import type { RuntimeStorageProvider } from "@lobbystack/providers/storage/provider";
 import { NumberOrderPendingError } from "@lobbystack/providers/telephony/types";
@@ -647,6 +647,18 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         if (job.payload.template === "onboarding_followup") return { status: "skipped", ...(businessId ? { entityId: businessId } : {}) };
         // The host's own emails, such as the welcome email, never reach a partner's business, whenever they were queued.
         if (businessId && isHostOnlyEmailTemplate(template) && !await businessGetsHostEmails(dependencies.domain.db, businessId)) return { status: "skipped", entityId: businessId };
+        const to = String(job.payload.to ?? job.payload.email ?? "");
+        let unsubscribe: EmailUnsubscribeLinks | undefined;
+        if (isMarketingEmailTemplate(template)) {
+          // Checked as it goes out, so one queued before the person unsubscribed, or by the previous release, stays home too.
+          // An address nobody has can't unsubscribe, so it gets none.
+          const recipient = await marketingEmailRecipient(dependencies.domain.db, to);
+          if (!recipient || recipient.unsubscribed) {
+            console.info(JSON.stringify({ event: "email.skipped", template, reason: recipient ? "unsubscribed" : "no_recipient" }));
+            return { status: "skipped", ...(businessId ? { entityId: businessId } : {}) };
+          }
+          unsubscribe = marketingUnsubscribeLinks(recipient.userId, variables.locale);
+        }
         try {
           // An email queued before payloads carried a brand goes out under the host's.
           const reference = parseEmailBrandReference(job.payload.brand);
@@ -657,12 +669,13 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
           const brand = await emailBrand(dependencies.domain, reference);
           const sent = await dependencies.email.sendTemplate({
             template,
-            to: String(job.payload.to ?? job.payload.email ?? ""),
+            to,
             // Without a subject of its own, the template writes one under the brand.
             ...(job.payload.subject === undefined || job.payload.subject === null ? {} : { subject: String(job.payload.subject) }),
             variables,
             brand,
             idempotencyKey: job.idempotencyKey,
+            ...(unsubscribe ? { unsubscribe } : {}),
             ...emailSender(brand, {
               from: typeof job.payload.from === "string" ? job.payload.from : null,
               replyTo: typeof job.payload.replyTo === "string" ? job.payload.replyTo : null,
