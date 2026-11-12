@@ -153,6 +153,25 @@ describe("new appointments locale baseline", () => {
     expect(screen.queryByRole("row", { name: /3:00 PM/ })).toBeNull();
   });
 
+  it("filters the list by customer, service or employee as you type, and says when nothing matches", async () => {
+    route.search = "view=list";
+    vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-09-06T13:00:00Z") });
+    const base = { timezone: "UTC", status: "confirmed", sourceChannel: "voice", calendarSyncState: "synced" };
+    await setup("en", false, "scheduler");
+    clients[0]!.setQueryData(["appointments", "business"], { appointments: [
+      { ...base, id: "a", startsAt: "2026-09-06T15:00:00Z", endsAt: "2026-09-06T15:45:00Z", contactName: "Rosa", serviceName: "Haircut", staffName: "Ana" },
+      { ...base, id: "b", startsAt: "2026-09-06T16:00:00Z", endsAt: "2026-09-06T16:45:00Z", contactName: "Marko", serviceName: "Massage", staffName: "Ivan" },
+    ] });
+    expect(await screen.findByRole("row", { name: /3:00 PM/ })).toBeTruthy();
+    expect(screen.getByRole("row", { name: /4:00 PM/ })).toBeTruthy();
+    await userEvent.type(screen.getByRole("textbox", { name: en.tableSearch.appointments }), "massage");
+    await waitFor(() => expect(screen.queryByRole("row", { name: /3:00 PM/ })).toBeNull());
+    expect(screen.getByRole("row", { name: /4:00 PM/ })).toBeTruthy();
+    await userEvent.clear(screen.getByRole("textbox", { name: en.tableSearch.appointments }));
+    await userEvent.type(screen.getByRole("textbox", { name: en.tableSearch.appointments }), "zzz");
+    expect(await screen.findByText(en.tableSearch.noResults.replace("{{query}}", "zzz"))).toBeTruthy();
+  });
+
   it("shows the Calendar column only once a calendar is connected, with each state as a chip", async () => {
     route.search = "view=list";
     vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-09-01T00:00:00Z") });

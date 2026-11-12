@@ -1,6 +1,7 @@
 "use client";
 
 import { requestJson } from "@/lib/request-json";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { subscribeRealtimeQuery } from "@/lib/realtime-query";
 
@@ -22,8 +23,9 @@ import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { EditContactDialog } from "@/components/edit-contact-dialog";
 import { NewContactButton } from "@/components/new-contact-dialog";
 import { DataTablePagination, paginationFeatures, useDataTablePaginationLabels } from "@/components/data-table/pagination";
+import { TableSearch } from "@/components/data-table/table-search";
 import { PageHeader } from "@/components/page-header";
-import { ContactRowsSkeleton, DataTablePaginationSkeleton } from "@/components/loading-skeletons";
+import { ContactRowsSkeleton, DataTablePaginationSkeleton, TableSearchSkeleton } from "@/components/loading-skeletons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -54,18 +56,21 @@ type PendingBlock = { contact: Contact; nextBlocked: boolean };
 
 export function LiveContactsSurface() {
   const { i18n, t } = useTranslation("contacts");
+  const { t: tCommon } = useTranslation("common");
   const paginationLabels = useDataTablePaginationLabels("contacts");
   const router = useRouter();
   const telemetry = useTelemetry();
   const queryClient = useQueryClient();
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
+  const [search, setSearch] = useState("");
+  const query = useDebouncedValue(search.trim());
   const [pendingBlock, setPendingBlock] = useState<PendingBlock | null>(null);
   const [pendingDelete, setPendingDelete] = useState<Contact | null>(null);
   const [editing, setEditing] = useState<Contact | null>(null);
   const { businesses, business } = useActiveBusiness();
   const contacts = useQuery({
-    queryKey: ["contacts", business?.businessId, pagination.pageIndex, pagination.pageSize],
-    queryFn: () => requestJson<{ contacts: Contact[]; pagination: { total: number } }>(`/api/contacts?businessId=${encodeURIComponent(business!.businessId)}&limit=${pagination.pageSize}&offset=${pagination.pageIndex * pagination.pageSize}`),
+    queryKey: ["contacts", business?.businessId, pagination.pageIndex, pagination.pageSize, query],
+    queryFn: () => requestJson<{ contacts: Contact[]; pagination: { total: number } }>(`/api/contacts?businessId=${encodeURIComponent(business!.businessId)}&limit=${pagination.pageSize}&offset=${pagination.pageIndex * pagination.pageSize}${query ? `&search=${encodeURIComponent(query)}` : ""}`),
     enabled: Boolean(business),
     // Keep the current rows on screen while the next page loads.
     placeholderData: keepPreviousForBusiness(business?.businessId),
@@ -155,6 +160,7 @@ export function LiveContactsSurface() {
   return (
     <div className="flex flex-1 flex-col gap-6">
       <PageHeader actions={business ? <NewContactButton businessId={business.businessId} canCreate={canMutate} /> : null} title={t("page.title")} />
+      {loading ? <TableSearchSkeleton /> : <TableSearch label={tCommon("tableSearch.contacts")} onValueChange={(value) => { setSearch(value); setPagination((current) => ({ ...current, pageIndex: 0 })); }} value={search} />}
       <TableCard>
         <Table className={cn("w-full table-fixed", hasRows && "min-w-[52rem]")}>
           <colgroup><col className="w-[45%]" /><col className="w-[20%]" /><col className="w-[35%]" /><col className="w-36" /><col className="w-48" /><TableActionsColumn /></colgroup>
@@ -162,7 +168,7 @@ export function LiveContactsSurface() {
           <TableBody aria-busy={loading || undefined}>
             {loading ? <ContactRowsSkeleton rows={Math.min(pagination.pageSize, 10)} /> : null}
             {loading ? null : table.getRowModel().rows.map((row) => <TableRow className="cursor-pointer" key={row.id} onClick={() => { if (business) telemetry.track("web.contacts.contact_opened", { businessId: business.businessId, contactId: row.original.id }); router.push(`/contacts/${row.original.id}`); }}>{row.getAllCells().map((cell) => <TableCell className={cell.column.id === "lastInteraction" ? "min-w-[11rem] max-w-0 whitespace-nowrap text-right" : cell.column.id === "actions" ? "w-16 text-right" : cell.column.id === "contact" ? "min-w-[12rem]" : cell.column.id === "channels" ? "min-w-[8rem]" : cell.column.id === "activity" ? "min-w-[10rem]" : cell.column.id === "appointments" ? "min-w-[7rem] text-center" : undefined} key={cell.id} onClick={cell.column.id === "actions" ? (event) => event.stopPropagation() : undefined}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>)}</TableRow>)}
-            {!loading && table.getRowModel().rows.length === 0 ? <TableRow><TableCell className="h-24 text-center whitespace-normal text-muted-foreground" colSpan={6}>{t("table.empty")}</TableCell></TableRow> : null}
+            {!loading && table.getRowModel().rows.length === 0 ? <TableRow><TableCell className="h-24 text-center whitespace-normal text-muted-foreground" colSpan={6}>{query ? tCommon("tableSearch.noResults", { query }) : t("table.empty")}</TableCell></TableRow> : null}
           </TableBody>
         </Table>
       </TableCard>

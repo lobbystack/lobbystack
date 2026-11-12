@@ -64,6 +64,12 @@ describe("contact list parity and pagination", () => {
     expect(await within(dialog).findByText("edit.invalidEmail")).toBeTruthy();
     expect(fetchMock.mock.calls.some(([, init]) => init?.method === "PATCH")).toBe(false);
   });
+  it("searches the whole list on the server and returns to the first page", async () => {
+    const { fetchMock } = setup();
+    await screen.findByText("Contact 1");
+    await userEvent.type(screen.getByRole("textbox", { name: "tableSearch.contacts" }), "milan");
+    await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => url.includes("search=milan") && url.includes("offset=0"))).toBe(true));
+  });
   it("renders the original trailing actions layout", async () => {
     const { container } = setup();
     expect(await screen.findByRole("button", { name: "table.actions.moreOptions" })).toBeTruthy();

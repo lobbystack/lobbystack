@@ -415,5 +415,14 @@
     "testing": "Testiranje...",
     "connecting": "Povezivanje...",
     "disconnecting": "Prekidanje veze..."
+  },
+  "tableSearch": {
+    "contacts": "Pretraži kontakte",
+    "appointments": "Pretraži termine",
+    "knowledge": "Pretraži znanje",
+    "services": "Pretraži usluge",
+    "employees": "Pretraži zaposlene",
+    "rules": "Pretraži pravila",
+    "noResults": "Nema rezultata za „{{query}}“"
   }
 }

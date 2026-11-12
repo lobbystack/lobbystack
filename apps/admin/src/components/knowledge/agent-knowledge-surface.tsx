@@ -12,7 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { useManagedBusiness } from "@/hooks/use-agent-settings";
 import { useKnowledgeSources, type KnowledgeSource } from "@/hooks/use-knowledge-sources";
 import { AddKnowledgeMenu, FileContent, KnowledgeForms, SourceMenu, useSourceActions, type KnowledgeForm } from "./knowledge-parts";
-import { KnowledgeSourcesTable } from "./knowledge-sources-table";
+import { KnowledgeSourcesTable, useKnowledgeSearch } from "./knowledge-sources-table";
 import { SelectionBar, useSelection } from "./selection";
 import { WebsitePagesDialog } from "./website-pages-dialog";
 
@@ -39,8 +39,10 @@ export function AgentKnowledgeSurface({ agentId }: { agentId: string }) {
   const paginationLabels = useDataTablePaginationLabels("agent");
   const { businesses, businessId, canManage } = useManagedBusiness();
   const { sources, act, cancelImport, invalidate } = useKnowledgeSources(businessId || undefined, agentId);
-  const own = useMemo(() => sources.data?.own ?? [], [sources.data]);
-  const shared = useMemo(() => sources.data?.shared ?? [], [sources.data]);
+  const allOwn = useMemo(() => sources.data?.own ?? [], [sources.data]);
+  const allShared = useMemo(() => sources.data?.shared ?? [], [sources.data]);
+  const { rows: own, search: ownSearch } = useKnowledgeSearch(allOwn);
+  const { rows: shared, search: sharedSearch } = useKnowledgeSearch(allShared);
   const ownSelection = useSelection(useMemo(() => own.map((row) => row.id), [own]));
   const sharedSelection = useSelection(useMemo(() => shared.map((row) => row.id), [shared]));
   const actions = useSourceActions({ act: act.mutateAsync, cancelImport: cancelImport.mutateAsync });
@@ -73,7 +75,7 @@ export function AgentKnowledgeSurface({ agentId }: { agentId: string }) {
       { id: "disable", label: t("sections.knowledge.batch.disable"), onClick: () => void actions.run("disable", pick(own, ownSelection.selected)).then(ownSelection.stop) },
       { id: "enable", label: t("sections.knowledge.batch.enable"), onClick: () => void actions.run("enable", pick(own, ownSelection.selected)).then(ownSelection.stop) },
       { id: "reimport", label: t("sections.knowledge.batch.reimport"), disabled: !pick(own, ownSelection.selected).some((row) => row.kind === "website"), onClick: () => void actions.run("reimport", pick(own, ownSelection.selected)).then(ownSelection.stop) },
-    ]} disabled={!own.length || actions.pending} label={t("sections.knowledge.agent.ownTitle")} selection={ownSelection} /> : null} title={t("sections.knowledge.agent.ownTitle")}>
+    ]} disabled={!allOwn.length || actions.pending} label={t("sections.knowledge.agent.ownTitle")} selection={ownSelection} /> : null} title={t("sections.knowledge.agent.ownTitle")}>
       <KnowledgeSourcesTable
         emptyText={t("sections.knowledge.agent.ownEmpty")}
         expanded={viewed ? <FileContent businessId={businessId} source={viewed} /> : null}
@@ -85,6 +87,7 @@ export function AgentKnowledgeSurface({ agentId }: { agentId: string }) {
         onOpen={(source) => open(source, false)}
         onRetry={canManage && !actions.pending ? (source) => void actions.run("reimport", [source]) : undefined}
         rows={own}
+        search={ownSearch}
         selection={canManage ? ownSelection : undefined}
       />
     </Section>
@@ -93,7 +96,7 @@ export function AgentKnowledgeSurface({ agentId }: { agentId: string }) {
       {canManage ? <SelectionBar actions={[
         { id: "agent_disable", label: t("sections.knowledge.batch.agentDisable"), onClick: () => void actions.run("agent_disable", pick(shared, sharedSelection.selected)).then(sharedSelection.stop) },
         { id: "agent_enable", label: t("sections.knowledge.batch.agentEnable"), onClick: () => void actions.run("agent_enable", pick(shared, sharedSelection.selected)).then(sharedSelection.stop) },
-      ]} disabled={!shared.length || actions.pending} label={t("sections.knowledge.agent.sharedTitle")} selection={sharedSelection} /> : null}
+      ]} disabled={!allShared.length || actions.pending} label={t("sections.knowledge.agent.sharedTitle")} selection={sharedSelection} /> : null}
     </>} title={t("sections.knowledge.agent.sharedTitle")}>
       <KnowledgeSourcesTable
         emptyText={t("sections.knowledge.agent.sharedEmpty")}
@@ -104,6 +107,7 @@ export function AgentKnowledgeSurface({ agentId }: { agentId: string }) {
         loading={false}
         onOpen={(source) => open(source, true)}
         rows={shared}
+        search={sharedSearch}
         selection={canManage ? sharedSelection : undefined}
         toggle={{
           heading: t("sections.knowledge.agent.toggleHeading"),

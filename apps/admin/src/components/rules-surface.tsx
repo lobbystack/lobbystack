@@ -14,7 +14,9 @@ import { requestJson } from "@/lib/request-json";
 import { HeaderActions } from "@/components/header-actions";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { DataTablePagination, paginationFeatures, useDataTablePaginationLabels } from "./data-table/pagination";
-import { DataTablePaginationSkeleton, HeaderButtonSkeleton, RuleRowsSkeleton, RulesPageSkeleton } from "./loading-skeletons";
+import { TableSearch } from "./data-table/table-search";
+import { matchesSearch } from "./data-table/search-match";
+import { DataTablePaginationSkeleton, HeaderButtonSkeleton, RuleRowsSkeleton, RulesPageSkeleton, TableSearchSkeleton } from "./loading-skeletons";
 import { PageSurface } from "./page-surface";
 import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
@@ -43,9 +45,12 @@ function summarize(value: string, length: number): string {
 /** One agent's rules, or without `agentId` the default agent's. */
 export function RulesSurface({ agentId }: { agentId?: string } = {}) {
   const { i18n, t } = useTranslation("agent");
+  const { t: tCommon } = useTranslation("common");
   const paginationLabels = useDataTablePaginationLabels("agent");
   const queryClient = useQueryClient();
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
+  const [search, setSearch] = useState("");
+  const query = search.trim();
   const [editingRule, setEditingRule] = useState<Rule | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteCandidate, setDeleteCandidate] = useState<Rule | null>(null);
@@ -74,19 +79,22 @@ export function RulesSurface({ agentId }: { agentId?: string } = {}) {
   });
 
   const orderedRules = useMemo(() => [...(rules.data ?? [])].sort((left, right) => left.sortOrder - right.sortOrder), [rules.data]);
-  const table = useTable({ features: paginationFeatures, data: orderedRules, columns: [], onPaginationChange: setPagination, state: { pagination } });
+  // Reordering acts on the full list, so it stays off while a search hides some rules.
+  const reorderLocked = Boolean(query);
+  const visibleRules = useMemo(() => query ? orderedRules.filter((rule) => matchesSearch(query, [rule.title, rule.content, rule.channel ? t(`sections.rules.fields.channel.${rule.channel}`) : t("sections.rules.fields.channel.all")])) : orderedRules, [orderedRules, query, t]);
+  const table = useTable({ features: paginationFeatures, data: visibleRules, columns: [], onPaginationChange: setPagination, state: { pagination } });
   const pageRows = table.getRowModel().rows.map((row) => row.original);
   const loading = rules.isLoading;
 
   useEffect(() => {
-    const pageCount = Math.max(1, Math.ceil(orderedRules.length / pagination.pageSize));
+    const pageCount = Math.max(1, Math.ceil(visibleRules.length / pagination.pageSize));
     if (pagination.pageIndex >= pageCount) setPagination((current) => ({ ...current, pageIndex: pageCount - 1 }));
-  }, [orderedRules.length, pagination.pageIndex, pagination.pageSize]);
+  }, [visibleRules.length, pagination.pageIndex, pagination.pageSize]);
 
   function moveRule(rule: Rule, direction: -1 | 1) {
     const index = orderedRules.findIndex((candidate) => candidate.id === rule.id);
     const nextIndex = index + direction;
-    if (index < 0 || nextIndex < 0 || nextIndex >= orderedRules.length) return;
+    if (reorderLocked || index < 0 || nextIndex < 0 || nextIndex >= orderedRules.length) return;
     const reordered = [...orderedRules];
     [reordered[index], reordered[nextIndex]] = [reordered[nextIndex]!, reordered[index]!];
     reorderRules.mutate(reordered.map((candidate) => candidate.id));
@@ -102,7 +110,7 @@ export function RulesSurface({ agentId }: { agentId?: string } = {}) {
     const dragged = draggingId;
     const target = dropTarget;
     endDrag();
-    if (!dragged || !target || dragged === target.id) return;
+    if (reorderLocked || !dragged || !target || dragged === target.id) return;
     const ids = orderedRules.map((rule) => rule.id).filter((id) => id !== dragged);
     ids.splice(ids.indexOf(target.id) + (target.after ? 1 : 0), 0, dragged);
     if (ids.some((id, index) => id !== orderedRules[index]?.id)) reorderRules.mutate(ids);
@@ -120,6 +128,7 @@ export function RulesSurface({ agentId }: { agentId?: string } = {}) {
         <HeaderActions>
           {canManage ? loading ? <HeaderButtonSkeleton label={t("sections.rules.addKnowledge")} /> : <Button onClick={() => { setEditingRule(null); setDialogOpen(true); }}><Plus data-icon="inline-start" />{t("sections.rules.addKnowledge")}</Button> : null}
         </HeaderActions>
+        {loading ? <TableSearchSkeleton /> : orderedRules.length > 0 || query ? <TableSearch label={tCommon("tableSearch.rules")} onValueChange={(value) => { setSearch(value); setPagination((current) => ({ ...current, pageIndex: 0 })); }} value={search} /> : null}
         <TableCard>
           <Table className={cn("w-full table-fixed", (loading || pageRows.length > 0) && "min-w-[60rem]")}>
             <colgroup>{canManage ? <col className="w-12" /> : null}<col className="w-[25%]" /><col className="w-[20%]" /><col className="w-[37%]" /><col className="w-[18%]" /><col className="w-48" /><TableActionsColumn /></colgroup>
@@ -130,7 +139,7 @@ export function RulesSurface({ agentId }: { agentId?: string } = {}) {
                 const dropLine = dropTarget?.id === rule.id && draggingId !== rule.id ? (dropTarget.after ? "shadow-[inset_0_-2px_0_var(--primary)]" : "shadow-[inset_0_2px_0_var(--primary)]") : "";
                 return <TableRow
                   className={cn(canManage ? "h-12 cursor-pointer" : "h-12", draggingId === rule.id && "opacity-50", dropLine)}
-                  draggable={canManage && dragArmed === rule.id}
+                  draggable={canManage && !reorderLocked && dragArmed === rule.id}
                   key={rule.id}
                   onClick={() => { if (canManage) { setEditingRule(rule); setDialogOpen(true); } }}
                   onDragEnd={endDrag}
@@ -145,15 +154,15 @@ export function RulesSurface({ agentId }: { agentId?: string } = {}) {
                   onDragStart={(event) => { event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", rule.id); setDraggingId(rule.id); }}
                   onDrop={(event) => { event.preventDefault(); dropRule(); }}
                 >
-                  {canManage ? <TableCell className="pr-0" onClick={(event) => event.stopPropagation()}><span aria-hidden="true" className={cn("flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground", reorderRules.isPending ? "cursor-not-allowed opacity-50" : "cursor-grab active:cursor-grabbing")} onPointerDown={() => { if (!reorderRules.isPending) setDragArmed(rule.id); }} onPointerUp={() => setDragArmed(null)} title={t("actions.dragToReorder")}><GripVertical className="size-4" /></span></TableCell> : null}
+                  {canManage ? <TableCell className="pr-0" onClick={(event) => event.stopPropagation()}><span aria-hidden="true" className={cn("flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground", reorderRules.isPending || reorderLocked ? "cursor-not-allowed opacity-50" : "cursor-grab active:cursor-grabbing")} onPointerDown={() => { if (!reorderRules.isPending && !reorderLocked) setDragArmed(rule.id); }} onPointerUp={() => setDragArmed(null)} title={t("actions.dragToReorder")}><GripVertical className="size-4" /></span></TableCell> : null}
                   <TableCell className="max-w-0 overflow-hidden"><span className="block truncate type-item-title" title={rule.title}>{summarize(rule.title, 32)}</span></TableCell>
                   <TableCell className="max-w-0 overflow-hidden">{rule.channel ? <Badge className="max-w-full" variant="secondary"><span className="truncate">{t(`sections.rules.fields.channel.${rule.channel}`)}</span></Badge> : <span className="block truncate type-body-muted">{t("sections.rules.fields.channel.all")}</span>}</TableCell>
                   <TableCell className="max-w-0 overflow-hidden"><span className="block truncate type-body-muted" title={rule.content}>{summarize(rule.content, 72)}</span></TableCell>
                   <TableCell><Status variant={knowledgeStatusVariant(rule.active ? "indexed" : "disabled")}>{rule.active ? t("sections.rules.status.indexed") : t("table.disabled")}</Status></TableCell>
                   <TableCell className="text-right type-body-muted">{new Intl.DateTimeFormat(intlLocale(i18n.resolvedLanguage), { dateStyle: "medium", timeStyle: "short" }).format(new Date(rule.createdAt))}</TableCell>
-                  <TableCell onClick={(event) => event.stopPropagation()}>{canManage ? <DropdownMenu><DropdownMenuTrigger render={<Button aria-label={t("actions.moreOptions")} size="icon-sm" type="button" variant="ghost"><MoreHorizontal /></Button>} /><DropdownMenuContent align="end" className="min-w-0 w-fit"><DropdownMenuItem onClick={() => { setEditingRule(rule); setDialogOpen(true); }}><Pencil />{t("actions.edit")}</DropdownMenuItem><DropdownMenuSeparator /><DropdownMenuItem disabled={orderedIndex === 0 || reorderRules.isPending} onClick={() => moveRule(rule, -1)}><ArrowUp />{t("actions.moveUp")}</DropdownMenuItem><DropdownMenuItem disabled={orderedIndex === orderedRules.length - 1 || reorderRules.isPending} onClick={() => moveRule(rule, 1)}><ArrowDown />{t("actions.moveDown")}</DropdownMenuItem><DropdownMenuSeparator /><DropdownMenuItem disabled={updateRule.isPending} onClick={() => updateRule.mutate({ ruleId: rule.id, active: !rule.active })}>{rule.active ? <Pause /> : <Play />}{rule.active ? t("actions.disable") : t("actions.enable")}</DropdownMenuItem><DropdownMenuSeparator /><DropdownMenuItem onClick={() => setDeleteCandidate(rule)} variant="destructive"><Trash2 />{t("actions.delete")}</DropdownMenuItem></DropdownMenuContent></DropdownMenu> : null}</TableCell>
+                  <TableCell onClick={(event) => event.stopPropagation()}>{canManage ? <DropdownMenu><DropdownMenuTrigger render={<Button aria-label={t("actions.moreOptions")} size="icon-sm" type="button" variant="ghost"><MoreHorizontal /></Button>} /><DropdownMenuContent align="end" className="min-w-0 w-fit"><DropdownMenuItem onClick={() => { setEditingRule(rule); setDialogOpen(true); }}><Pencil />{t("actions.edit")}</DropdownMenuItem><DropdownMenuSeparator /><DropdownMenuItem disabled={orderedIndex === 0 || reorderRules.isPending || reorderLocked} onClick={() => moveRule(rule, -1)}><ArrowUp />{t("actions.moveUp")}</DropdownMenuItem><DropdownMenuItem disabled={orderedIndex === orderedRules.length - 1 || reorderRules.isPending || reorderLocked} onClick={() => moveRule(rule, 1)}><ArrowDown />{t("actions.moveDown")}</DropdownMenuItem><DropdownMenuSeparator /><DropdownMenuItem disabled={updateRule.isPending} onClick={() => updateRule.mutate({ ruleId: rule.id, active: !rule.active })}>{rule.active ? <Pause /> : <Play />}{rule.active ? t("actions.disable") : t("actions.enable")}</DropdownMenuItem><DropdownMenuSeparator /><DropdownMenuItem onClick={() => setDeleteCandidate(rule)} variant="destructive"><Trash2 />{t("actions.delete")}</DropdownMenuItem></DropdownMenuContent></DropdownMenu> : null}</TableCell>
                 </TableRow>;
-              }) : <TableRow><TableCell className="h-24 text-center whitespace-normal text-muted-foreground" colSpan={canManage ? 7 : 6}>{t("sections.rules.emptyState")}</TableCell></TableRow>}
+              }) : <TableRow><TableCell className="h-24 text-center whitespace-normal text-muted-foreground" colSpan={canManage ? 7 : 6}>{query ? tCommon("tableSearch.noResults", { query }) : t("sections.rules.emptyState")}</TableCell></TableRow>}
             </TableBody>
           </Table>
         </TableCard>

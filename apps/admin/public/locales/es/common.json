@@ -415,5 +415,14 @@
     "testing": "Probando...",
     "connecting": "Conectando...",
     "disconnecting": "Desconectando..."
+  },
+  "tableSearch": {
+    "contacts": "Buscar contactos",
+    "appointments": "Buscar citas",
+    "knowledge": "Buscar conocimiento",
+    "services": "Buscar servicios",
+    "employees": "Buscar empleados",
+    "rules": "Buscar reglas",
+    "noResults": "Sin resultados para «{{query}}»"
   }
 }

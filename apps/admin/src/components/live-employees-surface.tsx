@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 
 import { isTransferCountry, type HoursWindow } from "@lobbystack/shared";
 import { requestJson } from "@/lib/request-json";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
@@ -27,7 +28,8 @@ import { HeaderActions } from "@/components/header-actions";
 import { toDays, useBusinessHours, useDayNames, WeeklyHoursEditor, windowsForSave, type HoursWindowInput } from "@/components/business-hours-section";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { DataTablePagination, paginationFeatures, useDataTablePaginationLabels } from "@/components/data-table/pagination";
-import { DataTablePaginationSkeleton, EmployeeRowsSkeleton, HeaderButtonSkeleton } from "@/components/loading-skeletons";
+import { TableSearch } from "@/components/data-table/table-search";
+import { DataTablePaginationSkeleton, EmployeeRowsSkeleton, HeaderButtonSkeleton, TableSearchSkeleton } from "@/components/loading-skeletons";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -91,17 +93,20 @@ function errorCode(error: unknown): string | undefined {
 
 export function LiveEmployeesSurface() {
   const { i18n, t } = useTranslation("employees");
+  const { t: tCommon } = useTranslation("common");
   const paginationLabels = useDataTablePaginationLabels("employees");
   const locale = i18n.resolvedLanguage ?? i18n.language;
   const queryClient = useQueryClient();
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
+  const [search, setSearch] = useState("");
+  const query = useDebouncedValue(search.trim());
   const [pendingDelete, setPendingDelete] = useState<Employee | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const { businesses, business } = useActiveBusiness();
   const employees = useQuery({
-    queryKey: ["employees", business?.businessId, pagination.pageIndex, pagination.pageSize],
-    queryFn: () => requestJson<{ employees: Employee[]; services: ServiceOption[]; today: string; pagination: { total: number } }>(`/api/employees?businessId=${encodeURIComponent(business!.businessId)}&limit=${pagination.pageSize}&offset=${pagination.pageIndex * pagination.pageSize}`),
+    queryKey: ["employees", business?.businessId, pagination.pageIndex, pagination.pageSize, query],
+    queryFn: () => requestJson<{ employees: Employee[]; services: ServiceOption[]; today: string; pagination: { total: number } }>(`/api/employees?businessId=${encodeURIComponent(business!.businessId)}&limit=${pagination.pageSize}&offset=${pagination.pageIndex * pagination.pageSize}${query ? `&search=${encodeURIComponent(query)}` : ""}`),
     enabled: Boolean(business),
     // Keep the current rows on screen while the next page loads.
     placeholderData: keepPreviousForBusiness(business?.businessId),
@@ -204,6 +209,7 @@ export function LiveEmployeesSurface() {
       <HeaderActions>
         {loading && (businesses.isLoading || canMutate) ? <HeaderButtonSkeleton label={t("add.button")} /> : canMutate ? <Button onClick={() => openEditor(null)}><Plus data-icon="inline-start" />{t("add.button")}</Button> : null}
       </HeaderActions>
+      {loading ? <TableSearchSkeleton /> : <TableSearch label={tCommon("tableSearch.employees")} onValueChange={(value) => { setSearch(value); setPagination((current) => ({ ...current, pageIndex: 0 })); }} value={search} />}
       <TableCard>
         <Table className={cn("w-full table-fixed", (loading || table.getRowModel().rows.length > 0) && "min-w-[60rem]")}>
           <colgroup><col className="w-[16%]" /><col className="w-[15%]" /><col className="w-[22%]" /><col className="w-[25%]" /><col className="w-[22%]" /><TableActionsColumn /></colgroup>
@@ -211,7 +217,7 @@ export function LiveEmployeesSurface() {
           <TableBody aria-busy={loading || undefined}>
             {loading ? <EmployeeRowsSkeleton rows={Math.min(pagination.pageSize, 10)} /> : null}
             {loading ? null : table.getRowModel().rows.map((row) => <TableRow className={canMutate ? "cursor-pointer" : undefined} key={row.id} onClick={() => { if (canMutate) openEditor(row.original); }}>{row.getAllCells().map((cell) => <TableCell className={cell.column.id === "added" ? "text-right type-body-muted" : cell.column.id === "actions" ? undefined : "max-w-0"} key={cell.id} onClick={cell.column.id === "actions" ? (event) => event.stopPropagation() : undefined}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>)}</TableRow>)}
-            {!loading && table.getRowModel().rows.length === 0 ? <TableRow><TableCell className="h-24 text-center whitespace-normal text-muted-foreground" colSpan={6}>{t("table.emptyState")}</TableCell></TableRow> : null}
+            {!loading && table.getRowModel().rows.length === 0 ? <TableRow><TableCell className="h-24 text-center whitespace-normal text-muted-foreground" colSpan={6}>{query ? tCommon("tableSearch.noResults", { query }) : t("table.emptyState")}</TableCell></TableRow> : null}
           </TableBody>
         </Table>
       </TableCard>

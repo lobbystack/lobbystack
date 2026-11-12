@@ -373,6 +373,7 @@ export function AgentKnowledgeSkeleton({ labels }: { labels: { own: string; shar
           <HiddenTextSkeleton className="type-button-sm" skeletonClassName="h-8 px-3 rounded-full">{labels.select}</HiddenTextSkeleton>
         </div>
       </div>
+      <TableSearchSkeleton />
       <TableCard>
         <Table className="min-w-[60rem] w-full table-fixed">
           <colgroup><col className="w-[22%]" /><col className="w-[42%]" /><col className="w-[12%]" /><col className="w-[18%]" />{toggle ? <col className="w-28" /> : null}<TableActionsColumn /></colgroup>
@@ -411,6 +412,7 @@ export function WebsitePagesSkeleton({ rows = 4 }: { rows?: number }) {
 export function KnowledgePageSkeleton({ headings, rowsPerPage }: { headings: [title: string, preview: string, status: string, added: string]; rowsPerPage: string }) {
   return (
     <>
+      <TableSearchSkeleton />
       <TableCard>
         <Table className="min-w-[60rem] w-full table-fixed">
           <colgroup><col className="w-[20%]" /><col className="w-[46%]" /><col className="w-[12%]" /><col className="w-[22%]" /><TableActionsColumn /></colgroup>
@@ -451,6 +453,11 @@ export function KnowledgePageSkeleton({ headings, rowsPerPage }: { headings: [ti
  * Stands in for a header button with a leading icon, such as "+ Add knowledge". The label stays in the layout
  * but is hidden, so the placeholder is as wide as the real button in every language.
  */
+/** The search field above a table. */
+export function TableSearchSkeleton() {
+  return <Skeleton aria-hidden="true" className="h-10 w-full rounded-xl sm:max-w-xs" />;
+}
+
 export function HeaderButtonSkeleton({ label, trailingIcon = false }: { label: string; trailingIcon?: boolean }) {
   return (
     <Skeleton
@@ -510,6 +517,7 @@ export function ServiceRowsSkeleton({ rows = 10 }: { rows?: number }) {
 export function ServicesPageSkeleton({ headings, rowsPerPage }: { headings: [title: string, preview: string, price: string, status: string, added: string]; rowsPerPage: string }) {
   return (
     <>
+      <TableSearchSkeleton />
       <TableCard>
         <Table className="min-w-[60rem] w-full table-fixed">
           <colgroup><col className="w-[25%]" /><col className="w-[42%]" /><col className="w-[18%]" /><col className="w-[15%]" /><col className="w-48" /><TableActionsColumn /></colgroup>
@@ -582,6 +590,7 @@ export function RuleRowsSkeleton({ channelLabel, handle = true, rows = 10 }: { c
 export function RulesPageSkeleton({ channelLabel, headings, rowsPerPage }: { channelLabel: string; headings: [title: string, channel: string, preview: string, status: string, added: string]; rowsPerPage: string }) {
   return (
     <>
+      <TableSearchSkeleton />
       <TableCard>
         <Table className="min-w-[60rem] w-full table-fixed">
           <colgroup><col className="w-12" /><col className="w-[25%]" /><col className="w-[20%]" /><col className="w-[37%]" /><col className="w-[18%]" /><col className="w-48" /><TableActionsColumn /></colgroup>

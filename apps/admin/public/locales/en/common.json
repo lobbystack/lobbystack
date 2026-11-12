@@ -412,5 +412,14 @@
     "testing": "Testing...",
     "connecting": "Connecting...",
     "disconnecting": "Disconnecting..."
+  },
+  "tableSearch": {
+    "contacts": "Search contacts",
+    "appointments": "Search appointments",
+    "knowledge": "Search knowledge",
+    "services": "Search services",
+    "employees": "Search employees",
+    "rules": "Search rules",
+    "noResults": "No results for “{{query}}”"
   }
 }
