@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -120,9 +120,27 @@ function smsConsentStatusLabel(status: string, t: ReturnType<typeof useTranslati
   return key ? t(`detail.details.smsConsentStatusValues.${key}`) : humanize(status);
 }
 
+const CONTACT_TABS = ["activity", "appointments", "details"] as const;
+
 export function LiveContactDetailSurface({ contactId }: { contactId: string }) {
   const { i18n, t } = useTranslation("contacts");
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  // ?tab=appointments or ?tab=details; Activity, the default, stays out of the URL.
+  const requestedTab = searchParams.get("tab");
+  const urlTab = CONTACT_TABS.find((option) => option === requestedTab) ?? "activity";
+  // The tab switches at once; the URL follows, and back or forward moves the tab again.
+  const [tab, setTab] = useState<string>(urlTab);
+  useEffect(() => { setTab(urlTab); }, [urlTab]);
+  const selectTab = (next: string) => {
+    setTab(next);
+    const params = new URLSearchParams(searchParams.toString());
+    if (next === "activity") params.delete("tab");
+    else params.set("tab", next);
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+  };
   const queryClient = useQueryClient();
   const { copiedField, copy } = useCopiedField();
   const [blockDialogOpen, setBlockDialogOpen] = useState(false);
@@ -186,7 +204,7 @@ export function LiveContactDetailSurface({ contactId }: { contactId: string }) {
         <StatCard className="border-l border-t border-border sm:border-t-0" label={t("detail.stats.conversations")} value={data.activityCounts.conversations} />
       </Surface>
 
-      <Tabs defaultValue="activity">
+      <Tabs onValueChange={selectTab} value={tab}>
         <TabsList variant="pills">
           <TabsTrigger value="activity"><Activity className="size-4" />{t("detail.tabs.activity")}</TabsTrigger>
           <TabsTrigger value="appointments"><Calendar className="size-4" />{t("detail.tabs.appointments")}</TabsTrigger>
