@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
-import { businesses, createDatabaseClient, firstRealConversations, onboardingNumberClaimEvents, outboxMessages, phoneNumbers, users, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { businesses, createDatabaseClient, firstRealConversations, onboardingNumberClaimEvents, outboxMessages, phoneNumbers, users, type Database, type DatabaseTransaction, defaultAgentIdOf } from "@lobbystack/db";
 import { createBusiness } from "./tenancy";
 import { advanceOnboardingStage, queueWelcomeEmail } from "./onboarding";
 
@@ -89,7 +89,7 @@ describe.skipIf(!testUrl)("welcome email against dedicated PostgreSQL roles", ()
   it("names the number the owner took, so the button forwards their calls", async () => {
     await rollbackTest(async tx => {
       const { businessId } = await completedWorkspace(tx);
-      await tx.insert(phoneNumbers).values({ businessId, e164: "+14388070285", carrier: "twilio", status: "active", voiceEnabled: true, smsEnabled: true });
+      await tx.insert(phoneNumbers).values({ businessId, agentId: defaultAgentIdOf(businessId), e164: "+14388070285", carrier: "twilio", status: "active", voiceEnabled: true, smsEnabled: true });
       expect(await queueAsWorker(tx, businessId)).toBe("queued");
       expect((await welcomeEmails(tx, businessId))[0]!.payload).toMatchObject({ variables: { number: "+14388070285", goal: "" } });
     });

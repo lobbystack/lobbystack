@@ -12,7 +12,7 @@ function normalizeComparable(value: string): string {
 }
 
 // Spellings a transcript swaps for the same sound, so a caller saying
-// "Raphael Morency" matches a booking the receptionist heard as "Rafael Morenzi".
+// "Raphael Morency" matches a booking the agent heard as "Rafael Morenzi".
 function soundKey(token: string): string {
   return token.replace(/ph/g, "f").replace(/ck|q/g, "k").replace(/c(?=[eiy])/g, "s").replace(/c/g, "k").replace(/z/g, "s").replace(/y/g, "i").replace(/(.)\1+/g, "$1");
 }

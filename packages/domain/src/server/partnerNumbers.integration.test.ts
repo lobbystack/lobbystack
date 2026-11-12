@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { billingAccounts, businesses, createDatabaseClient, numberTrials, onboardingNumberClaimEvents, onboardingPhoneVerifications, outboxMessages, partnerBillingAccounts, partnerLifecycles, partnerNumberCharges, partners, partnerTierBilling, phoneNumbers, prospectDemos, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { billingAccounts, businesses, createDatabaseClient, numberTrials, onboardingNumberClaimEvents, onboardingPhoneVerifications, outboxMessages, partnerBillingAccounts, partnerLifecycles, partnerNumberCharges, partners, partnerTierBilling, phoneNumbers, prospectDemos, users, withBusinessTransaction, type Database, type DatabaseTransaction, defaultAgentIdOf } from "@lobbystack/db";
 
 import { openPartnerBusiness } from "./businessAccess";
 import { forgetCachedBrands } from "./brands";
@@ -209,7 +209,7 @@ async function failedThisHour(tx: DatabaseTransaction, input: { businessId: stri
 
 /** A number the business holds, bought at `createdAt`. */
 async function hold(tx: DatabaseTransaction, businessId: string, input: { createdAt?: Date; reclaimScheduledAt?: Date } = {}): Promise<string> {
-  const [number] = await asMigrator(tx, async () => await tx.insert(phoneNumbers).values({ businessId, e164: testNumber(), status: "active", ...(input.createdAt ? { createdAt: input.createdAt } : {}), ...(input.reclaimScheduledAt ? { reclaimScheduledAt: input.reclaimScheduledAt, reclaimReason: "replacement" } : {}) }).returning({ id: phoneNumbers.id }));
+  const [number] = await asMigrator(tx, async () => await tx.insert(phoneNumbers).values({ businessId, agentId: defaultAgentIdOf(businessId), e164: testNumber(), status: "active", ...(input.createdAt ? { createdAt: input.createdAt } : {}), ...(input.reclaimScheduledAt ? { reclaimScheduledAt: input.reclaimScheduledAt, reclaimReason: "replacement" } : {}) }).returning({ id: phoneNumbers.id }));
   return number!.id;
 }
 

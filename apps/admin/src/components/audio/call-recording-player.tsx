@@ -25,7 +25,7 @@ type CallRecordingPlayerProps = {
   seekLabel?: string;
   src?: string | null;
   variant?: "default" | "hidden";
-  /** Draws the recording's loudness as bars the listener can click to seek. Loads and decodes the recording on the first play or seek. */
+  /** Draws the recording's loudness as bars the listener can click to seek. Loads and decodes the recording as soon as the player mounts. */
   waveform?: boolean;
 };
 
@@ -33,6 +33,25 @@ const WAVEFORM_BARS = 120;
 /** Flat bars stand in until the recording decodes, so the listener can still press play and seek. */
 const WAVEFORM_PLACEHOLDER = Array.from({ length: WAVEFORM_BARS }, () => 0.15);
 const SEEK_STEP_SECONDS = 5;
+/** A bar and the 1px gap after it need at least this many pixels, so a narrow waveform shows fewer, wider bars instead of none. */
+const WAVEFORM_BAR_PITCH_PX = 3;
+const WAVEFORM_MIN_BARS = 8;
+/**
+ * The seek control shares the row with play, time and download. Below 12rem
+ * the four don't fit, so the player becomes a grid and the seek control takes
+ * a line of its own under the other three instead of shrinking to nothing.
+ */
+const SEEK_LAYOUT = "col-span-full row-start-2";
+
+/** `peaks` folded into `count` bars, each the loudest of the peaks it covers. */
+function foldPeaks(peaks: number[], count: number): number[] {
+  if (count >= peaks.length) return peaks;
+  return Array.from({ length: count }, (_, bar) => {
+    const start = Math.floor((bar * peaks.length) / count);
+    const end = Math.max(start + 1, Math.floor(((bar + 1) * peaks.length) / count));
+    return Math.max(...peaks.slice(start, end));
+  });
+}
 
 /** The loudest sample in each of `count` equal slices of the recording, across all channels, scaled so the loudest slice is 1. Null when the buffer can't be read. */
 function computePeaks(buffer: { getChannelData?: (channel: number) => Float32Array; length?: number; numberOfChannels: number }, count: number): number[] | null {
@@ -227,6 +246,17 @@ export function CallRecordingPlayer({
     return await promise;
   }
 
+  // The waveform draws as soon as the player shows, not on the first play.
+  useEffect(() => {
+    if (!waveform || !src || playbackSrc) {
+      return;
+    }
+
+    void ensurePlaybackSource();
+    // ensurePlaybackSource is recreated each render; a src change already resets what it reads.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [waveform, playbackSrc, src]);
+
   useEffect(() => {
     if (!autoPlay || !src || playbackSrc) {
       return;
@@ -404,11 +434,11 @@ export function CallRecordingPlayer({
   return (
     <div
       className={cn(
-        "w-full px-2 py-2",
+        "@container/recording w-full px-2 py-2",
         className,
       )}
     >
-      <div className="flex min-w-0 items-center gap-2">
+      <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1 @min-[12rem]/recording:flex" data-slot="recording-row">
         <Button
           aria-label={isPlaying ? pauseLabel : playLabel}
           onClick={() => void togglePlayback()}
@@ -430,7 +460,7 @@ export function CallRecordingPlayer({
           />
         ) : (
           <Slider
-            className="min-w-24 flex-1"
+            className={cn("min-w-12 flex-1", SEEK_LAYOUT)}
             max={100}
             min={0}
             onValueChange={(value) => {
@@ -445,7 +475,8 @@ export function CallRecordingPlayer({
           />
         )}
 
-        <time className="min-w-10 text-right type-body-muted tabular-nums">
+        {/* The time gives up width before the waveform does, so play, waveform, time and download all stay on one row. */}
+        <time className="w-10 min-w-0 shrink justify-self-end truncate text-right type-body-muted tabular-nums" data-slot="recording-time">
           {formatDuration(displayedRemainingSeconds)}
         </time>
 
@@ -474,6 +505,26 @@ function Waveform({ currentTime, duration, label, onSeek, onToggle, peaks }: {
   peaks: number[];
 }) {
   const ratio = duration > 0 ? currentTime / duration : 0;
+  const ref = useRef<HTMLDivElement | null>(null);
+  // The waveform's width, once measured; until then every bar renders.
+  const [width, setWidth] = useState(0);
+
+  useEffect(() => {
+    const element = ref.current;
+    if (!element || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver((entries) => {
+      const next = entries[0]?.contentRect.width ?? 0;
+      setWidth(Math.floor(next));
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  const bars = useMemo(() => {
+    if (width <= 0) return peaks;
+    const count = Math.max(WAVEFORM_MIN_BARS, Math.min(peaks.length, Math.floor((width + 1) / WAVEFORM_BAR_PITCH_PX)));
+    return foldPeaks(peaks, count);
+  }, [peaks, width]);
 
   function seekFromPointer(event: PointerEvent<HTMLDivElement>) {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -491,7 +542,7 @@ function Waveform({ currentTime, duration, label, onSeek, onToggle, peaks }: {
       aria-valuemin={0}
       aria-valuenow={Math.round(currentTime)}
       aria-valuetext={`${formatDuration(currentTime)} / ${formatDuration(duration)}`}
-      className="flex h-10 min-w-0 flex-1 cursor-pointer touch-none items-center gap-px overflow-hidden rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      className={cn("flex h-10 min-w-12 flex-1 cursor-pointer touch-none items-center gap-px overflow-hidden rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background", SEEK_LAYOUT)}
       onKeyDown={(event) => {
         if (event.key === " " && !event.repeat && !event.ctrlKey && !event.metaKey && !event.altKey) {
           event.preventDefault();
@@ -516,17 +567,17 @@ function Waveform({ currentTime, duration, label, onSeek, onToggle, peaks }: {
           seekFromPointer(event);
         }
       }}
+      data-slot="recording-waveform"
+      ref={ref}
       role="slider"
       tabIndex={0}
     >
-      {peaks.map((peak, index) => (
+      {bars.map((peak, index) => (
         <span
           aria-hidden="true"
           className={cn(
             "min-w-0 flex-1 rounded-full",
-            // Phones show every second bar, so the full set never overflows the time and download controls.
-            index % 2 === 1 && "hidden sm:block",
-            (index + 0.5) / peaks.length <= ratio ? "bg-foreground" : "bg-muted-foreground/35",
+            (index + 0.5) / bars.length <= ratio ? "bg-foreground" : "bg-muted-foreground/35",
           )}
           key={index}
           style={{ height: `${Math.max(10, peak * 100)}%` }}

@@ -8,10 +8,10 @@ export const CALENDLY_PLAN_ERROR = "Calendly books through its API only on paid 
 export { interfaceLocaleTags, interfaceLocales, intlLocale, isInterfaceLocale, isRuntimeLocale, normalizeInterfaceLocale, normalizeRuntimeLocale, runtimeLocaleFromTag, runtimeLocaleName, runtimeLocales } from "./locales";
 export type { InterfaceLocale, RuntimeLocale } from "./locales";
 import { interfaceLocales, runtimeLocales, type InterfaceLocale, type RuntimeLocale } from "./locales";
-import { appointmentChangeVerificationModes, bookingModes, transferModes, type ReceptionistVoice, type StaffFirstMode } from "./receptionist";
+import { appointmentChangeVerificationModes, bookingModes, transferModes, type AgentVoice, type StaffFirstMode } from "./agentSettings";
 import type { RuleChannel } from "./ruleChannels";
 import { WIDGET_COLOR_PATTERN, widgetPositionSchema, type WidgetPosition } from "./widget";
-export * from "./receptionist";
+export * from "./agentSettings";
 export * from "./ruleChannels";
 export * from "./chatChannels";
 export * from "./checkIn";
@@ -349,7 +349,7 @@ export type SnapshotAgent = {
   isDefault: boolean;
   greeting: string;
   tone: string;
-  voice: ReceptionistVoice;
+  voice: AgentVoice;
   voiceInstructions: string;
   smsInstructions: string;
   chatInstructions: string;
@@ -387,7 +387,7 @@ export type BusinessContextSnapshot = {
   legalName?: string;
   timezone: string;
   defaultLocale: RuntimeLocale;
-  /** The language the team reads what the receptionist writes for it. Absent follows `defaultLocale`. */
+  /** The language the team reads what the agent writes for it. Absent follows `defaultLocale`. */
   teamLocale?: RuntimeLocale;
   businessType: BusinessType;
   /** Optional analytics consent captured at call start; absence is not consent. */
@@ -401,9 +401,9 @@ export type BusinessContextSnapshot = {
   greeting: string;
   /**
    * The GPT-Live voice calls speak in. Absent in snapshots built before
-   * businesses could pick one; read it through normalizeReceptionistVoice.
+   * businesses could pick one; read it through normalizeAgentVoice.
    */
-  voice?: ReceptionistVoice;
+  voice?: AgentVoice;
   voiceInstructions: string;
   smsInstructions: string;
   chatInstructions: string;

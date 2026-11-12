@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { test, expect } from "@playwright/test";
 import { eq } from "drizzle-orm";
-import { agents, businesses, businessMemberships, createDatabaseClient, phoneNumbers, users, withBusinessTransaction } from "@lobbystack/db";
+import { agents, businesses, businessMemberships, createDatabaseClient, phoneNumbers, users, withBusinessTransaction, defaultAgentIdOf } from "@lobbystack/db";
 import settings from "../public/locales/fr/settings.json" with { type: "json" };
 import translations from "../public/locales/fr/agent.json" with { type: "json" };
 
@@ -20,7 +20,7 @@ test("service, rule and knowledge editors persist changes and enforce read-only 
       await tx.insert(businesses).values({ id: businessId, slug: `agent-workflows-${businessId}`, name: "Agent workflows", deploymentMode: "self_hosted_standard", timezone: "UTC", businessType: "clinic", onboardingStage: "complete" });
       await tx.insert(businessMemberships).values({ businessId, userId: userId!, role: "business_owner", status: "active" });
       // Rules belong to an agent, whose pages /agents/primary opens.
-      await tx.insert(agents).values({ businessId, isDefault: true, greeting: "Hi", tone: "warm", summary: "Agent workflows", bookingPolicy: "Book", transferMode: "never", bookingMode: "instant" });
+      await tx.insert(agents).values({ businessId, isDefault: true, greeting: "Hi", tone: "warm", bookingPolicy: "Book", transferMode: "never", bookingMode: "instant" });
     });
     await auth.db.update(users).set({ activeBusinessId: businessId }).where(eq(users.id, userId!));
     const page = await context.newPage();
@@ -92,7 +92,7 @@ test("service, rule and knowledge editors persist changes and enforce read-only 
     const initialPreferences = await (await context.request.get(notificationUrl)).json();
     expect((await context.request.put(notificationUrl, { headers, data: { ...initialPreferences, smsEnabled: true, smsConsent: true } })).status()).toBe(400);
     await auth.db.update(users).set({ phone: "+14165550901", phoneVerifiedAt: new Date() }).where(eq(users.id, userId!));
-    await withBusinessTransaction(database.db, { businessId, actorType: "worker" }, async tx => tx.insert(phoneNumbers).values({ businessId, e164: `+1416555${String(parseInt(businessId.slice(0, 4), 16) % 10000).padStart(4, "0")}`, status: "active", voiceEnabled: true, smsEnabled: true }));
+    await withBusinessTransaction(database.db, { businessId, actorType: "worker" }, async tx => tx.insert(phoneNumbers).values({ businessId, agentId: defaultAgentIdOf(businessId), e164: `+1416555${String(parseInt(businessId.slice(0, 4), 16) % 10000).padStart(4, "0")}`, status: "active", voiceEnabled: true, smsEnabled: true }));
     await page.goto(`${baseURL}/account/notifications`);
     const smsSwitch = page.getByRole("switch", { name: settings.notifications.sources.sms.title, exact: true });
     await expect(smsSwitch).toBeEnabled();

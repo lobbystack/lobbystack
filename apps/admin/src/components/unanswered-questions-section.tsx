@@ -16,6 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { intlLocale } from "@/lib/locale";
 import { requestJson } from "@/lib/request-json";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export type UnansweredQuestion = { id: string; question: string; timesAsked: number; firstAskedAt: string; lastAskedAt: string; lastChannel: string };
 export type UnansweredQuestions = { questions: UnansweredQuestion[]; openCount: number };
@@ -35,7 +36,7 @@ export function fetchUnansweredQuestions(businessId: string): Promise<Unanswered
 }
 
 /**
- * Open questions the receptionist found no knowledge for, most asked first. Owners and admins answer or dismiss them.
+ * Open questions the agent found no knowledge for, most asked first. Owners and admins answer or dismiss them.
  * Home links here by anchor, but the section renders after the page loads, so it scrolls itself into view once the
  * content above it (`layoutSettled`) and its own list have loaded.
  */
@@ -127,6 +128,6 @@ export function UnansweredQuestionsSection({ businessId, canManage, layoutSettle
           </Fragment>;
         })}
       </ItemGroup></CardContent></Card>
-      : <div className="rounded-xl border border-dashed p-8 text-center"><p className="type-empty-title">{t("unansweredQuestions.emptyTitle")}</p><p className="type-empty-description mt-2">{t("unansweredQuestions.emptyDescription")}</p></div>}
+      : <EmptyState description={t("unansweredQuestions.emptyDescription")} title={t("unansweredQuestions.emptyTitle")} />}
   </section>;
 }

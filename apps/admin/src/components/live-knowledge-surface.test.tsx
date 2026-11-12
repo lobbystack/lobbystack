@@ -17,7 +17,7 @@ beforeEach(() => { telemetryRef.current = createRecordedBrowserTelemetry(); });
 afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals(); vi.clearAllMocks(); });
 
 const at = "2026-09-01T12:00:00Z";
-const job = (status: string, extra: Partial<WebsiteImport> = {}): WebsiteImport => ({ id: "job", status, websiteUrl: "https://example.invalid", importedCount: 10, indexedCount: 0, documentCount: 0, crawlFinishedCount: null, crawlTotalCount: null, ...extra });
+const job = (status: string, extra: Partial<WebsiteImport> = {}): WebsiteImport => ({ id: "job", status, websiteUrl: "https://example.invalid", importedCount: 10, indexedCount: 0, documentCount: 0, crawlFinishedCount: null, crawlTotalCount: null, stalled: false, ...extra });
 function source(input: Partial<KnowledgeSource> & Pick<KnowledgeSource, "kind" | "id">): KnowledgeSource {
   return { title: "Clinic hours", sourceUrl: null, agentId: null, active: true, status: "indexed", error: null, preview: "**Clinic** [hours](https://example.invalid)", createdAt: at, updatedAt: at, processingProgress: 100, revision: 1, ...input };
 }
@@ -86,6 +86,17 @@ describe("the business's knowledge, one row per source", () => {
     expect(websiteImportProgress({ ...base, status: "crawling" })).toBe(12);
     expect(websiteImportProgress({ ...base, status: "indexing" })).toBe(72);
     expect(websiteImportProgress({ ...base, status: "crawling", importedCount: 10, crawlFinishedCount: 20, crawlTotalCount: 10 })).toBe(99);
+  });
+
+  it("says a stalled website import stopped, and Try again reads the site again", async () => {
+    const fetchMock = setup({ rows: [website({ status: "processing", pageCount: 0, pagesOff: 0, websiteImport: job("queued", { stalled: true }) })] });
+    expect(screen.queryByRole("progressbar")).toBeNull();
+    expect(screen.getByText("sections.knowledge.websiteImport.status.stalled")).toBeTruthy();
+    expect(screen.getByText("sections.knowledge.websiteImport.previewStalled")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "sections.knowledge.websiteImport.tryAgain" }));
+    await waitFor(() => expect(actionCall(fetchMock)).toEqual([{ action: "reimport", items: [{ type: "website", id: "site" }] }]));
+    // The button sits in the row, and pressing it doesn't open the website's pages.
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   it("shows a failed website import", () => {

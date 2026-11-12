@@ -3,7 +3,7 @@ import { randomInt, randomUUID } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { DateTime } from "luxon";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
-import { agents, billingAccounts, businessContextSnapshots, businessHours, businessMemberships, businesses, contacts, createDatabaseClient, notifications, operatorNotificationDeliveries, operatorNotificationPreferences, outboxMessages, phoneNumbers, services, smsConsentEvents, staff, users, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { agents, billingAccounts, businessContextSnapshots, businessHours, businessMemberships, businesses, contacts, createDatabaseClient, notifications, operatorNotificationDeliveries, operatorNotificationPreferences, outboxMessages, phoneNumbers, services, smsConsentEvents, staff, users, type Database, type DatabaseTransaction, defaultAgentIdOf } from "@lobbystack/db";
 import { OPERATOR_SMS_DISCLOSURE_VERSION } from "@lobbystack/shared";
 
 import { createAppointmentChangeVerification, issueAppointmentChangeOtp } from "./appointmentChanges";
@@ -68,11 +68,11 @@ async function seed(tx: DatabaseTransaction, options: { selfHosted: boolean; own
   const eventPreferences = defaultOperatorNotificationEventPreferences();
   eventPreferences.voiceMessage.sms = true;
   await tx.insert(operatorNotificationPreferences).values({ businessId, userId, emailEnabled: false, smsEnabled: true, eventPreferences, smsConsentGrantedAt: new Date(), smsConsentDisclosureVersion: OPERATOR_SMS_DISCLOSURE_VERSION, smsConsentPhone: ownerPhone, smsConsentSource: "operator_settings" });
-  await tx.insert(agents).values({ businessId, isDefault: true, greeting: "Hi", tone: "warm", summary: "Test", bookingPolicy: "Book", transferMode: "never", bookingMode: "instant", appointmentChangePolicy: { enabled: true, verificationMode: "otp_required", allowCancel: true, allowReschedule: true } });
+  await tx.insert(agents).values({ businessId, isDefault: true, greeting: "Hi", tone: "warm", bookingPolicy: "Book", transferMode: "never", bookingMode: "instant", appointmentChangePolicy: { enabled: true, verificationMode: "otp_required", allowCancel: true, allowReschedule: true } });
   const [member] = await tx.insert(staff).values({ businessId, name: "Sam", timezone: "UTC" }).returning();
   const [service] = await tx.insert(services).values({ businessId, name: "Cut", slug: "cut", durationMinutes: 30 }).returning();
   await tx.insert(businessHours).values(Array.from({ length: 7 }, (_, dayOfWeek) => ({ businessId, dayOfWeek, openMinutes: 0, closeMinutes: 1439 })));
-  await tx.insert(phoneNumbers).values({ businessId, e164: ownNumber, providerPhoneId: `PN-${randomUUID()}` });
+  await tx.insert(phoneNumbers).values({ businessId, agentId: defaultAgentIdOf(businessId), e164: ownNumber, providerPhoneId: `PN-${randomUUID()}` });
   const db = tx as unknown as Database;
   let slots = 0;
   const nextStart = () => DateTime.utc().plus({ days: 3 + slots++ }).set({ hour: 12, minute: 0, second: 0, millisecond: 0 }).toISO()!;
@@ -342,7 +342,7 @@ describe.skipIf(!client)("the opt-in confirmation", () => {
 });
 
 describe.skipIf(!client)("text consent a business sends through the API or MCP", () => {
-  // The shared number's toll-free verification covers consent the receptionist collects on a call only.
+  // The shared number's toll-free verification covers consent the agent collects on a call only.
   it("doesn't count on cloud, where texts come from the shared number, and counts when self-hosted", async () => {
     vi.stubEnv("TWILIO_ALERT_SMS_FROM", SHARED);
     await rollbackTest(async (tx) => {

@@ -117,7 +117,7 @@ const isCaller = (turn: ConversationTranscriptTurn) => turn.speaker === "caller"
 
 /**
  * True when the caller gave this name as their own: right after a cue such as
- * "my name is" or "c'est", or as a short reply to the receptionist asking for
+ * "my name is" or "c'est", or as a short reply to the agent asking for
  * their name. A name the caller only mentions ("I'd like to speak with Marie
  * Tremblay") doesn't count.
  */

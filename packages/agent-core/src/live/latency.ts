@@ -3,7 +3,7 @@
  * the sideband reports. GPT-Live sends no speech-started, speech-stopped or
  * input-committed events, so the caller's turn ends where their last
  * transcribed words end (`session.input_transcript.delta` end_ms). The
- * receptionist starts speaking at its first transcribed words
+ * agent starts speaking at its first transcribed words
  * (`session.output_transcript.delta` start_ms). The sideband's reflected
  * output audio can't mark speech: GPT-Live is full duplex, and those events
  * cover silence too.
@@ -12,13 +12,13 @@
  * OpenAI and the worker does not affect them.
  */
 export type LiveCallLatency = {
-  /** When the receptionist first started speaking, from the start of the session. */
+  /** When the agent first started speaking, from the start of the session. */
   firstSpeechMs?: number;
-  /** The receptionist spoke before the caller did. */
+  /** The agent spoke before the caller did. */
   greetedFirst: boolean;
-  /** For each caller turn the receptionist answered: silence between the caller's last word and the answer. */
+  /** For each caller turn the agent answered: silence between the caller's last word and the answer. */
   answerGapsMs: number[];
-  /** Which sideband events marked the receptionist's speech. */
+  /** Which sideband events marked the agent's speech. */
   speechSource: "transcript" | "none";
 };
 
@@ -47,39 +47,39 @@ export class LiveLatencyTracker {
     addSpan(this.callerSpans, startMs ?? endMs ?? Number.NaN, endMs ?? Number.NaN);
   }
 
-  receptionistTranscript(startMs: number | undefined, endMs: number | undefined): void {
+  agentTranscript(startMs: number | undefined, endMs: number | undefined): void {
     addSpan(this.transcriptSpans, startMs ?? endMs ?? Number.NaN, endMs ?? Number.NaN);
   }
 
   summarize(): LiveCallLatency {
     const speechSource = this.transcriptSpans.length ? "transcript" : "none";
     const byStart = (a: Span, b: Span) => a.start - b.start;
-    const receptionist = [...this.transcriptSpans].sort(byStart);
+    const agent = [...this.transcriptSpans].sort(byStart);
     const caller = [...this.callerSpans].sort(byStart);
     const timeline = [
       ...caller.map((span) => ({ ...span, speaker: "caller" as const })),
-      ...receptionist.map((span) => ({ ...span, speaker: "receptionist" as const })),
+      ...agent.map((span) => ({ ...span, speaker: "agent" as const })),
     ].sort(byStart);
 
     const answerGapsMs: number[] = [];
     let callerEnd: number | undefined;
-    let receptionistEnd = Number.NEGATIVE_INFINITY;
+    let agentEnd = Number.NEGATIVE_INFINITY;
     for (const span of timeline) {
       if (span.speaker === "caller") {
         callerEnd = Math.max(callerEnd ?? Number.NEGATIVE_INFINITY, span.end);
         continue;
       }
-      // Skip caller speech that ended while the receptionist was still talking
+      // Skip caller speech that ended while the agent was still talking
       // (a backchannel or an interruption it talked over), and answers that
       // started before the caller finished.
-      if (callerEnd !== undefined && callerEnd > receptionistEnd && span.start >= callerEnd) {
+      if (callerEnd !== undefined && callerEnd > agentEnd && span.start >= callerEnd) {
         answerGapsMs.push(Math.round(span.start - callerEnd));
       }
       callerEnd = undefined;
-      receptionistEnd = Math.max(receptionistEnd, span.end);
+      agentEnd = Math.max(agentEnd, span.end);
     }
 
-    const first = receptionist[0];
+    const first = agent[0];
     return {
       ...(first ? { firstSpeechMs: Math.round(first.start) } : {}),
       greetedFirst: first !== undefined && (caller[0] === undefined || first.start <= caller[0].start),

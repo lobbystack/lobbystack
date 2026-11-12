@@ -181,7 +181,7 @@ function staffForTime(schedule: Schedule, startsAt: Date, requestedStaffIds: str
   const eligible = eligibleStaffIds(schedule, requestedStaffIds, keepStaffId);
   if (!eligible.length) return "no_staff";
   const working = eligible.filter((id) => isWorking(schedule, id, startsAt));
-  // Off then, through their own hours or time off: the time isn't free, and the receptionist offers another.
+  // Off then, through their own hours or time off: the time isn't free, and the agent offers another.
   if (!working.length) return "taken";
   const fresh = working.filter((id) => isCalendarFresh(schedule, id, startsAt, now));
   return fresh.length ? fresh : "calendar_not_synced";

@@ -308,7 +308,7 @@ describe.skipIf(!client)("booking employees", () => {
     });
   });
 
-  it("tells the receptionist the name of the employee it booked, and nothing for the business's own staff", async () => {
+  it("tells the agent the name of the employee it booked, and nothing for the business's own staff", async () => {
     await rollbackTest(async (tx) => {
       const { db, owner } = await seed(tx);
       const [colour, haircut] = owner.serviceIds;
@@ -376,7 +376,7 @@ describe.skipIf(!client)("employee transfer numbers", () => {
 
       await expect(createEmployee({ db }, { ...owner, name: "Marko", phone: "+381642222222" })).rejects.toMatchObject({ status: 409, code: "trial_transfer_locked" });
       await expect(createEmployee({ db }, { ...owner, name: "Owner", phone: "+381601111111" })).resolves.toMatchObject({ phone: "+381601111111" });
-      // An employee saved before the trial keeps their number, but the receptionist doesn't dial it during the trial.
+      // An employee saved before the trial keeps their number, but the agent doesn't dial it during the trial.
       await expect(resolveEmployee({ db }, { businessId: owner.businessId, name: "Ana" })).resolves.toMatchObject({ ok: true, staffId: ana.id, phone: null });
       await expect(resolveEmployee({ db }, { businessId: owner.businessId, name: "Owner" })).resolves.toMatchObject({ ok: true, phone: "+381601111111" });
     });

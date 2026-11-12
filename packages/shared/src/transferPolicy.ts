@@ -1,5 +1,5 @@
 import type { BusinessContextSnapshot, TransferPolicy } from "./index";
-import { staffFirstModes, transferModes, type StaffFirstMode } from "./receptionist";
+import { staffFirstModes, transferModes, type StaffFirstMode } from "./agentSettings";
 
 export function normalizeTransferMode(value: string | null | undefined): TransferPolicy["mode"] {
   if (value == null) return "on_request";

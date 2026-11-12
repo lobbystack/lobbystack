@@ -1,6 +1,6 @@
 // Scripted callers shared by live-call-eval.ts (GPT-Live over the API) and
 // test-call.ts (a real phone call). Every call opens with OPENING and waits for
-// the receptionist's answer; then the scenario's lines play, each after
+// the agent's answer; then the scenario's lines play, each after
 // pauseMs of the caller's silence. Only the phone script can press keys.
 
 import type { RuntimeLocale } from "@lobbystack/shared";
@@ -18,16 +18,16 @@ export type CallerLine = { text: string; pauseMs?: number } | { digits: string; 
 
 export type CallScenario = {
   name: string;
-  /** "ends": the receptionist should hang up after the last line. "continues": the call should go on. */
+  /** "ends": the agent should hang up after the last line. "continues": the call should go on. */
   expect: "ends" | "continues";
   lines: CallerLine[];
-  /** The eval fails a run when any of the receptionist's lines matches this. The phone script can't check it. */
+  /** The eval fails a run when any of the agent's lines matches this. The phone script can't check it. */
   mustNotSay?: RegExp;
-  /** The eval fails an English run when none of the receptionist's lines matches this. */
+  /** The eval fails an English run when none of the agent's lines matches this. */
   mustSay?: RegExp;
   /**
    * How long the caller stays silent after the last line, waiting for the
-   * receptionist to hang up. It must stay under the silence check-ins'
+   * agent to hang up. It must stay under the silence check-ins'
    * goodbye for a call that should go on. The default is END_SILENCE_MS.
    */
   endSilenceMs?: number;
@@ -43,13 +43,13 @@ export const SCENARIOS: CallScenario[] = [
   { name: "goodbye", expect: "ends", lines: [{ text: "No, that's everything. Goodbye!" }] },
   { name: "good-day", expect: "ends", lines: [{ text: "Great, thank you so much. Have a good day, bye bye." }] },
   { name: "thats-it", expect: "ends", lines: [{ text: "Nope, that's it. Thanks." }] },
-  // The caller leaves without answering the receptionist's question.
+  // The caller leaves without answering the agent's question.
   { name: "has-to-go", expect: "ends", lines: [{ text: "Ah no, I actually have to go. Bye bye." }] },
-  // The caller answers the receptionist's goodbye with their own.
+  // The caller answers the agent's goodbye with their own.
   { name: "trailing-goodbye", expect: "ends", lines: [{ text: "No, that's everything." }, { text: "Goodbye!", pauseMs: 1_500 }] },
-  // The caller pauses before the question, so the receptionist mustn't hang up meanwhile.
+  // The caller pauses before the question, so the agent mustn't hang up meanwhile.
   { name: "one-more-thing", expect: "continues", lines: [{ text: "No, that's everything." }, { text: "Oh wait, one more thing.", pauseMs: 3_000 }, { text: "Do you have parking?", pauseMs: 3_000 }] },
-  // The caller goes quiet after the answer. The receptionist asks twice whether
+  // The caller goes quiet after the answer. The agent asks twice whether
   // they're still there, then says goodbye and hangs up, about 30 seconds in.
   { name: "silent", expect: "ends", lines: [], endSilenceMs: 50_000, mustSay: SILENCE_CHECK_IN },
 ];
@@ -63,20 +63,20 @@ const BOOKING_SCENARIOS: CallScenario[] = [
   { name: "book-no-texts", expect: "continues", lines: [{ text: "Okay. Can I book an initial consultation on Tuesday at 10 AM? My name is Sam Lee." }, { text: "Yes, please book it.", pauseMs: 15_000 }, { text: "And no text messages, please.", pauseMs: 12_000 }] },
   // The business requires a PIN for changes, and the calling number's contact
   // has PIN 5829 and an appointment on Tuesday at 10 AM. The caller types the
-  // PIN once the receptionist asks for it. The eval can't press keys, so only
+  // PIN once the agent asks for it. The eval can't press keys, so only
   // the phone script runs it.
   { name: "cancel-with-pin", expect: "ends", lines: [{ text: "I need to cancel my appointment on Tuesday at 10 AM. My name is Sam Lee." }, { digits: "5829#", pauseMs: 20_000 }, { text: "Yes, please cancel it.", pauseMs: 15_000 }, { text: "No, that's everything. Goodbye!", pauseMs: 15_000 }] },
 ];
 
-// The caller asks for something a receptionist doesn't do, then hangs up. The
-// receptionist should decline without writing the poem. English lines only,
+// The caller asks for something outside the agent's job, then hangs up. The
+// agent should decline without writing the poem. English lines only,
 // so it runs only by name and without --locale.
 const OFF_TOPIC_SCENARIOS: CallScenario[] = [
   { name: "off-topic", expect: "ends", lines: [{ text: "Can you write me a short poem about the ocean? Just two lines." }, { text: "Okay, no problem. That's all, thanks. Goodbye!", pauseMs: 10_000 }], mustNotSay: /\b(waves?|tides?|shores?|seas?)\b/i },
 ];
 
 // Scenarios that can put a real phone call through to the business's team, so
-// they run only by name. The eval has no transfer tool, so its receptionist
+// they run only by name. The eval has no transfer tool, so its agent
 // must never announce a transfer; run them with --browser for a widget call.
 const PERSON_SCENARIOS: CallScenario[] = [
   { name: "ask-for-person", expect: "continues", lines: [{ text: "Okay, thanks. Can I speak to a real person, please?" }], mustNotSay: /\b(connecting you|transferring you|putting you through|(I'll|I will|let me) (connect|transfer) you)\b/i },

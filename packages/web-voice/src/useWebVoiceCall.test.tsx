@@ -165,7 +165,7 @@ describe("live captions", () => {
     ]);
   });
 
-  it("reads only the caller's and the receptionist's transcript deltas", () => {
+  it("reads only the caller's and the agent's transcript deltas", () => {
     expect(readTranscriptDelta(JSON.stringify({ type: "session.input_transcript.delta", delta: "hello" }))).toEqual({ speaker: "caller", delta: "hello" });
     expect(readTranscriptDelta(JSON.stringify({ type: "session.output_transcript.delta", delta: "hi" }))).toEqual({ speaker: "assistant", delta: "hi" });
     expect(readTranscriptDelta(JSON.stringify({ type: "session.output_transcript.delta", delta: "" }))).toBeUndefined();
@@ -394,7 +394,7 @@ describe("readSessionClosedReason", () => {
 });
 
 describe("getWebVoiceErrorKey", () => {
-  it("tells a used-up voice allowance apart from an unavailable receptionist", () => {
+  it("tells a used-up voice allowance apart from an unavailable agent", () => {
     expect(getWebVoiceErrorKey(new Error("voice_limit_reached"))).toBe("voiceLimitReached");
     expect(getWebVoiceErrorKey(new Error("voice_unavailable"))).toBe("unavailable");
     expect(getWebVoiceErrorKey(new Error("The AI receptionist is unavailable right now."))).toBe("unavailable");

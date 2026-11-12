@@ -67,9 +67,12 @@ export function HomePhoneCard({ businessId, called, canSetUp, lines, results }: 
   if (!lines.length) return card;
   return (
     <section aria-labelledby="home-phone-title" className="flex flex-col gap-3">
-      <div className="flex items-center gap-2 px-1">
+      <div className="flex items-start gap-2 px-1">
         <h2 className="type-section-title" id="home-phone-title">{t(phoneStatusKey(called, lines))}</h2>
-        <span aria-hidden="true" className="size-2 shrink-0 rounded-full bg-status-success-foreground" data-slot="phone-status-dot" />
+        {/* One heading line tall, so the dot centers on the first line's capitals even when the heading wraps. */}
+        <span aria-hidden="true" className="flex h-lh shrink-0 items-center type-section-title" data-slot="phone-status-dot-line">
+          <span className="size-2 rounded-full bg-status-success-foreground" data-slot="phone-status-dot" />
+        </span>
       </div>
       {card}
     </section>

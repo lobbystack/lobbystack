@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { and, asc, desc, eq, ilike, inArray, isNull, lt, ne, notInArray, sql } from "drizzle-orm";
 
 import { agentRules, agents, businessContextSnapshots, businesses, businessHours, closures, defaultAgentOf, enqueueOutbox, inOrder, knowledgeChunks, knowledgeDocuments, knowledgeSnippets, phoneNumbers, services, staffServiceAssignments, storageObjects, websiteIngestionJobs, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
-import { defaultGreeting, FULL_CRAWL_PAGE_LIMIT, getKnowledgeStorageLimitBytes, normalizeAppointmentChangePolicy, normalizeBookingMode, normalizeReceptionistVoice, normalizeRuntimeLocale, normalizeStaffFirstMode, normalizeTransferMode, ONBOARDING_CRAWL_PAGE_LIMIT, runtimeLocales, servicePriceFromColumns, stageAfterWebsite, type AgentRuleSummary, type BusinessContextSnapshot, type KnowledgeSnippet, type SnapshotAgent } from "@lobbystack/shared";
+import { defaultGreeting, FULL_CRAWL_PAGE_LIMIT, getKnowledgeStorageLimitBytes, normalizeAppointmentChangePolicy, normalizeBookingMode, normalizeAgentVoice, normalizeRuntimeLocale, normalizeStaffFirstMode, normalizeTransferMode, ONBOARDING_CRAWL_PAGE_LIMIT, runtimeLocales, servicePriceFromColumns, stageAfterWebsite, type AgentRuleSummary, type BusinessContextSnapshot, type KnowledgeSnippet, type SnapshotAgent } from "@lobbystack/shared";
 import { agentInstructions, buildBusinessContextSnapshot, MAX_KNOWLEDGE_SNIPPETS_PER_SNAPSHOT, snapshotRules } from "../snapshot";
 import { countKnowledgeTokens, fuseKnowledgeRanks, KNOWLEDGE_SEARCH_TOKEN_BUDGET, knowledgeLexicalQueries, knowledgeQueryTerms, splitToTokenBudget, withinKnowledgeBudget, type KnowledgePassage } from "../knowledgeRanking";
 
@@ -22,6 +22,7 @@ import { loadEntitlement } from "./entitlement";
 import { resolveBusinessBillingPlan } from "./contentRetentionPolicy";
 import { resolveSmsSender } from "./smsSender";
 import { documentInScope, knowledgeScopeFor, snippetInScope, type KnowledgeScope } from "./knowledgeScope";
+import { isWebsiteImportStalled, websiteImportDispatchSql, type WebsiteImportDispatch } from "./websiteImportHealth";
 
 const ragMeter = getMeter("lobbystack-rag");
 const searchDuration = ragMeter.createHistogram("rag.search.duration_ms", { unit: "ms" });
@@ -130,7 +131,8 @@ export async function createKnowledgeDocumentInTransaction(
   if (existing) {
     // A retry of an onboarding submission is still onboarding: without the
     // limit it would fall back to the full crawl this sampling exists to defer.
-    if (["cancelled", "error"].includes(existing.status)) await queueKnowledgeDocumentRetry(tx, { businessId: input.businessId, documentId: existing.id, crawlLimit }, existing);
+    // A crawl that stopped moving gets read again too, so resubmitting the site is a way out.
+    if (["cancelled", "error"].includes(existing.status) || (existing.status === "processing" && await websiteCrawlStalled(tx, input.businessId, existing.id))) await queueKnowledgeDocumentRetry(tx, { businessId: input.businessId, documentId: existing.id, crawlLimit }, existing);
     return existing.id;
   }
   const [document] = await tx.insert(knowledgeDocuments).values({
@@ -191,11 +193,19 @@ async function queueKnowledgeDocumentRetry(tx: DatabaseTransaction, input: { bus
     await enqueueOutbox(tx, { topic: document.sourceType === "website" ? "knowledge.crawlWebsite" : "knowledge.extractDocument", businessId: input.businessId, aggregateType: "knowledge_document", aggregateId: input.documentId, dedupeKey: `knowledge:${input.documentId}:retry:${document.revision + 1}`, payload: document.sourceType === "website" && document.sourceUrl ? { documentId: input.documentId, url: document.sourceUrl, revision: document.revision + 1, websiteIngestionJobId: ingestion!.id, limit: retryLimit } : { documentId: input.documentId, revision: document.revision + 1 } });
 }
 
+/** Reads a source again. A website keeps the page limit its last crawl ran with, so retrying onboarding's sample reads a sample again. */
 export async function retryKnowledgeDocument(context: DomainContext, input: { userId: string; businessId: string; documentId: string }): Promise<void> {
   await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
-    if (!(await retryKnowledgeDocumentInTransaction(tx, input))) throw new Error("Knowledge document not found.");
+    const [crawl] = await tx.select({ pageLimit: websiteIngestionJobs.pageLimit }).from(websiteIngestionJobs).where(and(eq(websiteIngestionJobs.businessId, input.businessId), eq(websiteIngestionJobs.rootDocumentId, input.documentId))).limit(1);
+    if (!(await retryKnowledgeDocumentInTransaction(tx, { ...input, crawlLimit: crawl?.pageLimit ?? undefined }))) throw new Error("Knowledge document not found.");
   });
+}
+
+/** Whether the document's crawl should be running but stopped moving. */
+async function websiteCrawlStalled(tx: DatabaseTransaction, businessId: string, documentId: string): Promise<boolean> {
+  const [crawl] = await tx.select({ status: websiteIngestionJobs.status, updatedAt: websiteIngestionJobs.updatedAt, dispatch: sql<WebsiteImportDispatch | null>`${websiteImportDispatchSql("website_ingestion_jobs")}` }).from(websiteIngestionJobs).where(and(eq(websiteIngestionJobs.businessId, businessId), eq(websiteIngestionJobs.rootDocumentId, documentId))).limit(1);
+  return Boolean(crawl && isWebsiteImportStalled(crawl));
 }
 
 /**
@@ -234,7 +244,7 @@ export async function setKnowledgeDocumentActive(context: DomainContext, input: 
   });
 }
 
-/** Turns a document on or off for the receptionist. False when the business has no such document. Callers authorize first. */
+/** Turns a document on or off for the agent. False when the business has no such document. Callers authorize first. */
 export async function setKnowledgeDocumentActiveInTransaction(tx: DatabaseTransaction, input: { businessId: string; documentId: string; active: boolean }): Promise<boolean> {
   const [document] = await tx.update(knowledgeDocuments).set({ active: input.active, updatedAt: new Date() }).where(and(eq(knowledgeDocuments.id, input.documentId), eq(knowledgeDocuments.businessId, input.businessId))).returning({ id: knowledgeDocuments.id });
   if (!document) return false;
@@ -343,7 +353,7 @@ export async function createKnowledgeSnippet(
   });
 }
 
-/** Inserts a snippet, shared unless agentId names the one agent that uses it, and refreshes the receptionist snapshot. Callers authorize first. */
+/** Inserts a snippet, shared unless agentId names the one agent that uses it, and refreshes the agent snapshot. Callers authorize first. */
 export async function createKnowledgeSnippetInTransaction(
   tx: DatabaseTransaction,
   input: { businessId: string; title: string; content: string; tags?: string[]; priority?: number; active?: boolean; agentId?: string | undefined },
@@ -365,7 +375,7 @@ export async function updateKnowledgeSnippet(
   });
 }
 
-/** Changes the fields given and refreshes the receptionist snapshot. Null when the business has no such snippet. Callers authorize first. */
+/** Changes the fields given and refreshes the agent snapshot. Null when the business has no such snippet. Callers authorize first. */
 export async function updateKnowledgeSnippetInTransaction(
   tx: DatabaseTransaction,
   input: { businessId: string; snippetId: string; title?: string | undefined; content?: string | undefined; tags?: string[] | undefined; priority?: number | undefined; active?: boolean | undefined },
@@ -384,7 +394,7 @@ export async function deleteKnowledgeSnippet(context: DomainContext, input: { us
   });
 }
 
-/** Deletes a snippet and refreshes the receptionist snapshot. False when the business has no such snippet. Callers authorize first. */
+/** Deletes a snippet and refreshes the agent snapshot. False when the business has no such snippet. Callers authorize first. */
 export async function deleteKnowledgeSnippetInTransaction(tx: DatabaseTransaction, input: { businessId: string; snippetId: string }): Promise<boolean> {
   const [snippet] = await tx.delete(knowledgeSnippets).where(and(eq(knowledgeSnippets.id, input.snippetId), eq(knowledgeSnippets.businessId, input.businessId))).returning({ id: knowledgeSnippets.id });
   if (!snippet) return false;
@@ -685,7 +695,7 @@ function ruleSummary(row: typeof agentRules.$inferSelect): AgentRuleSummary {
 function snapshotAgentFields(agent: typeof agents.$inferSelect | undefined) {
   const staffFirstMode = normalizeStaffFirstMode(agent?.staffFirstMode);
   return {
-    voice: normalizeReceptionistVoice(agent?.voice),
+    voice: normalizeAgentVoice(agent?.voice),
     tone: agent?.tone ?? "professional",
     bookingPolicy: agent?.bookingPolicy ?? "Confirm availability before booking.",
     appointmentChangePolicy: normalizeAppointmentChangePolicy(agent?.appointmentChangePolicy),
@@ -813,7 +823,7 @@ export async function refreshBusinessSnapshot(
       greeting: currentProfile?.greeting ?? defaultGreeting(business[0].name, defaultLocale),
       ...snapshotAgentFields(currentProfile),
       // A sign-up placeholder says nothing about the business, so prompts get no summary until AI or a person writes one.
-      summary: currentProfile && currentProfile.summarySource !== "placeholder" ? currentProfile.summary : "",
+      summary: business[0].summarySource !== "placeholder" ? business[0].summary : "",
       knowledgeDigest: defaultKnowledge.knowledgeDigest,
       hours: hours.map((row) => ({ dayOfWeek: row.dayOfWeek, openMinutes: row.openMinutes, closeMinutes: row.closeMinutes })),
       closures: closureRows.map((row) => ({ startsAt: row.startsAt.toISOString(), endsAt: row.endsAt.toISOString(), reason: row.reason })),
@@ -863,7 +873,7 @@ export async function refreshBusinessSnapshot(
 }
 
 /**
- * Counts the indexed text the receptionist searches, in UTF-8 bytes. Uploaded
+ * Counts the indexed text the agent searches, in UTF-8 bytes. Uploaded
  * files don't count: a PDF's images and layout take space the agent never reads.
  */
 export async function getKnowledgeStorageUsageBytes(tx: DatabaseTransaction, businessId: string, options: { excludeDocumentId?: string } = {}): Promise<number> {

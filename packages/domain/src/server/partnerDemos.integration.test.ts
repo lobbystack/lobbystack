@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { agentRules, agents, billingUsageEvents, businesses, businessMemberships, createDatabaseClient, outboxMessages, partnerUsageMonths, phoneNumbers, platformKeyBusinesses, prospectDemos, storageObjects, users, websiteIngestionJobs, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { agentRules, agents, billingUsageEvents, businesses, businessMemberships, createDatabaseClient, outboxMessages, partnerUsageMonths, phoneNumbers, platformKeyBusinesses, prospectDemos, storageObjects, users, websiteIngestionJobs, withBusinessTransaction, type Database, type DatabaseTransaction, defaultAgentIdOf } from "@lobbystack/db";
 import { PROSPECT_DEMO_WIDGET_ID } from "@lobbystack/shared";
 
 import { forgetCachedBrands } from "./brands";
@@ -14,7 +14,7 @@ import { finishLiveCall, startLiveWebCall } from "./liveCalls";
 import { refreshBusinessSnapshot } from "./knowledge";
 import { getActiveOnboardingState } from "./onboarding";
 import { acceptPartnerInvitation, hashPartnerToken, invitePartnerMember, listPartnerBusinesses, releaseBusiness, signUpPartner, type PartnerMemberActor } from "./partners";
-import { listUserBusinesses, NEW_BUSINESS_RECEPTIONIST_INSTRUCTIONS, readActiveBusinessId } from "./tenancy";
+import { listUserBusinesses, NEW_BUSINESS_AGENT_INSTRUCTIONS, readActiveBusinessId } from "./tenancy";
 import { periodKeyFor } from "./usage";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
@@ -139,7 +139,7 @@ describe.skipIf(!client)("a partner's prospect demos against PostgreSQL", () => 
       // The partner's people work in it through opens, never on its team.
       expect(stored.team).toEqual([]);
       expect(stored.demo).toEqual({ partnerId: bright.partnerId, operatorUserId: bright.owner.userId });
-      // The receptionist names the partner, never the host.
+      // The agent names the partner, never the host.
       expect(stored.instructions).toContain("This is a prospect demo from Bright Desk.");
       expect(stored.instructions).not.toMatch(/LobbyStack|Front Desk/);
 
@@ -253,12 +253,12 @@ describe.skipIf(!client)("a partner's prospect demos against PostgreSQL", () => 
       }));
       // At the activity level the owner's only onboarding step is their phone, as for an owner the partner invited.
       expect(claimed.business).toEqual({ partnerId: bright.partnerId, accessLevel: "activity", onboardingStage: "verify_phone" });
-      // Real calls aren't a demo anymore: the receptionist gets back what a new business is told, apart from what someone changed during the demo.
+      // Real calls aren't a demo anymore: the agent gets back what a new business is told, apart from what someone changed during the demo.
       const receptionist = await asMigrator(tx, async () => ({
         bookingPolicy: (await tx.select({ bookingPolicy: agents.bookingPolicy }).from(agents).where(eq(agents.businessId, demo.businessId)))[0]?.bookingPolicy,
         rules: await tx.select({ channel: agentRules.channel, content: agentRules.content }).from(agentRules).where(eq(agentRules.businessId, demo.businessId)).orderBy(agentRules.sortOrder),
       }));
-      expect(receptionist).toEqual({ bookingPolicy: NEW_BUSINESS_RECEPTIONIST_INSTRUCTIONS.bookingPolicy, rules: [{ channel: "voice", content: NEW_BUSINESS_RECEPTIONIST_INSTRUCTIONS.voiceInstructions }, { channel: "sms", content: "Text back within the hour." }] });
+      expect(receptionist).toEqual({ bookingPolicy: NEW_BUSINESS_AGENT_INSTRUCTIONS.bookingPolicy, rules: [{ channel: "voice", content: NEW_BUSINESS_AGENT_INSTRUCTIONS.voiceInstructions }, { channel: "sms", content: "Text back within the hour." }] });
       const refresh = await asMigrator(tx, async () => await tx.select({ id: outboxMessages.id }).from(outboxMessages).where(and(eq(outboxMessages.businessId, demo.businessId), eq(outboxMessages.topic, "snapshot.refresh"), eq(outboxMessages.aggregateType, "agent"))));
       expect(refresh).toHaveLength(1);
       // A claim can't be turned off.
@@ -386,7 +386,7 @@ describe.skipIf(!client)("a partner's prospect demos against PostgreSQL", () => 
       const objectKey = `${closed.businessId}/knowledge/${randomUUID()}/menu.pdf`;
       const [number] = await asMigrator(tx, async () => {
         await tx.insert(storageObjects).values({ businessId: closed.businessId, objectKey, purpose: "knowledge", fileName: "menu.pdf", contentType: "application/pdf", status: "ready" });
-        return await tx.insert(phoneNumbers).values({ businessId: closed.businessId, ...line, status: "active" }).returning({ id: phoneNumbers.id });
+        return await tx.insert(phoneNumbers).values({ businessId: closed.businessId, agentId: defaultAgentIdOf(closed.businessId), ...line, status: "active" }).returning({ id: phoneNumbers.id });
       });
 
       await deletePartnerDemo(bright.context, bright.ownerActor, { demoId: closed.demoId });

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { countryCodeForBusinessTimezone, resolveBusinessNumberMarket } from "./phoneNumberMarket";
+import { countryCodeForBusinessTimezone, countryCodeForTimezone, resolveBusinessNumberMarket } from "./phoneNumberMarket";
 
 describe("resolveBusinessNumberMarket", () => {
   it("prefers an explicit supported selection over the workspace location", () => {
@@ -38,5 +38,31 @@ describe("countryCodeForBusinessTimezone", () => {
     expect(countryCodeForBusinessTimezone("UTC")).toBeUndefined();
     expect(countryCodeForBusinessTimezone("")).toBeUndefined();
     expect(countryCodeForBusinessTimezone(null)).toBeUndefined();
+  });
+});
+
+describe("countryCodeForTimezone", () => {
+  it.each([
+    ["Europe/Belgrade", "RS"], ["America/Toronto", "CA"], ["America/New_York", "US"], ["Europe/Paris", "FR"], ["Europe/Ljubljana", "SI"],
+    ["Asia/Kolkata", "IN"], ["Asia/Calcutta", "IN"], ["Europe/Kiev", "UA"], ["US/Eastern", "US"], ["America/Montreal", "CA"], ["America/Puerto_Rico", "PR"],
+  ])("maps %s to %s", (timezone, country) => {
+    expect(countryCodeForTimezone(timezone)).toBe(country);
+  });
+
+  it("knows the country of every zone the runtime lists", () => {
+    const unmapped = Intl.supportedValuesOf("timeZone").filter((zone) => !countryCodeForTimezone(zone));
+    expect(unmapped).toEqual([]);
+  });
+
+  it("gives no country for UTC, an unknown zone, or nothing", () => {
+    expect(countryCodeForTimezone("UTC")).toBeUndefined();
+    expect(countryCodeForTimezone("Mars/Olympus")).toBeUndefined();
+    expect(countryCodeForTimezone(" ")).toBeUndefined();
+    expect(countryCodeForTimezone(undefined)).toBeUndefined();
+  });
+
+  it("keeps the number market to the countries with numbers", () => {
+    expect(countryCodeForBusinessTimezone("Europe/Belgrade")).toBeUndefined();
+    expect(countryCodeForBusinessTimezone("Pacific/Honolulu")).toBe("US");
   });
 });

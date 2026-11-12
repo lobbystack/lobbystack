@@ -3,12 +3,12 @@ import { readFileSync } from "node:fs";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 
-import { agentRules, agents, businessContextSnapshots, businesses, createDatabaseClient, instagramAccounts, outboxMessages, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { agentRules, agents, businessContextSnapshots, businesses, createDatabaseClient, instagramAccounts, outboxMessages, withBusinessTransaction, type Database, type DatabaseTransaction, defaultAgentIdOf } from "@lobbystack/db";
 import { SNAPSHOT_SCHEMA_VERSION } from "@lobbystack/shared";
 
 import { isCurrentSnapshot } from "../snapshot";
 import { loadLatestBusinessSnapshot, refreshBusinessSnapshot } from "./knowledge";
-import { saveReceptionistProfileInTransaction } from "./receptionistProfile";
+import { saveAgentSettingsInTransaction } from "./agentSettings";
 import { getBusinessSnapshotForAgent } from "./snapshotCache";
 
 // Migration 0203 and the old instruction fields, against a dedicated test database. Every test rolls back.
@@ -37,7 +37,7 @@ async function rollbackTest(run: (tx: DatabaseTransaction) => Promise<void>) {
 }
 
 const migration = readFileSync(new URL("../../../db/migrations/0203_rule_channels.sql", import.meta.url), "utf8");
-const agentFields = { tone: "warm", summary: "A clinic", bookingPolicy: "Book", transferMode: "on_request", greeting: "Hello" };
+const agentFields = { tone: "warm", bookingPolicy: "Book", transferMode: "on_request", greeting: "Hello" };
 
 async function business(tx: DatabaseTransaction, defaultLocale: string): Promise<string> {
   const id = randomUUID();
@@ -61,7 +61,7 @@ describe.skipIf(!testUrl)("migration 0203 on sample rows", () => {
       const [tagalog] = await tx.insert(agents).values({ ...agentFields, businessId: filipino, isDefault: true, smsInstructions: "Text back soon." }).returning({ id: agents.id });
       const [fallback] = await tx.insert(agents).values({ ...agentFields, businessId: unknown, isDefault: true, voiceInstructions: "Speak slowly.", chatInstructions: "Be brief." }).returning({ id: agents.id });
       // Linked after its agents exist, so the account's trigger finds the default agent.
-      await tx.insert(instagramAccounts).values({ businessId: french, instagramUserId: `ig-${french}`, encryptedAccessToken: "sealed", tokenExpiresAt: new Date(Date.now() + 86_400_000), status: "reconnect_required" });
+      await tx.insert(instagramAccounts).values({ businessId: french, agentId: defaultAgentIdOf(french), instagramUserId: `ig-${french}`, encryptedAccessToken: "sealed", tokenExpiresAt: new Date(Date.now() + 86_400_000), status: "reconnect_required" });
       // An agent with a call rule already keeps it, and gets the others after its last rule.
       await tx.insert(agentRules).values([
         { businessId: unknown, agentId: fallback!.id, title: "Parking", content: "Rear lot", sortOrder: 4 },
@@ -189,7 +189,7 @@ describe.skipIf(!testUrl)("the old instruction fields", () => {
     await rollbackTest(async (tx) => {
       const businessId = await business(tx, "fr");
       const [agent] = await tx.insert(agents).values({ ...agentFields, businessId, isDefault: true }).returning({ id: agents.id });
-      const save = async (patch: Parameters<typeof saveReceptionistProfileInTransaction>[1]["patch"]) => await saveReceptionistProfileInTransaction(tx, { businessId, businessName: "Harbor Dental", patch });
+      const save = async (patch: Parameters<typeof saveAgentSettingsInTransaction>[1]["patch"]) => await saveAgentSettingsInTransaction(tx, { businessId, businessName: "Harbor Dental", patch });
 
       expect(await save({ voiceInstructions: "Parlez lentement.", chatInstructions: "Soyez bref." })).toMatchObject({ voiceInstructions: "Parlez lentement.", smsInstructions: null, chatInstructions: "Soyez bref." });
       expect(await rulesOf(tx, agent!.id)).toEqual([

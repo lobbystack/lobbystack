@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
-import { PhoneCountrySelect } from "@/components/phone-country-select";
+import { CountryCombobox } from "@/components/country-combobox";
 import { useTelemetry } from "@/components/product-analytics";
 import { getSafeOnboardingErrorMessage } from "@/lib/onboarding-errors";
 import { getPhoneCountryOptions, type PhoneCountryOption } from "@/lib/phone";
@@ -51,8 +51,8 @@ export function OnboardingNumberCountryFallback({ businessId, initialCountry, nu
   return (
     <div className="mx-auto flex w-full max-w-md flex-col gap-4">
       <Field>
-        <FieldLabel>{t("number.country.label")}</FieldLabel>
-        <PhoneCountrySelect ariaLabel={t("number.country.label")} className="w-full justify-start" countries={options} onChange={(next) => { setCountry(next); setJoined(false); setError(null); }} value={country} />
+        <FieldLabel htmlFor="number-fallback-country">{t("number.country.label")}</FieldLabel>
+        <CountryCombobox countries={options} id="number-fallback-country" onChange={(next) => { setCountry(next); setJoined(false); setError(null); }} placeholder={t("number.country.placeholder")} value={country} />
       </Field>
       {country ? <>
         <div className="flex flex-col gap-3 rounded-xl border border-border p-4 text-left">

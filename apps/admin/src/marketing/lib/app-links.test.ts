@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 import {
   appAffiliateLoginUrl,
   appAffiliateSignupUrl,
+  appDashboardUrl,
   appLoginUrl,
   appPartnerSignupUrl,
   appSignupUrl,
@@ -45,5 +46,11 @@ describe("dashboard auth links", () => {
     expect(appPartnerSignupUrl("fr")).toBe(
       "https://app.lobbystack.com/partner/signup?lng=fr"
     )
+  })
+})
+
+describe("dashboard link", () => {
+  it.each(locales)("opens the dashboard's home in %s", (locale) => {
+    expect(appDashboardUrl(locale)).toBe(`https://app.lobbystack.com/?lng=${locale}`)
   })
 })

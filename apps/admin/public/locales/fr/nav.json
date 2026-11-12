@@ -117,7 +117,6 @@
   },
   "accountMenu": "Menu du compte",
   "agentMenu": {
-    "conversations": "Conversations",
     "noChannels": "Aucun canal pour l'instant"
   },
   "agents": {
@@ -149,7 +148,7 @@
     "madeDefault": "{{name}} est maintenant l'agent par défaut",
     "makeDefaultFailed": "Impossible de changer l'agent par défaut.",
     "remove": "Retirer l'agent",
-    "removeDefaultHint": "Choisissez d'abord un autre agent par défaut",
+    "removeDefaultHint": "Définissez d'abord un autre agent par défaut",
     "removeTitle": "Retirer {{name}}?",
     "removeDescription": "Ses canaux et ses conversations ouvertes passent à {{name}}.",
     "removeDescriptionPick": "Ses canaux et ses conversations ouvertes passent à l'agent choisi.",

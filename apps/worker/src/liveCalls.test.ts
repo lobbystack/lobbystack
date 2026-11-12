@@ -13,7 +13,7 @@ const mocks = vi.hoisted(() => ({
   createAgentModel: vi.fn((..._args: unknown[]) => ({})),
   callerIsDone: vi.fn(async (..._args: unknown[]) => true),
   callerIsLeaving: vi.fn(async (..._args: unknown[]) => true),
-  createReceptionistAgent: vi.fn((..._args: unknown[]) => ({})),
+  createConversationAgent: vi.fn((..._args: unknown[]) => ({})),
   closeLiveSession: vi.fn(async (..._args: unknown[]) => undefined),
   controllers_: [] as Array<{ endSession: ReturnType<typeof vi.fn>; end: ReturnType<typeof vi.fn>; wrapUp: ReturnType<typeof vi.fn>; transferAfterAnnouncement: ReturnType<typeof vi.fn>; canTransfer: ReturnType<typeof vi.fn>; collectPasscode: ReturnType<typeof vi.fn>; detach: ReturnType<typeof vi.fn>; options: Record<string, unknown> }>,
   blockLiveCaller: vi.fn(async (..._args: unknown[]) => undefined),
@@ -30,7 +30,7 @@ vi.mock("@lobbystack/agent-core", () => ({
   callerIsDone: mocks.callerIsDone,
   callerIsLeaving: mocks.callerIsLeaving,
   createAgentModel: mocks.createAgentModel,
-  createReceptionistAgent: mocks.createReceptionistAgent,
+  createConversationAgent: mocks.createConversationAgent,
   liveDelegationEnvironment: () => ({ AI_CHAT_REASONING_EFFORT: "low" }),
   liveLanguage: () => "English",
   // Tags the greeting so a test can see the picked language reached the setup.
@@ -177,7 +177,7 @@ describe("createLiveCallHandler", () => {
     const handler = createLiveCallHandler({ domain: { db: {} as never } });
     await handler.handle(attachRequest({ sessionId: "live_bye", businessId: "biz_1", callId: "call_1", channel: "voice" }), response());
     const controller = mocks.controllers_.at(-1)!;
-    const context = (mocks.createReceptionistAgent.mock.lastCall![0] as { context: { callControl: { hangup: (reason: string) => Promise<void> } } }).context;
+    const context = (mocks.createConversationAgent.mock.lastCall![0] as { context: { callControl: { hangup: (reason: string) => Promise<void> } } }).context;
     await context.callControl.hangup("caller_finished");
     expect(controller.end).toHaveBeenCalledWith("caller_finished");
     expect(controller.endSession).not.toHaveBeenCalled();
@@ -207,7 +207,7 @@ describe("createLiveCallHandler", () => {
     const handler = createLiveCallHandler({ domain: { db: {} as never } });
     await handler.handle(attachRequest({ sessionId: "live_abuse", businessId: "biz_1", callId: "call_abuse", channel: "voice" }), response());
     const controller = mocks.controllers_.at(-1)!;
-    const context = (mocks.createReceptionistAgent.mock.lastCall![0] as { context: { callControl: { hangup: (reason: string) => Promise<void> } } }).context;
+    const context = (mocks.createConversationAgent.mock.lastCall![0] as { context: { callControl: { hangup: (reason: string) => Promise<void> } } }).context;
     await context.callControl.hangup("spam");
     expect(mocks.blockLiveCaller).not.toHaveBeenCalled();
     await context.callControl.hangup("abuse");
@@ -279,7 +279,7 @@ describe("createLiveCallHandler", () => {
     await handler.handle(attachRequest({ sessionId: "live_pin", businessId: "biz_1", callId: "call_pin", channel: "voice" }), response());
     const controller = mocks.controllers_.at(-1)!;
     await expect(controller.options.setup as Promise<object>).resolves.toMatchObject({ maskKeypad: true });
-    const context = (mocks.createReceptionistAgent.mock.lastCall![0] as { context: { callControl: { collectPasscode: (check: unknown) => Promise<boolean> } } }).context;
+    const context = (mocks.createConversationAgent.mock.lastCall![0] as { context: { callControl: { collectPasscode: (check: unknown) => Promise<boolean> } } }).context;
     const check = vi.fn();
     await expect(context.callControl.collectPasscode(check)).resolves.toBe(true);
     expect(controller.collectPasscode).toHaveBeenCalledWith(check);
@@ -293,7 +293,7 @@ describe("createLiveCallHandler", () => {
     mocks.snapshot.mockResolvedValue({ businessId: "biz_1", greeting: "Hi", appointmentChangePolicy: pinPolicy });
     await handler.handle(attachRequest({ sessionId: "live_pin_web", businessId: "biz_1", callId: "call_pin_web", channel: "web_voice" }), response());
     expect(await (mocks.controllers_.at(-1)!.options.setup as Promise<object>)).not.toHaveProperty("maskKeypad");
-    expect((mocks.createReceptionistAgent.mock.lastCall![0] as { context: { callControl: object } }).context.callControl).not.toHaveProperty("collectPasscode");
+    expect((mocks.createConversationAgent.mock.lastCall![0] as { context: { callControl: object } }).context.callControl).not.toHaveProperty("collectPasscode");
   });
 
   it("refers a transfer after the announcement, and records it as referred until the destination answers", async () => {
@@ -305,7 +305,7 @@ describe("createLiveCallHandler", () => {
     const handler = createLiveCallHandler({ domain: { db: {} as never } });
     await handler.handle(attachRequest({ sessionId: "live_transfer", businessId: "biz_1", callId: "call_t", channel: "voice" }), response());
     const controller = mocks.controllers_.at(-1)!;
-    const context = (mocks.createReceptionistAgent.mock.lastCall![0] as { context: { callControl: { transfer: (destination: string) => Promise<boolean> } } }).context;
+    const context = (mocks.createConversationAgent.mock.lastCall![0] as { context: { callControl: { transfer: (destination: string) => Promise<boolean> } } }).context;
     await expect(context.callControl.transfer("+14165550199")).resolves.toBe(true);
     // The domain checks the number itself, as during a free trial, before an attempt is used.
     expect(mocks.prepareLiveCallTransfer).toHaveBeenLastCalledWith({ db: {} }, { businessId: "biz_1", callId: "call_t", destination: "+14165550199" });
@@ -326,7 +326,7 @@ describe("createLiveCallHandler", () => {
     await handler.handle(attachRequest({ sessionId: "live_transfer_skipped", businessId: "biz_1", callId: "call_ts", channel: "voice" }), response());
     // A transfer is already under way, or the call is ending.
     mocks.controllers_.at(-1)!.transferAfterAnnouncement.mockReturnValueOnce(false);
-    const context = (mocks.createReceptionistAgent.mock.lastCall![0] as { context: { callControl: { transfer: (destination: string) => Promise<boolean> } } }).context;
+    const context = (mocks.createConversationAgent.mock.lastCall![0] as { context: { callControl: { transfer: (destination: string) => Promise<boolean> } } }).context;
     await expect(context.callControl.transfer("+14165550199")).resolves.toBe(false);
   });
 
@@ -338,7 +338,7 @@ describe("createLiveCallHandler", () => {
     const handler = createLiveCallHandler({ domain: { db: {} as never } });
     await handler.handle(attachRequest({ sessionId: "live_transfer_trial", businessId: "biz_1", callId: "call_tt", channel: "voice" }), response());
     mocks.prepareLiveCallTransfer.mockResolvedValueOnce(false);
-    const context = (mocks.createReceptionistAgent.mock.lastCall![0] as { context: { callControl: { transfer: (destination: string) => Promise<boolean> } } }).context;
+    const context = (mocks.createConversationAgent.mock.lastCall![0] as { context: { callControl: { transfer: (destination: string) => Promise<boolean> } } }).context;
     await expect(context.callControl.transfer("+381641234567")).resolves.toBe(false);
     expect(mocks.controllers_.at(-1)!.transferAfterAnnouncement).not.toHaveBeenCalled();
   });
@@ -353,7 +353,7 @@ describe("createLiveCallHandler", () => {
     const controller = mocks.controllers_.at(-1)!;
     controller.canTransfer.mockReturnValueOnce(false);
     mocks.prepareLiveCallTransfer.mockClear();
-    const context = (mocks.createReceptionistAgent.mock.lastCall![0] as { context: { callControl: { transfer: (destination: string) => Promise<boolean> } } }).context;
+    const context = (mocks.createConversationAgent.mock.lastCall![0] as { context: { callControl: { transfer: (destination: string) => Promise<boolean> } } }).context;
     await expect(context.callControl.transfer("+14165550199")).resolves.toBe(false);
     expect(mocks.prepareLiveCallTransfer).not.toHaveBeenCalled();
     expect(controller.transferAfterAnnouncement).not.toHaveBeenCalled();
@@ -451,7 +451,7 @@ describe("which agent a call runs as", () => {
     await start({ sessionId: "live_agent", agentId: "agent_b" });
     expect(mocks.snapshot).toHaveBeenCalledWith(expect.anything(), { businessId: "biz_1", agentId: "agent_b", underWay: true });
     expect(await (mocks.controllers_.at(-1)!.options.setup as Promise<{ greeting?: string }>)).toMatchObject({ greeting: "Hi from agent_b" });
-    expect(mocks.createReceptionistAgent).toHaveBeenLastCalledWith(expect.objectContaining({ context: expect.objectContaining({ snapshot: expect.objectContaining({ greeting: "Hi from agent_b" }) }) }));
+    expect(mocks.createConversationAgent).toHaveBeenLastCalledWith(expect.objectContaining({ context: expect.objectContaining({ snapshot: expect.objectContaining({ greeting: "Hi from agent_b" }) }) }));
   });
 
   it("treats an attach from an admin that predates agents as the default agent", async () => {
@@ -642,7 +642,7 @@ describe("recovering a call whose worker died", () => {
     expect(controller.options.maxDurationMs as number).toBeLessThanOrEqual(480_000);
     // The call is under way, so no greeting fallback.
     await expect(controller.options.setup as Promise<{ greeting?: string }>).resolves.not.toHaveProperty("greeting");
-    expect(mocks.createReceptionistAgent).toHaveBeenLastCalledWith(expect.objectContaining({ context: expect.objectContaining({ callId: "call_live_orphan", conversationId: "conv_1", callerPhone: "+14165550100", channel: "voice" }) }));
+    expect(mocks.createConversationAgent).toHaveBeenLastCalledWith(expect.objectContaining({ context: expect.objectContaining({ callId: "call_live_orphan", conversationId: "conv_1", callerPhone: "+14165550100", channel: "voice" }) }));
     // New turns follow the seven its first worker saved.
     (controller.options.onTurn as (turn: unknown) => void)({ sequence: 1, speaker: "caller", text: "Hello? Are you still there?" });
     await vi.waitFor(() => expect(mocks.saveLiveCallTurn).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ callId: "call_live_orphan", sequence: 8 })));
@@ -908,7 +908,7 @@ describe("live call latency telemetry", () => {
   it("answers delegations on the delegation model and speaks direct tool answers", async () => {
     await startCall();
     expect(mocks.createAgentModel).toHaveBeenLastCalledWith({ AI_CHAT_REASONING_EFFORT: "low" });
-    expect(mocks.createReceptionistAgent).toHaveBeenLastCalledWith(expect.objectContaining({ directToolAnswers: true }));
+    expect(mocks.createConversationAgent).toHaveBeenLastCalledWith(expect.objectContaining({ directToolAnswers: true }));
   });
 
   it("logs live.delegation with timings, tools, model steps and per-step times", async () => {

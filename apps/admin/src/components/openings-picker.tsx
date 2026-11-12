@@ -1,11 +1,14 @@
 "use client";
 
+import { useId } from "react";
 import { useTranslation } from "react-i18next";
 import { enUS, es, fr, srLatn } from "react-day-picker/locale";
 
 import { OpeningTimesSkeleton } from "@/components/loading-skeletons";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
+import { FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { formatDateTime } from "@/lib/locale";
 import { cn } from "@/lib/utils";
 
@@ -24,9 +27,10 @@ const localDateToKey = (date: Date) => `${date.getFullYear()}-${String(date.getM
  * can't be picked. The caller loads the times for `date` and keeps the pick.
  * `waiting` takes the times' place with a note while something the times
  * depend on, such as the service, is still missing. `stacked` puts the times
- * under the calendar at every width, for a narrow panel.
+ * under the calendar at every width, for a narrow panel. `compact` swaps the
+ * month for a date field, for a popover.
  */
-export function OpeningsPicker({ date, today, timeZone, times, loading, failed, selected, onDateChange, onSelect, waiting, stacked = false }: {
+export function OpeningsPicker({ date, today, timeZone, times, loading, failed, selected, onDateChange, onSelect, waiting, stacked = false, compact = false }: {
   date: string;
   today: string;
   timeZone: string;
@@ -38,12 +42,18 @@ export function OpeningsPicker({ date, today, timeZone, times, loading, failed, 
   onSelect: (time: string) => void;
   waiting?: string;
   stacked?: boolean;
+  compact?: boolean;
 }) {
   const { t, i18n } = useTranslation("common");
+  const dateId = useId();
   const time = (value: string) => formatDateTime(value, i18n.language, { hour: "numeric", minute: "2-digit", timeZone });
+  const columns = stacked || compact;
   return (
-    <div className={cn("grid gap-4", !stacked && "sm:grid-cols-[auto_minmax(0,1fr)]")}>
-      <section aria-label={t("appointments.openings.date")} className="flex justify-center overflow-hidden rounded-xl border">
+    <div className={cn("grid gap-4", !columns && "sm:grid-cols-[auto_minmax(0,1fr)]")}>
+      {compact ? <div className="flex flex-col gap-2">
+        <FieldLabel htmlFor={dateId}>{t("appointments.openings.date")}</FieldLabel>
+        <Input className="w-44" id={dateId} min={today} onChange={(event) => { if (event.target.value && event.target.value >= today) onDateChange(event.target.value); }} required type="date" value={date} />
+      </div> : <section aria-label={t("appointments.openings.date")} className="flex justify-center overflow-hidden rounded-xl border">
         <Calendar
           className="bg-transparent"
           defaultMonth={keyToLocalDate(date)}
@@ -54,13 +64,13 @@ export function OpeningsPicker({ date, today, timeZone, times, loading, failed, 
           required
           selected={keyToLocalDate(date)}
         />
-      </section>
-      <section aria-busy={loading} aria-label={t("appointments.openings.times")} className="flex min-h-40 min-w-0 flex-col gap-2">
+      </section>}
+      <section aria-busy={loading} aria-label={t("appointments.openings.times")} className={cn("flex min-w-0 flex-col gap-2", compact ? "min-h-20" : "min-h-40")}>
         <h3 className="type-item-title">{t("appointments.openings.times")}</h3>
         {waiting ? <p className="type-body-muted">{waiting}</p>
           : loading ? <OpeningTimesSkeleton />
           : failed ? <p className="type-body-muted text-destructive">{t("appointments.openings.timesFailed")}</p>
-          : times.length ? <div className={cn("-m-1 grid max-h-72 grid-cols-3 gap-2 overflow-y-auto p-1", !stacked && "sm:grid-cols-2")}>
+          : times.length ? <div className={cn("grid grid-cols-3 gap-2 overflow-y-auto", compact ? "max-h-48 p-0.5" : "-m-1 max-h-72 p-1", !columns && "sm:grid-cols-2")}>
             {times.map((value) => <Button aria-pressed={selected === value} className={cn("tabular-nums", selected === value && "ring-2 ring-ring")} key={value} onClick={() => onSelect(value)} type="button" variant={selected === value ? "default" : "outline"}>{time(value)}</Button>)}
           </div>
           : <p className="type-body-muted">{t("appointments.openings.noTimes")}</p>}

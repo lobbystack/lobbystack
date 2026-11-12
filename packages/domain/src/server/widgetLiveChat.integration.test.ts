@@ -62,7 +62,7 @@ async function seedChat(tx: DatabaseTransaction) {
     visitorWrites: (body: string) => write("worker", { body, direction: "inbound" }),
     aiReplies: (body: string) => write("worker", { body, direction: "outbound", aiGenerated: true }),
     teamReplies: (body: string) => write("app", { body, direction: "outbound", userId }),
-    /** The visitor asks the receptionist for a person, as its requestTeamMember tool does. */
+    /** The visitor asks the agent for a person, as its requestTeamMember tool does. */
     asksForPerson: (now?: Date) => as(tx, "worker", (db) => requestTeamForWidgetChat({ db }, { businessId, conversationId, locale: "fr", reason: "Questions about\nan invoice", ...(now ? { now } : {}) })),
     /** The worker's job, once the wait is over. */
     expire: (requestedAt: Date) => as(tx, "worker", (db) => expireTeamRequest({ db }, { businessId, conversationId, requestedAt, locale: "fr" })),
@@ -129,7 +129,7 @@ describe.skipIf(!testUrl)("website chat take-over against PostgreSQL under produ
 
       const joined = await chat.teamReplies("Hi, this is Yuri. How can I help?");
       const takenOver = await chat.automation();
-      // Nobody asked for the team, so this is no live chat that goes back to the receptionist.
+      // Nobody asked for the team, so this is no live chat that goes back to the agent.
       expect(takenOver).toMatchObject({ state: "human_handoff", pausedBy: chat.userId, teamRequestedAt: null, teamJoinedAt: null });
       expect(takenOver.pausedAt).toBeInstanceOf(Date);
 
@@ -196,7 +196,7 @@ describe.skipIf(!testUrl)("live chat with the team against PostgreSQL under prod
     });
   });
 
-  it("gives the chat back to the receptionist with an offer to take a message when nobody joins in time", async () => {
+  it("gives the chat back to the agent with an offer to take a message when nobody joins in time", async () => {
     await rollbackTest(async (chat) => {
       await chat.visitorWrites("Je voudrais parler à quelqu'un.");
       const requestedAt = new Date(Date.now() - TEAM_REQUEST_WAIT_MS);
@@ -219,7 +219,7 @@ describe.skipIf(!testUrl)("live chat with the team against PostgreSQL under prod
     });
   });
 
-  it("lets a team member join with the button, or hand the waiting visitor back to the receptionist", async () => {
+  it("lets a team member join with the button, or hand the waiting visitor back to the agent", async () => {
     await rollbackTest(async (chat) => {
       const firstRequest = new Date(Date.now() - 2_000);
       await chat.asksForPerson(firstRequest);
@@ -242,7 +242,7 @@ describe.skipIf(!testUrl)("live chat with the team against PostgreSQL under prod
 });
 
 describe.skipIf(!testUrl)("a website chat the team went quiet in, against PostgreSQL under production logins", () => {
-  it("goes back to the receptionist when the visitor writes after the team joined them and left it quiet", async () => {
+  it("goes back to the agent when the visitor writes after the team joined them and left it quiet", async () => {
     await rollbackTest(async (chat) => {
       await chat.visitorWrites("Can I talk to someone?");
       await chat.asksForPerson();
@@ -254,7 +254,7 @@ describe.skipIf(!testUrl)("a website chat the team went quiet in, against Postgr
       expect(await chat.returnQuiet(stillThere)).toBe("human_handoff");
       expect(await chat.view(stillThere)).toMatchObject({ automationState: "human_handoff", waitingForTeam: false, teamMemberName: "Yuri" });
 
-      // The widget shows the receptionist again, and reading the chat changes nothing.
+      // The widget shows the agent again, and reading the chat changes nothing.
       expect(await chat.view(quiet)).toMatchObject({ automationState: "ai_active", waitingForTeam: false, teamMemberName: null });
       expect(await chat.automation()).toMatchObject({ state: "human_handoff", pausedBy: chat.userId, teamJoinedAt: expect.any(Date) });
 
@@ -319,7 +319,7 @@ describe.skipIf(!testUrl)("a website chat the team went quiet in, against Postgr
 });
 
 describe.skipIf(!testUrl)("a website chat after a day without messages, against PostgreSQL under production logins", () => {
-  it("is closed when the visitor next writes, and their message starts a new chat the receptionist answers", async () => {
+  it("is closed when the visitor next writes, and their message starts a new chat the agent answers", async () => {
     await rollbackTest(async (chat) => {
       await chat.visitorWrites("Can I talk to someone?");
       await chat.teamReplies("Hi, this is Yuri.");

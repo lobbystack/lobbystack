@@ -187,6 +187,7 @@
   "edit": {
     "title": "Izmeni kontakt",
     "name": "Ime",
+    "contactName": "Ime kontakta",
     "email": "E-pošta",
     "cancel": "Otkaži",
     "save": "Sačuvaj",

@@ -62,7 +62,7 @@ function Steps({ carrier, how, e164, mode }: { carrier: Carrier; how: Forwarding
 export function CallForwardingDialog({ confirming = false, e164, onConfirm, onOpenChange, open }: { confirming?: boolean; e164: string; onConfirm?: () => void; onOpenChange: (open: boolean) => void; open: boolean }) {
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
-      <DialogContent className="max-h-[calc(100svh-2rem)] overflow-y-auto">
+      <DialogContent className="max-h-[calc(100svh-2rem)] overflow-x-hidden overflow-y-auto">
         {/* The content unmounts when the dialog closes, so each opening starts with no carrier picked. */}
         <ForwardingDialogHeader e164={e164} />
         <ForwardingGuide e164={e164} />

@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 
 import { DataTablePagination, paginationFeatures, useDataTablePaginationLabels } from "@/components/data-table/pagination";
 import { DataTablePaginationSkeleton, KnowledgeRowsSkeleton } from "@/components/loading-skeletons";
+import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Status } from "@/components/ui/status";
 import { Table, TableActionsColumn, TableBody, TableCard, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -47,8 +48,14 @@ export function previewText(value: string): string {
   return stripHtmlTags(withoutLinks).replace(/\s+/gu, " ").trim();
 }
 
+/** A website still being read. One whose read stalled isn't: it shows the problem and Try again instead. */
 export function isImporting(source: KnowledgeSource): boolean {
-  return source.kind === "website" && Boolean(source.websiteImport && !["completed", "cancelled", "failed"].includes(source.websiteImport.status));
+  return source.kind === "website" && Boolean(source.websiteImport && !["completed", "cancelled", "failed"].includes(source.websiteImport.status)) && !source.websiteImport!.stalled;
+}
+
+/** A website whose read should be running but stopped moving. */
+export function isImportStalled(source: KnowledgeSource): boolean {
+  return source.kind === "website" && Boolean(source.websiteImport && !["completed", "cancelled", "failed"].includes(source.websiteImport.status) && source.websiteImport.stalled);
 }
 
 function SourceIcon({ source }: { source: KnowledgeSource }) {
@@ -62,9 +69,17 @@ function ProgressCell({ value }: { value: number }) {
 }
 
 /** The preview column: a website's page count, a file's or entry's first words, or progress while it's read. */
-function PreviewCell({ source }: { source: KnowledgeSource }) {
+function PreviewCell({ source, onRetry }: { source: KnowledgeSource; onRetry?: ((source: KnowledgeSource) => void) | undefined }) {
   const { t } = useTranslation("agent");
   if (isImporting(source)) return <ProgressCell value={websiteImportProgress(source.websiteImport!)} />;
+  if (isImportStalled(source)) {
+    return (
+      <div className="flex min-w-0 items-center gap-3">
+        <span className="min-w-0 truncate type-body text-destructive/80">{t("sections.knowledge.websiteImport.previewStalled")}</span>
+        {onRetry ? <Button className="shrink-0" onClick={(event) => { event.stopPropagation(); onRetry(source); }} size="sm" type="button" variant="outline">{t("sections.knowledge.websiteImport.tryAgain")}</Button> : null}
+      </div>
+    );
+  }
   if (source.kind === "file" && ["pending", "processing"].includes(source.status) && !source.preview.trim()) {
     return <ProgressCell value={Math.min(100, Math.max(0, Math.round(source.processingProgress ?? (source.status === "processing" ? 92 : 0))))} />;
   }
@@ -78,6 +93,7 @@ function PreviewCell({ source }: { source: KnowledgeSource }) {
 function StatusCell({ source, off }: { source: KnowledgeSource; off: boolean }) {
   const { t } = useTranslation("agent");
   if (isImporting(source)) return <Status variant={knowledgeStatusVariant("in_progress")}>{t("sections.knowledge.websiteImport.status.inProgress")}</Status>;
+  if (isImportStalled(source)) return <Status variant={knowledgeStatusVariant("failed")}>{t("sections.knowledge.websiteImport.status.stalled")}</Status>;
   if (source.kind === "website" && source.status === "error") return <Status variant={knowledgeStatusVariant("failed")}>{t("sections.knowledge.websiteImport.status.failed")}</Status>;
   if (off) return <Status variant={knowledgeStatusVariant("disabled")}>{t("table.disabled")}</Status>;
   const status = source.status === "processing" ? "indexing" : source.status === "pending" ? "queued" : source.status;
@@ -96,6 +112,8 @@ export type KnowledgeSourcesTableProps = {
   toggle?: { heading: string; render: (source: KnowledgeSource) => React.ReactNode } | undefined;
   /** The row's actions menu. */
   menu?: ((source: KnowledgeSource) => React.ReactNode) | undefined;
+  /** Starts a website's read again when it stalled. Without it, the row only says so. */
+  onRetry?: ((source: KnowledgeSource) => void) | undefined;
   expandedId?: string | null | undefined;
   expanded?: React.ReactNode;
   emptyText: string;
@@ -103,7 +121,7 @@ export type KnowledgeSourcesTableProps = {
 };
 
 /** Knowledge sources, one row each, in pages of ten. In selection mode each row gets a checkbox. */
-export function KnowledgeSourcesTable({ rows, loading, selection, onOpen, isOff, toggle, menu, expandedId, expanded, emptyText, label }: KnowledgeSourcesTableProps) {
+export function KnowledgeSourcesTable({ rows, loading, selection, onOpen, isOff, toggle, menu, onRetry, expandedId, expanded, emptyText, label }: KnowledgeSourcesTableProps) {
   const { i18n, t } = useTranslation("agent");
   const paginationLabels = useDataTablePaginationLabels("agent");
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
@@ -139,7 +157,7 @@ export function KnowledgeSourcesTable({ rows, loading, selection, onOpen, isOff,
                 <TableRow className={onOpen ? "cursor-pointer" : undefined} data-state={expandedId === source.id || selection?.selected.has(source.id) ? "selected" : undefined} onClick={() => { if (selecting && selection) selection.toggle(source.id); else onOpen?.(source); }}>
                   {selecting && selection ? <TableCell><RowCheckbox id={source.id} selection={selection} title={source.title} /></TableCell> : null}
                   <TableCell className="max-w-0 overflow-hidden"><div className="flex min-w-0 items-center gap-2"><SourceIcon source={source} /><span className="truncate type-item-title" title={source.title}>{summarize(source.title, 32)}</span></div></TableCell>
-                  <TableCell className="max-w-0 overflow-hidden"><PreviewCell source={source} /></TableCell>
+                  <TableCell className="max-w-0 overflow-hidden"><PreviewCell onRetry={selecting ? undefined : onRetry} source={source} /></TableCell>
                   <TableCell><StatusCell off={isOff(source)} source={source} /></TableCell>
                   <TableCell className="text-right type-body-muted">{new Intl.DateTimeFormat(intlLocale(i18n.resolvedLanguage), { dateStyle: "medium", timeStyle: "short" }).format(new Date(source.createdAt))}</TableCell>
                   {toggle ? <TableCell className="text-right" onClick={(event) => event.stopPropagation()}>{toggle.render(source)}</TableCell> : null}

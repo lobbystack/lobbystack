@@ -73,12 +73,30 @@ test("an owner books from the calendar's week, sees the booking as a block, and 
     await sheet.getByRole("button", { name: common.accessibility.close }).first().click();
     await expect(sheet).toBeHidden();
 
-    // An empty slot tomorrow at 10 AM draws a draft there and opens the panel on that time.
+    // An empty slot tomorrow at 10 AM draws a draft there and opens a popover over the calendar on that time.
+    const calendar = page.getByRole("region", { name: copy.views.calendar });
+    const widthBefore = (await calendar.boundingBox())!.width;
     const ten = tomorrow.set({ hour: 10 });
     await page.locator(`[data-starts-at="${ten.toUTC().toISO()}"]`).click();
-    const panel = page.getByRole("complementary", { name: copy.create.title });
+    const panel = page.locator('[data-slot="popover-content"]').filter({ has: page.getByText(copy.create.title, { exact: true }) });
     await expect(panel).toBeVisible();
     await expect(page.getByTestId("calendar-draft")).toContainText(/10:00\s–\s11:00\sAM/);
+    // The calendar keeps its width, the popover stays in the window, and its buttons show without scrolling it.
+    expect((await calendar.boundingBox())!.width).toBe(widthBefore);
+    const box = (await panel.boundingBox())!;
+    const viewport = page.viewportSize()!;
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.y).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(viewport.width);
+    expect(box.y + box.height).toBeLessThanOrEqual(viewport.height);
+    await expect(panel.getByRole("button", { name: copy.create.confirm, exact: true })).toBeInViewport();
+    await expect(panel.getByLabel(copy.openings.date, { exact: true })).toHaveValue(tomorrow.toISODate()!);
+    // Escape drops it with its draft.
+    await page.keyboard.press("Escape");
+    await expect(panel).toBeHidden();
+    await expect(page.getByTestId("calendar-draft")).toBeHidden();
+    await page.locator(`[data-starts-at="${ten.toUTC().toISO()}"]`).click();
+    await expect(panel).toBeVisible();
     await panel.getByRole("combobox", { name: copy.create.service }).click();
     await page.getByRole("option", { name: "Consultation", exact: true }).click();
     // The service sets the length, and the draft follows.
@@ -96,11 +114,13 @@ test("an owner books from the calendar's week, sees the booking as a block, and 
     const [saved] = await database.db.select({ notes: appointments.notes, internalNotes: appointments.internalNotes }).from(appointments).where(and(eq(appointments.businessId, businessId), eq(appointments.startsAt, ten.toJSDate())));
     expect(saved).toEqual({ notes: "Bring the referral letter", internalNotes: "Prefers mornings" });
 
-    // New appointment at the top opens the same panel.
+    // New appointment at the top opens the same form in a centered dialog.
     await page.getByRole("button", { name: copy.create.action, exact: true }).click();
-    await expect(panel).toBeVisible();
-    await panel.getByRole("button", { name: common.accessibility.close, exact: true }).click();
+    const dialog = page.locator('[data-slot="dialog-content"]').filter({ has: page.getByText(copy.create.title, { exact: true }) });
+    await expect(dialog).toBeVisible();
     await expect(panel).toBeHidden();
+    await dialog.getByRole("button", { name: copy.create.cancel, exact: true }).click();
+    await expect(dialog).toBeHidden();
 
     // Time off closes tomorrow for the whole business; the calendar shows it and its slots can't be booked.
     await page.getByRole("button", { name: copy.timeOff.action, exact: true }).click();

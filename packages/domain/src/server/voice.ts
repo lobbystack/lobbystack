@@ -138,7 +138,7 @@ export async function startCall(
       businessId: input.businessId,
       conversationId,
       contactId,
-      agentId,
+      agentId: agentId ?? defaultAgentIdOf(input.businessId),
       provider: input.provider,
       providerCallId: input.providerCallId,
       transport: input.transport,

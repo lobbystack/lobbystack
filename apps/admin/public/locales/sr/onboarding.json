@@ -94,7 +94,9 @@
   },
   "reading": {
     "title": "Čitamo vaš sajt",
-    "skip": "Preskoči čekanje",
+    "status_one": "Čitanje sajta {{host}}: pročitana {{count}} stranica",
+    "status_few": "Čitanje sajta {{host}}: pročitane {{count}} stranice",
+    "status_other": "Čitanje sajta {{host}}: pročitano {{count}} stranica",
     "previous": "Prethodno",
     "next": "Sledeće",
     "slides": {
@@ -124,7 +126,9 @@
         "question": "Radite li subotom?",
         "answer": "Da, do 13 časova."
       }
-    }
+    },
+    "stalled": "Nismo uspeli da završimo čitanje sajta {{host}}",
+    "tryAgain": "Pokušaj ponovo"
   },
   "verifyPhone": {
     "title": "Potvrdite broj mobilnog telefona",
@@ -216,6 +220,7 @@
       "continue": "Nastavi bez broja",
       "failed": "Nešto nije u redu. Pokušajte ponovo.",
       "label": "Zemlja",
+      "placeholder": "Izaberite zemlju",
       "back": "Nazad na brojeve",
       "other": "Druga zemlja"
     }

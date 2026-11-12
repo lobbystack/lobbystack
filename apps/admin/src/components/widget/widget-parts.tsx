@@ -38,7 +38,7 @@ export function WidgetHeader({ color, onColor, title, subtitle, pending, actions
   );
 }
 
-/** A message in the thread: the receptionist's or the team's on gray, the visitor's in the widget color. */
+/** A message in the thread: the agent's or the team's on gray, the visitor's in the widget color. */
 export function WidgetBubble({ from, color, onColor, className, children }: Accent & { from: "assistant" | "visitor"; className?: string; children: ReactNode }) {
   return (
     <div
@@ -50,7 +50,7 @@ export function WidgetBubble({ from, color, onColor, className, children }: Acce
   );
 }
 
-/** The receptionist is writing: three dots in an assistant bubble. */
+/** The agent is writing: three dots in an assistant bubble. */
 export function WidgetTyping({ label }: { label: string }) {
   return (
     <div className="flex justify-start" role="status">

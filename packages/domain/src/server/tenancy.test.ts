@@ -103,7 +103,7 @@ describe("business timezone", () => {
     expect(mocks.enqueueOutbox).not.toHaveBeenCalled();
   });
 
-  it("refreshes the receptionist's snapshot when the dashboard updates the business", async () => {
+  it("refreshes the agent's snapshot when the dashboard updates the business", async () => {
     const { tx } = useTransaction();
     await updateBusiness({ db: undefined as never }, { userId: "operator", businessId: "biz-1", timezone: "Europe/Belgrade" });
     expect(mocks.enqueueOutbox).toHaveBeenCalledWith(tx, expect.objectContaining({ topic: "snapshot.refresh", businessId: "biz-1", payload: { businessId: "biz-1", reason: "business_updated" } }));

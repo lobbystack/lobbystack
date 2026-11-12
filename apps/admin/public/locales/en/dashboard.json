@@ -138,7 +138,6 @@
     },
     "recentCalls": {
       "title": "Recent Calls",
-      "description": "{{count}} recent calls in the latest activity feed.",
       "durationValue": "{{value}} sec"
     },
     "actionRequired": {
@@ -147,7 +146,6 @@
       "titleWithContact": "{{message}} for {{name}}",
       "urgent": "Urgent",
       "emptyTitle": "No action required",
-      "emptyDescription": "Things that need your action will appear here.",
       "fields": {
         "callback": "Callback",
         "callbackWindow": "Preferred callback"
@@ -176,7 +174,6 @@
       "unknownService": "Unknown service",
       "employee": "Employee: {{name}}",
       "emptyTitle": "No upcoming appointments",
-      "emptyDescription": "Future bookings will appear here as soon as they are created.",
       "status": {
         "booked": "Booked",
         "confirmed": "Confirmed"
@@ -303,7 +300,7 @@
       "testCall": "Ask what your callers ask most.",
       "phoneNumber": "Give your agent its own number to answer real callers.",
       "phoneNumberTrial": "Answer your missed calls free for 14 days, no card needed.",
-      "forwardCalls": "Keeping the number your customers already call? Your agent can answer it too.",
+      "forwardCalls": "Keeping the number your customers already call? Your agent can answer it too. Optional.",
       "numberLost": "Your free trial ended. Choose a plan to get your number back."
     },
     "stepActions": {
@@ -316,7 +313,8 @@
       "copyNumber": "Copy number",
       "numberCopied": "Copied",
       "forwardCalls": "Set up forwarding",
-      "choosePlan": "Choose a plan"
+      "choosePlan": "Choose a plan",
+      "tryAgain": "Try again"
     },
     "forwardingFrom": "Forwarding from {{number}}",
     "forwardingWorks": "Forwarding works"

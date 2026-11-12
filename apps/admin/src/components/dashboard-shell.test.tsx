@@ -168,12 +168,6 @@ describe("drilling into an agent, Business and Settings", () => {
     expect(menu().getAttribute("data-menu-level")).toBe("agent:agent-2");
   });
 
-  it("links an agent's conversations once there are several agents", () => {
-    const view = setup({ agents: [FRONT, EVENING] });
-    view.navigate("/agents/agent-2");
-    expect(screen.getByRole("link", { name: /agentMenu\.conversations/ }).getAttribute("href")).toBe("/inbox?agent=agent-2");
-  });
-
   it("counts an agent's channels and marks one with none", () => {
     const view = setup({ agents: [FRONT, EVENING] });
     view.navigate("/agents/agent-1");

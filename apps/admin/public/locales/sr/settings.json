@@ -1085,8 +1085,7 @@
   },
   "apiKeys": {
     "title": "API ključevi",
-    "description": "Koristite ključ da povežete sopstveni kod ili drugu aplikaciju sa {{appName}} API-jem.",
-    "empty": "Još nema API ključeva.",
+    "empty": "Još nema API ključeva",
     "createdOn": "Kreiran {{date}}",
     "lastUsed": "Poslednji put korišćen {{date}}",
     "neverUsed": "Nikad korišćen",
@@ -1153,7 +1152,7 @@
   "webhooks": {
     "title": "Webhooks",
     "description": "{{appName}} šalje HTTPS POST zahtev na Vaš URL kada se nešto dogodi, na primer kada se poziv završi ili stigne novo zakazivanje.",
-    "empty": "Još nema webhook endpointa.",
+    "empty": "Još nema webhook endpointa",
     "enabledLabel": "Šalji događaje na ovaj endpoint",
     "restricted": {
       "title": "Samo vlasnici i administratori mogu da upravljaju webhookovima",
@@ -1245,8 +1244,8 @@
   },
   "connectedApps": {
     "title": "MCP veze",
-    "description": "AI asistenti, kao što su Claude ili ChatGPT, koje je neko povezao prijavom.",
-    "empty": "Još nema MCP veza. Da biste dodali vezu, dodajte {{appName}} u podešavanjima asistenta i prijavite se.",
+    "emptyTitle": "Još nema MCP veza",
+    "emptyDescription": "Da biste dodali vezu, dodajte {{appName}} u podešavanjima asistenta i prijavite se.",
     "neverUsed": "Nikad korišćena",
     "unnamed": "Aplikacija bez naziva",
     "connectedOn": "Povezana {{date}}",

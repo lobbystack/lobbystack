@@ -203,7 +203,7 @@ export function UploadKnowledgeDocumentSheet({
                 type="file"
               />
               <label
-                className={`flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-xl border bg-input/30 px-6 py-8 text-center transition-colors outline-none peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-background ${
+                className={`flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-xl border bg-input/30 px-6 py-8 text-center transition-colors outline-none peer-focus-visible:border-ring peer-focus-visible:ring-3 peer-focus-visible:ring-ring/50 ${
                   isDraggingFile
                     ? "border-ring ring-[3px] ring-ring/50"
                     : errorMessage

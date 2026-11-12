@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
-import { Check, CircleCheck, Copy, Globe, MessageCircle, MoreHorizontal, Pause, Pencil, Play, Plus, Trash2 } from "lucide-react";
+import { Check, CircleCheck, Copy, Globe, MoreHorizontal, Pause, Pencil, Play, Plus, Trash2 } from "lucide-react";
 import { useEffect, useId, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -27,11 +27,11 @@ import { Skeleton } from "./ui/skeleton";
 import { surfaceClassName } from "./ui/surface";
 import { Switch } from "./ui/switch";
 import { Textarea } from "./ui/textarea";
-import { readableOn } from "./widget/widget-parts";
 import { WidgetPreview } from "./widget/widget-preview";
 import { intlLocale } from "@/lib/locale";
 import { Status } from "@/components/ui/status";
 import { WIDGET_KEY_STATUS_VARIANTS } from "@/lib/status-variants";
+import { EmptyState } from "@/components/ui/empty-state";
 
 
 /** Languages the widget interface can be forced to, with their settings label keys. */
@@ -209,21 +209,14 @@ export function LiveWidgetSettingsSurface({ agentId, startAdding = false }: { ag
             {setStatus.isError ? <p className="type-body text-destructive">{setStatus.error.message}</p> : null}
           </div>
         ) : (
-          <div className="flex flex-col items-center gap-4 rounded-xl border border-dashed px-6 py-12 text-center">
-            <span className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground"><MessageCircle className="size-6" /></span>
-            <div className="flex max-w-sm flex-col gap-1">
-              <p className="type-item-title">{t("widget.keys.empty")}</p>
-              {issuanceEnabled ? <p className="type-body-muted">{t("widget:manage.emptyDescription")}</p> : null}
-            </div>
-            {newKeyButton}
-          </div>
+          <EmptyState action={newKeyButton} description={issuanceEnabled ? t("widget:manage.emptyDescription") : undefined} title={t("widget.keys.empty")} />
         )}
       </SectionBlock>
 
       <LiveNotificationSettingsSurface widgetOnly />
 
       <Dialog open={editing !== null} onOpenChange={(open) => { if (!open) closeDialog(); }}>
-        <DialogContent className={cn("flex max-h-[calc(100dvh-2rem)] flex-col gap-0 overflow-hidden p-0", createdKey ? "sm:max-w-xl" : "sm:max-w-5xl")}>
+        <DialogContent className={cn("flex max-h-[calc(100dvh-2rem)] flex-col gap-0 overflow-hidden p-0", !createdKey && "sm:max-w-5xl")}>
           {createdKey ? (
             <CreatedKeyView createdKey={createdKey} embedOrigin={embedOrigin} onDone={closeDialog} t={t} />
           ) : editing ? (
@@ -266,8 +259,8 @@ function WidgetKeyCard({ row, name, busy, embedOrigin, locale, onEdit, onStatus,
   return (
     <article className={cn(surfaceClassName, "flex flex-col gap-4 p-4 sm:flex-row sm:items-center", revoked && "bg-muted/30")}>
       <div className="flex min-w-0 flex-1 items-start gap-3">
-        {/* The key's own bubble, so each widget is recognizable at a glance. */}
-        <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-full", revoked && "grayscale opacity-50")} style={{ backgroundColor: color, color: readableOn(color) }} aria-hidden="true"><MessageCircle className="size-5" /></span>
+        {/* The key's own color, so each widget is recognizable at a glance. */}
+        <span className={cn("mt-1.5 size-3 shrink-0 rounded-full", revoked && "grayscale opacity-50")} style={{ backgroundColor: color }} aria-hidden="true" />
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <h3 className="type-item-title truncate">{name}</h3>
@@ -355,7 +348,7 @@ function WidgetKeyForm({ editing, name, businessName, embedOrigin, pending, erro
         <DialogDescription>{t("widget.create.description")}</DialogDescription>
       </DialogHeader>
       <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(0,1fr)_368px]">
-        <FieldGroup className="min-h-0 gap-8 overflow-y-auto px-6 py-6">
+        <FieldGroup className="min-h-0 gap-8 overflow-x-hidden overflow-y-auto px-6 py-6">
           <FieldSet>
             <FieldLegend>{t("widget:manage.sections.website")}</FieldLegend>
             <FieldGroup className="gap-5">
@@ -451,7 +444,7 @@ function WidgetKeyForm({ editing, name, businessName, embedOrigin, pending, erro
               : <p className="type-body-muted">{t("widget.keys.noSnippet")}</p>
           ) : null}
         </FieldGroup>
-        <div className="hidden min-h-0 overflow-y-auto border-l bg-muted/40 p-6 lg:block">
+        <div className="hidden min-h-0 overflow-x-hidden overflow-y-auto border-l bg-muted/40 p-6 lg:block">
           <WidgetPreview color={draft.color} position={draft.position} title={draft.title.trim() || businessName || t("widget.fields.titlePlaceholder")} subtitle={draft.subtitle.trim()} greeting={draft.greeting.trim()} />
         </div>
       </div>

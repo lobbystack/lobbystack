@@ -2,10 +2,9 @@ import { expect, test, type Page, type TestInfo } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 
-import { businesses, createDatabaseClient } from "@lobbystack/db";
+import { businesses, createDatabaseClient, websiteIngestionJobs } from "@lobbystack/db";
 
 import nav from "../public/locales/en/nav.json" with { type: "json" };
-import common from "../public/locales/en/common.json" with { type: "json" };
 import onboarding from "../public/locales/en/onboarding.json" with { type: "json" };
 
 import { completeSignupEmailVerification, isolateAuthRateLimit } from "./fixtures/email-verification";
@@ -53,10 +52,26 @@ async function newOwner(page: Page, testInfo: TestInfo, email: string): Promise<
 async function leaveNumberStep(page: Page): Promise<void> {
   await expect(page).toHaveURL("/onboarding/number");
   await expect(page.getByRole("button", { name: onboarding.number.country.continue })).toHaveCount(0);
-  await page.getByRole("combobox", { name: onboarding.number.country.label }).click();
-  await page.getByPlaceholder(common.phoneCountry.search).fill("France");
+  // The field is the search box: typing in it filters the countries.
+  await page.getByRole("combobox", { name: onboarding.number.country.label }).fill("France");
   await page.getByRole("option", { name: /France/ }).click();
   await page.getByRole("button", { name: onboarding.number.country.continue }).click();
+}
+
+/** The header's action shows in full inside the window, at desktop and phone widths. */
+async function expectHeaderActionInWindow(page: Page, name: string): Promise<void> {
+  const viewport = page.viewportSize();
+  for (const size of [{ width: 1440, height: 900 }, { width: 375, height: 812 }]) {
+    await page.setViewportSize(size);
+    const action = page.getByRole("button", { name });
+    await expect(action).toBeVisible();
+    const box = (await action.boundingBox())!;
+    const windowWidth = await page.evaluate(() => document.documentElement.clientWidth);
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(windowWidth);
+    expect(await action.evaluate((button) => button.scrollWidth <= button.clientWidth)).toBe(true);
+  }
+  if (viewport) await page.setViewportSize(viewport);
 }
 
 test("the website path waits for the import and ends on Meet your agent", async ({ page }, testInfo) => {
@@ -68,14 +83,19 @@ test("the website path waits for the import and ends on Meet your agent", async 
   try {
     businessId = await newOwner(page, testInfo, email);
 
-    // This run has no worker, so the import stays running and the wait stays up.
+    // This run has no worker, so the import stays queued and the wait stays up.
+    // There is no way to skip it: the wait ends when the import does.
     await page.getByLabel(onboarding.website.label).fill("example.com");
     await page.getByRole("button", { name: onboarding.website.continue }).click();
     await expect(page).toHaveURL(/\/onboarding\/reading\?documentId=/);
     await expect(page.getByText(onboarding.reading.slides.answers)).toBeVisible();
     await page.getByRole("button", { name: onboarding.reading.next }).click();
     await expect(page.getByText(onboarding.reading.slides.booking)).toBeVisible();
-    await page.getByRole("button", { name: onboarding.reading.skip }).click();
+    await expect(page.getByRole("main").getByRole("button")).toHaveCount(2);
+    await expectHeaderActionInWindow(page, onboarding.shell.signOut);
+
+    // A failed import ends the wait by itself.
+    await database.db.update(websiteIngestionJobs).set({ status: "failed" }).where(eq(websiteIngestionJobs.businessId, businessId));
 
     // No phone step: the number comes right after the website.
     await expect(page).toHaveURL("/onboarding/number");
@@ -129,6 +149,7 @@ test("the website path waits for the import and ends on Meet your agent", async 
     await page.getByRole("button", { name: onboarding.businessName.continue }).click();
     secondBusinessId = (await (await second).json() as { businessId: string }).businessId;
     await expect(page).toHaveURL("/onboarding/website");
+    await expectHeaderActionInWindow(page, onboarding.shell.backToDashboard);
     await page.getByRole("button", { name: onboarding.shell.backToDashboard }).click();
     await expect(page).toHaveURL("/");
     await expect(page.getByRole("button", { name: /^Onboarding Path / })).toBeVisible();
@@ -200,4 +221,29 @@ test("a used trial offers only the paid plans, and a country without numbers is 
     await removeFixtures(database, email, businessId);
     await database.pool.end();
   }
+});
+
+test.describe("a business in a country without numbers", () => {
+  test.use({ timezoneId: "Europe/Belgrade" });
+
+  test("lands on the way on without a number, with its country chosen", async ({ page }, testInfo) => {
+    test.setTimeout(120_000);
+    const database = migrator();
+    const email = `${prefix}-${randomUUID()}@example.invalid`;
+    let businessId: string | undefined;
+    try {
+      businessId = await newOwner(page, testInfo, email);
+      await page.getByRole("button", { name: onboarding.website.skip }).click();
+      await expect(page).toHaveURL("/onboarding/language");
+      await page.getByRole("button", { name: onboarding.language.continue }).click();
+      await expect(page).toHaveURL("/onboarding/number");
+      // The time zone points to Serbia, where we sell no numbers.
+      await expect(page.getByRole("combobox", { name: onboarding.number.country.label })).toHaveValue("Serbia");
+      await page.getByRole("button", { name: onboarding.number.country.continue }).click();
+      await expect(page).toHaveURL("/onboarding/attribution");
+    } finally {
+      await removeFixtures(database, email, businessId);
+      await database.pool.end();
+    }
+  });
 });

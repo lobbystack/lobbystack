@@ -544,7 +544,7 @@
   },
   "apiKeys": {
     "title": "API keys",
-    "empty": "No API keys yet.",
+    "empty": "No API keys yet",
     "createdOn": "Created {{date}}",
     "lastUsed": "Last used {{date}}",
     "neverUsed": "Never used",

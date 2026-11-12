@@ -36,6 +36,6 @@ export const GET = operatorRoute(async ({ businessId, transaction }) => NextResp
     // The country the business's time zone points to, which picks the carriers the forwarding steps list.
     country: countryCodeForBusinessTimezone(business?.timezone) ?? null,
     widgetsEnabled: isWidgetKeyIssuanceEnabled(process.env),
-    websiteImport: ingestion ? { status: ingestion.status, websiteUrl: ingestion.websiteUrl, importedCount: ingestion.importedCount, indexedCount: ingestion.indexedCount } : null,
+    websiteImport: ingestion ? { status: ingestion.status, websiteUrl: ingestion.websiteUrl, importedCount: ingestion.importedCount, indexedCount: ingestion.indexedCount, stalled: ingestion.stalled } : null,
   };
 })));

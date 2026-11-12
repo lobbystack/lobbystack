@@ -206,7 +206,7 @@ type TranscriptDelta = { speaker: WebVoiceTranscriptTurn["speaker"]; delta: stri
 
 /**
  * Returns the caption text when a data channel message is one of GPT-Live's
- * transcript deltas for the caller or the receptionist. The captions only
+ * transcript deltas for the caller or the agent. The captions only
  * render in this browser; they are never sent anywhere, including telemetry.
  */
 export function readTranscriptDelta(data: unknown): TranscriptDelta | undefined {
@@ -270,7 +270,7 @@ async function fetchWithTimeout(
  * A browser voice call on GPT-Live. The server records the call, answers
  * the agent's requests and keeps the recording; the browser only carries
  * audio, asks OpenAI to close the session when the caller hangs up, and
- * watches for the session closing when the receptionist hangs up.
+ * watches for the session closing when the agent hangs up.
  */
 export type WebVoiceCall = ReturnType<typeof useWebVoiceCall>;
 
@@ -531,7 +531,7 @@ export function useWebVoiceCall({
         cleanup();
       };
 
-      // The receptionist can end the call itself: its endCall tool, the
+      // The agent can end the call itself: its endCall tool, the
       // silence timeout or the plan's time limit make the worker close the
       // GPT-Live session. The browser then only sees its peer go away, which
       // looks like a dropped connection. OpenAI sends the terminal

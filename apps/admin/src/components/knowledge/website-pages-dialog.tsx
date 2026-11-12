@@ -61,7 +61,7 @@ export function WebsitePagesDialog({ businessId, documentId, onOpenChange, canMa
             </div>
           ) : null}
         </DialogHeader>
-        <div className="-mx-6 overflow-y-auto px-6">
+        <div className="-mx-6 overflow-x-hidden overflow-y-auto px-6">
           {pages.isLoading ? <WebsitePagesSkeleton /> : pages.data?.pages.length ? (
             <ul aria-label={t("sections.knowledge.pagesDialog.listLabel")} className="flex flex-col divide-y divide-border/70">
               {pages.data.pages.map((page) => {

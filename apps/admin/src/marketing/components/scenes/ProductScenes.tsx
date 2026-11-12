@@ -1,6 +1,7 @@
 import { intlLocale } from "@lobbystack/shared"
 import {
   AudioLines,
+  Bot,
   CalendarCheck,
   CalendarDays,
   FileText,
@@ -13,7 +14,6 @@ import {
   PhoneIncoming,
   Server,
   ShieldCheck,
-  Sparkles,
   Tag,
   Wrench,
   type LucideIcon,
@@ -302,7 +302,7 @@ function KnowledgeScene({ locale, neutral }: SceneProps) {
       <Place x={330} y={110}>
         <div className="relative">
           <Tile accent className="w-56" innerClassName="p-4">
-            <Row icon={<IconDot icon={Sparkles} />} title={t.readyToAnswer} />
+            <Row icon={<IconDot icon={Bot} />} title={t.readyToAnswer} />
           </Tile>
         </div>
       </Place>
@@ -331,7 +331,7 @@ function SummaryScene({ locale, neutral }: SceneProps) {
             </Chip>
           </Tile>
           <Badge className="absolute -top-4 -right-4 size-9">
-            <Sparkles className="size-4" strokeWidth={1.75} />
+            <Bot className="size-4" strokeWidth={1.75} />
           </Badge>
         </div>
       </Place>

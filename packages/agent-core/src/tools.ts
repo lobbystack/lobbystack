@@ -31,7 +31,7 @@ import { DateTime } from "luxon";
 import { z } from "zod";
 
 import { serviceFacts, upcomingClosures, weeklyHours } from "./businessFacts";
-import { receptionistCapabilities, type ToolName } from "./capabilities";
+import { agentCapabilities, type ToolName } from "./capabilities";
 
 /** Where the conversation happens. Phone calls know the caller's number. */
 export type AgentChannel = "voice" | "web_voice" | "web_chat" | "instagram" | "sms";
@@ -58,7 +58,7 @@ export type KeypadPasscodeCheck = (passcode: string) => Promise<KeypadPasscodeOu
 export type CallControl = {
   /**
    * Phone calls only. Resolves true once the transfer is reserved: the call is
-   * referred after the receptionist has announced it. Resolves false when the
+   * referred after the agent has announced it. Resolves false when the
    * transfer can't start, for example the plan is out of transfer attempts.
    */
   transfer?(destination: string): Promise<boolean>;
@@ -91,7 +91,7 @@ export type AgentToolContext = {
   /**
    * Website chats whose widget has live chat on: the visitor can ask for
    * someone from the team to join. `locale` is the chat's language, for what
-   * the receptionist says if nobody joins in time. `onTeamRequested` hears
+   * the agent says if nobody joins in time. `onTeamRequested` hears
    * when the team was asked.
    */
   liveChat?: { locale: RuntimeLocale; onTeamRequested?: () => void };
@@ -174,18 +174,18 @@ const isReason = (value: unknown): value is NoOpeningsReason => typeof value ===
 
 const OFFERINGS_QUERY = "What does the business do and offer: services, products and prices";
 
-export function createReceptionistTools(context: AgentToolContext): ToolSet {
+export function createAgentTools(context: AgentToolContext): ToolSet {
   const { domain, snapshot } = context;
   const businessId = snapshot.businessId;
   // A projected snapshot names its agent. A flat one is the default agent.
   const agent = snapshot.agentId ? { agentId: snapshot.agentId } : {};
   const timezone = snapshot.timezone;
   const channel = context.channel;
-  // The team reads what the receptionist writes for them in its own language, whatever language the caller spoke.
+  // The team reads what the agent writes for them in its own language, whatever language the caller spoke.
   const teamLanguage = runtimeLocaleName(normalizeRuntimeLocale(snapshot.teamLocale ?? snapshot.defaultLocale));
   const forTeam = `Write it in ${teamLanguage}, even when the caller spoke another language.`;
   // capabilities.ts decides which tools this conversation gets.
-  const { tools: offeredTools, callerTextable } = receptionistCapabilities(snapshot, context);
+  const { tools: offeredTools, callerTextable } = agentCapabilities(snapshot, context);
   const offered = (name: ToolName) => offeredTools.includes(name);
   const withConsentOnFile = <T extends object>(result: T & { smsConsentOnFile?: SmsConsentOnFile }) => {
     const { smsConsentOnFile, ...rest } = result;

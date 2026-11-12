@@ -29,7 +29,7 @@ function held() {
   return { response, send: (value: Response) => send(value) };
 }
 
-/** The chat route's answer, streamed as the receptionist writes it. */
+/** The chat route's answer, streamed as the agent writes it. */
 function streamedReply(text: string) {
   return createUIMessageStreamResponse({
     stream: createUIMessageStream({
@@ -123,7 +123,7 @@ describe("widget live chat with the team", () => {
 describe("threadEntries", () => {
   const text = (id: string, role: "user" | "assistant", content: string, metadata?: { fromTeam: true; teamMemberName: string | null }) => ({ id, role, parts: [{ type: "text" as const, text: content }], ...(metadata ? { metadata } : {}) });
 
-  it("notes each time the team takes the chat from the receptionist, and leaves out empty replies", () => {
+  it("notes each time the team takes the chat from the agent, and leaves out empty replies", () => {
     const entries = threadEntries([
       text("1", "user", "Hello"),
       text("2", "assistant", "Hi! How can I help?"),
@@ -227,7 +227,7 @@ describe("widget chat live updates", () => {
       return Response.json(config);
     });
 
-    // The greeting opens the empty chat as the receptionist's first message.
+    // The greeting opens the empty chat as the agent's first message.
     expect(await screen.findByText("chat.welcome")).toBeTruthy();
     await send("Do you open on Sundays?");
     expect(await screen.findByText("Do you open on Sundays?")).toBeTruthy();
@@ -712,7 +712,7 @@ describe("links in chat replies", () => {
     return content ? [...content.querySelectorAll("a")].map((anchor) => ({ text: anchor.textContent, href: anchor.getAttribute("href"), target: anchor.getAttribute("target"), rel: anchor.getAttribute("rel") })) : [];
   }
 
-  it("turns web addresses in the receptionist's streamed reply into links", async () => {
+  it("turns web addresses in the agent's streamed reply into links", async () => {
     const client = openChat((url) => {
       if (url.includes("/api/widget/history")) return Response.json({ automationState: "ai_active", messages: [] });
       if (!url.includes("/api/widget/chat")) return undefined;

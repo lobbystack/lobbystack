@@ -30,7 +30,12 @@ export function useKnowledgeSources(businessId: string | undefined, agentId?: st
     queryKey: sourcesKey(businessId, agentId),
     enabled: Boolean(businessId),
     queryFn: () => requestJson<{ own: KnowledgeSource[]; shared: KnowledgeSource[] }>(`/api/knowledge/sources?${query(businessId!, agentId)}`),
-    refetchInterval: (current) => [...(current.state.data?.own ?? []), ...(current.state.data?.shared ?? [])].some((source) => ["pending", "processing"].includes(source.status)) ? 1500 : false,
+    // A website whose read stalled is looked at now and then, in case the worker picks it back up.
+    refetchInterval: (current) => {
+      const reading = [...(current.state.data?.own ?? []), ...(current.state.data?.shared ?? [])].filter((source) => ["pending", "processing"].includes(source.status));
+      if (!reading.length) return false;
+      return reading.every((source) => source.websiteImport?.stalled) ? 15_000 : 1500;
+    },
   });
   const invalidate = async () => {
     await queryClient.invalidateQueries({ queryKey: ["knowledge-sources", businessId] });

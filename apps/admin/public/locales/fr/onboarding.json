@@ -94,7 +94,9 @@
   },
   "reading": {
     "title": "Lecture de votre site web",
-    "skip": "Ne pas attendre",
+    "status_one": "Lecture de {{host}} : {{count}} page jusqu'ici",
+    "status_many": "Lecture de {{host}} : {{count}} pages jusqu'ici",
+    "status_other": "Lecture de {{host}} : {{count}} pages jusqu'ici",
     "previous": "Précédent",
     "next": "Suivant",
     "slides": {
@@ -124,7 +126,9 @@
         "question": "Ouvert le samedi ?",
         "answer": "Oui, jusqu'à 13 h."
       }
-    }
+    },
+    "stalled": "Nous n'avons pas pu finir de lire {{host}}",
+    "tryAgain": "Réessayer"
   },
   "verifyPhone": {
     "title": "Vérifiez votre numéro de mobile",
@@ -216,6 +220,7 @@
       "continue": "Continuer sans numéro",
       "failed": "Une erreur est survenue. Réessayez.",
       "label": "Pays",
+      "placeholder": "Choisissez un pays",
       "back": "Retour aux numéros",
       "other": "Autre pays"
     }

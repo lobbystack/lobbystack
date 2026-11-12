@@ -552,7 +552,7 @@
   },
   "apiKeys": {
     "title": "Clés API",
-    "empty": "Aucune clé API pour l'instant.",
+    "empty": "Aucune clé API pour l'instant",
     "createdOn": "Créée le {{date}}",
     "lastUsed": "Dernière utilisation le {{date}}",
     "neverUsed": "Jamais utilisée",

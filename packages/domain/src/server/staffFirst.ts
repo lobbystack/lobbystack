@@ -17,7 +17,7 @@ import { emitWebhookEventInTransaction } from "./publicApi/webhooks";
 import { getBusinessSnapshotForAgent, getCachedBusinessSnapshot } from "./snapshotCache";
 import { findOrCreateCallContactInTransaction } from "./voice";
 
-// Staff answers first: a call rings one staff phone before the receptionist
+// Staff answers first: a call rings one staff phone before the agent
 // answers. See docs/specs/staff-answers-first.md.
 
 /** Why a business can't turn staff answers first on, or null when it can. A business with no number yet can: the setting applies to the number it buys. "setup" means this deployment's admin app can't reach GPT-Live. */
@@ -66,7 +66,7 @@ export const STAFF_ANSWERED_CALL_PROVIDER = "staff_answered";
 /** How long after a ring starts a second call from the caller counts as the same call: the ring, Twilio's buffer, and the carrier's forward. */
 const RING_SETTLE_SECONDS = 15;
 
-/** Bridged minutes a business gets in any 24 hours, whatever pays for it. Past this, calls go straight to the receptionist, so a staff phone can't carry unmetered traffic. */
+/** Bridged minutes a business gets in any 24 hours, whatever pays for it. Past this, calls go straight to the agent, so a staff phone can't carry unmetered traffic. */
 export const STAFF_BRIDGED_MINUTES_PER_DAY = 600;
 
 const DAY_MS = 24 * 60 * 60_000;
@@ -80,8 +80,8 @@ function callerKey(businessId: string, from: string): string {
  * The guard for a forward that names no line: a carrier can leave out
  * ForwardedFrom, and a staff phone that forwards here would ring itself until
  * the first <Dial> times out, using an attempt each time. The same caller
- * arriving during their own ring is that forward, so the receptionist takes
- * it. A caller who hangs up and redials in that time reaches the receptionist
+ * arriving during their own ring is that forward, so the agent takes
+ * it. A caller who hangs up and redials in that time reaches the agent
  * too. A withheld number can't be matched, so the first <Dial>'s timeout is
  * the only limit there.
  */
@@ -104,18 +104,18 @@ async function bridgedCapReached(context: DomainContext, input: { businessId: st
 export type StaffFirstDecision =
   // A blocked caller, or a number whose trial ended.
   | { action: "reject" }
-  | { action: "receptionist"; locale: RuntimeLocale }
+  | { action: "agent"; locale: RuntimeLocale }
   | { action: "ring"; locale: RuntimeLocale; phone: string; ringSeconds: number; message?: string | undefined };
 
 /**
  * What to do with a call to a staff-first number. Everything that can't ring
- * goes straight to the receptionist, which applies the plan's and the trial's
+ * goes straight to the agent, which applies the plan's and the trial's
  * minutes as on any other call. The dialled number's agent decides who rings
  * and for how long. Hours come from the snapshot, like the rest of a call's
  * setup, so a change reaches calls when the snapshot refreshes. Each
  * ring uses one transfer attempt, keyed on the carrier's call so a repeated
  * webhook doesn't use another. With none left, or past the bridged minutes,
- * the receptionist answers.
+ * the agent answers.
  */
 export async function decideStaffFirstCall(context: DomainContext, input: { businessId: string; e164: string; providerCallId: string; from?: string | undefined; forwardedFrom?: string | undefined; now?: Date }): Promise<StaffFirstDecision> {
   const { ended, blocked, included, trialPhone, agentId } = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
@@ -127,18 +127,18 @@ export async function decideStaffFirstCall(context: DomainContext, input: { busi
   const snapshot = await getBusinessSnapshotForAgent(context, { businessId: input.businessId, agentId });
   const locale = snapshot?.defaultLocale ?? "en";
   const policy = snapshot?.staffFirstPolicy;
-  if (!snapshot || !policy || !included || !shouldRingStaffFirst(snapshot, input.now)) return { action: "receptionist", locale };
+  if (!snapshot || !policy || !included || !shouldRingStaffFirst(snapshot, input.now)) return { action: "agent", locale };
   // A staff line that forwards here, or the dialled number itself, would loop. Some carriers put the forwarding line in From.
-  if (policy.number === input.e164 || policy.number === input.forwardedFrom || policy.number === input.from) return { action: "receptionist", locale };
+  if (policy.number === input.e164 || policy.number === input.forwardedFrom || policy.number === input.from) return { action: "agent", locale };
   // The last check before a number is dialed, as on a transfer: a trial can start after the staff phone was saved.
-  if (!isTransferPhone(policy.number) || (trialPhone && policy.number !== trialPhone)) return { action: "receptionist", locale };
+  if (!isTransferPhone(policy.number) || (trialPhone && policy.number !== trialPhone)) return { action: "agent", locale };
   const now = input.now ?? new Date();
-  if (await bridgedCapReached(context, { businessId: input.businessId, now })) return { action: "receptionist", locale };
+  if (await bridgedCapReached(context, { businessId: input.businessId, now })) return { action: "agent", locale };
   const caller = input.from ? callerKey(input.businessId, input.from) : undefined;
   const sourceKey = caller ? `staff_ring:${caller}:${input.providerCallId}` : `staff_ring:${input.providerCallId}`;
-  if (caller && await callerIsRinging(context, { businessId: input.businessId, caller, sourceKey, ringSeconds: policy.ringSeconds, now })) return { action: "receptionist", locale };
+  if (caller && await callerIsRinging(context, { businessId: input.businessId, caller, sourceKey, ringSeconds: policy.ringSeconds, now })) return { action: "agent", locale };
   const attempt = await reserveOutboundCallAttempt(context, { businessId: input.businessId, sourceKey, recordedAt: now });
-  if (!attempt.allowed) return { action: "receptionist", locale };
+  if (!attempt.allowed) return { action: "agent", locale };
   return { action: "ring", locale, phone: policy.number, ringSeconds: policy.ringSeconds, ...(policy.message ? { message: policy.message } : {}) };
 }
 
@@ -149,7 +149,7 @@ export async function loadStaffPrompt(context: DomainContext, input: { businessI
   return { business: snapshot?.displayName ?? "", locale: snapshot?.teamLocale ?? snapshot?.defaultLocale ?? "en", caller: { ...(contact?.name ? { name: contact.name } : {}), ...(input.from ? { phone: input.from } : {}) } };
 }
 
-/** What the receptionist's leg needs after a ring: the business's language and the handover message of the dialled number's agent. */
+/** What the agent's leg needs after a ring: the business's language and the handover message of the dialled number's agent. */
 export async function loadStaffFirstHandover(context: DomainContext, input: { businessId: string; e164: string }): Promise<{ locale: RuntimeLocale; message?: string }> {
   const agentId = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => await numberAgentIdInTransaction(tx, input));
   const snapshot = await getBusinessSnapshotForAgent(context, { businessId: input.businessId, agentId });
@@ -158,9 +158,9 @@ export async function loadStaffFirstHandover(context: DomainContext, input: { bu
 
 /**
  * Records a call a staff member took, once the carrier reports it over. It
- * uses no plan minutes and no conversation: the receptionist wasn't on it. Its
+ * uses no plan minutes and no conversation: the agent wasn't on it. Its
  * seconds count toward STAFF_BRIDGED_MINUTES_PER_DAY. It stays out of
- * mediaStartedAt so it doesn't count as the receptionist's first call. A
+ * mediaStartedAt so it doesn't count as the agent's first call. A
  * repeated webhook finds the record and changes nothing.
  */
 export async function recordStaffAnsweredCall(context: DomainContext, input: { businessId: string; providerCallId: string; from?: string | undefined; to: string; seconds: number; endedAt?: Date }): Promise<void> {

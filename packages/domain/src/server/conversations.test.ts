@@ -69,7 +69,7 @@ describe("model-written call summaries", () => {
     expect(normalizeCallSummaryLocale(null)).toBe("en");
   });
 
-  it("uses the Spanish and Serbian fallbacks, and English for a language the receptionist doesn't speak", () => {
+  it("uses the Spanish and Serbian fallbacks, and English for a language the agent doesn't speak", () => {
     expect(buildConversationSessionSummary({ locale: normalizeCallSummaryLocale("es-MX"), transcript: ["Hola"] })).toEqual({ kind: "summary", summary: "Resumen de la llamada: Hola" });
     expect(buildConversationSessionSummary({ locale: normalizeCallSummaryLocale("sr-Latn"), transcript: [] })).toEqual({ kind: "summary", summary: "Glasovna interakcija je završena." });
     expect(normalizeCallSummaryLocale("de")).toBe("de");
@@ -108,7 +108,7 @@ describe("model-written call summaries", () => {
     // Named, but not as the caller's own name.
     expect(sanitizeGeneratedCallerName("Marie Tremblay", [{ speaker: "caller", text: "I'd like to speak with Marie Tremblay, please." }])).toBeUndefined();
     expect(sanitizeGeneratedCallerName("Marie", [{ speaker: "caller", text: "Est-ce que Marie est là?" }])).toBeUndefined();
-    // A short answer to the receptionist asking for a name counts.
+    // A short answer to the agent asking for a name counts.
     expect(sanitizeGeneratedCallerName("Marie Tremblay", [{ speaker: "assistant", text: "May I have your name?" }, { speaker: "caller", text: "Sure, Marie Tremblay." }])).toBe("Marie Tremblay");
     expect(sanitizeGeneratedCallerName("Luc", [{ speaker: "assistant", text: "Quel est votre nom?" }, { speaker: "caller", text: "Luc" }])).toBe("Luc");
     // Once another question comes in between, the answer no longer counts as the name.

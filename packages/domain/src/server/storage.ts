@@ -175,12 +175,12 @@ export async function completeUploadInTransaction(
   return null;
 }
 
-export async function createObjectDownload(
+/** A ready, unexpired object of the business, for a member to download. Null when there is none. */
+export async function findDownloadableObject(
   context: DomainContext,
-  input: { userId: string; businessId: string; objectId: string; range?: string | undefined },
-  storage: StorageProvider,
-): Promise<{ url: string; fileName: string; contentType: string; length: number | null; headers?: Record<string, string> }> {
-  const object = await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
+  input: { userId: string; businessId: string; objectId: string },
+): Promise<{ objectKey: string; fileName: string; contentType: string; contentLength: number | null } | null> {
+  return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessMembership(tx, input);
     return (await tx.select({
       objectKey: storageObjects.objectKey,
@@ -194,6 +194,14 @@ export async function createObjectDownload(
       or(isNull(storageObjects.retentionUntil), gte(storageObjects.retentionUntil, new Date())),
     )).limit(1))[0] ?? null;
   });
+}
+
+export async function createObjectDownload(
+  context: DomainContext,
+  input: { userId: string; businessId: string; objectId: string; range?: string | undefined },
+  storage: StorageProvider,
+): Promise<{ url: string; fileName: string; contentType: string; length: number | null; headers?: Record<string, string> }> {
+  const object = await findDownloadableObject(context, input);
   if (!object) {
     throw new Error("Object not found.");
   }

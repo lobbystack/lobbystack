@@ -29,7 +29,7 @@ The caller hears silence while the agent works, so calls keep it short:
 - If OpenAI rejects an answer, the worker sends a short failure in its place, so the caller doesn't wait in silence.
 - A booking repeated for the same caller, service and time returns the existing appointment instead of reporting the slot as taken.
 
-The sideband also receives copies of the call's audio, as OpenAI's [server-side controls guide](https://developers.openai.com/api/docs/guides/voice-server-controls?api=live) describes: the receptionist's as `session.output_audio.delta` and the caller's as `session.input_audio.append`. Both carry 16-bit PCM at 24 kHz. The receptionist's audio includes silence, because GPT-Live is full duplex, so the worker counts a chunk as speech only when it's loud, for the greeting, the goodbye and the silence timeout. Words in the output transcript count as speech too, so all three keep working if OpenAI stops sending the audio events. The worker only measures the caller's audio. `live.closed` logs both in `outputAudio` and `inputAudio`. Latency telemetry measures the receptionist's speech from the output transcript.
+The sideband also receives copies of the call's audio, as OpenAI's [server-side controls guide](https://developers.openai.com/api/docs/guides/voice-server-controls?api=live) describes: the agent's as `session.output_audio.delta` and the caller's as `session.input_audio.append`. Both carry 16-bit PCM at 24 kHz. The agent's audio includes silence, because GPT-Live is full duplex, so the worker counts a chunk as speech only when it's loud, for the greeting, the goodbye and the silence timeout. Words in the output transcript count as speech too, so all three keep working if OpenAI stops sending the audio events. The worker only measures the caller's audio. `live.closed` logs both in `outputAudio` and `inputAudio`. Latency telemetry measures the agent's speech from the output transcript.
 
 Keypad presses on phone calls reach the sideband as `transport.dtmf.received`, an event OpenAI sends only to sidebands. The worker adds each press to the caller's turn as `[pressed 1]`. The saved transcript and the next delegated request both show it, and a press resets the silence timeout.
 
@@ -37,7 +37,7 @@ The worker logs each answer as `live.delegation` with `agentMs`, `totalMs`, `que
 
 ### Keypad PINs
 
-A business can require a PIN before the receptionist cancels or reschedules (verification mode `passcode_required`). Operators set each caller's PIN on the contact's **Details** tab, and `contact_passcodes` keeps only a salted scrypt hash of it, with `OTP_HASH_SECRET` (or `ENCRYPTION_KEY`, then `BETTER_AUTH_SECRET`) in the hash input. Changing that secret makes every saved PIN stop matching.
+A business can require a PIN before the agent cancels or reschedules (verification mode `passcode_required`). Operators set each caller's PIN on the contact's **Details** tab, and `contact_passcodes` keeps only a salted scrypt hash of it, with `OTP_HASH_SECRET` (or `ENCRYPTION_KEY`, then `BETTER_AUTH_SECRET`) in the hash input. Changing that secret makes every saved PIN stop matching.
 
 GPT-Live never hears key presses, so the worker takes the PIN:
 
@@ -58,7 +58,7 @@ The session config used to carry the command in its starting history (`input`), 
 
 After 4.5 seconds without voice from either side, the worker sends the command again, up to 3 commands in all.
 
-The worker stops sending the command once the receptionist or the caller speaks, or the call starts ending. It doesn't resend a command that OpenAI rejected or never acknowledged. OpenAI's guide says an acknowledgment waits until the session timeline reaches the end of the command, so it stays pending on a call whose audio never connected.
+The worker stops sending the command once the agent or the caller speaks, or the call starts ending. It doesn't resend a command that OpenAI rejected or never acknowledged. OpenAI's guide says an acknowledgment waits until the session timeline reaches the end of the command, so it stays pending on a call whose audio never connected.
 
 The worker logs each step as `live.greeting` with these fields:
 
@@ -72,7 +72,7 @@ The worker logs each step as `live.greeting` with these fields:
 
 GPT-Live skips the command on phone and browser calls at similar rates. On the October calls, the session also kept running through the silence before the caller spoke:
 
-- On every phone call that connected audio, the receptionist's reflected audio started 200 ms into the session and ran until 1.3 to 3.9 seconds before the call ended, whether or not anyone spoke. On a call where nobody spoke for 75 seconds, it covered 73.0 of 75.5 seconds.
+- On every phone call that connected audio, the agent's reflected audio started 200 ms into the session and ran until 1.3 to 3.9 seconds before the call ended, whether or not anyone spoke. On a call where nobody spoke for 75 seconds, it covered 73.0 of 75.5 seconds.
 - OpenAI acknowledged each greeting command on those calls within 0.7 seconds of the send, so the session timeline was moving.
 - Twilio's Elastic SIP trunks offer G.711 (PCMU and PCMA) by default. Twilio's [codec page](https://www.twilio.com/docs/sip-trunking/codecs) lists voice activity detection and discontinuous transmission only for AMR-NB, a codec Twilio enables only on request. The trunk API has no silence settings.
 
@@ -88,7 +88,7 @@ The number's carrier sends its calls to your OpenAI project's SIP address: a Twi
 
 1. OpenAI sends a `live.transport.incoming` webhook to `/api/webhooks/openai/live` on the admin app.
 2. The admin finds the business from the dialled number. It tries each number in the SIP `Diversion` headers in order, then `To`, `P-Called-Party-ID`, `History-Info` and `X-LobbyStack-Called`, and uses the first one that belongs to a business. A voice webhook that hands a call to OpenAI with `<Dial><Sip>` has to set `X-LobbyStack-Called` to `tel:<dialled number>`, because `To` holds the project there and Twilio refused `P-Called-Party-ID` on that leg in testing. On a forwarded call, the first `Diversion` can hold the business's old line.
-3. The admin records the call and reserves minutes for it while it loads the business snapshot. The write that records the call also reads the dialled number's agent, so a moved number answers as its new agent on the next call, and the agent's id goes on the call and its conversation. A call reserves 5 minutes, or what the plan has left when that's less, and the worker adds more as the call runs. Calls share what's left, so the free plan's 30 minutes let six calls start at once. An unlimited plan reserves nothing. The admin rejects the call with SIP 503 when the plan is out of minutes or at its overage cap, so the trunk forwards it (see [Calls the receptionist can't take](#calls-the-receptionist-cant-take)). It rejects with 603 when the caller is blocked, and 486 (busy) when the number's trial ended.
+3. The admin records the call and reserves minutes for it while it loads the business snapshot. The write that records the call also reads the dialled number's agent, so a moved number answers as its new agent on the next call, and the agent's id goes on the call and its conversation. A call reserves 5 minutes, or what the plan has left when that's less, and the worker adds more as the call runs. Calls share what's left, so the free plan's 30 minutes let six calls start at once. An unlimited plan reserves nothing. The admin rejects the call with SIP 503 when the plan is out of minutes or at its overage cap, so the trunk forwards it (see [Calls the agent can't take](#calls-the-agent-cant-take)). It rejects with 603 when the caller is blocked, and 486 (busy) when the number's trial ended.
 4. The admin projects the snapshot for that agent and accepts the call with the agent's voice and instructions, then asks the worker to attach. It passes the agent and the reserved length as the call's limit, or no limit on an unlimited plan.
 5. The worker opens the sideband, then loads the business, speaks the greeting, and handles the call until it ends.
 
@@ -98,7 +98,7 @@ The caller hears ringing until step 4. The admin logs `live.incoming` with the m
 
 A caller who withholds their number gets a new contact with no number, the same as a browser caller. The agent can't block that contact. The worker also skips the call's Twilio price lookup. The trunk carries every business's calls, so a match on start time alone could pick another business's call.
 
-### Calls the receptionist can't take
+### Calls the agent can't take
 
 A business out of minutes, on Free or at a Starter or Pro overage cap, still gets its calls. The admin rejects the GPT-Live session with SIP 503 before accepting it, and the trunk fails the call over to its disaster recovery URL, `/api/webhooks/twilio/voice`. That route asks `resolveNumberFallback` in `packages/domain` where the call goes, and answers with `<Dial>`:
 
@@ -116,16 +116,16 @@ Forwarding never accepts the GPT-Live session, so it uses no OpenAI audio and no
 
 ### Ring a staff phone first
 
-A business with staff answers first on has its Twilio numbers on `/api/webhooks/twilio/staff-first/incoming` instead of the trunk. `desiredNumberRouting` returns `staff_first` while the number's agent has the setting on, and a trial's `fallback` wins. Hours never move a number: the webhook applies them on each call. Telnyx numbers stay on the receptionist, and the dashboard shows the setting as unavailable. See [the spec](../specs/staff-answers-first.md) for the open Telnyx questions.
+A business with staff answers first on has its Twilio numbers on `/api/webhooks/twilio/staff-first/incoming` instead of the trunk. `desiredNumberRouting` returns `staff_first` while the number's agent has the setting on, and a trial's `fallback` wins. Hours never move a number: the webhook applies them on each call. Telnyx numbers stay on the agent, and the dashboard shows the setting as unavailable. See [the spec](../specs/staff-answers-first.md) for the open Telnyx questions.
 
 One route, `/api/webhooks/twilio/staff-first/[step]`, checks Twilio's signature and handles each step:
 
-1. `incoming` rejects a blocked caller and a number whose trial ended. It sends the call to GPT-Live outside the mode's hours, on a plan without the feature, when the staff phone is the line in `ForwardedFrom` or the caller, when the same caller is already ringing it, or with no transfer attempts left. It does the same once the business's staff-answered calls reach `STAFF_BRIDGED_MINUTES_PER_DAY`, 600 in 24 hours, on every plan. The check on the same caller catches a forward from a carrier that leaves out `ForwardedFrom`: each ring's attempt carries a hash of the caller, and a second call within the ring time plus 15 seconds goes to the receptionist. A withheld number can't be matched, so the first `<Dial>`'s timeout limits that loop. Otherwise it reserves one `outbound_call_attempts` and dials the staff phone. Hours and the staff phone come from the business snapshot, projected for the dialled number's agent.
+1. `incoming` rejects a blocked caller and a number whose trial ended. It sends the call to GPT-Live outside the mode's hours, on a plan without the feature, when the staff phone is the line in `ForwardedFrom` or the caller, when the same caller is already ringing it, or with no transfer attempts left. It does the same once the business's staff-answered calls reach `STAFF_BRIDGED_MINUTES_PER_DAY`, 600 in 24 hours, on every plan. The check on the same caller catches a forward from a carrier that leaves out `ForwardedFrom`: each ring's attempt carries a hash of the caller, and a second call within the ring time plus 15 seconds goes to the agent. A withheld number can't be matched, so the first `<Dial>`'s timeout limits that loop. Otherwise it reserves one `outbound_call_attempts` and dials the staff phone. Hours and the staff phone come from the business snapshot, projected for the dialled number's agent.
 2. `staff-prompt` tells the staff leg who's calling and waits for a key. `staff-press` bridges the call on a 1 and hangs up on anything else, so a voicemail never keeps the call.
 3. `staff-result` reads `DialBridged`, because Twilio reports `DialCallStatus=completed` when a voicemail answers and nobody presses 1. An accepted call gets a record, fires `call.completed`, and ends. `<Dial timeLimit>` stops it at 30 minutes. Anything else plays the handover message and dials GPT-Live.
 4. `receptionist-result` ends a call that ran its course. A refusal goes through `resolveRefusedCallForward`, as on the disaster recovery URL. A `DialSipResponseCode` of 603 gets `<Reject>`. A 503, a 486, or a refusal with no code gets the forward, or a busy signal when `resolveNumberFallback` finds nowhere to send it. The spike looked for `SipResponseCode`, which isn't Twilio's name for this field, so check `DialSipResponseCode` on a real refusal.
 5. `refer` dials the target in `ReferTransferTarget`, after checking `isTransferPhone`. `<Dial>` needs `referUrl`, or Twilio refuses the REFER with error 13802.
-6. `fallback` is the number's voice fallback URL. It dials GPT-Live without reading the database, so a failed `incoming` still reaches the receptionist.
+6. `fallback` is the number's voice fallback URL. It dials GPT-Live without reading the database, so a failed `incoming` still reaches the agent.
 
 The `<Sip>` address is `sip:<project>@sip.api.openai.com;transport=tls;secure=true?X-LobbyStack-Called=tel:<dialled number>`. Keep SRTP in the URI: the `secure="true"` attribute gets the call refused with `Live SIP calls require SRTP`. Staging and production share an OpenAI project, so a new header has to reach production before staging can use it.
 
@@ -144,9 +144,9 @@ Dashboard test calls, the website widget, prospect demos, and the landing site d
 
 A dashboard test call can name an `agentId`. The admin checks it under the operator's own access and answers 404 `agent_not_found` for an archived agent or one outside their business. Widget calls answer as the widget key's agent, and every other caller gets the default agent, whatever the browser sends.
 
-The landing site demo can send a `language`, one of the `RuntimeLocale` values. It sends the page's language, except that the English page sends the visitor's browser language when the site has no pages in it, such as German (`callLanguage` in `LobbyStackAuraVoiceDemo.tsx`). The admin ignores it from every other caller and when it isn't one of them. A language that differs from the business's default replaces the snapshot's default locale and its greeting, which becomes the standard greeting in that language (`defaultGreeting`), so the receptionist speaks it from the first word. The admin passes the same `language` to the worker on attach, which applies it to the snapshot it loads, so the greeting command matches the session. A call the worker recovers after a restart loses the choice and falls back to the business's default language.
+The landing site demo can send a `language`, one of the `RuntimeLocale` values. It sends the page's language, except that the English page sends the visitor's browser language when the site has no pages in it, such as German (`callLanguage` in `LobbyStackAuraVoiceDemo.tsx`). The admin ignores it from every other caller and when it isn't one of them. A language that differs from the business's default replaces the snapshot's default locale and its greeting, which becomes the standard greeting in that language (`defaultGreeting`), so the agent speaks it from the first word. The admin passes the same `language` to the worker on attach, which applies it to the snapshot it loads, so the greeting command matches the session. A call the worker recovers after a restart loses the choice and falls back to the business's default language.
 
-The browser shows the call as connecting until the receptionist starts speaking, so the animation ends on the greeting. GPT-Live's audio track runs through silence and its data channel has no speech event, so `useWebVoiceCall` takes the first of these:
+The browser shows the call as connecting until the agent starts speaking, so the animation ends on the greeting. GPT-Live's audio track runs through silence and its data channel has no speech event, so `useWebVoiceCall` takes the first of these:
 
 - The remote audio gets loud, by the worker's voice threshold.
 - A transcript delta with words arrives from either side. A delta covers audio that already started, so it trails the audio. A caller who speaks first also ends the wait, because the worker then stops sending the greeting.
@@ -161,9 +161,9 @@ The browser can only close the session. It can't change instructions or answer d
 Once attached, the worker owns the call until OpenAI closes the session. It:
 
 - speaks the business greeting as soon as the session starts
-- saves each caller and receptionist turn to the transcript
+- saves each caller and agent turn to the transcript
 - transfers phone calls with a SIP REFER to the destination number, once GPT-Live has told the caller
-- hangs up after the receptionist's goodbye has played, when the agent ends the call
+- hangs up after the agent's goodbye has played, when the agent ends the call
 - asks whether the caller is still there after 8 seconds without speech or keypad presses from either side, asks once more 8 seconds later, and ends the call with a goodbye after another 8 seconds. Its own questions don't start the count over; the caller speaking or pressing a key does. It doesn't ask while the caller waits on a transfer, types a PIN or is about to be hung up on. On November 2, a silent browser call with 10-second gaps heard both questions and the goodbye, and ended 46 seconds in.
 - ends the call at the duration limit. The limit is the minutes the call has reserved, and at most 30 minutes. When the admin sends no limit, as on an unlimited plan, the call stops at 30 minutes. A request still being answered pauses the silence timer.
 - records the final call state, billed seconds, and estimated cost
@@ -407,7 +407,7 @@ These parts of the Telnyx path haven't been tested against a live account, becau
 - **Replies and shared sender**: a text in a conversation goes out from the business's own number through its carrier. Confirmations, reminders and alerts for a US or Canadian cloud business go out from the shared sender, so they stay on Twilio unless `TELEPHONY_ALERT_SMS` is `telnyx`.
 - **Transfers**: on 2026-10-30, a REFER from OpenAI worked on a connection with an outbound voice profile, without asking Telnyx support to enable anything. A call from Twilio to a Canadian Telnyx number then transferred to a Canadian mobile, which answered.
 - **Calls between Telnyx numbers**: Telnyx puts the project in `To` and may send no `X-Telnyx-Connection-id`, so the admin refuses the call and Telnyx forwards it. Don't set a Telnyx number as a business's transfer number.
-- **Refused calls**: Telnyx forwards a call the receptionist refuses to one fixed number per Telnyx number, as [Calls the receptionist can't take](#calls-the-receptionist-cant-take) describes, and its retry of the 503 means OpenAI sends the webhook twice.
+- **Refused calls**: Telnyx forwards a call the agent refuses to one fixed number per Telnyx number, as [Calls the agent can't take](#calls-the-agent-cant-take) describes, and its retry of the 503 means OpenAI sends the webhook twice.
 - **Number orders**: Telnyx fills orders in the background, and a review of a requirement group can take days. The worker waits 30 seconds, then saves the order's ID on the claim (`onboarding_number_claim_events.provider_order_id`) and checks that order again every 10 minutes. After 5 days it fails the claim and releases the number if the order put it on the account.
 - **Call cost**: the worker prices a call from Telnyx's SIP trunking detail records, matched by caller, connection and start time. It pages back through the account's newest records until they start before the call, up to 1,000 records. Telnyx's API spec doesn't define those records' fields, and doesn't say how long they take to appear.
 - **Verify language**: a Telnyx Verify profile texts in its own language, whatever the user's interface language.

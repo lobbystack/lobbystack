@@ -77,6 +77,7 @@ export function LiveKnowledgeSurface() {
       loading={loading}
       menu={canManage ? (source) => <SourceMenu actions={actions} isOff={isOff(source)} onEdit={(entry) => { setEditing(entry); setForm("text"); }} source={source} /> : undefined}
       onOpen={(source) => { if (!isImporting(source) || source.kind === "website") open(source); }}
+      onRetry={canManage && !actions.pending ? (source) => void actions.run("reimport", [source]) : undefined}
       rows={rows}
       selection={canManage ? selection : undefined}
     />

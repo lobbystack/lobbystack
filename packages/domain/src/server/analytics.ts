@@ -7,7 +7,7 @@ import { discountedAmount, isNonBillableCallDisposition, MAX_PHONE_CALL_MS, MIN_
 import { requireBusinessMembership } from "../authz";
 import { listActiveAgentsInTransaction } from "./agents";
 import type { DomainContext } from "./context";
-import type { ReceptionistChannel } from "./receptionistActions";
+import type { AgentActionChannel } from "./agentActions";
 
 export const analyticsGranularities = ["hour", "day", "week", "month", "year"] as const;
 export type AnalyticsGranularity = (typeof analyticsGranularities)[number];
@@ -62,10 +62,10 @@ export function analyticsMessageChannel(channel: string): AnalyticsChannel {
 }
 
 /**
- * The channels the receptionist books on. Bookings from the public API, MCP,
+ * The channels the agent books on. Bookings from the public API, MCP,
  * or the dashboard come from people, so they don't count toward booked value.
  */
-export const analyticsReceptionistBookingChannels = ["voice", "web_voice", "web_chat", "instagram", "sms"] as const satisfies readonly ReceptionistChannel[];
+export const analyticsAgentBookingChannels = ["voice", "web_voice", "web_chat", "instagram", "sms"] as const satisfies readonly AgentActionChannel[];
 
 /**
  * What one booking of a service adds to booked value, in the currency's
@@ -93,7 +93,7 @@ export type AnalyticsBookingGroup = {
 };
 
 /**
- * Booked value for the current and previous periods: the receptionist's
+ * Booked value for the current and previous periods: the agent's
  * bookings that weren't cancelled, priced by analyticsBookedValueMinor.
  * Appointments don't keep the price they were booked at, so this uses each
  * service's current price.
@@ -102,7 +102,7 @@ export function summarizeAnalyticsBookedValue(groups: AnalyticsBookingGroup[]): 
   const total = { current: 0, previous: 0 };
   for (const group of groups) {
     if (group.status === "canceled") continue;
-    if (!(analyticsReceptionistBookingChannels as readonly string[]).includes(group.sourceChannel)) continue;
+    if (!(analyticsAgentBookingChannels as readonly string[]).includes(group.sourceChannel)) continue;
     const value = analyticsBookedValueMinor(group);
     if (value === null) continue;
     total[group.current ? "current" : "previous"] += value * group.count;
@@ -134,7 +134,7 @@ export function isAnalyticsHandledCall(call: { disposition: string | null; billi
 
 type HandledCallTotals = { seconds: number; calls: number; withoutTransfer: number };
 
-/** Talk time and call counts for the calls the receptionist handled, per period. */
+/** Talk time and call counts for the calls the agent handled, per period. */
 export function summarizeAnalyticsHandledCalls(groups: AnalyticsCallGroup[]): { current: HandledCallTotals; previous: HandledCallTotals } {
   const totals = { current: { seconds: 0, calls: 0, withoutTransfer: 0 }, previous: { seconds: 0, calls: 0, withoutTransfer: 0 } };
   for (const group of groups) {
@@ -262,7 +262,7 @@ function activityQuery(source: SQL): SQL {
 
 export type AnalyticsResultsInput = { businessId: string; from: Date; to: Date; previousFrom: Date };
 
-/** What the receptionist booked and saved: booked value, time saved and the share of calls without a transfer, each with the previous period. */
+/** What the agent booked and saved: booked value, time saved and the share of calls without a transfer, each with the previous period. */
 export type AnalyticsResults = {
   /** In the business currency's smallest unit. */
   bookedValue: { current: number; previous: number; currency: string };
@@ -278,7 +278,7 @@ export type AnalyticsResults = {
  */
 export async function readAnalyticsResults(tx: DatabaseTransaction, input: AnalyticsResultsInput): Promise<AnalyticsResults> {
   // Grouped, so the rules in summarizeAnalyticsBookedValue and summarizeAnalyticsHandledCalls run over a few rows.
-  // Booked value counts bookings made in the period, by when the receptionist made them.
+  // Booked value counts bookings made in the period, by when the agent made them.
   const bookingGroups = (await tx.execute<Omit<AnalyticsBookingGroup, "priceMinor" | "priceMaxMinor" | "discountPercent" | "count"> & { priceMinor: string | number | null; priceMaxMinor: string | number | null; discountPercent: string | number | null; count: string }>(sql`
     select ${appointments.createdAt} >= ${input.from.toISOString()}::timestamptz as current,
       ${appointments.sourceChannel} as "sourceChannel", ${appointments.status} as status,
@@ -339,7 +339,7 @@ export async function getAnalytics(context: DomainContext, analyticsInput: Analy
     const appointmentBucket = analyticsBucketExpression(appointments.startsAt, input.granularity, timeZone);
     const messageBucket = analyticsBucketExpression(messages.createdAt, input.granularity, timeZone);
     // A call still open a minute past its max duration lost its worker or gateway, so it counts as missed, not live.
-    // A transfer counts once the call went out: one only requested, never started or failed stayed with the receptionist.
+    // A transfer counts once the call went out: one only requested, never started or failed stayed with the agent.
     const outcomeKey = sql<string>`case
       when ${calls.status} = 'transferred' or ${calls.transferState} in ('referred', 'completed') then 'transferred'
       when ${calls.endedAt} is null and ${calls.status} in ('started', 'in_progress') and ${calls.startedAt} >= current_timestamp - (case when ${calls.transport} = 'web_voice' then coalesce(${calls.webCallMaxDurationMs}, 300000) else ${sql.raw(String(MAX_PHONE_CALL_MS))} end + 60000) * interval '1 millisecond' then 'live'

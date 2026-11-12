@@ -41,6 +41,12 @@ test("a phone opens the Inbox from the tab bar, an agent's Rules from the menu s
     await tab(navCopy.mobileNav.tabs.inbox).click();
     await expect(page).toHaveURL(/\/inbox$/);
     await expect(tab(navCopy.mobileNav.tabs.inbox)).toHaveAttribute("aria-current", "page");
+    // No top bar: the page header keeps the title and its actions.
+    await expect(page.locator('[data-slot="site-header"]')).toBeEmpty();
+    // The Inbox scrolls with the page, not inside a box of its own.
+    await expect(page.locator('[data-slot="inbox"]')).toBeVisible();
+    expect(await page.locator('[data-slot="inbox-list"] > div:last-child').evaluate((list) => getComputedStyle(list).overflowY)).toBe("visible");
+    expect(await page.locator('[data-slot="sidebar-inset"]').evaluate((content) => getComputedStyle(content).overflowY)).toBe("auto");
 
     // Menu → Agents opens the one agent's menu, and Rules opens its page and closes the sheet.
     await menuTab.click();
@@ -65,6 +71,25 @@ test("a phone opens the Inbox from the tab bar, an agent's Rules from the menu s
     await page.goBack();
     await expect(page).toHaveURL(/\/inbox$/);
 
+    // A dialog with date fields fits the phone's width and only scrolls up and down.
+    await page.goto("/appointments");
+    await page.getByRole("button", { name: commonCopy.appointments.timeOff.action, exact: true }).click();
+    const timeOff = page.getByRole("dialog", { name: commonCopy.appointments.timeOff.title });
+    await expect(timeOff.getByLabel(commonCopy.appointments.timeOff.startDate, { exact: true })).toBeVisible();
+    // Whatever scrolls in it, form fields aside, scrolls only up and down, and nothing in it can be dragged sideways.
+    const scrolling = await timeOff.evaluate((dialog) => [dialog, ...dialog.querySelectorAll<HTMLElement>(":not(input, textarea, select)")].flatMap((element) => {
+      const style = getComputedStyle(element);
+      const sideways = /(auto|scroll)/.test(style.overflowX) && element.scrollWidth > element.clientWidth + 1;
+      return /(auto|scroll)/.test(style.overflowY) || sideways ? [{ overflowX: style.overflowX, sideways }] : [];
+    }));
+    expect(scrolling.length).toBeGreaterThan(0);
+    expect(scrolling).toEqual(scrolling.map(() => ({ overflowX: "hidden", sideways: false })));
+    const box = await timeOff.boundingBox();
+    expect((box?.x ?? -1) >= 0 && (box?.x ?? 0) + (box?.width ?? 0) <= 375).toBe(true);
+    await page.keyboard.press("Escape");
+    await expect(timeOff).toBeHidden();
+    await page.goBack();
+
     // Escape closes it too.
     await menuTab.click();
     await expect(sheet).toBeVisible();
@@ -74,6 +99,18 @@ test("a phone opens the Inbox from the tab bar, an agent's Rules from the menu s
 
     await menuTab.click();
     await expect(sheet.getByText(owner.email, { exact: true })).toBeVisible();
+    // Every row, the email's included, has the same height and the same gap to the next, and their labels share one left edge.
+    const rows = await sheet.locator("[data-sidebar=menu-button], [data-account-email]").evaluateAll((elements) => elements.map((element) => {
+      const box = element.getBoundingClientRect();
+      const label = [...element.querySelectorAll("span:not([data-slot^=avatar])")].find((span) => span.textContent?.trim())!.getBoundingClientRect();
+      return { top: box.top, height: box.height, labelLeft: label.left };
+    }));
+    expect(new Set(rows.map((row) => row.height))).toEqual(new Set([44]));
+    const gaps = rows.slice(1).map((row, index) => Math.round(row.top - rows[index]!.top - rows[index]!.height));
+    // One line, between Settings and the email, takes the only wider gap.
+    expect(gaps.filter((gap) => gap !== 4)).toHaveLength(1);
+    expect(await sheet.locator('[data-slot="separator"]').count()).toBe(1);
+    expect(new Set(rows.map((row) => Math.round(row.labelLeft))).size).toBe(1);
     await sheet.getByRole("button", { name: navCopy.sidebar.signOut, exact: true }).click();
     await expect(page).toHaveURL(/\/en\/login$/);
   } finally {

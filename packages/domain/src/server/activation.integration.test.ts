@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
-import { businesses, calls, createDatabaseClient, partners, phoneNumbers, users, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { businesses, calls, createDatabaseClient, partners, phoneNumbers, users, type Database, type DatabaseTransaction, defaultAgentIdOf } from "@lobbystack/db";
 import { loadSetupGuideInTransaction } from "./activation";
 import { createBusiness } from "./tenancy";
 
@@ -45,7 +45,7 @@ describe.skipIf(!testUrl)("Getting started against PostgreSQL", () => {
   it("gives a direct business with a number the number list, and counts a call it answered long before as calling the number", async () => {
     await rollbackTest(async (tx) => {
       const businessId = await workspace(tx);
-      await tx.insert(phoneNumbers).values({ businessId, e164: line(), providerPhoneId: `PN${randomUUID().replaceAll("-", "")}`, status: "active" });
+      await tx.insert(phoneNumbers).values({ businessId, agentId: defaultAgentIdOf(businessId), e164: line(), providerPhoneId: `PN${randomUUID().replaceAll("-", "")}`, status: "active" });
       expect((await loadSetupGuideInTransaction(tx, businessId)).numberSteps.callNumber).toBe("needs setup");
       // A real call answered a year ago, before this list existed.
       const longAgo = new Date(Date.now() - 365 * 86_400_000);
@@ -65,7 +65,7 @@ describe.skipIf(!testUrl)("Getting started against PostgreSQL", () => {
       await tx.insert(partners).values({ id: partnerId, name: "Acme Reception", slug: `acme-${partnerId.slice(0, 8)}` });
       const partnered = randomUUID();
       await tx.insert(businesses).values({ id: partnered, slug: `harbor-${partnered.slice(0, 8)}`, name: "Harbor Dental", timezone: "UTC", businessType: "dental", partnerId });
-      await tx.insert(phoneNumbers).values({ businessId: partnered, e164: line(), providerPhoneId: `PN${randomUUID().replaceAll("-", "")}`, status: "active" });
+      await tx.insert(phoneNumbers).values({ businessId: partnered, agentId: defaultAgentIdOf(partnered), e164: line(), providerPhoneId: `PN${randomUUID().replaceAll("-", "")}`, status: "active" });
       expect((await loadSetupGuideInTransaction(tx, partnered)).variant).toBe("classic");
     });
   });

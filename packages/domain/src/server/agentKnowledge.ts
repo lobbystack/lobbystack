@@ -7,6 +7,7 @@ import { agentKnowledgeExclusions, enqueueOutbox, knowledgeDocuments, knowledgeS
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
 import { groupWebsiteDocuments, knowledgeSources, websitePages, websiteSource, type KnowledgeDocumentRow, type KnowledgeSnippetRow, type KnowledgeSource, type WebsiteGroup, type WebsiteImportSummary } from "../knowledgeSources";
 import { requireActiveAgentInTransaction } from "./agents";
+import { websiteImportSummarySql, withWebsiteImportHealth, type WebsiteImportClock } from "./websiteImportHealth";
 import { enqueueKnowledgeDerivedRefresh } from "./businessHours";
 import type { DomainContext } from "./context";
 import { deleteKnowledgeDocumentInTransaction, deleteKnowledgeSnippetInTransaction, deleteWebsiteKnowledgeInTransaction, retryKnowledgeDocumentInTransaction } from "./knowledge";
@@ -31,9 +32,10 @@ async function loadDocuments(tx: DatabaseTransaction, businessId: string, ownerA
     createdAt: knowledgeDocuments.createdAt,
     updatedAt: knowledgeDocuments.updatedAt,
     preview: sql<string>`coalesce((select left(preview.content, 500) from knowledge_chunks as preview where preview.document_id = knowledge_documents.id and preview.business_id = knowledge_documents.business_id order by preview.sequence limit 1), '')`,
-    websiteImport: sql<WebsiteImportSummary | null>`(select json_build_object('id', ingestion.id, 'status', ingestion.status, 'websiteUrl', ingestion.website_url, 'importedCount', ingestion.imported_count, 'indexedCount', ingestion.indexed_count, 'documentCount', ingestion.indexed_count, 'crawlFinishedCount', nullif(ingestion.imported_count, 0), 'crawlTotalCount', nullif(ingestion.imported_count, 0)) from website_ingestion_jobs ingestion where ingestion.root_document_id = knowledge_documents.id and ingestion.business_id = knowledge_documents.business_id limit 1)`,
+    websiteImport: sql<(Omit<WebsiteImportSummary, "stalled"> & WebsiteImportClock) | null>`${websiteImportSummarySql()}`,
   }).from(knowledgeDocuments).where(and(eq(knowledgeDocuments.businessId, businessId), ownerAgentId ? eq(knowledgeDocuments.agentId, ownerAgentId) : isNull(knowledgeDocuments.agentId)));
-  return rows.map((row) => ({ ...row, hasContent: row.preview.trim().length > 0 }));
+  const now = Date.now();
+  return rows.map((row) => ({ ...row, websiteImport: withWebsiteImportHealth(row.websiteImport, now), hasContent: row.preview.trim().length > 0 }));
 }
 
 async function loadSnippets(tx: DatabaseTransaction, businessId: string, ownerAgentId: string | null): Promise<KnowledgeSnippetRow[]> {

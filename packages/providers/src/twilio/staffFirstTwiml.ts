@@ -89,7 +89,7 @@ export function ringStaffTwiml(input: { staffPhone: string; ringSeconds: number;
  * learns the dialled number, and `referUrl` is how a transfer leaves this leg:
  * without it, Twilio refuses the REFER with error 13802.
  */
-export function dialReceptionistTwiml(input: { sipAddress: string; called: string; message?: string | undefined; locale: RuntimeLocale; actionUrl: string; referUrl: string }): string {
+export function dialAgentTwiml(input: { sipAddress: string; called: string; message?: string | undefined; locale: RuntimeLocale; actionUrl: string; referUrl: string }): string {
   return respond((response) => {
     say(response, input.locale, input.message);
     const dial = response.dial({ answerOnBridge: true, action: input.actionUrl, method: "POST", referUrl: input.referUrl, referMethod: "POST" });
@@ -102,7 +102,7 @@ function spokenPhone(phone: string): string {
   return phone.replace(/\D/g, "").split("").join(", ");
 }
 
-/** What the staff leg hears. It hangs up unless someone presses 1, so a voicemail greeting leaves the call to the receptionist. */
+/** What the staff leg hears. It hangs up unless someone presses 1, so a voicemail greeting leaves the call to the agent. */
 export function staffPromptTwiml(input: { business: string; caller: { name?: string | null | undefined; phone?: string | undefined }; locale: RuntimeLocale; pressUrl: string }): string {
   const copy = STAFF_PROMPTS[input.locale] ?? STAFF_PROMPTS.en;
   const who = input.caller.name?.trim() || (input.caller.phone ? spokenPhone(input.caller.phone) : undefined);
@@ -119,7 +119,7 @@ export function staffPressTwiml(digits: string | undefined): string {
   return digits === "1" ? emptyTwiml() : hangupTwiml();
 }
 
-/** Dials the target the receptionist chose. Twilio sends it as a phone number or a SIP or tel URI. */
+/** Dials the target the agent chose. Twilio sends it as a phone number or a SIP or tel URI. */
 export function referTwiml(target: string): string {
   return respond((response) => { response.dial({ answerOnBridge: true }, target); });
 }
@@ -145,7 +145,7 @@ export function staffDialOutcome(params: Record<string, string | undefined>): "a
  * and only a 603, a blocked caller, changes the answer: a 503 or 486, or a
  * refusal with no code, goes to the same fallback a trunk's refused call does.
  */
-export function receptionistDialOutcome(params: Record<string, string | undefined>): "finished" | "blocked" | "refused" {
+export function agentDialOutcome(params: Record<string, string | undefined>): "finished" | "blocked" | "refused" {
   if (params.DialBridged === "true" || params.DialCallStatus === "completed" || callerGone(params)) return "finished";
   return params.DialSipResponseCode === "603" ? "blocked" : "refused";
 }

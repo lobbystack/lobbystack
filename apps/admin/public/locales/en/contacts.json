@@ -186,6 +186,7 @@
   "edit": {
     "title": "Edit contact",
     "name": "Name",
+    "contactName": "Contact name",
     "email": "Email",
     "cancel": "Cancel",
     "save": "Save",

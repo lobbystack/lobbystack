@@ -2,7 +2,8 @@
 // whatever number of pages its crawl brought in; each file and each entry is
 // one row. Pure functions, so the grouping is tested without a database.
 
-export type WebsiteImportSummary = { id: string; status: string; websiteUrl: string; importedCount: number; indexedCount: number; documentCount: number; crawlFinishedCount: number | null; crawlTotalCount: number | null };
+/** A crawl's progress. stalled: it should be running but stopped moving (see isWebsiteImportStalled). */
+export type WebsiteImportSummary = { id: string; status: string; websiteUrl: string; importedCount: number; indexedCount: number; documentCount: number; crawlFinishedCount: number | null; crawlTotalCount: number | null; stalled: boolean };
 
 export type KnowledgeDocumentRow = {
   id: string;

@@ -79,7 +79,7 @@ describe("the notification bell", () => {
     expect(bell().querySelector("[data-unread-dot]")).not.toBeNull();
   });
 
-  it("lists each item's icon, title, line and time, action required first, and reports opening", async () => {
+  it("lists each item's title, line and time, action required first, and reports opening", async () => {
     await renderBell();
     await waitFor(() => expect(bell().getAttribute("aria-label")).toContain("2 unread"));
     await userEvent.click(bell());
@@ -92,6 +92,7 @@ describe("the notification bell", () => {
     expect(within(rows[0]!).getByText("Unread")).toBeTruthy();
     expect(within(rows[1]!).queryByText("Unread")).toBeNull();
     expect(within(rows[2]!).getByText("Run several agents")).toBeTruthy();
+    expect(rows.every((row) => !row.querySelector("svg"))).toBe(true);
     telemetryRef.current!.expectEvent("web.notifications.bell_opened", { businessId: "business", unreadCount: 2, actionCount: 2 });
   });
 

@@ -38,7 +38,7 @@ const NO_CALL: VoiceCaptions = { status: "idle", turns: [] };
 
 type WidgetMessageMetadata = {
   automationState?: "ai_active" | "human_handoff";
-  /** The receptionist asked the team to join, and the chat waits for them. */
+  /** The agent asked the team to join, and the chat waits for them. */
   waitingForTeam?: boolean;
   /** A team member wrote this message, with their first name when they have one. */
   fromTeam?: boolean;
@@ -46,9 +46,9 @@ type WidgetMessageMetadata = {
 };
 type WidgetMessage = UIMessage<WidgetMessageMetadata>;
 
-/** Who answers the chat: the receptionist, or the team, which was asked to join or is in the chat. */
+/** Who answers the chat: the agent, or the team, which was asked to join or is in the chat. */
 type ChatHandling = { handoff: boolean; waitingForTeam: boolean; teamMemberName: string | null };
-const RECEPTIONIST_HANDLING: ChatHandling = { handoff: false, waitingForTeam: false, teamMemberName: null };
+const AGENT_HANDLING: ChatHandling = { handoff: false, waitingForTeam: false, teamMemberName: null };
 
 type HistoryPayload = {
   automationState?: string;
@@ -150,7 +150,7 @@ export function WidgetChatClient({ widgetKey, initialColor }: { widgetKey: strin
   const followThreadRef = useRef(true);
   const [lead, setLead] = useState({ name: "", email: "", phone: "" });
   const [leadSubmitting, setLeadSubmitting] = useState(false);
-  const [handling, setHandling] = useState<ChatHandling>(RECEPTIONIST_HANDLING);
+  const [handling, setHandling] = useState<ChatHandling>(AGENT_HANDLING);
   const handoff = handling.handoff;
   const [voiceCaptions, setVoiceCaptions] = useState<VoiceCaptions>(NO_CALL);
   // On a phone the loader opens the chat as a full-screen sheet and hides its bubble, so the chat draws its own close button.
@@ -198,7 +198,7 @@ export function WidgetChatClient({ widgetKey, initialColor }: { widgetKey: strin
     onFinish: ({ message }) => {
       setChatSaved(true);
       const metadata = message.metadata;
-      if (metadata?.automationState === "ai_active") setHandling(RECEPTIONIST_HANDLING);
+      if (metadata?.automationState === "ai_active") setHandling(AGENT_HANDLING);
       if (metadata?.automationState === "human_handoff") setHandling((current) => ({ ...current, handoff: true, waitingForTeam: metadata.waitingForTeam ?? current.waitingForTeam }));
     },
   });
@@ -273,7 +273,7 @@ export function WidgetChatClient({ widgetKey, initialColor }: { widgetKey: strin
       if (!response.ok) return;
       const data = await response.json() as HistoryPayload;
       if (signal?.aborted) return;
-      setHandling(data.automationState === "human_handoff" ? { handoff: true, waitingForTeam: data.waitingForTeam === true, teamMemberName: data.teamMemberName ?? null } : RECEPTIONIST_HANDLING);
+      setHandling(data.automationState === "human_handoff" ? { handoff: true, waitingForTeam: data.waitingForTeam === true, teamMemberName: data.teamMemberName ?? null } : AGENT_HANDLING);
       if (Array.isArray(data.messages)) {
         setChatSaved(data.messages.length > 0);
         setMessages(data.messages.map((message) => ({
@@ -615,7 +615,7 @@ type ThreadEntry = {
   message: WidgetMessage;
   /** The first name of the team member who wrote the message, when they have one. */
   teamMemberName: string | null;
-  /** The first team message after the receptionist's: someone from the team joined the chat. */
+  /** The first team message after the agent's: someone from the team joined the chat. */
   joined: boolean;
   /** Where the speaker changes to a team member, their name goes above the message. */
   showName: boolean;

@@ -186,7 +186,7 @@ describe("business timezone", () => {
     expect(JSON.parse(String(patch?.[1]?.body)).transferNumber).toMatch(/4165550100$/);
   });
 
-  it("offers the business's zone even before it has a receptionist profile", async () => {
+  it("offers the business's zone even before it has an agent profile", async () => {
     setup(null);
     expect((await timezonePicker()).textContent).toMatch(/^Toronto \(/);
   });

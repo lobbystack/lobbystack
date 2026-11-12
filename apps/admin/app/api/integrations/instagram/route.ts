@@ -9,7 +9,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // Every member sees whether Instagram is offered, so the card stays hidden
-// until it is, which account the receptionist answers, and as which agent.
+// until it is, which account the agent answers, and as which agent.
 // The account's id lets an agent's channels move it to another agent.
 export const GET = operatorRoute(async ({ userId, businessId }) => {
   const configured = instagramConfigured();

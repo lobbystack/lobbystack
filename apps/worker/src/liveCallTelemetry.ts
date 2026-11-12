@@ -31,7 +31,7 @@ function record(domain: DomainContext, call: LiveCallTelemetryContext, name: "vo
   }
 }
 
-/** One delegated request the receptionist agent answered. Carries timings and tool names only. */
+/** One delegated request the agent answered. Carries timings and tool names only. */
 export function recordLiveDelegation(domain: DomainContext, call: LiveCallTelemetryContext, timing: DelegationTiming): void {
   record(domain, call, "voice.delegation_completed", {
     agentMs: timing.agentMs,

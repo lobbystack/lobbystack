@@ -3,14 +3,14 @@ import { randomUUID } from "node:crypto";
 import { and, asc, eq, like, sql } from "drizzle-orm";
 import { DateTime } from "luxon";
 import { afterAll, describe, expect, it } from "vitest";
-import { agents, appointments, businessHours, businessMemberships, businesses, calls, contacts, createDatabaseClient, inboxItems, notifications, outboxMessages, phoneNumbers, services, smsConsentEvents, staff, users, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { agents, appointments, businessHours, businessMemberships, businesses, calls, contacts, createDatabaseClient, inboxItems, notifications, outboxMessages, phoneNumbers, services, smsConsentEvents, staff, users, type Database, type DatabaseTransaction, defaultAgentIdOf } from "@lobbystack/db";
 
 import { createAppointmentChangeVerification } from "./appointmentChanges";
 import { bookAppointment, cancelAppointment, cancelAppointmentForCaller, rescheduleAppointment } from "./booking";
 import type { SmsConsentAnswer } from "./contactSmsConsent";
 import { CANCELLATION_CONFIRMATION, releaseCallTexts, RESCHEDULE_CONFIRMATION, resolveNotificationDelivery } from "./notifications";
 import { cancelAppointmentForApi } from "./publicApi/operations";
-import { recordTextConsentForCaller } from "./receptionistActions";
+import { recordTextConsentForCaller } from "./agentActions";
 import { CANCELLATION_REQUEST } from "./voice";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
@@ -50,11 +50,11 @@ async function seed(tx: DatabaseTransaction) {
   await tx.insert(businesses).values({ id: businessId, slug: businessId, name: "Javor", timezone: "UTC", businessType: "test", telemetryEnabled: false, deploymentMode: "self_hosted_standard" });
   await tx.insert(users).values({ id: userId, email: `${userId}@example.invalid`, normalizedEmail: `${userId}@example.invalid` });
   await tx.insert(businessMemberships).values({ businessId, userId, role: "scheduler" });
-  await tx.insert(agents).values({ businessId, isDefault: true, greeting: "Hi", tone: "warm", summary: "Test", bookingPolicy: "Book", transferMode: "never", bookingMode: "instant", appointmentChangePolicy: { enabled: true, verificationMode: "phone_match_and_facts", allowCancel: true, allowReschedule: true } });
+  await tx.insert(agents).values({ businessId, isDefault: true, greeting: "Hi", tone: "warm", bookingPolicy: "Book", transferMode: "never", bookingMode: "instant", appointmentChangePolicy: { enabled: true, verificationMode: "phone_match_and_facts", allowCancel: true, allowReschedule: true } });
   const [member] = await tx.insert(staff).values({ businessId, name: "Sam", timezone: "UTC" }).returning();
   const [service] = await tx.insert(services).values({ businessId, name: "Cut", slug: "cut", durationMinutes: 30 }).returning();
   await tx.insert(businessHours).values(Array.from({ length: 7 }, (_, dayOfWeek) => ({ businessId, dayOfWeek, openMinutes: 0, closeMinutes: 1439 })));
-  await tx.insert(phoneNumbers).values({ businessId, e164: sender, providerPhoneId: `PN-${randomUUID()}` });
+  await tx.insert(phoneNumbers).values({ businessId, agentId: defaultAgentIdOf(businessId), e164: sender, providerPhoneId: `PN-${randomUUID()}` });
   const db = tx as unknown as Database;
   const as = async (role: "lobbystack_worker" | "lobbystack_app") => { await tx.execute(sql.raw(`set local role ${role}`)); };
   const asOwner = async () => { await tx.execute(sql`reset role`); };

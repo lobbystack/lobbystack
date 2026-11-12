@@ -14,7 +14,7 @@ vi.mock("./onboarding-plan-surface", () => ({ OnboardingPlanSurface: () => <div>
 const clients: QueryClient[] = [];
 afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals(); });
 beforeEach(() => { telemetryRef.current = createRecordedBrowserTelemetry(); navigation.push.mockReset(); navigation.replace.mockReset(); });
-function setup(stage: string, primary = false, pending = false, suggestion?: () => Response, trialRefusal: string | null = null, suggestedCountry = "CA", numberRequired = true) {
+function setup(stage: string, primary = false, pending = false, suggestion?: () => Response, trialRefusal: string | null = null, suggestedCountry: string | null = "CA", numberRequired = true) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } }); clients.push(client);
   client.setQueryData(["businesses"], { businesses: [{ businessId: "business-1", active: true, onboardingStage: stage }] });
   client.setQueryData(["onboarding-primary-number", "business-1"], { activeClaim: pending ? { id: "claim-1", status: "provisioning" } : null, phoneNumbers: primary ? [{ id: "phone-1", e164: "+15815550102", reclaimScheduledAt: null }] : [] });
@@ -94,10 +94,36 @@ describe("onboarding number API adapter", () => {
     await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => url.includes("/skip?"))).toBe(true));
     expect(navigation.push).toHaveBeenCalledWith("/onboarding/attribution");
   });
-  it("doesn't open the way on without a number by itself, even where the time zone points to a country without numbers", async () => {
-    setup("phone_number", false, false, undefined, null, "FR");
+  it("opens the way on without a number at the start where the time zone points to a country without numbers, with that country chosen", async () => {
+    setup("phone_number", false, false, undefined, null, "RS");
+    expect(await screen.findByRole("button", { name: "number.country.continue" })).toBeTruthy();
+    expect((screen.getByRole("combobox", { name: "number.country.label" }) as HTMLInputElement).value).toBe("Serbia");
+    expect(screen.queryByRole("button", { name: "number.select" })).toBeNull();
+    // Back to the numbers stays back: the time zone doesn't reopen the way on.
+    await userEvent.click(screen.getByRole("button", { name: "number.country.back" }));
     expect(await screen.findByRole("button", { name: "number.select" })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "number.country.continue" })).toBeNull();
+  });
+
+  it("starts the plans' country on the time zone's country, or on none", async () => {
+    setup("phone_number", false, false, undefined, "trial_already_used", "US");
+    const field = await screen.findByRole("combobox", { name: "number.country.label" }) as HTMLInputElement;
+    expect(field.value).toBe("United States");
+    cleanup();
+    setup("phone_number", false, false, undefined, "trial_already_used", null);
+    const empty = await screen.findByRole("combobox", { name: "number.country.label" }) as HTMLInputElement;
+    // No country rather than the first one we sell numbers in.
+    expect(empty.value).toBe("");
+    expect(empty.placeholder).toBe("number.country.placeholder");
+  });
+
+  it("filters the countries as the owner types in the field itself", async () => {
+    setup("phone_number", false, false, undefined, "trial_already_used", null);
+    const field = await screen.findByRole("combobox", { name: "number.country.label" });
+    await userEvent.type(field, "381");
+    expect(await screen.findByRole("option", { name: /Serbia/ })).toBeTruthy();
+    expect(screen.queryByRole("option", { name: /Canada/ })).toBeNull();
+    await userEvent.click(screen.getByRole("option", { name: /Serbia/ }));
+    expect(await screen.findByRole("button", { name: "number.country.continue" })).toBeTruthy();
   });
   it("opens the way on without a number once the owner picks a country we sell none in, beside the paid plans", async () => {
     const fetchMock = setup("phone_number", false, false, undefined, "trial_already_used");

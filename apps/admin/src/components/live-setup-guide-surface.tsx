@@ -20,7 +20,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Item, ItemActions, ItemContent, ItemDescription, ItemTitle } from "@/components/ui/item";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Surface } from "@/components/ui/surface";
-import { isWebsiteImportRunning, WebsiteImportProgress } from "@/components/website-import-progress";
+import { isWebsiteImportRunning, isWebsiteImportStalled, WebsiteImportProgress } from "@/components/website-import-progress";
 import { type Activation, useActivation } from "@/hooks/use-activation";
 import { forwardingCountry } from "@/lib/call-forwarding";
 import { formatDuration } from "@/lib/duration";
@@ -64,6 +64,7 @@ export function LiveSetupGuideSurface({ businessId }: { businessId: string }) {
   const { data: activation, needsNumberClaim, trialAvailable, upgrade } = useActivation(businessId);
   const job = activation?.websiteImport;
   const importing = isWebsiteImportRunning(job);
+  const stalled = isWebsiteImportStalled(job);
   const setup = useSetupGuide(businessId, importing);
   // Instant booking with no opening hours books nothing, so a business that
   // books instantly and has none gets a step for them: after its sources in
@@ -104,6 +105,11 @@ export function LiveSetupGuideSurface({ businessId }: { businessId: string }) {
     mutationFn: (documentId: string) => requestJson(`/api/knowledge/${encodeURIComponent(documentId)}?businessId=${encodeURIComponent(businessId)}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "expand" }) }),
     onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ["setup", businessId] }); router.push("/business/knowledge"); },
   });
+  // Reading the rest again after it stalled: the step shows the new read's progress, so the operator stays here.
+  const readAgain = useMutation({
+    mutationFn: (documentId: string) => requestJson(`/api/knowledge/${encodeURIComponent(documentId)}?businessId=${encodeURIComponent(businessId)}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "expand" }) }),
+    onSuccess: async () => { await Promise.all([queryClient.invalidateQueries({ queryKey: ["activation", businessId] }), queryClient.invalidateQueries({ queryKey: ["setup", businessId] })]); },
+  });
   const skip = useMutation({ mutationFn: (stepId: GuideStepId) => requestJson<{ skippedSteps: string[] }>(`/api/setup?businessId=${encodeURIComponent(businessId)}`, { method: "PATCH", body: JSON.stringify({ stepId, skipped: true }) }), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ["setup", businessId] }); } });
 
   return (
@@ -124,8 +130,10 @@ export function LiveSetupGuideSurface({ businessId }: { businessId: string }) {
               <AccordionContent aria-labelledby="" className="px-6"><div className="flex gap-4"><span className="size-6 shrink-0" /><div className="flex min-w-0 flex-1 flex-col gap-4">
                 {step.id === "fullScan" ? (
                   <>
-                    {job && (importing || job.status === "failed" || job.status === "cancelled") ? <WebsiteImportProgress inline job={job} /> : <StepDescription>{t("setupGuide.stepDescriptions.fullScan")}</StepDescription>}
-                    <StepActions primary={importing ? null : <Button disabled={expand.isPending} onClick={() => { if (step.documentId) expand.mutate(step.documentId); }}>{t("setupGuide.stepActions.fullScan")}</Button>} skip={skipLink} />
+                    {job && (importing || stalled || job.status === "failed" || job.status === "cancelled") ? <WebsiteImportProgress inline job={job} /> : <StepDescription>{t("setupGuide.stepDescriptions.fullScan")}</StepDescription>}
+                    <StepActions primary={importing ? null : stalled
+                      ? <Button disabled={readAgain.isPending || !step.documentId} onClick={() => { if (step.documentId) readAgain.mutate(step.documentId); }}>{t("setupGuide.stepActions.tryAgain")}</Button>
+                      : <Button disabled={expand.isPending} onClick={() => { if (step.documentId) expand.mutate(step.documentId); }}>{t("setupGuide.stepActions.fullScan")}</Button>} skip={skipLink} />
                   </>
                 ) : step.id === "sources" ? (
                   <>
@@ -332,6 +340,6 @@ function ProgressRing({ completed, total }: { completed: number; total: number }
 }
 
 function StepMarker({ completed }: { completed: boolean }) {
-  if (completed) return <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted-foreground/70 text-background"><Check className="size-4" /></span>;
+  if (completed) return <span className="flex size-6 shrink-0 items-center justify-center text-muted-foreground"><Check aria-hidden="true" className="size-5" /></span>;
   return <span className="relative flex size-6 shrink-0 items-center justify-center bg-background"><svg aria-hidden="true" className="absolute inset-0 size-6" viewBox="0 0 24 24"><circle className="stroke-foreground" cx="12" cy="12" fill="none" r="10.5" strokeDasharray="6.8 4.2" strokeLinecap="round" strokeWidth="1.5" /></svg></span>;
 }

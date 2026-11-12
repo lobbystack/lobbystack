@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { auditLogs, billingAccounts, billingUsageEvents, businesses, businessInvitations, businessMemberships, createDatabaseClient, onboardingNumberClaimEvents, outboxMessages, partnerBusinessOpens, partnerPlatformKeys, phoneNumbers, services, storageObjects, userActiveBusinesses, users, webhookEndpoints, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { auditLogs, billingAccounts, billingUsageEvents, businesses, businessInvitations, businessMemberships, createDatabaseClient, onboardingNumberClaimEvents, outboxMessages, partnerBusinessOpens, partnerPlatformKeys, phoneNumbers, services, storageObjects, userActiveBusinesses, users, webhookEndpoints, withBusinessTransaction, type Database, type DatabaseTransaction, defaultAgentIdOf } from "@lobbystack/db";
 import { planEntitlement, type PartnerAccessLevel } from "@lobbystack/shared";
 
 import { reserveWidgetChatUsageInTransaction } from "./billing";
@@ -355,10 +355,10 @@ describe.skipIf(!client)("deleting a business", () => {
       const sharedSender = phoneNumber();
       vi.stubEnv("TWILIO_ALERT_SMS_FROM", sharedSender);
       const numbers = await asMigrator(tx, async () => await tx.insert(phoneNumbers).values([
-        { businessId: harbor, e164: phoneNumber(), providerPhoneId: providerPhoneId(), status: "active" },
-        { businessId: harbor, e164: phoneNumber(), providerPhoneId: providerPhoneId(), status: "reclaiming" },
-        { businessId: harbor, e164: phoneNumber(), providerPhoneId: providerPhoneId(), status: "reclaimed" },
-        { businessId: harbor, e164: sharedSender, providerPhoneId: providerPhoneId(), status: "active" },
+        { businessId: harbor, agentId: defaultAgentIdOf(harbor), e164: phoneNumber(), providerPhoneId: providerPhoneId(), status: "active" },
+        { businessId: harbor, agentId: defaultAgentIdOf(harbor), e164: phoneNumber(), providerPhoneId: providerPhoneId(), status: "reclaiming" },
+        { businessId: harbor, agentId: defaultAgentIdOf(harbor), e164: phoneNumber(), providerPhoneId: providerPhoneId(), status: "reclaimed" },
+        { businessId: harbor, agentId: defaultAgentIdOf(harbor), e164: sharedSender, providerPhoneId: providerPhoneId(), status: "active" },
       ]).returning({ id: phoneNumbers.id, e164: phoneNumbers.e164, providerPhoneId: phoneNumbers.providerPhoneId }));
       const objectKey = `${harbor}/knowledge/${randomUUID()}.pdf`;
       await asMigrator(tx, async () => await tx.insert(storageObjects).values([

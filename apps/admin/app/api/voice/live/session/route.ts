@@ -29,7 +29,7 @@ function parse(body: unknown): LiveWebCallRequest | undefined {
   if (!sdp || !widgetId || !(LIVE_WEB_CALL_WIDGET_IDS as readonly string[]).includes(widgetId)) return undefined;
   const agentId = text("agentId", 64);
   if (agentId && !isUuid(agentId)) return undefined;
-  // Only the landing site's demo lets a visitor choose the language the receptionist speaks.
+  // Only the landing site's demo lets a visitor choose the language the agent speaks.
   const language = widgetId === "lobbystack-landing" ? (runtimeLocales as readonly string[]).find((locale) => locale === value.language) as RuntimeLocale | undefined : undefined;
   const optional = { language, businessSlug: text("businessSlug", 128), visitorId: text("visitorId", 128), pageUrl: text("pageUrl"), prospectDemoToken: text("prospectDemoToken", 512), agentId };
   return { sdp, widgetId, ...Object.fromEntries(Object.entries(optional).filter(([, entry]) => entry !== undefined)) };

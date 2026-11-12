@@ -29,6 +29,7 @@ const failure = async (run: () => Promise<unknown>) => await run().then(() => nu
 const constraintOf = async (run: () => Promise<unknown>) => await run().then(() => null, (error: { constraint?: string; cause?: { constraint?: string } }) => error.cause?.constraint ?? error.constraint ?? "unknown");
 
 const CHECK_VIOLATION = "23514";
+const NOT_NULL_VIOLATION = "23502";
 const FOREIGN_KEY_VIOLATION = "23503";
 const INSUFFICIENT_PRIVILEGE = "42501";
 
@@ -38,13 +39,15 @@ const e164 = () => { number += 1; return `+1${String(Date.now()).slice(-9)}${Str
 type Row = { id: string; agent_id: string | null };
 
 // Each insert is one old code could send, with agent_id left out when it's null.
-const links: Array<{ table: string; insert: (businessId: string, agentId?: string) => SQL }> = [
-  { table: "phone_numbers", insert: (businessId, agentId) => sql`insert into public.phone_numbers (business_id, e164, provider_phone_id, agent_id) values (${businessId}::uuid, ${e164()}, ${randomUUID()}, ${agentId ?? null}::uuid) returning id, agent_id` },
-  { table: "widget_keys", insert: (businessId, agentId) => sql`insert into public.widget_keys (business_id, key_hash, agent_id) values (${businessId}::uuid, ${randomUUID()}, ${agentId ?? null}::uuid) returning id, agent_id` },
-  { table: "instagram_accounts", insert: (businessId, agentId) => sql`insert into public.instagram_accounts (business_id, instagram_user_id, encrypted_access_token, token_expires_at, agent_id) values (${businessId}::uuid, ${randomUUID()}, 'token', now() + interval '1 day', ${agentId ?? null}::uuid) returning id, agent_id` },
-  { table: "calls", insert: (businessId, agentId) => sql`insert into public.calls (business_id, provider_call_id, transport, started_at, agent_id) values (${businessId}::uuid, ${randomUUID()}, 'voice', now(), ${agentId ?? null}::uuid) returning id, agent_id` },
-  { table: "conversations", insert: (businessId, agentId) => sql`insert into public.conversations (business_id, channel, agent_id) values (${businessId}::uuid, 'sms', ${agentId ?? null}::uuid) returning id, agent_id` },
-  { table: "agent_rules", insert: (businessId, agentId) => sql`insert into public.agent_rules (business_id, title, content, agent_id) values (${businessId}::uuid, 'Rule', 'Be kind', ${agentId ?? null}::uuid) returning id, agent_id` },
+// `filled` says whether a trigger still fills a missing agent_id for the
+// previous release. agent_rules lost its trigger in 0214.
+const links: Array<{ table: string; filled: boolean; insert: (businessId: string, agentId?: string) => SQL }> = [
+  { table: "phone_numbers", filled: true, insert: (businessId, agentId) => sql`insert into public.phone_numbers (business_id, e164, provider_phone_id, agent_id) values (${businessId}::uuid, ${e164()}, ${randomUUID()}, ${agentId ?? null}::uuid) returning id, agent_id` },
+  { table: "widget_keys", filled: true, insert: (businessId, agentId) => sql`insert into public.widget_keys (business_id, key_hash, agent_id) values (${businessId}::uuid, ${randomUUID()}, ${agentId ?? null}::uuid) returning id, agent_id` },
+  { table: "instagram_accounts", filled: true, insert: (businessId, agentId) => sql`insert into public.instagram_accounts (business_id, instagram_user_id, encrypted_access_token, token_expires_at, agent_id) values (${businessId}::uuid, ${randomUUID()}, 'token', now() + interval '1 day', ${agentId ?? null}::uuid) returning id, agent_id` },
+  { table: "calls", filled: true, insert: (businessId, agentId) => sql`insert into public.calls (business_id, provider_call_id, transport, started_at, agent_id) values (${businessId}::uuid, ${randomUUID()}, 'voice', now(), ${agentId ?? null}::uuid) returning id, agent_id` },
+  { table: "conversations", filled: true, insert: (businessId, agentId) => sql`insert into public.conversations (business_id, channel, agent_id) values (${businessId}::uuid, 'sms', ${agentId ?? null}::uuid) returning id, agent_id` },
+  { table: "agent_rules", filled: false, insert: (businessId, agentId) => sql`insert into public.agent_rules (business_id, title, content, agent_id) values (${businessId}::uuid, 'Rule', 'Be kind', ${agentId ?? null}::uuid) returning id, agent_id` },
 ];
 const link = (table: string) => links.find((entry) => entry.table === table)!;
 
@@ -103,8 +106,12 @@ describe.skipIf(!client)("links from channels and history to agents", () => {
   const operator = (): RlsContext => ({ businessId, userId, actorType: "operator" });
   const worker = (): RlsContext => ({ businessId, actorType: "worker" });
 
-  describe.each(links)("$table", ({ table, insert }) => {
-    it.each([
+  describe.each(links)("$table", ({ table, filled, insert }) => {
+    it.runIf(!filled).each(["lobbystack_app", "lobbystack_worker"] as const)("refuses a row with no agent as %s", async (role) => {
+      expect(await failure(() => as(role, role === "lobbystack_app" ? operator() : worker(), async (tx) => await tx.execute(insert(businessId))))).toBe(NOT_NULL_VIOLATION);
+    });
+
+    it.runIf(filled).each([
       { role: "lobbystack_app" as const, context: operator },
       { role: "lobbystack_app" as const, context: (): RlsContext => ({ businessId, actorType: "system" }) },
       { role: "lobbystack_worker" as const, context: worker },
@@ -129,19 +136,19 @@ describe.skipIf(!client)("links from channels and history to agents", () => {
     });
 
     it("rejects another business's agent on update", async () => {
-      const [row] = (await client!.db.execute<Row>(insert(businessId))).rows;
+      const [row] = (await client!.db.execute<Row>(insert(businessId, agentId))).rows;
       const target = sql.identifier(table);
       expect(await failure(() => as("lobbystack_app", operator(), async (tx) => await tx.execute(sql`update public.${target} set agent_id = ${otherAgentId}::uuid where id = ${row!.id}::uuid`)))).toBe(FOREIGN_KEY_VIOLATION);
       expect(await agentIdOf(table, row!.id)).toBe(agentId);
     });
 
-    it("fills a row set back to null, so the check can't fail a write old code never meant", async () => {
+    it.runIf(filled)("fills a row set back to null, so the check can't fail a write old code never meant", async () => {
       const [row] = (await client!.db.execute<Row>(insert(businessId))).rows;
       await as("lobbystack_worker", worker(), async (tx) => await tx.execute(sql`update public.${sql.identifier(table)} set agent_id = null where id = ${row!.id}::uuid`));
       expect(await agentIdOf(table, row!.id)).toBe(agentId);
     });
 
-    it("gives a business with no agent the default agent it would have got", async () => {
+    it.runIf(filled)("gives a business with no agent the default agent it would have got", async () => {
       const [row] = (await as("lobbystack_worker", { businessId: bareBusinessId, actorType: "worker" }, async (tx) => await tx.execute<Row>(insert(bareBusinessId)))).rows;
       const [agent] = await client!.db.select({ id: agents.id, name: agents.name, isDefault: agents.isDefault, greeting: agents.greeting, transferMode: agents.transferMode }).from(agents).where(eq(agents.businessId, bareBusinessId));
       expect(row?.agent_id).toBe(agent?.id);
@@ -336,7 +343,7 @@ describe.skipIf(!client)("links from channels and history to agents", () => {
 
   describe("deletion", () => {
     async function fill(id: string): Promise<void> {
-      for (const { insert } of links) await client!.db.execute(insert(id));
+      for (const { filled, insert } of links) await client!.db.execute(insert(id, filled ? undefined : agentId));
     }
 
     it("deletes a business with every kind of link, as the owner", async () => {

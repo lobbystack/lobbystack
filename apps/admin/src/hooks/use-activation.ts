@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useBusinessCan } from "@/components/business-capabilities-provider";
 import { useTelemetry } from "@/components/product-analytics";
 import { useOpenUpgradePlanDialog } from "@/components/upgrade-plan-dialog-context";
-import { isWebsiteImportRunning, type WebsiteImportSummary } from "@/components/website-import-progress";
+import { isWebsiteImportRunning, websiteImportPollMs, type WebsiteImportSummary } from "@/components/website-import-progress";
 import { requestJson } from "@/lib/request-json";
 import { useCallSettleRefetch } from "@/lib/use-call-settle-refetch";
 
@@ -77,7 +77,8 @@ export function useActivation(businessId: string | undefined) {
     refetchInterval: query => {
       if (isWebsiteImportRunning(query.state.data?.websiteImport)) return 2500;
       // A call just ended in this tab: poll briefly until the worker records it.
-      return callSettleInterval();
+      // A stalled import is looked at now and then, in case the worker picks it back up.
+      return callSettleInterval() || websiteImportPollMs(query.state.data?.websiteImport);
     },
   });
 

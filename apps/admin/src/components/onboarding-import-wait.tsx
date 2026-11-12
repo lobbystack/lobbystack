@@ -1,13 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { IMPORT_WAIT_SCENES } from "./onboarding-import-wait-scenes";
 import { Button } from "./ui/button";
-import { Surface } from "./ui/surface";
-import { isWebsiteImportRunning, type WebsiteImportSummary } from "./website-import-progress";
+import { isWebsiteImportRunning, isWebsiteImportStalled, type WebsiteImportSummary } from "./website-import-progress";
 
 /**
  * Most imports still running when the operator reaches the wait finish within
@@ -23,10 +22,12 @@ const SLIDES = ["answers", "booking", "transfer", "languages", "summaries", "wid
 /** checking: no answer yet. waiting: the screen shows. waited: the screen showed and ended. ready: it never showed. */
 export type ImportWaitPhase = "checking" | "waiting" | "waited" | "ready";
 
-function nextPhase(phase: ImportWaitPhase, settled: boolean, running: boolean, justSubmitted: boolean): ImportWaitPhase {
+function nextPhase(phase: ImportWaitPhase, settled: boolean, running: boolean, justSubmitted: boolean, stalled: boolean): ImportWaitPhase {
   if (phase === "checking") return !settled ? phase : running ? "waiting" : "ready";
   // A just-submitted website also holds while the import is still on its way.
-  if (phase === "waiting") return running || (justSubmitted && !settled) ? phase : "waited";
+  // An import that stalled holds too, so the operator sees it and can try again
+  // until the limit moves them on.
+  if (phase === "waiting") return running || stalled || (justSubmitted && !settled) ? phase : "waited";
   return phase;
 }
 
@@ -39,22 +40,22 @@ const stop = (phase: ImportWaitPhase): ImportWaitPhase => phase === "checking" ?
  */
 export function useImportWait(job: WebsiteImportSummary | null, settled: boolean, justSubmitted = false) {
   const running = isWebsiteImportRunning(job);
-  const [phase, setPhase] = useState<ImportWaitPhase>(() => justSubmitted && !settled ? "waiting" : nextPhase("checking", settled, running, justSubmitted));
-  useEffect(() => { setPhase((current) => nextPhase(current, settled, running, justSubmitted)); }, [justSubmitted, settled, running]);
-  const stopWaiting = useCallback(() => setPhase(stop), []);
+  const stalled = isWebsiteImportStalled(job);
+  const [phase, setPhase] = useState<ImportWaitPhase>(() => justSubmitted && !settled ? "waiting" : nextPhase("checking", settled, running, justSubmitted, stalled));
+  useEffect(() => { setPhase((current) => nextPhase(current, settled, running, justSubmitted, stalled)); }, [justSubmitted, settled, running, stalled]);
   useEffect(() => {
-    const limit = setTimeout(stopWaiting, IMPORT_WAIT_LIMIT_MS);
+    const limit = setTimeout(() => setPhase(stop), IMPORT_WAIT_LIMIT_MS);
     return () => clearTimeout(limit);
-  }, [stopWaiting]);
-  return { phase, stopWaiting };
+  }, []);
+  return { phase };
 }
 
 function prefersReducedMotion(): boolean {
   return typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
-/** What the agent can do, one screen at a time, while it reads the operator's website. */
-export function ImportWaitSlides() {
+/** What the agent can do, one screen at a time, while it reads the operator's website. The status goes under the caption. */
+export function ImportWaitSlides({ status }: { status?: ReactNode }) {
   const { t } = useTranslation("onboarding");
   const [index, setIndex] = useState(0);
   // Slides stop moving on their own once someone picks one, and for anyone who asked for less motion.
@@ -72,12 +73,13 @@ export function ImportWaitSlides() {
   const Scene = IMPORT_WAIT_SCENES[key];
 
   return (
-    <Surface className="flex flex-col gap-4 overflow-hidden p-4">
+    <div className="flex flex-col gap-4">
       {/* The key restarts the fade for each slide. Without motion, slides swap in place. */}
       <div className="flex flex-col gap-4 motion-safe:animate-in motion-safe:fade-in motion-safe:duration-300" key={key}>
         <Scene />
         <p className="text-center type-card-title">{t(`reading.slides.${key}`)}</p>
       </div>
+      {status}
       <div className="flex items-center justify-between">
         <Button aria-label={t("reading.previous")} onClick={() => go(-1)} size="icon-sm" type="button" variant="ghost"><ChevronLeft /></Button>
         <div aria-hidden="true" className="flex gap-1.5">
@@ -85,6 +87,6 @@ export function ImportWaitSlides() {
         </div>
         <Button aria-label={t("reading.next")} onClick={() => go(1)} size="icon-sm" type="button" variant="ghost"><ChevronRight /></Button>
       </div>
-    </Surface>
+    </div>
   );
 }

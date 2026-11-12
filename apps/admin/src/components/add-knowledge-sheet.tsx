@@ -118,7 +118,7 @@ export function AddKnowledgeSheet({
           {/* The fields scroll and the footer stays put, so a long paste never
               pushes the save button off screen. The inset keeps focus rings
               clear of the scroll edge. */}
-          <div className="-m-1 min-h-0 overflow-y-auto p-1">
+          <div className="-m-1 min-h-0 overflow-x-hidden overflow-y-auto p-1">
             <FieldGroup>
               <Field data-invalid={titleMissing || undefined}>
                 <FieldContent>

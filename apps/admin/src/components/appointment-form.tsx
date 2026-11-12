@@ -58,14 +58,14 @@ const sameInstant = (left: string | null, right: string) => left !== null && Dat
 
 /**
  * The booking form shared by the New appointment dialog and the calendar's
- * side panel: service, staff, contact, length, day and open time, and notes.
+ * slot popover and phone sheet: service, staff, contact, length, day and open time, and notes.
  * It books through POST /api/appointments, which checks the time is still
  * open. `initialStartsAt` preselects a time, such as a clicked slot, and
  * `onDraftChange` reports the time, length and service as they change, so
  * the calendar can draw the booking. `unavailable` names the time off a
  * time falls in, if any.
  */
-export function AppointmentForm({ businessId, timeZone: fallbackTimeZone, initialStartsAt = null, onDraftChange, unavailable, onDone, onCancel, Footer, stacked = false, header }: {
+export function AppointmentForm({ businessId, timeZone: fallbackTimeZone, initialStartsAt = null, onDraftChange, unavailable, onDone, onCancel, Footer, stacked = false, compact = false, header }: {
   businessId: string;
   timeZone: string;
   initialStartsAt?: string | null;
@@ -76,6 +76,8 @@ export function AppointmentForm({ businessId, timeZone: fallbackTimeZone, initia
   /** Wraps the buttons, such as DialogFooter. */
   Footer: ComponentType<{ children: ReactNode; className?: string }>;
   stacked?: boolean;
+  /** A date field instead of a month, for a popover. */
+  compact?: boolean;
   header?: ReactNode;
 }) {
   const { t, i18n } = useTranslation("common");
@@ -268,7 +270,7 @@ export function AppointmentForm({ businessId, timeZone: fallbackTimeZone, initia
           </Field>
           {/* Always shown, so the form asks for a time from the start and keeps its height once a service is picked. */}
           <Field data-invalid={timeMissing || Boolean(timeError) || undefined}>
-            <OpeningsPicker date={date} failed={Boolean(service) && openings.isError} loading={Boolean(service) && openings.isLoading} onDateChange={(day) => { setDate(day); setChosen((current) => current ? onDay(current, day, timeZone) : null); }} onSelect={setChosen} selected={selected} stacked={stacked} timeZone={timeZone} times={service ? times : []} today={today} {...(service ? {} : { waiting: t("appointments.openings.chooseService") })} />
+            <OpeningsPicker date={date} failed={Boolean(service) && openings.isError} loading={Boolean(service) && openings.isLoading} onDateChange={(day) => { setDate(day); setChosen((current) => current ? onDay(current, day, timeZone) : null); }} onSelect={setChosen} compact={compact} selected={selected} stacked={stacked} timeZone={timeZone} times={service ? times : []} today={today} {...(service ? {} : { waiting: t("appointments.openings.chooseService") })} />
             {chosen && endsAt ? <p className="type-body-muted tabular-nums" data-testid="appointment-form-time">{formatDateTimeRange(chosen, endsAt, i18n.language, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone })}</p> : null}
             {timeError ? <FieldError>{timeError}</FieldError> : timeMissing ? <FieldError>{t("appointments.create.timeRequired")}</FieldError> : null}
           </Field>

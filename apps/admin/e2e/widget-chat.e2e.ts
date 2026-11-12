@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { test, expect } from "@playwright/test";
 import { and, eq } from "drizzle-orm";
-import { billingAccounts, businesses, conversations, createDatabaseClient, messages, outboxMessages, widgetKeys } from "@lobbystack/db";
+import { billingAccounts, businesses, conversations, createDatabaseClient, messages, outboxMessages, widgetKeys, defaultAgentIdOf } from "@lobbystack/db";
 import { startWidgetProvider } from "./fixtures/widget-provider";
 import english from "../public/locales/en/widget.json" with { type: "json" };
 import french from "../public/locales/fr/widget.json" with { type: "json" };
@@ -23,7 +23,7 @@ for (const locale of ["en", "fr"] as const) for (const viewport of [{ width: 144
     try {
       await database.db.insert(businesses).values({ id: businessId, name: "Widget certification", slug: key, timezone: "UTC", businessType: "clinic", defaultLocale: locale, onboardingStage: "complete", deploymentMode: "self_hosted_standard" });
       await database.db.insert(billingAccounts).values({ businessId, billingKey: `business:${businessId}`, plan: "self_hosted_standard", subscriptionState: "active" });
-      await database.db.insert(widgetKeys).values({ businessId, keyHash: createHash("sha256").update(key).digest("hex"), allowedOrigins: ["http://localhost:18090"], config: { title: "Widget certification", localeOverride: locale } });
+      await database.db.insert(widgetKeys).values({ businessId, agentId: defaultAgentIdOf(businessId), keyHash: createHash("sha256").update(key).digest("hex"), allowedOrigins: ["http://localhost:18090"], config: { title: "Widget certification", localeOverride: locale } });
       const denied = await request.post("/api/widget/session", { headers: { origin: "https://untrusted.example.invalid" }, data: { widgetKey: key, visitorId: randomUUID() } });
       expect(denied.status()).toBe(403);
       const page = await context.newPage();

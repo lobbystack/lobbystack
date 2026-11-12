@@ -122,7 +122,7 @@ export const onboardManifestSchema = z.strictObject({
 
 export type OnboardManifest = z.infer<typeof onboardManifestSchema>;
 
-// The receptionist's settings a template keeps: everything but the transfer
+// The agent's settings a template keeps: everything but the transfer
 // number and staff answers first, which belong to one business's phones, and
 // the one-off summary rewrite.
 const { transfer_number: _transferNumber, regenerate_summary: _regenerateSummary, staff_first_mode: _staffFirstMode, staff_first_number: _staffFirstNumber, staff_first_ring_seconds: _staffFirstRingSeconds, staff_first_message: _staffFirstMessage, staff_first_handover_message: _staffFirstHandoverMessage, ...templateReceptionistShape } = apiReceptionistUpdateSchema.shape;
@@ -223,7 +223,7 @@ function sortedHours(hours: ReadonlyArray<{ day: string; open: string; close: st
   return [...hours].sort((left, right) => weekdays.indexOf(left.day as never) - weekdays.indexOf(right.day as never) || left.open.localeCompare(right.open)).map(({ day, open, close }) => ({ day, open, close }));
 }
 
-/** Whether reading a source stopped before the receptionist could use it. */
+/** Whether reading a source stopped before the agent could use it. */
 export const isUnreadableSource = (source: { status?: unknown } | undefined) => source?.status === "error" || source?.status === "cancelled";
 
 /** Why reading a source stopped. */
@@ -387,7 +387,7 @@ export type ApplyResult = { changes: SetupChange[] };
 
 /**
  * Makes the business the port reaches match a template: its details,
- * receptionist, services, rules, websites, documents, FAQs and texts, in that
+ * agent, services, rules, websites, documents, FAQs and texts, in that
  * order, the same order lobbystack onboard applies a manifest in. A website
  * to read in full is left for the dashboard, since its sample has to finish
  * first.

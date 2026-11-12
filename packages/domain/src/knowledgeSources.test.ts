@@ -7,7 +7,7 @@ function row(input: Partial<KnowledgeDocumentRow> & { id: string }): KnowledgeDo
   clock += 1;
   return { title: input.id, sourceType: "website", sourceUrl: null, status: "indexed", error: null, active: true, sourceActive: true, agentId: null, websiteDocumentId: null, processingProgress: 100, revision: 1, storageObjectId: null, mimeType: null, createdAt: new Date(2026, 0, 1, 0, 0, clock), updatedAt: new Date(2026, 0, 1, 0, 0, clock), preview: "text", hasContent: true, websiteImport: null, ...input };
 }
-const job = (status: string): WebsiteImportSummary => ({ id: "job", status, websiteUrl: "https://harbor.example/", importedCount: 3, indexedCount: 3, documentCount: 3, crawlFinishedCount: 3, crawlTotalCount: 3 });
+const job = (status: string): WebsiteImportSummary => ({ id: "job", status, websiteUrl: "https://harbor.example/", importedCount: 3, indexedCount: 3, documentCount: 3, crawlFinishedCount: 3, crawlTotalCount: 3, stalled: false });
 
 describe("knowledge sources", () => {
   it("shows a website as one row with its page count, apart from files and entries", () => {

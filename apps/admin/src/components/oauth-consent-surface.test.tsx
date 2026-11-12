@@ -107,7 +107,7 @@ describe("the MCP connections under Settings > API keys", () => {
     await user.click(screen.getByRole("button", { name: "connectedApps.revoke.action" }));
     await user.click(screen.getByRole("button", { name: "connectedApps.revoke.confirm" }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/oauth-grants/g1?businessId=business-1", expect.objectContaining({ method: "DELETE" })));
-    expect(await screen.findByText("connectedApps.empty")).toBeTruthy();
+    expect(await screen.findByText("connectedApps.emptyTitle")).toBeTruthy();
   });
 });
 
