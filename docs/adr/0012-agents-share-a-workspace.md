@@ -37,6 +37,6 @@ Knowledge stays shared by default, and an agent can now differ from it in two wa
 - An agent can have sources of its own: websites, files, FAQs and text that no other agent answers from.
 - An agent can turn a shared source off for itself, or one page of a shared website. Every shared source starts on for every agent, so a fix on the business Knowledge page still reaches each agent that hasn't opted out.
 
-Services, employees, hours and the business summary stay shared. The summary and the hours read only shared sources, so one agent's facts never change what the business says about itself.
+Services, employees, hours and the business summary stay shared. The summary and the hours read only shared sources, so one agent's facts never change what the business says about itself. Migration 0215 moved the summary from the default agent to `businesses`.
 
 This replaces the first consequence above: two agents that need different facts can have them now. The opt-outs live in `agent_knowledge_exclusions`, and migration 0208 adds them with `agent_id` on knowledge documents and entries.
