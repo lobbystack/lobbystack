@@ -205,7 +205,7 @@ describe("SMTP delivery", () => {
         "2. Teach it your business",
         "Add your hours, prices and FAQs so it answers the way your team does.",
         "",
-        "3. Forward your calls to +14388070285",
+        "3. Forward your calls to (438) 807-0285",
         "Your phone rings first. When you miss a call, your agent picks up.",
         "",
         "Forward my missed calls: https://app.example.test/?setup=phoneNumber",
@@ -238,10 +238,12 @@ describe("SMTP delivery", () => {
       for (const locale of ["fr", "es", "sr"]) await send(provider, { ...welcome, variables: { ...welcome.variables, locale } });
       const [french, spanish, serbian] = sendMail.mock.calls.map((call) => call[0].text as string);
       expect(french).toMatch(/^Bienvenue chez LobbyStack, Ryan\n/);
+      expect(french).toContain("3. Transférez vos appels vers le (438) 807-0285\n");
       expect(french).toContain("Transférer mes appels manqués : https://app.example.test/?setup=phoneNumber");
       expect(spanish).toMatch(/^Le damos la bienvenida a LobbyStack, Ryan\n/);
-      expect(spanish).toContain("Desvíe sus llamadas al +14388070285");
+      expect(spanish).toContain("3. Desvíe sus llamadas al (438) 807-0285\n");
       expect(serbian).toMatch(/^Dobro došli u LobbyStack, Ryan\n/);
+      expect(serbian).toContain("3. Preusmerite pozive na (438) 807-0285\n");
       expect(serbian).not.toMatch(/[Ѐ-ӿ]/);
     });
   });

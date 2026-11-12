@@ -1194,7 +1194,7 @@ function welcomeCopy(variables: Record<string, string>) {
   const copy = WELCOME_COPY[locale];
   const goal: WelcomeGoal = variables.goal === "answer_calls" || variables.goal === "book_appointments" || variables.goal === "answer_website_visitors" || variables.goal === "answer_instagram_messages" ? variables.goal : "none";
   const number = variables.number?.trim() ?? "";
-  const phone = number ? { title: copy.forward.title(number), text: copy.forward.text, action: copy.forward.action } : copy.claim;
+  const phone = number ? { title: copy.forward.title(formatEmailPhoneNumber(number)), text: copy.forward.text, action: copy.forward.action } : copy.claim;
   return {
     heading: copy.heading(variables.firstName?.trim() ?? ""),
     lines: [copy.intro(variables.businessName ?? ""), copy.lead],
