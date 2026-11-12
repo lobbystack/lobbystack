@@ -109,8 +109,9 @@ REVOKE ALL ON FUNCTION app.extra_number_included(uuid) FROM PUBLIC;
 
 -- A bought claim's number goes to the claim's agent, and an extra number's
 -- price starts its months. A replacement takes the agent of the number it
--- replaces. An agent archived since the claim leaves the number where the
--- worker put it, on the default agent.
+-- replaces, and keeps its price if it was an extra number. An agent archived
+-- since the claim leaves the number where the worker put it, on the default
+-- agent.
 CREATE OR REPLACE FUNCTION app.settle_claimed_number()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -134,6 +135,13 @@ BEGIN
     v_country := upper(COALESCE(NEW.selection_context->>'countryCode', ''));
     INSERT INTO public.business_number_charges (business_id, phone_number_id, claim_id, country_code, monthly_price_cents, started_at)
       VALUES (NEW.business_id, NEW.phone_number_id, NEW.id, CASE WHEN v_country ~ '^[A-Z]{2}$' THEN v_country ELSE 'US' END, NEW.monthly_price_cents, COALESCE(NEW.purchased_at, now()))
+      ON CONFLICT (phone_number_id) DO NOTHING;
+  ELSIF NEW.purpose = 'replacement' AND NEW.replacing_phone_number_id IS NOT NULL THEN
+    -- A replaced extra number's price carries over, and the new number's months start now.
+    INSERT INTO public.business_number_charges (business_id, phone_number_id, claim_id, country_code, monthly_price_cents, started_at)
+      SELECT charge.business_id, NEW.phone_number_id, NEW.id, charge.country_code, charge.monthly_price_cents, COALESCE(NEW.purchased_at, now())
+      FROM public.business_number_charges charge
+      WHERE charge.phone_number_id = NEW.replacing_phone_number_id AND charge.business_id = NEW.business_id
       ON CONFLICT (phone_number_id) DO NOTHING;
   END IF;
   RETURN NEW;

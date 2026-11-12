@@ -214,4 +214,19 @@ describe.skipIf(!testUrl)("extra numbers against dedicated PostgreSQL roles", ()
       expect(agent?.isDefault).toBe(false);
     });
   });
+
+  it("keeps an extra number's price on its replacement", async () => {
+    await rollbackTest(async (tx) => {
+      const owner = await businessWithNumber(tx, { plan: "starter", subscriptionState: "active" });
+      const search = await as(tx, "lobbystack_app", async (db) => await searchExtraNumbers({ db }, { ...owner, claimTokenSecret }, inventory));
+      const extraClaim = await as(tx, "lobbystack_app", async (db) => await reserveExtraNumberClaim({ db }, { ...owner, claimToken: search.numbers[0]!.claimToken, claimTokenSecret, idempotencyKey: randomUUID() }));
+      const extraNumberId = await buy(tx, owner.businessId, extraClaim);
+      const offers = await as(tx, "lobbystack_app", async (db) => await searchBusinessNumberInventory({ db }, { ...owner, purpose: "replacement", claimTokenSecret }, inventory));
+      const claimId = await as(tx, "lobbystack_app", async (db) => await reserveReplacementNumberClaim({ db }, { ...owner, claimToken: offers.numbers[0]!.claimToken, claimTokenSecret, idempotencyKey: randomUUID(), phoneNumberId: extraNumberId }));
+      const replacementId = await buy(tx, owner.businessId, claimId);
+      const [number] = await tx.select({ agentId: phoneNumbers.agentId }).from(phoneNumbers).where(eq(phoneNumbers.id, replacementId));
+      expect(number?.agentId).toBe(owner.agentId);
+      expect(await tx.select({ price: businessNumberCharges.monthlyPriceCents }).from(businessNumberCharges).where(eq(businessNumberCharges.phoneNumberId, replacementId))).toEqual([{ price: 115 }]);
+    });
+  });
 });
