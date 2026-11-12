@@ -138,7 +138,6 @@
     },
     "recentCalls": {
       "title": "Appels récents",
-      "description": "{{count}} appels récents dans le flux d'activité.",
       "durationValue": "{{value}} sec"
     },
     "actionRequired": {
@@ -147,7 +146,6 @@
       "titleWithContact": "{{message}} pour {{name}}",
       "urgent": "Urgent",
       "emptyTitle": "Aucune tâche de suivi ouverte",
-      "emptyDescription": "Les nouvelles demandes de rappel et les relais humains apparaîtront ici.",
       "fields": {
         "callback": "Rappel",
         "callbackWindow": "Rappel préféré"
@@ -177,7 +175,6 @@
       "employee": "Employé : {{name}}",
       "withStaff": "avec {{staff}}",
       "emptyTitle": "Aucun rendez-vous à venir",
-      "emptyDescription": "Les futures réservations apparaîtront ici dès leur création.",
       "status": {
         "booked": "Réservé",
         "confirmed": "Confirmé"

@@ -138,7 +138,6 @@
     },
     "recentCalls": {
       "title": "Recent Calls",
-      "description": "{{count}} recent calls in the latest activity feed.",
       "durationValue": "{{value}} sec"
     },
     "actionRequired": {
@@ -147,7 +146,6 @@
       "titleWithContact": "{{message}} for {{name}}",
       "urgent": "Urgent",
       "emptyTitle": "No action required",
-      "emptyDescription": "Things that need your action will appear here.",
       "fields": {
         "callback": "Callback",
         "callbackWindow": "Preferred callback"
@@ -176,7 +174,6 @@
       "unknownService": "Unknown service",
       "employee": "Employee: {{name}}",
       "emptyTitle": "No upcoming appointments",
-      "emptyDescription": "Future bookings will appear here as soon as they are created.",
       "status": {
         "booked": "Booked",
         "confirmed": "Confirmed"

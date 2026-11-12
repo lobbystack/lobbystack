@@ -138,7 +138,6 @@
     },
     "recentCalls": {
       "title": "Llamadas recientes",
-      "description": "{{count}} llamadas recientes en la actividad más reciente.",
       "durationValue": "{{value}} s"
     },
     "actionRequired": {
@@ -147,7 +146,6 @@
       "titleWithContact": "{{message}} para {{name}}",
       "urgent": "Urgente",
       "emptyTitle": "No hay acciones pendientes",
-      "emptyDescription": "Aquí aparecerá lo que requiera una acción manual.",
       "fields": {
         "callback": "Devolver llamada",
         "callbackWindow": "Horario preferido para devolver la llamada"
@@ -176,7 +174,6 @@
       "unknownService": "Servicio desconocido",
       "employee": "Empleado: {{name}}",
       "emptyTitle": "No hay citas próximas",
-      "emptyDescription": "Las nuevas reservas aparecerán aquí en cuanto se creen.",
       "status": {
         "booked": "Reservada",
         "confirmed": "Confirmada"

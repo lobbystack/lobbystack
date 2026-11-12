@@ -138,7 +138,6 @@
     },
     "recentCalls": {
       "title": "Nedavni pozivi",
-      "description": "Nedavnih poziva u najnovijoj aktivnosti: {{count}}.",
       "durationValue": "{{value}} s"
     },
     "actionRequired": {
@@ -147,7 +146,6 @@
       "titleWithContact": "{{message}} za {{name}}",
       "urgent": "Hitno",
       "emptyTitle": "Nema potrebnih radnji",
-      "emptyDescription": "Ovde će se pojaviti stavke koje zahtevaju ručnu radnju.",
       "fields": {
         "callback": "Povratni poziv",
         "callbackWindow": "Željeno vreme povratnog poziva"
@@ -176,7 +174,6 @@
       "unknownService": "Nepoznata usluga",
       "employee": "Zaposleni: {{name}}",
       "emptyTitle": "Nema predstojećih termina",
-      "emptyDescription": "Buduća zakazivanja pojaviće se ovde čim budu kreirana.",
       "status": {
         "booked": "Zakazano",
         "confirmed": "Potvrđeno"
