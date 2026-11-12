@@ -74,7 +74,7 @@ export function AgentActionsMenu({ agentId }: { agentId: string }) {
   const [removing, setRemoving] = useState(false);
   const agent = find(agentId);
   if (!agent) return null;
-  // With one agent, adding one is the only action, so it gets a quiet button.
+  // With one agent, adding one is the only action, so it gets a quiet button; Test call beside it is the accent.
   if (!hasChoice) return <AddAgentDialog copyFromAgentId={agent.id} trigger={(open) => <Button onClick={open} type="button" variant="outline"><Plus data-icon="inline-start" />{t("agents.add")}</Button>} />;
   async function makeDefault() {
     try {
