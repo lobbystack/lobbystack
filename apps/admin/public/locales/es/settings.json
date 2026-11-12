@@ -473,7 +473,18 @@
       "changed": "Número de teléfono cambiado. Su número anterior seguirá activo durante 30 días.",
       "added": "Número de teléfono agregado."
     },
-    "numbersUnavailable": "Los números de teléfono aún no están configurados en este panel. Pida a quien lo administra que conecte un proveedor de telefonía."
+    "numbersUnavailable": "Los números de teléfono aún no están configurados en este panel. Pida a quien lo administra que conecte un proveedor de telefonía.",
+    "extra": {
+      "buy": "Comprar un número",
+      "select": "Comprar",
+      "monthly": "{{price}} al mes",
+      "confirmTitle": "¿Comprar el {{number}}?",
+      "confirmDescription": "Cuesta {{price}} al mes y se cobra con su plan.",
+      "confirm": "Comprar número",
+      "cancel": "Cancelar",
+      "priceChanged": "El precio cambió. Busque de nuevo para verlo.",
+      "unavailable": "Este espacio de trabajo no puede comprar más números."
+    }
   },
   "appearance": {
     "title": "Preferencias",

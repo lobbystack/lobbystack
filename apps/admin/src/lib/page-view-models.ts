@@ -129,6 +129,8 @@ export type PhoneNumberViewModel = {
   status: string;
   reclaimScheduledAt: string | null;
   reclaimReason: string | null;
+  /** An extra number's monthly price in US cents, or null for a number the plan includes or one that's free. */
+  monthlyPriceCents?: number | null;
 };
 
 export type BillingUsageViewModel = {
