@@ -141,6 +141,53 @@ END $$;
 REVOKE ALL ON FUNCTION app.reserve_extra_number_claim(uuid,uuid,uuid,text,jsonb,text,text,integer) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION app.reserve_extra_number_claim(uuid,uuid,uuid,text,jsonb,text,text,integer) TO lobbystack_app;
 
+-- The public API's extra number claim (POST /phone-numbers/extra/claims).
+-- /api/v1 runs as lobbystack_worker, which checked the key and the account it
+-- acts as, so this trusts the worker's business setting instead of the
+-- operator's membership. Otherwise it checks what reserve_extra_number_claim
+-- checks. A platform key's claims count against the business's quotas, as in
+-- reserve_api_number_claim, and another key's against its account's.
+CREATE OR REPLACE FUNCTION app.reserve_api_extra_number_claim(target_business_id uuid, target_user_id uuid, target_agent_id uuid, target_e164 text, selection jsonb, token_hash text, request_key text, price_cents integer, quota_by_business boolean)
+RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, app, pg_catalog AS $$
+DECLARE claim_id uuid; business_row public.businesses%ROWTYPE; included integer;
+BEGIN
+  IF NULLIF(current_setting('app.actor_type', true), '') IS DISTINCT FROM 'worker'
+    OR target_business_id IS DISTINCT FROM NULLIF(current_setting('app.business_id', true), '')::uuid
+    OR target_user_id IS NULL OR quota_by_business IS NULL THEN
+    RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
+  END IF;
+  PERFORM pg_advisory_xact_lock(hashtextextended('phone-claim:' || target_business_id::text, 0));
+  SELECT id INTO claim_id FROM public.onboarding_number_claim_events WHERE business_id = target_business_id AND idempotency_key = request_key;
+  IF claim_id IS NOT NULL THEN RETURN claim_id; END IF;
+  UPDATE public.onboarding_number_claim_events SET status = 'failed', completed_at = now(), last_error = CASE WHEN status = 'reserved' THEN 'Number claim reservation expired.' ELSE 'Number provisioning stalled.' END, updated_at = now()
+    WHERE business_id = target_business_id AND purpose = 'extra'
+      AND ((status = 'reserved' AND reserved_at <= now() - interval '15 minutes') OR (status = 'provisioning' AND updated_at <= now() - interval '30 minutes'));
+  IF EXISTS (SELECT 1 FROM public.onboarding_number_claim_events WHERE business_id = target_business_id AND purpose IN ('onboarding', 'extra') AND status IN ('reserved','provisioning')) THEN RAISE EXCEPTION 'number_claim_in_progress' USING ERRCODE = 'P0001'; END IF;
+  SELECT * INTO business_row FROM public.businesses WHERE id = target_business_id;
+  IF NOT FOUND THEN RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501'; END IF;
+  IF business_row.partner_id IS NOT NULL THEN RAISE EXCEPTION 'extra_numbers_unavailable' USING ERRCODE = 'P0001'; END IF;
+  IF NOT EXISTS (SELECT 1 FROM public.agents WHERE business_id = target_business_id AND id = target_agent_id AND archived_at IS NULL) THEN RAISE EXCEPTION 'agent_not_found' USING ERRCODE = 'P0001'; END IF;
+  IF NOT EXISTS (SELECT 1 FROM public.phone_numbers WHERE business_id = target_business_id AND status IN ('active','provisioning') AND reclaim_scheduled_at IS NULL) THEN RAISE EXCEPTION 'business_number_required' USING ERRCODE = 'P0001'; END IF;
+  IF business_row.deployment_mode = 'cloud' THEN
+    IF NOT app.has_live_entitlement(target_business_id) THEN RAISE EXCEPTION 'dedicated_number_requires_paid_plan' USING ERRCODE = 'P0001'; END IF;
+    included := app.extra_number_included(target_business_id);
+    IF (included IS NULL) <> (price_cents IS NULL) THEN RAISE EXCEPTION 'extra_number_price_changed' USING ERRCODE = 'P0001'; END IF;
+    IF price_cents IS NOT NULL AND NOT app.extra_numbers_subscription_live(target_business_id) THEN RAISE EXCEPTION 'extra_numbers_subscription_required' USING ERRCODE = 'P0001'; END IF;
+  ELSIF price_cents IS NOT NULL THEN
+    RAISE EXCEPTION 'extra_number_price_changed' USING ERRCODE = 'P0001';
+  END IF;
+  IF price_cents IS NOT NULL AND price_cents < 0 THEN RAISE EXCEPTION 'extra_number_price_changed' USING ERRCODE = 'P0001'; END IF;
+  IF (SELECT count(*) FROM public.onboarding_number_claim_events WHERE (CASE WHEN quota_by_business THEN business_id = target_business_id ELSE user_id = target_user_id END) AND NOT by_partner_member AND reserved_at >= now() - interval '1 hour') >= 3 THEN RAISE EXCEPTION 'number_claim_rate_limited' USING ERRCODE = 'P0001'; END IF;
+  IF (SELECT count(*) FROM public.onboarding_number_claim_events WHERE (CASE WHEN quota_by_business THEN business_id = target_business_id ELSE user_id = target_user_id END) AND NOT by_partner_member AND status = 'claimed' AND purchased_at >= now() - interval '1 day') >= 2 THEN RAISE EXCEPTION 'daily_claim_quota_reached' USING ERRCODE = 'P0001'; END IF;
+  IF (SELECT count(*) FROM public.onboarding_number_claim_events WHERE (CASE WHEN quota_by_business THEN business_id = target_business_id ELSE user_id = target_user_id END) AND NOT by_partner_member AND status = 'claimed' AND purchased_at >= now() - interval '30 days') >= 5 THEN RAISE EXCEPTION 'monthly_claim_quota_reached' USING ERRCODE = 'P0001'; END IF;
+  INSERT INTO public.onboarding_number_claim_events(business_id,user_id,purpose,agent_id,monthly_price_cents,requested_e164,selection_context,claim_token_hash,idempotency_key,status,by_partner_member)
+    VALUES(target_business_id,target_user_id,'extra',target_agent_id,price_cents,target_e164,selection,token_hash,request_key,'reserved',false)
+    RETURNING id INTO claim_id;
+  RETURN claim_id;
+END $$;
+REVOKE ALL ON FUNCTION app.reserve_api_extra_number_claim(uuid,uuid,uuid,text,jsonb,text,text,integer,boolean) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION app.reserve_api_extra_number_claim(uuid,uuid,uuid,text,jsonb,text,text,integer,boolean) TO lobbystack_worker;
+
 -- 0216's, except that a month the add-on would charge waits while the add-on
 -- isn't live, instead of settling, so it's charged once the add-on bills
 -- again. A month nothing charges, because the plan ended, the number is the

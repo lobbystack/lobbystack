@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lt, ne, not, notInArray, or, sql, type SQL } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 
-import { agentRules, agents, appointments, businesses, businessHours, calls, contactPasscodes, contacts, conversations, conversationSessions, defaultAgentOf, inboxItems, inOrder, knowledgeDocuments, knowledgeSnippets, onboardingNumberClaimEvents, phoneNumbers, services, staff, staffServiceAssignments, storageObjects, transcripts, webhookEndpoints, websiteIngestionJobs, type DatabaseTransaction } from "@lobbystack/db";
+import { agentRules, agents, appointments, businesses, businessNumberCharges, businessHours, calls, contactPasscodes, contacts, conversations, conversationSessions, defaultAgentOf, inboxItems, inOrder, knowledgeDocuments, knowledgeSnippets, onboardingNumberClaimEvents, phoneNumbers, services, staff, staffServiceAssignments, storageObjects, transcripts, webhookEndpoints, websiteIngestionJobs, type DatabaseTransaction } from "@lobbystack/db";
 import {
   PUBLIC_API_DEFAULT_PAGE_SIZE,
   PUBLIC_API_MAX_PAGE_SIZE,
@@ -562,20 +562,20 @@ export async function listKnowledgeSourceResources(tx: DatabaseTransaction, busi
 // Other statuses stay out.
 
 const phoneNumberStatuses: Record<string, ApiPhoneNumber["status"]> = { active: "active", reclaiming: "releasing", reclaimed: "released", released: "released" };
-const phoneNumberColumns = { id: phoneNumbers.id, e164: phoneNumbers.e164, status: phoneNumbers.status, reclaimScheduledAt: phoneNumbers.reclaimScheduledAt, createdAt: phoneNumbers.createdAt, updatedAt: phoneNumbers.updatedAt };
-type PhoneNumberRow = { id: string; e164: string; status: string; reclaimScheduledAt: Date | null; createdAt: Date; updatedAt: Date };
+const phoneNumberColumns = { id: phoneNumbers.id, e164: phoneNumbers.e164, status: phoneNumbers.status, reclaimScheduledAt: phoneNumbers.reclaimScheduledAt, agentId: phoneNumbers.agentId, monthlyPriceCents: businessNumberCharges.monthlyPriceCents, createdAt: phoneNumbers.createdAt, updatedAt: phoneNumbers.updatedAt };
+type PhoneNumberRow = { id: string; e164: string; status: string; reclaimScheduledAt: Date | null; agentId?: string | null; monthlyPriceCents?: number | null; createdAt: Date; updatedAt: Date };
 
 export function serializePhoneNumber(row: PhoneNumberRow): ApiPhoneNumber {
-  return { id: row.id, phone_number: row.e164, status: phoneNumberStatuses[row.status] ?? "released", release_scheduled_at: isoOrNull(row.reclaimScheduledAt), created_at: iso(row.createdAt), updated_at: iso(row.updatedAt) };
+  return { id: row.id, phone_number: row.e164, status: phoneNumberStatuses[row.status] ?? "released", release_scheduled_at: isoOrNull(row.reclaimScheduledAt), agent_id: row.agentId ?? null, monthly_price: row.monthlyPriceCents == null ? null : { amount_cents: row.monthlyPriceCents, currency: "USD" }, created_at: iso(row.createdAt), updated_at: iso(row.updatedAt) };
 }
 
 export async function listPhoneNumberResources(tx: DatabaseTransaction, businessId: string): Promise<ApiPhoneNumber[]> {
-  const rows = await tx.select(phoneNumberColumns).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, businessId), inArray(phoneNumbers.status, Object.keys(phoneNumberStatuses)))).orderBy(desc(phoneNumbers.createdAt), desc(phoneNumbers.id));
+  const rows = await tx.select(phoneNumberColumns).from(phoneNumbers).leftJoin(businessNumberCharges, eq(businessNumberCharges.phoneNumberId, phoneNumbers.id)).where(and(eq(phoneNumbers.businessId, businessId), inArray(phoneNumbers.status, Object.keys(phoneNumberStatuses)))).orderBy(desc(phoneNumbers.createdAt), desc(phoneNumbers.id));
   return rows.map(serializePhoneNumber);
 }
 
 export async function loadPhoneNumberResource(tx: DatabaseTransaction, businessId: string, phoneNumberId: string): Promise<ApiPhoneNumber | null> {
-  const [row] = await tx.select(phoneNumberColumns).from(phoneNumbers).where(and(eq(phoneNumbers.id, phoneNumberId), eq(phoneNumbers.businessId, businessId), inArray(phoneNumbers.status, Object.keys(phoneNumberStatuses)))).limit(1);
+  const [row] = await tx.select(phoneNumberColumns).from(phoneNumbers).leftJoin(businessNumberCharges, eq(businessNumberCharges.phoneNumberId, phoneNumbers.id)).where(and(eq(phoneNumbers.id, phoneNumberId), eq(phoneNumbers.businessId, businessId), inArray(phoneNumbers.status, Object.keys(phoneNumberStatuses)))).limit(1);
   return row ? serializePhoneNumber(row) : null;
 }
 

@@ -8,6 +8,7 @@ import { createAgent } from "./agents";
 import { reconcileBillingProviderEvent } from "./billing";
 import { createExtraNumbersCheckoutRequest, reserveExtraNumberClaim, searchExtraNumbers, settleExtraNumberCharges, type ExtraNumberCharge } from "./extraNumbers";
 import { extraNumbersSubscriptionChange } from "./extraNumbersSubscription";
+import { claimExtraPhoneNumberForApi, createExtraNumbersCheckoutForApi, getExtraNumbersCheckoutForApi, listPhoneNumbersForApi, searchExtraPhoneNumbersForApi } from "./publicApi/operations";
 import { claimNumberProvisioning, completeNumberProvisioning, reserveReplacementNumberClaim, searchBusinessNumberInventory, type NumberInventoryProvider } from "./phoneNumbers";
 import { createBusiness } from "./tenancy";
 
@@ -353,6 +354,37 @@ describe.skipIf(!testUrl)("extra numbers against dedicated PostgreSQL roles", ()
       expect(rows.rows).toEqual([{ amount_cents: 230, commissions: 0 }]);
       const [account] = await tx.select({ plan: billingAccounts.plan, state: billingAccounts.subscriptionState }).from(billingAccounts).where(eq(billingAccounts.businessId, owner.businessId));
       expect(account).toEqual({ plan: "starter", state: "active" });
+    });
+  });
+
+  it("sells an extra number through the public API only at the price the caller repeats, once billing is set up", async () => {
+    await rollbackTest(async (tx) => {
+      const owner = await businessWithNumber(tx, { plan: "pro", subscriptionState: "active" });
+      const caller = { businessId: owner.businessId, grantId: randomUUID(), userId: owner.userId, actor: "mcp" as const };
+      const api = async <T>(run: (context: { db: Database }) => Promise<T>) => await worker(tx, async (db) => await run({ db }));
+      const failure = async (run: Promise<unknown>) => await run.then(() => "ok", (error: unknown) => `${(error as { status?: number }).status} ${(error as { code?: string }).code}`);
+
+      const [offer] = await api(async (context) => await searchExtraPhoneNumbersForApi(context, caller, { country: "CA" }, { provider: inventory, claimTokenSecret }));
+      expect(offer).toMatchObject({ country: "CA", kind: "local", monthly_price: { amount_cents: 115, currency: "USD" }, billing_set_up: false });
+      const claim = (accept: number | null, agentId = owner.agentId) => api(async (context) => await claimExtraPhoneNumberForApi(context, caller, { offer_token: offer!.offer_token, agent_id: agentId, accept_monthly_price_cents: accept }, { claimTokenSecret }));
+      // The caller repeats the price, so a script can't buy at one it didn't read.
+      expect(await failure(claim(null))).toBe("400 invalid_request");
+      expect(await failure(claim(100))).toBe("400 invalid_request");
+      // Billing for extra numbers comes first.
+      expect(await failure(claim(115))).toBe("409 conflict");
+      const checkout = await api(async (context) => await createExtraNumbersCheckoutForApi(context, caller, { agent_id: owner.agentId }, { available: true }));
+      expect(checkout).toMatchObject({ status: "pending", billing_set_up: false });
+      expect(await api(async (context) => await getExtraNumbersCheckoutForApi(context, caller, checkout.id))).toMatchObject({ id: checkout.id });
+      await subscribe(tx, owner.businessId);
+      expect(await failure(api(async (context) => await createExtraNumbersCheckoutForApi(context, caller, {}, { available: true })))).toBe("409 conflict");
+      expect(await failure(claim(115, randomUUID()))).toBe("404 not_found");
+
+      const claimed = await claim(115);
+      expect(claimed).toMatchObject({ status: "pending", phone_number: offer!.phone_number });
+      const phoneNumberId = await buy(tx, owner.businessId, claimed.id);
+      const listed = await api(async (context) => await listPhoneNumbersForApi(context, caller));
+      expect(listed.find((number) => number.id === phoneNumberId)).toMatchObject({ agent_id: owner.agentId, monthly_price: { amount_cents: 115, currency: "USD" } });
+      expect(listed.find((number) => number.id === owner.includedNumberId)).toMatchObject({ monthly_price: null });
     });
   });
 });

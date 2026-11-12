@@ -10,7 +10,7 @@ import type { DomainContext } from "./context";
 import { loadBusinessBilling } from "./entitlement";
 import { extraNumbersSubscriptionLiveInTransaction } from "./extraNumbersSubscription";
 import { resolveBusinessNumberMarket } from "./phoneNumberMarket";
-import { claimRefusal, offerBusinessNumbers, readNumberOffer, refused, type NumberInventoryProvider, type NumberSelection } from "./phoneNumbers";
+import { claimRefusal, offerBusinessNumbers, readNumberOffer, refused, type NumberInventoryProvider, type NumberOffer, type NumberSelection } from "./phoneNumbers";
 
 // Extra numbers (migrations 0216 and 0217). Starter, Pro and Enterprise
 // include one number, and a business on any of them buys more, each for one of
@@ -83,11 +83,22 @@ function unsupportedKind(): Error {
  * refusals when the business can't buy one.
  */
 export async function searchExtraNumbers(context: DomainContext, input: { userId: string; businessId: string; selection?: Partial<NumberSelection> | undefined; limit?: number | undefined; claimTokenSecret: string }, provider: NumberInventoryProvider) {
-  const { availability, timezone } = await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
+  const found = await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
-    const [business] = await tx.select({ timezone: businesses.timezone }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1);
-    return { availability: await extraNumberAvailabilityInTransaction(tx, input.businessId), timezone: business?.timezone ?? null };
+    return await extraNumberSearchInTransaction(tx, input.businessId);
   });
+  return await offerExtraNumbers({ ...input, ...found }, provider);
+}
+
+/** What a search for extra numbers needs from the business, in the caller's transaction: whether it can buy one, and its time zone. */
+export async function extraNumberSearchInTransaction(tx: DatabaseTransaction, businessId: string): Promise<{ availability: ExtraNumberAvailability; timezone: string | null }> {
+  const [business] = await tx.select({ timezone: businesses.timezone }).from(businesses).where(eq(businesses.id, businessId)).limit(1);
+  return { availability: await extraNumberAvailabilityInTransaction(tx, businessId), timezone: business?.timezone ?? null };
+}
+
+/** Searches the carrier and signs each extra number offer with its price, once the caller read the business's availability. */
+export async function offerExtraNumbers(input: { userId: string; businessId: string; availability: ExtraNumberAvailability; timezone: string | null; selection?: Partial<NumberSelection> | undefined; limit?: number | undefined; claimTokenSecret: string }, provider: NumberInventoryProvider) {
+  const { availability, timezone } = input;
   if (!availability.available) throw refused(availability.refusal);
   const market = resolveBusinessNumberMarket({ selection: input.selection, timezone });
   const countryCode = market.countryCode;
@@ -111,23 +122,55 @@ export async function reserveExtraNumberClaim(context: DomainContext, input: { u
   if (offer.purpose !== "extra" || offer.businessId !== input.businessId || offer.userId !== input.userId) throw Object.assign(new Error("Number claim token does not belong to this purchase."), { status: 400, code: "number_offer_invalid" });
   return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
-    const [agent] = await tx.select({ id: agents.id }).from(agents).where(and(eq(agents.businessId, input.businessId), eq(agents.id, input.agentId), isNull(agents.archivedAt))).limit(1);
-    if (!agent) throw refused("agent_not_found");
-    const availability = await extraNumberAvailabilityInTransaction(tx, input.businessId);
-    if (!availability.available) throw refused(availability.refusal);
-    const price = extraNumberPriceFor(availability, offer.countryCode.toUpperCase(), offer.selection.kind);
-    // A kind no longer priced, a price that changed, or a plan that now prices what was free.
-    const expected = price ?? undefined;
-    if (price === undefined || expected !== offer.selection.monthlyPriceCents) throw refused("extra_number_price_changed");
-    // The add-on bills the number's months, so a priced number waits for it.
-    if (expected !== undefined && !availability.subscribed) throw refused("extra_numbers_subscription_required");
+    const price = await checkExtraNumberOfferInTransaction(tx, { businessId: input.businessId, agentId: input.agentId, offer });
     const tokenHash = createHash("sha256").update(input.claimToken).digest("hex");
-    const result = await tx.execute(sql`SELECT app.reserve_extra_number_claim(${input.businessId}::uuid, ${input.userId}::uuid, ${input.agentId}::uuid, ${offer.e164}::text, ${JSON.stringify(offer.selection)}::jsonb, ${tokenHash}::text, ${input.idempotencyKey}::text, ${expected ?? null}::integer) AS id`);
-    const claimId = String((result.rows[0] as { id?: unknown } | undefined)?.id ?? "");
-    if (!claimId) throw new Error("Number claim could not be reserved.");
-    await enqueueOutbox(tx, { topic: "phoneNumber.provision", businessId: input.businessId, aggregateType: "number_claim", aggregateId: claimId, dedupeKey: `phone-claim:${claimId}:provision`, payload: { claimId } });
-    return claimId;
+    const result = await tx.execute(sql`SELECT app.reserve_extra_number_claim(${input.businessId}::uuid, ${input.userId}::uuid, ${input.agentId}::uuid, ${offer.e164}::text, ${JSON.stringify(offer.selection)}::jsonb, ${tokenHash}::text, ${input.idempotencyKey}::text, ${price}::integer) AS id`);
+    return await queueExtraNumberPurchase(tx, input.businessId, result.rows[0]);
   }).catch((error: unknown) => { throw claimRefusal(error) ?? error; });
+}
+
+/**
+ * The checks an extra number offer passes before it's reserved, in the
+ * caller's transaction: the agent is the business's, the business can buy
+ * one, the price is still what it saw, and a priced number's add-on bills.
+ * Returns the price to record, or null when it's free.
+ */
+async function checkExtraNumberOfferInTransaction(tx: DatabaseTransaction, input: { businessId: string; agentId: string; offer: NumberOffer }): Promise<number | null> {
+  const [agent] = await tx.select({ id: agents.id }).from(agents).where(and(eq(agents.businessId, input.businessId), eq(agents.id, input.agentId), isNull(agents.archivedAt))).limit(1);
+  if (!agent) throw refused("agent_not_found");
+  const availability = await extraNumberAvailabilityInTransaction(tx, input.businessId);
+  if (!availability.available) throw refused(availability.refusal);
+  const price = extraNumberPriceFor(availability, input.offer.countryCode.toUpperCase(), input.offer.selection.kind);
+  // A kind no longer priced, a price that changed, or a plan that now prices what was free.
+  if (price === undefined || (price ?? undefined) !== input.offer.selection.monthlyPriceCents) throw refused("extra_number_price_changed");
+  // The add-on bills the number's months, so a priced number waits for it.
+  if (price !== null && !availability.subscribed) throw refused("extra_numbers_subscription_required");
+  return price;
+}
+
+async function queueExtraNumberPurchase(tx: DatabaseTransaction, businessId: string, row: unknown): Promise<string> {
+  const claimId = String((row as { id?: unknown } | undefined)?.id ?? "");
+  if (!claimId) throw new Error("Number claim could not be reserved.");
+  await enqueueOutbox(tx, { topic: "phoneNumber.provision", businessId, aggregateType: "number_claim", aggregateId: claimId, dedupeKey: `phone-claim:${claimId}:provision`, payload: { claimId } });
+  return claimId;
+}
+
+/**
+ * Reserves an extra number for the public API, in its worker transaction,
+ * through app.reserve_api_extra_number_claim: the account the key acts as
+ * buys it, with the dashboard's checks. The caller has checked the offer was
+ * made for this business and account. A platform key's claims count against
+ * the business's quotas, and a key's against its account's.
+ */
+export async function reserveApiExtraNumberClaimInTransaction(tx: DatabaseTransaction, input: { businessId: string; userId: string; agentId: string; offer: NumberOffer; claimToken: string; quotaByBusiness: boolean; requestKey: string }): Promise<string> {
+  try {
+    const price = await checkExtraNumberOfferInTransaction(tx, input);
+    const tokenHash = createHash("sha256").update(input.claimToken).digest("hex");
+    const result = await tx.execute(sql`SELECT app.reserve_api_extra_number_claim(${input.businessId}::uuid, ${input.userId}::uuid, ${input.agentId}::uuid, ${input.offer.e164}::text, ${JSON.stringify(input.offer.selection)}::jsonb, ${tokenHash}::text, ${input.requestKey}::text, ${price}::integer, ${input.quotaByBusiness}::boolean) AS id`);
+    return await queueExtraNumberPurchase(tx, input.businessId, result.rows[0]);
+  } catch (error) {
+    throw claimRefusal(error) ?? error;
+  }
 }
 
 /** The checkout request target of the extra numbers add-on, in billing_checkout_requests. */
