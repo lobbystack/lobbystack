@@ -24,9 +24,22 @@ describe("syncEnv", () => {
     expect(output.endsWith("\n\n# ==== NOT IN .env.example ====\nOLD=mine\n")).toBe(true);
   });
 
-  it("resets everything local with prune: example values, no extra keys, new secrets", () => {
+  it("removes only unlisted keys and lines with prune, keeping every value", () => {
+    const current = "ONE=mine\nSECRET=old\nOLD=gone\nstray line\n";
+    const { output, unlisted, stray } = syncEnv(example, current, { prune: true, random: () => "new" });
+    expect(output).toBe(["# ==== A ====", "ONE=mine", "TWO=", "", "# ==== B ====", "SECRET=old", "TWILIO_AUTH_TOKEN=", ""].join("\n"));
+    expect(unlisted).toEqual(["OLD"]);
+    expect(stray).toEqual(["stray line"]);
+  });
+
+  it("copies comments from the example through like section headers", () => {
+    const commented = "# ==== A ====\n# Setup note.\nONE=d\n";
+    expect(syncEnv(commented, "ONE=mine\n", { random: () => "x" }).output).toBe("# ==== A ====\n# Setup note.\nONE=mine\n");
+  });
+
+  it("resets everything local with reset: example values, no extra keys, new secrets", () => {
     const current = "ONE=mine\nTWO=mine\nSECRET=old\nOLD=gone\nstray line\n";
-    const { output, unlisted, reset, added, stray } = syncEnv(example, current, { prune: true, random: () => "new" });
+    const { output, unlisted, reset, added, stray } = syncEnv(example, current, { reset: true, random: () => "new" });
     expect(output).toBe(["# ==== A ====", "ONE=default", "TWO=", "", "# ==== B ====", "SECRET=new", "TWILIO_AUTH_TOKEN=", ""].join("\n"));
     expect(reset).toEqual(["ONE", "TWO", "SECRET"]);
     expect(added).toEqual(["TWILIO_AUTH_TOKEN"]);

@@ -3,8 +3,9 @@
 // Values already in .env are kept. A key that .env lacks is added with its example value, and a
 // placeholder secret is generated. A key that .env.example does not list stays: it moves to a closing
 // section, so a setting you added locally survives. Any other line in .env that is not a comment or
-// blank (a stray fragment) is kept in the closing section too. --prune discards everything local: the
-// result is .env.example with fresh secrets, so changed values and extra keys are gone.
+// blank (a stray fragment) is kept in the closing section too. Comments, section headers and blank
+// lines come from .env.example. --prune drops the keys and lines .env.example does not list and keeps
+// every value you set. --reset starts over from .env.example: example values, new secrets, nothing local.
 // The old file is saved as .env.backup-<timestamp> before .env changes; a backup is never overwritten.
 import { copyFileSync, constants, existsSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -46,7 +47,7 @@ export function parseEnv(text) {
   return { entries, stray };
 }
 
-export function syncEnv(example, current, { prune = false, random = randomSecret } = {}) {
+export function syncEnv(example, current, { prune = false, reset: resetAll = false, random = randomSecret } = {}) {
   const { entries, stray } = parseEnv(current);
   const currentByKey = new Map(entries.map((entry) => [entry.key, entry]));
   const exampleKeys = new Set();
@@ -54,13 +55,14 @@ export function syncEnv(example, current, { prune = false, random = randomSecret
   const added = [];
   const generated = [];
   const reset = [];
+  const dropLocal = prune || resetAll;
   const lines = example.replace(/\r\n/g, "\n").split("\n").map((line) => {
     const match = KEY_LINE.exec(line);
     if (!match) return line;
     const [, key, exampleValue] = match;
     exampleKeys.add(key);
     const existing = currentByKey.get(key);
-    if (existing && !prune) {
+    if (existing && !resetAll) {
       // Composite values added later reuse the secret this key already holds.
       if (exampleValue.startsWith(PLACEHOLDER_PREFIX) && existing.value !== "") secrets.set(exampleValue, existing.value);
       return existing.raw;
@@ -72,7 +74,7 @@ export function syncEnv(example, current, { prune = false, random = randomSecret
     return `${key}=${resolved.value}`;
   });
   const unlisted = entries.filter((entry) => !exampleKeys.has(entry.key));
-  const closing = prune ? [] : [...unlisted.map((entry) => entry.raw), ...stray];
+  const closing = dropLocal ? [] : [...unlisted.map((entry) => entry.raw), ...stray];
   let output = lines.join("\n");
   if (closing.length > 0) output = `${output.replace(/\n*$/, "\n")}\n${UNLISTED_HEADER}\n${closing.join("\n")}\n`;
   return { output, added, generated, reset, unlisted: unlisted.map((entry) => entry.key), stray };
@@ -84,16 +86,17 @@ function backupPath(target, now = new Date()) {
 
 function main() {
   const args = new Set(process.argv.slice(2));
-  const prune = args.has("--prune");
+  const reset = args.has("--reset");
+  const prune = args.has("--prune") || reset;
   const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
   const target = resolve(root, ".env");
   const current = existsSync(target) ? readFileSync(target, "utf8") : "";
-  const { output, added, generated, reset, unlisted, stray } = syncEnv(readFileSync(resolve(root, ".env.example"), "utf8"), current, { prune });
+  const { output, added, generated, reset: resetKeys, unlisted, stray } = syncEnv(readFileSync(resolve(root, ".env.example"), "utf8"), current, { prune, reset });
   const list = (items) => `${items.length}${items.length ? `: ${items.join(", ")}` : ""}`;
   const report = () => {
     console.log(`Added ${list(added)}`);
     console.log(`Generated secrets ${list(generated)}`);
-    if (prune) console.log(`Reset to the example value ${list(reset)}`);
+    if (reset) console.log(`Reset to the example value ${list(resetKeys)}`);
     console.log(`${prune ? "Removed, not in .env.example" : "Not in .env.example, kept at the end"} ${list(unlisted)}`);
     if (stray.length > 0) console.log(`Unrecognized lines, ${prune ? "removed" : "kept at the end"} ${stray.length}: ${stray.map((line) => JSON.stringify(line.slice(0, 40))).join(", ")}`);
   };
