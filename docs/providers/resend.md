@@ -37,9 +37,9 @@ For local development, start Mailpit with `docker compose --env-file .env --prof
 
 The worker emails each new owner a welcome two minutes after they finish onboarding. It goes out from `EMAIL_FROM` in the owner's dashboard language, and replies go to `EMAIL_REPLY_TO`. Its button opens Home on the phone step: the forwarding steps for the number the owner took, or the number picker. A partner's businesses and businesses a platform key onboarded never get it. It needs no settings of its own beyond SMTP.
 
-## Send the plan reminder
+## Send the plan reminders
 
-An owner who claims a trial number and meets their agent lands on the plans, and onboarding finishes when they choose one. The worker emails an owner who hasn't chosen one hour after they reached the plans, or at 09:00 in the business's time zone when that hour falls between 21:00 and 08:00. It names their number and links to the plans. It goes out once per business, in the owner's dashboard language, and only if the business is still on the plans, its trial is active and it has no paid plan. A partner's businesses, self-hosted businesses and businesses a platform key onboarded never get it. It needs no settings of its own beyond SMTP.
+An owner who claims a trial number and meets their agent lands on the plans, and onboarding finishes when they choose one. The worker emails an owner who hasn't chosen twice: one hour after they reached the plans, and again 24 hours after, at any hour. Each names their number and links to the plans, and the second has its own subject and wording. Each goes out once per business, in the owner's dashboard language, and only if the business is still on the plans, its trial is active and it has no paid plan. A partner's businesses, self-hosted businesses and businesses a platform key onboarded never get them, and neither does an owner who unsubscribed from marketing emails. They need no settings of their own beyond SMTP.
 
 ## Let people unsubscribe from marketing emails
 

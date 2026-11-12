@@ -292,7 +292,7 @@ export const queueForJobType = {
   // Remove it with the worker's case once no job from before can be left.
   "onboarding.sendFollowup": "default",
   "onboarding.sendWelcome": "default",
-  // An hour after a direct business reaches the plans, if it's still there.
+  // An hour, and again a day, after a direct business reaches the plans, if it's still there.
   "onboarding.sendPlanReminder": "default",
   "affiliate.generatePayoutRun": "maintenance",
   "telemetry.flush": "maintenance",

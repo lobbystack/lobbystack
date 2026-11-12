@@ -4,7 +4,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import { billingAccounts, businessMemberships, businesses, createDatabaseClient, defaultAgentIdOf, numberTrials, outboxMessages, partners, phoneNumbers, platformKeyBusinesses, users, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import { createBusiness } from "./tenancy";
 import { advanceOnboardingStage } from "./onboarding";
-import { planReminderDedupeKey, planReminderDueAt, queuePlanReminderEmail, schedulePlanReminderInTransaction } from "./planReminder";
+import { planReminderDedupeKey, planReminderDueAt, queuePlanReminderEmail, schedulePlanReminderInTransaction, type PlanReminder } from "./planReminder";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
 const testUrl = process.env.LOBBYSTACK_RELIABILITY_TEST_DATABASE_URL;
@@ -53,7 +53,7 @@ async function advance(tx: DatabaseTransaction, input: { userId: string; busines
 }
 
 async function reminderJobs(tx: DatabaseTransaction, businessId: string) {
-  return await tx.select({ dedupeKey: outboxMessages.dedupeKey, availableAt: outboxMessages.availableAt }).from(outboxMessages).where(and(eq(outboxMessages.businessId, businessId), eq(outboxMessages.topic, "onboarding.sendPlanReminder")));
+  return await tx.select({ dedupeKey: outboxMessages.dedupeKey, availableAt: outboxMessages.availableAt, payload: outboxMessages.payload }).from(outboxMessages).where(and(eq(outboxMessages.businessId, businessId), eq(outboxMessages.topic, "onboarding.sendPlanReminder")));
 }
 
 async function reminderEmails(tx: DatabaseTransaction, businessId: string) {
@@ -62,10 +62,10 @@ async function reminderEmails(tx: DatabaseTransaction, businessId: string) {
 }
 
 // The owner resolver trusts only the worker's login identity, so switch session_user rather than the current role.
-async function runAsWorker(tx: DatabaseTransaction, businessId: string) {
+async function runAsWorker(tx: DatabaseTransaction, businessId: string, reminder: PlanReminder = "first") {
   await tx.execute(sql`set local session authorization lobbystack_worker`);
   try {
-    return (await queuePlanReminderEmail({ db: tx as unknown as Database }, { businessId })).status;
+    return (await queuePlanReminderEmail({ db: tx as unknown as Database }, { businessId, reminder })).status;
   } finally {
     await tx.execute(sql`reset session authorization`);
   }
@@ -76,21 +76,24 @@ async function pay(tx: DatabaseTransaction, businessId: string) {
 }
 
 describe.skipIf(!testUrl)("plan reminder against dedicated PostgreSQL roles", () => {
-  it("schedules one reminder when the business reaches the plans, due by the timing rule in its time zone", async () => {
+  it("schedules both reminders when the business reaches the plans, an hour and a day later, whatever its time zone", async () => {
     await rollbackTest(async (tx) => {
       const workspace = await trialAtMeet(tx, { timezone: "America/Toronto" });
       const before = new Date();
       expect(await advance(tx, workspace)).toBe("choose_plan");
       const after = new Date();
       const jobs = await reminderJobs(tx, workspace.businessId);
-      expect(jobs.map((job) => job.dedupeKey)).toEqual([planReminderDedupeKey(workspace.businessId)]);
-      const due = jobs[0]!.availableAt.getTime();
-      expect(due).toBeGreaterThanOrEqual(planReminderDueAt(before, "America/Toronto").getTime());
-      expect(due).toBeLessThanOrEqual(planReminderDueAt(after, "America/Toronto").getTime());
-      expect(due).toBeGreaterThanOrEqual(before.getTime() + 60 * 60_000);
+      expect(jobs.map((job) => job.dedupeKey).sort()).toEqual([planReminderDedupeKey(workspace.businessId), planReminderDedupeKey(workspace.businessId, "second")].sort());
+      for (const [reminder, delay] of [["first", 60 * 60_000], ["second", 24 * 60 * 60_000]] as const) {
+        const job = jobs.find((row) => row.dedupeKey === planReminderDedupeKey(workspace.businessId, reminder))!;
+        expect(job.availableAt.getTime()).toBeGreaterThanOrEqual(planReminderDueAt(before, reminder).getTime());
+        expect(job.availableAt.getTime()).toBeLessThanOrEqual(planReminderDueAt(after, reminder).getTime());
+        expect(job.availableAt.getTime() - before.getTime()).toBeGreaterThanOrEqual(delay);
+        expect(job.payload).toEqual(reminder === "first" ? {} : { reminder: "second" });
+      }
       // Scheduling again, as a retried move would, adds nothing.
       await schedulePlanReminderInTransaction(tx, workspace.businessId, new Date());
-      expect(await reminderJobs(tx, workspace.businessId)).toHaveLength(1);
+      expect(await reminderJobs(tx, workspace.businessId)).toHaveLength(2);
       // Nothing goes out when the job is scheduled.
       expect(await reminderEmails(tx, workspace.businessId)).toEqual([]);
     });
@@ -113,27 +116,59 @@ describe.skipIf(!testUrl)("plan reminder against dedicated PostgreSQL roles", ()
       });
       // The template writes the subject, with the number formatted.
       expect(emails[0]!.payload).not.toHaveProperty("subject");
+      expect((emails[0]!.payload as { variables: Record<string, string> }).variables).not.toHaveProperty("kind");
     });
   });
 
-  it("sends it only once", async () => {
+  it("sends the second reminder a day later, as the second, when the business is still on the plans", async () => {
     await rollbackTest(async (tx) => {
       const workspace = await trialAtMeet(tx);
       expect(await advance(tx, workspace)).toBe("choose_plan");
       expect(await runAsWorker(tx, workspace.businessId)).toBe("queued");
-      expect(await runAsWorker(tx, workspace.businessId)).toBe("queued");
-      expect(await reminderEmails(tx, workspace.businessId)).toHaveLength(1);
-      expect(await reminderJobs(tx, workspace.businessId)).toHaveLength(1);
+      expect(await runAsWorker(tx, workspace.businessId, "second")).toBe("queued");
+      const emails = await reminderEmails(tx, workspace.businessId);
+      expect(emails.map((email) => email.dedupeKey).sort()).toEqual([`onboarding-plan-reminder:${workspace.businessId}:email`, `onboarding-plan-reminder:${workspace.businessId}:second:email`]);
+      const second = emails.find((email) => email.dedupeKey.endsWith(":second:email"))!;
+      expect(second.payload).toMatchObject({ template: "plan_reminder", to: workspace.email, variables: { locale: "fr", kind: "second", number: workspace.e164 }, brand: { kind: "host" } });
     });
   });
 
-  it("sends nothing to an owner who chose Free before it was due", async () => {
+  it("sends each reminder only once", async () => {
+    await rollbackTest(async (tx) => {
+      const workspace = await trialAtMeet(tx);
+      expect(await advance(tx, workspace)).toBe("choose_plan");
+      for (const reminder of ["first", "first", "second", "second"] as const) expect(await runAsWorker(tx, workspace.businessId, reminder)).toBe("queued");
+      expect(await reminderEmails(tx, workspace.businessId)).toHaveLength(2);
+      expect(await reminderJobs(tx, workspace.businessId)).toHaveLength(2);
+    });
+  });
+
+  it("sends neither reminder to an owner who chose Free before it was due", async () => {
     await rollbackTest(async (tx) => {
       const workspace = await trialAtMeet(tx);
       expect(await advance(tx, workspace)).toBe("choose_plan");
       expect(await advance(tx, workspace)).toBe("complete");
       expect(await runAsWorker(tx, workspace.businessId)).toBe("skipped");
+      expect(await runAsWorker(tx, workspace.businessId, "second")).toBe("skipped");
       expect(await reminderEmails(tx, workspace.businessId)).toEqual([]);
+    });
+  });
+
+  it("sends the second to nobody who chose Free or paid after the first", async () => {
+    await rollbackTest(async (tx) => {
+      const free = await trialAtMeet(tx);
+      expect(await advance(tx, free)).toBe("choose_plan");
+      expect(await runAsWorker(tx, free.businessId)).toBe("queued");
+      expect(await advance(tx, free)).toBe("complete");
+      expect(await runAsWorker(tx, free.businessId, "second")).toBe("skipped");
+      expect(await reminderEmails(tx, free.businessId)).toHaveLength(1);
+
+      const paid = await trialAtMeet(tx);
+      expect(await advance(tx, paid)).toBe("choose_plan");
+      expect(await runAsWorker(tx, paid.businessId)).toBe("queued");
+      await pay(tx, paid.businessId);
+      expect(await runAsWorker(tx, paid.businessId, "second")).toBe("skipped");
+      expect(await reminderEmails(tx, paid.businessId)).toHaveLength(1);
     });
   });
 
@@ -144,6 +179,7 @@ describe.skipIf(!testUrl)("plan reminder against dedicated PostgreSQL roles", ()
       // The checkout's subscription synced, and the owner hasn't come back to the return page yet.
       await pay(tx, workspace.businessId);
       expect(await runAsWorker(tx, workspace.businessId)).toBe("skipped");
+      expect(await runAsWorker(tx, workspace.businessId, "second")).toBe("skipped");
       expect(await advance(tx, workspace)).toBe("complete");
       expect(await runAsWorker(tx, workspace.businessId)).toBe("skipped");
       expect(await reminderEmails(tx, workspace.businessId)).toEqual([]);
@@ -160,7 +196,7 @@ describe.skipIf(!testUrl)("plan reminder against dedicated PostgreSQL roles", ()
     });
   });
 
-  it("never schedules or sends it for a partner's business", async () => {
+  it("never schedules or sends either reminder for a partner's business", async () => {
     await rollbackTest(async (tx) => {
       // A direct business can't join a partner later, so this one starts as the partner's.
       const userId = randomUUID();
@@ -178,11 +214,12 @@ describe.skipIf(!testUrl)("plan reminder against dedicated PostgreSQL roles", ()
       await schedulePlanReminderInTransaction(tx, businessId, new Date());
       expect(await reminderJobs(tx, businessId)).toEqual([]);
       expect(await runAsWorker(tx, businessId)).toBe("skipped");
+      expect(await runAsWorker(tx, businessId, "second")).toBe("skipped");
       expect(await reminderEmails(tx, businessId)).toEqual([]);
     });
   });
 
-  it("never schedules or sends it for a self-hosted business or one a platform key onboarded", async () => {
+  it("never schedules or sends either reminder for a self-hosted business or one a platform key onboarded", async () => {
     await rollbackTest(async (tx) => {
       const selfHosted = await trialAtMeet(tx);
       await tx.update(businesses).set({ deploymentMode: "self_hosted_standard", onboardingStage: "choose_plan" }).where(eq(businesses.id, selfHosted.businessId));
@@ -193,6 +230,7 @@ describe.skipIf(!testUrl)("plan reminder against dedicated PostgreSQL roles", ()
         await schedulePlanReminderInTransaction(tx, businessId, new Date());
         expect(await reminderJobs(tx, businessId)).toEqual([]);
         expect(await runAsWorker(tx, businessId)).toBe("skipped");
+        expect(await runAsWorker(tx, businessId, "second")).toBe("skipped");
         expect(await reminderEmails(tx, businessId)).toEqual([]);
       }
     });

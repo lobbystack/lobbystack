@@ -264,14 +264,14 @@ describe("SMTP delivery", () => {
         "",
         "Start your 14-day free trial: https://app.example.test/onboarding/plan",
         "",
-        "LobbyStack",
-        "",
         `Unsubscribe: ${unsubscribe.pageUrl}`,
       ].join("\n"));
       const html = sent().html as string;
       expect(html).toContain('<td align="left" style="padding-bottom:32px;">');
       const anchors = [...html.matchAll(/<a href="([^"]+)"[^>]*>([^<]+)<\/a>/g)].map(([, href, text]) => ({ href, text }));
       expect(anchors).toEqual([{ href: "https://app.example.test/onboarding/plan", text: "Start your 14-day free trial" }, { href: unsubscribe.pageUrl, text: "Unsubscribe" }]);
+      // The reminders end on their button, with no signature.
+      expect(html).not.toContain(">LobbyStack</p>");
       // The paid plans stay on the page.
       expect(sent().text).not.toMatch(/Starter|Pro\b|\$/);
     });
@@ -295,6 +295,33 @@ describe("SMTP delivery", () => {
       expect(serbian!.subject).toBe("Vaš broj (555) 010-0123 je aktivan");
       expect(serbian!.text).toContain("Započnite besplatnu probu od 14 dana: https://app.example.test/onboarding/plan");
       expect(`${serbian!.subject}${serbian!.text}`).not.toMatch(/[Ѐ-ӿ]/);
+    });
+
+    it("writes the second reminder with its own subject and lines, and the first's button", async () => {
+      const { provider, sendMail } = capture();
+      for (const locale of ["en", "fr", "es", "sr"]) await send(provider, { ...reminder, variables: { ...reminder.variables, locale, kind: "second" } });
+      const [english, french, spanish, serbian] = sendMail.mock.calls.map((call) => call[0] as { subject: string; text: string; html: string });
+      expect(english!.subject).toBe("Finish setting up (555) 010-0123");
+      expect(english!.text).toBe([
+        "Hi Ryan,",
+        "",
+        "You haven't chosen a plan for Metroprint yet, so setup isn't finished.",
+        "",
+        "The free trial gives you 14 days to see how your agent handles calls to (555) 010-0123. You won't need a card.",
+        "",
+        "Start your 14-day free trial: https://app.example.test/onboarding/plan",
+        "",
+        `Unsubscribe: ${unsubscribe.pageUrl}`,
+      ].join("\n"));
+      expect(french!.subject).toBe("Terminez la configuration du (555) 010-0123");
+      expect(french!.text).toContain("Commencer l'essai gratuit de 14 jours : https://app.example.test/onboarding/plan");
+      expect(french!.text).toContain("Se désabonner : ");
+      expect(spanish!.subject).toBe("Termine de configurar el (555) 010-0123");
+      expect(spanish!.text).toContain("Empezar la prueba gratuita de 14 días: https://app.example.test/onboarding/plan");
+      expect(serbian!.subject).toBe("Završite podešavanje broja (555) 010-0123");
+      expect(serbian!.text).toContain("Započnite besplatnu probu od 14 dana: https://app.example.test/onboarding/plan");
+      expect(`${serbian!.subject}${serbian!.text}`).not.toMatch(/[Ѐ-ӿ]/);
+      for (const sent of [english, french, spanish, serbian]) expect(sent!.html).not.toContain(">LobbyStack</p>");
     });
   });
 

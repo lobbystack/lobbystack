@@ -1,5 +1,4 @@
 import { and, eq, sql } from "drizzle-orm";
-import { DateTime } from "luxon";
 import { HOST_EMAIL_BRAND, normalizeInterfaceLocale } from "@lobbystack/shared";
 
 import { businesses, enqueueOutbox, numberTrials, phoneNumbers, platformKeyBusinesses, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
@@ -11,68 +10,68 @@ import { loadEntitlement } from "./entitlement";
 import { businessGetsHostEmails } from "./hostEmails";
 import { marketingEmailRecipient } from "./marketingEmails";
 
-// The plan reminder: one email to the owner of a direct cloud business that
+// The plan reminders: two emails to the owner of a direct cloud business that
 // claimed a trial number, met its agent, and left the plans without choosing.
-// The plans are its last onboarding step, so it has had no welcome yet.
+// The first goes an hour after it reached the plans, and the second and last
+// a day after. The plans are its last onboarding step, so it has had no
+// welcome yet.
 
-/** How long after the plans open the reminder waits. */
-const PLAN_REMINDER_DELAY_MS = 60 * 60_000;
-/** The local hours it never goes out in: from 21:00 until 08:00. */
-const QUIET_FROM_HOUR = 21;
-const QUIET_UNTIL_HOUR = 8;
-/** When a reminder due in those hours goes out instead, local time. */
-const MORNING_HOUR = 9;
+export type PlanReminder = "first" | "second";
 
-/**
- * When the reminder goes out: an hour after the business reached the plans,
- * or at 09:00 in its time zone when that hour lands between 21:00 and 08:00.
- * An unknown time zone counts as UTC.
- */
-export function planReminderDueAt(enteredAt: Date, timezone: string): Date {
-  const instant = new Date(enteredAt.getTime() + PLAN_REMINDER_DELAY_MS);
-  const zoned = DateTime.fromJSDate(instant).setZone(timezone);
-  const local = zoned.isValid ? zoned : DateTime.fromJSDate(instant, { zone: "utc" });
-  if (local.hour >= QUIET_UNTIL_HOUR && local.hour < QUIET_FROM_HOUR) return local.toJSDate();
-  // Late evening waits for tomorrow morning; the small hours wait for this morning.
-  const day = local.hour >= QUIET_FROM_HOUR ? local.plus({ days: 1 }) : local;
-  return day.set({ hour: MORNING_HOUR, minute: 0, second: 0, millisecond: 0 }).toJSDate();
+/** How long after the plans open each reminder waits. */
+const PLAN_REMINDER_DELAY_MS: Record<PlanReminder, number> = { first: 60 * 60_000, second: 24 * 60 * 60_000 };
+
+/** When a reminder goes out: an hour, or for the second a day, after the business reached the plans, at any hour. */
+export function planReminderDueAt(enteredAt: Date, reminder: PlanReminder = "first"): Date {
+  return new Date(enteredAt.getTime() + PLAN_REMINDER_DELAY_MS[reminder]);
 }
 
 /**
- * The reminder job's dedupe key. A business reaches the plans once, and the
- * outbox keeps this job's row when it prunes, so the key holds for good. The
- * email the job queues keeps its own key, `onboarding-plan-reminder:{businessId}:email`.
+ * A reminder job's dedupe key. A business reaches the plans once, and the
+ * outbox keeps these jobs' rows when it prunes, so each key holds for good.
+ * The first keeps the key it had when it was the only reminder. The email a
+ * job queues keeps its own key: this one followed by `:email`.
  */
-export function planReminderDedupeKey(businessId: string): string {
-  return `onboarding-plan-reminder:${businessId}`;
+export function planReminderDedupeKey(businessId: string, reminder: PlanReminder = "first"): string {
+  return reminder === "first" ? `onboarding-plan-reminder:${businessId}` : `onboarding-plan-reminder:${businessId}:second`;
+}
+
+/** Which reminder a job's payload names; one queued before the second existed names none and is the first. */
+export function planReminderOf(payload: Record<string, unknown>): PlanReminder {
+  return payload.reminder === "second" ? "second" : "first";
 }
 
 /**
- * Whether the business may get the plan reminder: a direct cloud business
+ * Whether the business may get the plan reminders: a direct cloud business
  * that set itself up. A partner's business, a self-hosted one, and one a
  * platform key onboarded never do, as with the welcome email.
  */
-async function getsPlanReminderInTransaction(tx: DatabaseTransaction, businessId: string): Promise<{ timezone: string } | null> {
-  if (!await businessGetsHostEmails(tx, businessId)) return null;
-  const [business] = await tx.select({ deploymentMode: businesses.deploymentMode, timezone: businesses.timezone }).from(businesses).where(eq(businesses.id, businessId)).limit(1);
-  if (!business || business.deploymentMode !== "cloud") return null;
+async function getsPlanReminderInTransaction(tx: DatabaseTransaction, businessId: string): Promise<boolean> {
+  if (!await businessGetsHostEmails(tx, businessId)) return false;
+  const [business] = await tx.select({ deploymentMode: businesses.deploymentMode }).from(businesses).where(eq(businesses.id, businessId)).limit(1);
+  if (!business || business.deploymentMode !== "cloud") return false;
   const [platformKey] = await tx.select({ businessId: platformKeyBusinesses.businessId }).from(platformKeyBusinesses).where(eq(platformKeyBusinesses.businessId, businessId)).limit(1);
-  return platformKey ? null : { timezone: business.timezone };
+  return !platformKey;
 }
 
-/** Schedules the plan reminder when a business reaches the plans, due by planReminderDueAt. */
+/**
+ * Schedules both plan reminders when a business reaches the plans, due by
+ * planReminderDueAt. A worker on the previous release that takes the second
+ * job queues the first email again, which its dedupe key drops.
+ */
 export async function schedulePlanReminderInTransaction(tx: DatabaseTransaction, businessId: string, enteredAt: Date): Promise<void> {
-  const business = await getsPlanReminderInTransaction(tx, businessId);
-  if (!business) return;
-  await enqueueOutbox(tx, {
-    topic: "onboarding.sendPlanReminder",
-    businessId,
-    aggregateType: "business",
-    aggregateId: businessId,
-    dedupeKey: planReminderDedupeKey(businessId),
-    availableAt: planReminderDueAt(enteredAt, business.timezone),
-    payload: {},
-  });
+  if (!await getsPlanReminderInTransaction(tx, businessId)) return;
+  for (const reminder of ["first", "second"] as const) {
+    await enqueueOutbox(tx, {
+      topic: "onboarding.sendPlanReminder",
+      businessId,
+      aggregateType: "business",
+      aggregateId: businessId,
+      dedupeKey: planReminderDedupeKey(businessId, reminder),
+      availableAt: planReminderDueAt(enteredAt, reminder),
+      payload: reminder === "first" ? {} : { reminder },
+    });
+  }
 }
 
 export type PlanReminderResult = { status: "queued" | "skipped" };
@@ -83,12 +82,13 @@ function planReminderUrl(): string {
 }
 
 /**
- * Queues the plan reminder to the business's owner, in their dashboard
+ * Queues a plan reminder to the business's owner, in their dashboard
  * language, when it's due. It checks again that the business is still on the
  * plans, with its trial running on its number and no paid plan, and skips
  * otherwise.
  */
-export async function queuePlanReminderEmail(context: DomainContext, input: { businessId: string }): Promise<PlanReminderResult> {
+export async function queuePlanReminderEmail(context: DomainContext, input: { businessId: string; reminder?: PlanReminder }): Promise<PlanReminderResult> {
+  const reminder = input.reminder ?? "first";
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx): Promise<PlanReminderResult> => {
     if (!await getsPlanReminderInTransaction(tx, input.businessId)) return { status: "skipped" };
     const [business] = await tx.select({ stage: businesses.onboardingStage, status: businesses.status }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1);
@@ -110,11 +110,12 @@ export async function queuePlanReminderEmail(context: DomainContext, input: { bu
       businessId: input.businessId,
       aggregateType: "business",
       aggregateId: input.businessId,
-      dedupeKey: `${planReminderDedupeKey(input.businessId)}:email`,
+      dedupeKey: `${planReminderDedupeKey(input.businessId, reminder)}:email`,
       payload: {
+        // Both reminders use one template, so a worker on the previous release sends the second as the first.
         template: "plan_reminder",
         to: owner.email,
-        variables: { locale, firstName: greetingName(owner.name, owner.email), businessName: owner.business_name, number: trial.e164, url: planReminderUrl() },
+        variables: { locale, firstName: greetingName(owner.name, owner.email), businessName: owner.business_name, number: trial.e164, url: planReminderUrl(), ...(reminder === "second" ? { kind: "second" } : {}) },
         brand: HOST_EMAIL_BRAND,
         replyTo: null,
       },

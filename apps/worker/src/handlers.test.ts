@@ -173,8 +173,12 @@ describe("worker handlers", () => {
     await expect(handleJob(job, { domain })).resolves.toEqual({ status: "skipped" });
     expect(queuePlanReminderEmail).not.toHaveBeenCalled();
     await expect(handleJob(job, { domain, email: { sendTemplate: vi.fn() } })).resolves.toEqual({ status: "completed", entityId: businessId });
-    expect(queuePlanReminderEmail).toHaveBeenCalledWith(domain, { businessId });
+    expect(queuePlanReminderEmail).toHaveBeenCalledWith(domain, { businessId, reminder: "first" });
     await expect(handleJob(job, { domain, email: { sendTemplate: vi.fn() } })).resolves.toEqual({ status: "skipped", entityId: businessId });
+    // The second job names itself in its payload.
+    vi.mocked(queuePlanReminderEmail).mockResolvedValueOnce({ status: "queued" });
+    await expect(handleJob({ ...job, payload: { reminder: "second" }, idempotencyKey: `onboarding-plan-reminder:${businessId}:second` }, { domain, email: { sendTemplate: vi.fn() } })).resolves.toEqual({ status: "completed", entityId: businessId });
+    expect(queuePlanReminderEmail).toHaveBeenLastCalledWith(domain, { businessId, reminder: "second" });
   });
   it("sends an email queued before payloads carried a brand exactly as one queued under a brand, LobbyStack included", async () => {
     vi.stubEnv("APP_BASE_URL", "https://app.example.test");

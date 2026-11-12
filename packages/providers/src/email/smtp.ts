@@ -261,7 +261,8 @@ function templateHtml(template: TemplateName, subject: string, variables: Record
     }
     case "plan_reminder": {
       const copy = planReminderCopy(variables);
-      return renderLetterHtml(brand, subject, variables, copy.lines, copy.button, variables.url, brand.name);
+      // The plan reminders end on their button, with no signature.
+      return renderLetterHtml(brand, subject, variables, copy.lines, copy.button, variables.url, null);
     }
     case "number_release": {
       const copy = numberReleaseCopy(variables);
@@ -300,8 +301,8 @@ function renderCodeHtml(brand: EmailBrand, subject: string, heading: string, int
 
 const ACTION_BUTTON_STYLE = "display:inline-block;padding:12px 24px;background-color:#0B0B0D;border-radius:9999px;color:#FFFFFF;font-size:16px;font-weight:600;text-decoration:none;";
 
-/** A greeting, the copy, a button and a signature, left-aligned like a letter: the trial, release and allowance emails. */
-function renderLetterHtml(brand: EmailBrand, subject: string, variables: Record<string, string>, lines: string[], action: string, url: string | undefined, signature: string): string {
+/** A greeting, the copy, a button and a signature, left-aligned like a letter: the trial, release and allowance emails. A null signature leaves it out. */
+function renderLetterHtml(brand: EmailBrand, subject: string, variables: Record<string, string>, lines: string[], action: string, url: string | undefined, signature: string | null): string {
   const greet = TRIAL_GREETINGS[variables.locale ?? "en"] ?? TRIAL_GREETINGS.en!;
   return renderEmailLayout({
     brand,
@@ -310,8 +311,8 @@ function renderLetterHtml(brand: EmailBrand, subject: string, variables: Record<
     content: [
       `<p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#3D3D3D;">${escapeHtml(greet(variables.firstName ?? ""))}</p>`,
       ...lines.map((line) => `<p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#3D3D3D;">${escapeHtml(line)}</p>`),
-      ...(url ? [`<p style="margin:24px 0 32px;"><a href="${escapeHtml(url)}" style="${ACTION_BUTTON_STYLE}">${escapeHtml(action)}</a></p>`] : []),
-      `<p style="margin:0;font-size:16px;line-height:1.6;color:#3D3D3D;">${escapeHtml(signature)}</p>`,
+      ...(url ? [`<p style="margin:24px 0 ${signature === null ? 0 : 32}px;"><a href="${escapeHtml(url)}" style="${ACTION_BUTTON_STYLE}">${escapeHtml(action)}</a></p>`] : []),
+      ...(signature === null ? [] : [`<p style="margin:0;font-size:16px;line-height:1.6;color:#3D3D3D;">${escapeHtml(signature)}</p>`]),
     ].join(""),
   });
 }
@@ -587,7 +588,7 @@ function templateBody(template: TemplateName, variables: Record<string, string>,
     case "welcome":
       return welcomeBody(variables, brand);
     case "plan_reminder":
-      return planReminderBody(variables, brand);
+      return planReminderBody(variables);
     case "number_trial":
       return numberTrialBody(variables, brand);
     case "number_release":
@@ -889,6 +890,7 @@ export function formatEmailPhoneNumber(value: string): string {
 function planReminderCopy(v: Record<string, string>): TrialCopy {
   const num = formatEmailPhoneNumber(v.number ?? "");
   const business = v.businessName?.trim() ?? "";
+  if (v.kind === "second") return secondPlanReminderCopy(v.locale, num, business);
   switch (v.locale) {
     case "fr":
       return { subject: `Votre numéro ${num} est actif`, lines: [business ? `Votre numéro ${num} est actif et votre agent répond à ses appels pour ${business}.` : `Votre numéro ${num} est actif et votre agent répond à ses appels.`, "Commencez votre essai gratuit de 14 jours pour terminer la configuration. Il suffit d'un clic, sans carte bancaire."], button: "Commencer l'essai gratuit de 14 jours" };
@@ -901,12 +903,29 @@ function planReminderCopy(v: Record<string, string>): TrialCopy {
   }
 }
 
-function planReminderBody(variables: Record<string, string>, brand: EmailBrand): string {
+/**
+ * The second and last reminder, a day after the owner reached the plans and
+ * still on them. Its button is the first reminder's.
+ */
+function secondPlanReminderCopy(locale: string | undefined, num: string, business: string): TrialCopy {
+  switch (locale) {
+    case "fr":
+      return { subject: `Terminez la configuration du ${num}`, lines: [business ? `Vous n'avez pas encore choisi de forfait pour ${business}, donc la configuration n'est pas terminée.` : "Vous n'avez pas encore choisi de forfait, donc la configuration n'est pas terminée.", `L'essai gratuit vous donne 14 jours pour voir comment votre agent répond aux appels au ${num}. Aucune carte bancaire n'est nécessaire.`], button: "Commencer l'essai gratuit de 14 jours" };
+    case "es":
+      return { subject: `Termine de configurar el ${num}`, lines: [business ? `Todavía no eligió un plan para ${business}, así que la configuración no está terminada.` : "Todavía no eligió un plan, así que la configuración no está terminada.", `La prueba gratuita le da 14 días para ver cómo su agente contesta las llamadas al ${num}. No necesita tarjeta.`], button: "Empezar la prueba gratuita de 14 días" };
+    case "sr":
+      return { subject: `Završite podešavanje broja ${num}`, lines: [business ? `Još niste izabrali paket za ${business}, pa podešavanje nije završeno.` : "Još niste izabrali paket, pa podešavanje nije završeno.", `Besplatna proba Vam daje 14 dana da vidite kako agent odgovara na pozive na ${num}. Kartica nije potrebna.`], button: "Započnite besplatnu probu od 14 dana" };
+    default:
+      return { subject: `Finish setting up ${num}`, lines: [business ? `You haven't chosen a plan for ${business} yet, so setup isn't finished.` : "You haven't chosen a plan yet, so setup isn't finished.", `The free trial gives you 14 days to see how your agent handles calls to ${num}. You won't need a card.`], button: "Start your 14-day free trial" };
+  }
+}
+
+function planReminderBody(variables: Record<string, string>): string {
   const copy = planReminderCopy(variables);
   const greet = TRIAL_GREETINGS[variables.locale ?? "en"] ?? TRIAL_GREETINGS.en!;
   // French puts a space before the colon that follows the button's words.
   const colon = variables.locale === "fr" ? " : " : ": ";
-  return [greet(variables.firstName ?? ""), "", ...copy.lines.flatMap((line) => [line, ""]), `${copy.button}${colon}${variables.url ?? ""}`, "", brand.name].join("\n");
+  return [greet(variables.firstName ?? ""), "", ...copy.lines.flatMap((line) => [line, ""]), `${copy.button}${colon}${variables.url ?? ""}`].join("\n");
 }
 
 type TrialEmailKind = "day10" | "day13" | "ended" | "minutes_out";
