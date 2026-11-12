@@ -8,7 +8,7 @@ import { realtimeEventSchema, type JobEnvelope } from "@lobbystack/contracts";
 import { HOST_EMAIL_BRAND, billingMeterEventNames, detectSiteLanguage, emailSender, getPolarMeteredUsagePayload, intlLocale, isUuid, normalizeRuntimeLocale, parseEmailBrandReference, partnerFeatures, partnerTierProductId, type BillingUsageKind, type EmailBrandReference, type ProductUpdateEntry } from "@lobbystack/shared";
 import { appointments, calls, contacts, enqueueOutbox, knowledgeChunks, knowledgeDocuments, messages, notifications, phoneNumbers, storageObjects, websiteIngestionJobs, withBusinessTransaction, type Database } from "@lobbystack/db";
 import { enqueueKnowledgeDerivedRefresh, finishBusinessSummaryRegenerate, forgetStaleRetiredCalendarTokens, loadBusinessHoursInput, loadBusinessSummaryInput, markBusinessHoursChecked, resetGeneratedBusinessSummary, saveGeneratedBusinessHours, saveGeneratedBusinessSummary, type SummaryRegenerateOutcome } from "@lobbystack/domain";
-import { billingCheckoutLeaseEndsAt, checkKnowledgeStorageLimit, claimBillingCheckoutRequest, countPublishableOutboxMessages, deferBillingCheckoutRequest, deleteCallRecordingForRetention, deleteExpiredObjectsForBusiness, deleteStoredObjects, deleteSentProductEventsBefore, expireProspectDemos, finalizeConversationSession, loadCallSummaryInput, generateAffiliatePayoutRun, indexCrawledWebsitePage, indexDocumentText, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markKnowledgeDocumentFailed, markProductEventsSent, reconcileBillingProviderEvent, recordAiGenerationEvent, recordCallProviderPricing, loadLiveCallForPricing, recordProductEvent, recordSmsProviderPricing, refreshBusinessSnapshot, runPrivacyRetentionSweep, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, chunkText, embeddingInputsForChunk, hashContent, upsertWebsiteDocument, queueWelcomeEmail, type DurableAiUsage, type GeneratedCallSummary } from "@lobbystack/domain";
+import { billingCheckoutLeaseEndsAt, checkKnowledgeStorageLimit, claimBillingCheckoutRequest, countPublishableOutboxMessages, deferBillingCheckoutRequest, deleteCallRecordingForRetention, deleteExpiredObjectsForBusiness, deleteStoredObjects, deleteSentProductEventsBefore, expireProspectDemos, finalizeConversationSession, loadCallSummaryInput, generateAffiliatePayoutRun, indexCrawledWebsitePage, indexDocumentText, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markKnowledgeDocumentFailed, markProductEventsSent, reconcileBillingProviderEvent, recordAiGenerationEvent, recordCallProviderPricing, loadLiveCallForPricing, recordProductEvent, recordSmsProviderPricing, refreshBusinessSnapshot, runPrivacyRetentionSweep, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, chunkText, embeddingInputsForChunk, hashContent, upsertWebsiteDocument, queuePlanReminderEmail, queueWelcomeEmail, type DurableAiUsage, type GeneratedCallSummary } from "@lobbystack/domain";
 import { PRODUCT_UPDATE_ENTRIES, postNumberReleasedInTransaction, postProductUpdates } from "@lobbystack/domain";
 import { deliverOutbound, markFeedbackEmailFailed, markFeedbackEmailSent, queueDailyOperatorSummaries, refreshUnitEconomicsMonth } from "@lobbystack/domain";
 import { NUMBER_ORDER_MAX_WAIT_MS, claimNumberProvisioning, completeNumberProvisioning, deferNumberProvisioning, desiredNumberRouting, refreshStaleRefusedCallForwards, enqueueNumberRouting, resolveRefusedCallForward, failNumberProvisioning, isSharedSmsSender, loadNumberReleaseEmail, loadNumberTrialEmail, numberProvisioningLeaseEndsAt, sharedSmsSender, sweepNumberReleases, sweepNumberTrial } from "@lobbystack/domain";
@@ -381,7 +381,7 @@ async function recordOutboxBacklogSample(
 // The templates an email job may name. A worker before the notices doesn't
 // route email.sendNotice, so only that job sends them. Anything else goes out
 // as a plain alert.
-const EMAIL_SEND_TEMPLATES = ["existing_account", "account_setup", "verify_email", "password_reset", "passkey_added", "invitation", "operator_alert", "feedback_submission", "welcome", "partner_pool_alert", "business_allowance_alert", "partner_business_allowance_alert"] as const;
+const EMAIL_SEND_TEMPLATES = ["existing_account", "account_setup", "verify_email", "password_reset", "passkey_added", "invitation", "operator_alert", "feedback_submission", "welcome", "plan_reminder", "partner_pool_alert", "business_allowance_alert", "partner_business_allowance_alert"] as const;
 const EMAIL_NOTICE_TEMPLATES = ["business_released", "business_deleted"] as const;
 type QueuedEmailTemplate = (typeof EMAIL_SEND_TEMPLATES)[number] | (typeof EMAIL_NOTICE_TEMPLATES)[number];
 
@@ -1334,6 +1334,12 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       const welcome = await queueWelcomeEmail(dependencies.domain, { businessId });
       if (welcome.status === "waiting") return { status: "deferred", entityId: businessId, retryAt: welcome.retryAt };
       return { status: welcome.status === "queued" ? "completed" : "skipped", entityId: businessId };
+    }
+    case "onboarding.sendPlanReminder": {
+      const businessId = businessIdOrThrow(job);
+      if (!dependencies.email) return { status: "skipped" };
+      const reminder = await queuePlanReminderEmail(dependencies.domain, { businessId });
+      return { status: reminder.status === "queued" ? "completed" : "skipped", entityId: businessId };
     }
     case "affiliate.generatePayoutRun": {
       const periodKey = typeof job.payload.periodKey === "string" && job.payload.periodKey.trim() ? job.payload.periodKey.trim() : undefined;

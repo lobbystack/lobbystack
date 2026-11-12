@@ -5,7 +5,7 @@ import { vi } from "vitest";
 
 import type { JobEnvelope } from "@lobbystack/contracts";
 import { billingCheckoutLeaseEndsAt, claimBillingCheckoutRequest, countPublishableOutboxMessages, deferBillingCheckoutRequest, deleteCallRecordingForRetention, deleteSentProductEventsBefore, deliverOutbound, expireProspectDemos, generateAffiliatePayoutRun, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, loadLiveCallForPricing, recordCallProviderPricing, recordProductEvent, recordSmsProviderPricing, reconcileBillingProviderEvent, runPrivacyRetentionSweep } from "@lobbystack/domain";
-import { queueDailyOperatorSummaries, queueWelcomeEmail } from "@lobbystack/domain";
+import { queueDailyOperatorSummaries, queuePlanReminderEmail, queueWelcomeEmail } from "@lobbystack/domain";
 import { NUMBER_ORDER_MAX_WAIT_MS, claimNumberProvisioning, completeNumberProvisioning, deferNumberProvisioning, failNumberProvisioning, numberProvisioningLeaseEndsAt } from "@lobbystack/domain";
 import { PolarRequestError } from "@lobbystack/providers/polar/polarBilling";
 import { NumberOrderPendingError } from "@lobbystack/providers/telephony/types";
@@ -53,6 +53,7 @@ vi.mock("@lobbystack/domain", async (importOriginal) => {
     markBillingCheckoutCreated: vi.fn(),
     markBillingCheckoutFailed: vi.fn(),
     queueWelcomeEmail: vi.fn(),
+    queuePlanReminderEmail: vi.fn(),
     claimNumberProvisioning: vi.fn(),
     numberProvisioningLeaseEndsAt: vi.fn(),
     countPublishableOutboxMessages: vi.fn(),
@@ -162,6 +163,16 @@ describe("worker handlers", () => {
     expect(queueWelcomeEmail).toHaveBeenCalledWith(domain, { businessId });
     await expect(handleJob(job, { domain, email: { sendTemplate: vi.fn() } })).resolves.toEqual({ status: "skipped", entityId: businessId });
     await expect(handleJob(job, { domain, email: { sendTemplate: vi.fn() } })).resolves.toEqual({ status: "deferred", entityId: businessId, retryAt });
+  });
+  it("queues the plan reminder through the domain, and skips it without SMTP or when the domain does", async () => {
+    const businessId = randomUUID(); const domain = { db: undefined as never };
+    vi.mocked(queuePlanReminderEmail).mockResolvedValueOnce({ status: "queued" }).mockResolvedValueOnce({ status: "skipped" });
+    const job = { jobId: randomUUID(), type: "onboarding.sendPlanReminder" as const, queue: "default" as const, businessId, payload: {}, trace: {}, idempotencyKey: `onboarding-plan-reminder:${businessId}`, scheduled: false };
+    await expect(handleJob(job, { domain })).resolves.toEqual({ status: "skipped" });
+    expect(queuePlanReminderEmail).not.toHaveBeenCalled();
+    await expect(handleJob(job, { domain, email: { sendTemplate: vi.fn() } })).resolves.toEqual({ status: "completed", entityId: businessId });
+    expect(queuePlanReminderEmail).toHaveBeenCalledWith(domain, { businessId });
+    await expect(handleJob(job, { domain, email: { sendTemplate: vi.fn() } })).resolves.toEqual({ status: "skipped", entityId: businessId });
   });
   it("sends an email queued before payloads carried a brand exactly as one queued under a brand, LobbyStack included", async () => {
     vi.stubEnv("APP_BASE_URL", "https://app.example.test");
