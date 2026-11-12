@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
-import { billingAccounts, businesses, createDatabaseClient, enqueueOutbox, firstRealConversations, numberTrials, onboardingNumberClaimEvents, outboxMessages, partners, phoneNumbers, users, type Database, type DatabaseTransaction, defaultAgentIdOf } from "@lobbystack/db";
+import { billingAccounts, businessMemberships, businesses, createDatabaseClient, enqueueOutbox, firstRealConversations, numberTrials, onboardingNumberClaimEvents, outboxMessages, partners, phoneNumbers, users, type Database, type DatabaseTransaction, defaultAgentIdOf } from "@lobbystack/db";
 import { createBusiness } from "./tenancy";
 import { advanceOnboardingStage, queueWelcomeEmail, welcomeEmailDedupeKey } from "./onboarding";
 
@@ -142,9 +142,14 @@ describe.skipIf(!testUrl)("welcome email against dedicated PostgreSQL roles", ()
 
   it("never schedules the welcome for a partner's business", async () => {
     await rollbackTest(async tx => {
-      const { userId, businessId } = await completedWorkspace(tx);
+      // A direct business can't join a partner later, so this one starts as the partner's.
+      const userId = randomUUID();
+      const email = `${userId}@example.invalid`;
+      await tx.insert(users).values({ id: userId, email, normalizedEmail: email, name: "Sam Owner" });
       const [partner] = await tx.insert(partners).values({ name: "Acme Reception", slug: `acme-${randomUUID().slice(0, 8)}` }).returning({ id: partners.id });
-      await tx.update(businesses).set({ partnerId: partner!.id, partnerAccessLevel: "full", onboardingStage: "meet" }).where(eq(businesses.id, businessId));
+      const businessId = randomUUID();
+      await tx.insert(businesses).values({ id: businessId, slug: `harbor-${businessId.slice(0, 8)}`, name: "Harbor Dental", timezone: "UTC", businessType: "dental", partnerId: partner!.id, partnerAccessLevel: "full", onboardingStage: "meet" });
+      await tx.insert(businessMemberships).values({ businessId, userId, role: "business_owner", status: "active" });
       expect(await advance(tx, { userId, businessId })).toBe("complete");
       expect(await welcomeJobs(tx, businessId)).toEqual([]);
       expect(await sentWelcomes(tx, businessId)).toEqual([]);
