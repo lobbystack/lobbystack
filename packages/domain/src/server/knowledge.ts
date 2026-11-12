@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { and, asc, desc, eq, ilike, inArray, isNull, lt, ne, notInArray, sql } from "drizzle-orm";
 
 import { agentRules, agents, businessContextSnapshots, businesses, businessHours, closures, defaultAgentOf, enqueueOutbox, inOrder, knowledgeChunks, knowledgeDocuments, knowledgeSnippets, phoneNumbers, services, staffServiceAssignments, storageObjects, websiteIngestionJobs, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
-import { defaultGreeting, FULL_CRAWL_PAGE_LIMIT, getKnowledgeStorageLimitBytes, normalizeAppointmentChangePolicy, normalizeBookingMode, normalizeReceptionistVoice, normalizeRuntimeLocale, normalizeStaffFirstMode, normalizeTransferMode, ONBOARDING_CRAWL_PAGE_LIMIT, runtimeLocales, servicePriceFromColumns, stageAfterWebsite, type AgentRuleSummary, type BusinessContextSnapshot, type KnowledgeSnippet, type SnapshotAgent } from "@lobbystack/shared";
+import { defaultGreeting, FULL_CRAWL_PAGE_LIMIT, getKnowledgeStorageLimitBytes, normalizeAppointmentChangePolicy, normalizeBookingMode, normalizeAgentVoice, normalizeRuntimeLocale, normalizeStaffFirstMode, normalizeTransferMode, ONBOARDING_CRAWL_PAGE_LIMIT, runtimeLocales, servicePriceFromColumns, stageAfterWebsite, type AgentRuleSummary, type BusinessContextSnapshot, type KnowledgeSnippet, type SnapshotAgent } from "@lobbystack/shared";
 import { agentInstructions, buildBusinessContextSnapshot, MAX_KNOWLEDGE_SNIPPETS_PER_SNAPSHOT, snapshotRules } from "../snapshot";
 import { countKnowledgeTokens, fuseKnowledgeRanks, KNOWLEDGE_SEARCH_TOKEN_BUDGET, knowledgeLexicalQueries, knowledgeQueryTerms, splitToTokenBudget, withinKnowledgeBudget, type KnowledgePassage } from "../knowledgeRanking";
 
@@ -685,7 +685,7 @@ function ruleSummary(row: typeof agentRules.$inferSelect): AgentRuleSummary {
 function snapshotAgentFields(agent: typeof agents.$inferSelect | undefined) {
   const staffFirstMode = normalizeStaffFirstMode(agent?.staffFirstMode);
   return {
-    voice: normalizeReceptionistVoice(agent?.voice),
+    voice: normalizeAgentVoice(agent?.voice),
     tone: agent?.tone ?? "professional",
     bookingPolicy: agent?.bookingPolicy ?? "Confirm availability before booking.",
     appointmentChangePolicy: normalizeAppointmentChangePolicy(agent?.appointmentChangePolicy),

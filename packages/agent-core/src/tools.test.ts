@@ -15,15 +15,15 @@ vi.mock("@lobbystack/domain", async () => ({
 }));
 
 import { bookForCaller, recordUnansweredQuestion, requestCancellationForCaller, requestRescheduleForCaller, resolveEmployee, searchKnowledgeEvidence } from "@lobbystack/domain";
-import { receptionistCapabilities, type Conversation } from "./capabilities";
-import { createReceptionistTools, type AgentChannel } from "./tools";
+import { agentCapabilities, type Conversation } from "./capabilities";
+import { createAgentTools, type AgentChannel } from "./tools";
 
 const callControl = { transfer: vi.fn(async () => true), hangup: vi.fn(async () => undefined) };
 
 // The booking fixtures use early October 2026: keep those times in the future.
 vi.setSystemTime(new Date("2026-10-01T12:00:00Z"));
 
-describe("createReceptionistTools", () => {
+describe("createAgentTools", () => {
   it("creates exactly the tools capabilities.ts offers", () => {
     const phoneCall: Conversation = { channel: "voice", callerPhone: "+14165550100", callId: "call_1", callControl };
     for (const [snapshot, conversation] of [
@@ -33,18 +33,18 @@ describe("createReceptionistTools", () => {
       [demoSnapshot, { channel: "web_voice", intakeOnly: true, callControl }],
       [demoSnapshot, { channel: "web_chat", testChat: true }],
     ] as Array<[BusinessContextSnapshot, Conversation]>) {
-      expect(Object.keys(createReceptionistTools({ domain: { db: {} as never }, snapshot, ...conversation }))).toEqual(receptionistCapabilities(snapshot, conversation).tools);
+      expect(Object.keys(createAgentTools({ domain: { db: {} as never }, snapshot, ...conversation }))).toEqual(agentCapabilities(snapshot, conversation).tools);
     }
   });
 
   // GPT-Live said goodbye before it handed the call over, so a reply would be a second one.
   it("tells the agent a caller who is done gets no reply", () => {
-    const endCall = createReceptionistTools({ domain: { db: {} as never }, channel: "voice", snapshot: demoSnapshot, callControl: { hangup: vi.fn() } }).endCall!;
+    const endCall = createAgentTools({ domain: { db: {} as never }, channel: "voice", snapshot: demoSnapshot, callControl: { hangup: vi.fn() } }).endCall!;
     expect(endCall.description).toBe("End the call. Use the reason caller_finished when the caller is done or is saying goodbye: the voice model says goodbye when it hears the call is ending, so don't write a reply. Use spam or abuse for a spam or abusive call.");
   });
 
   it("refuses a transfer the rules don't allow", async () => {
-    const tools = createReceptionistTools({
+    const tools = createAgentTools({
       domain: { db: {} as never },
       channel: "voice",
       callControl,
@@ -61,7 +61,7 @@ describe("createReceptionistTools", () => {
 describe("transferCall to an employee", () => {
   const transferTo = (snapshot: Partial<BusinessContextSnapshot> = {}) => {
     callControl.transfer.mockClear();
-    const tools = createReceptionistTools({
+    const tools = createAgentTools({
       domain: { db: {} as never },
       channel: "voice",
       callControl,
@@ -86,7 +86,7 @@ describe("transferCall to an employee", () => {
   it("follows the business's transfer rules, even for an employee with a number", async () => {
     vi.mocked(resolveEmployee).mockResolvedValue({ ok: true, staffId: "staff-ana", name: "Ana Petrović", phone: "+381641234567", services: [], timeOff: [] });
     for (const transferPolicy of [{ mode: "on_request" as const }, { mode: "never" as const, transferNumber: "+14165550199" }]) {
-      expect(createReceptionistTools({ domain: { db: {} as never }, channel: "voice", callControl, snapshot: { ...demoSnapshot, transferPolicy } }).transferCall).toBeUndefined();
+      expect(createAgentTools({ domain: { db: {} as never }, channel: "voice", callControl, snapshot: { ...demoSnapshot, transferPolicy } }).transferCall).toBeUndefined();
     }
     await expect(transferTo()({ callerRequested: false, urgent: false, employeeName: "Ana" }, { toolCallId: "1", messages: [] })).resolves.toMatchObject({ ok: false });
     expect(callControl.transfer).not.toHaveBeenCalled();
@@ -111,7 +111,7 @@ describe("requestAppointmentCancellation", () => {
   const operatorOnly = { appointmentChangePolicy: { enabled: true, allowCancel: true, allowReschedule: true, verificationMode: "operator_only" as const } };
 
   it("saves the caller's details as a request and says the appointment isn't cancelled", async () => {
-    const tools = createReceptionistTools({ domain: { db: {} as never }, channel: "web_voice", callId: "call_1", conversationId: "conversation_1", snapshot: { ...demoSnapshot, timezone: "America/Toronto" } });
+    const tools = createAgentTools({ domain: { db: {} as never }, channel: "web_voice", callId: "call_1", conversationId: "conversation_1", snapshot: { ...demoSnapshot, timezone: "America/Toronto" } });
     const execute = tools.requestAppointmentCancellation!.execute! as (input: object, options: object) => Promise<unknown>;
     await expect(execute({ callerName: "Milan", appointmentStartsAt: "2026-10-14T15:00", serviceName: "General Checkup", callbackPhone: "+14165550100" }, { toolCallId: "1", messages: [] }))
       .resolves.toMatchObject({ ok: true, inboxItemId: "inbox_1", cancelled: false, status: expect.stringContaining("still booked") });
@@ -124,7 +124,7 @@ describe("requestAppointmentCancellation", () => {
   // The team reads these notes in the business's language, not the caller's.
   it("asks for the notes in the business's language", async () => {
     const schema = async (locale: "en" | "sr") => {
-      const tools = createReceptionistTools({ domain: { db: {} as never }, channel: "web_voice", snapshot: { ...demoSnapshot, defaultLocale: locale } });
+      const tools = createAgentTools({ domain: { db: {} as never }, channel: "web_voice", snapshot: { ...demoSnapshot, defaultLocale: locale } });
       return JSON.stringify(await asSchema(tools.requestAppointmentCancellation!.inputSchema).jsonSchema);
     };
     expect(await schema("sr")).toContain("Write it in Serbian (Latin script), even when the caller spoke another language.");
@@ -132,13 +132,13 @@ describe("requestAppointmentCancellation", () => {
   });
 
   it("prefers the team language over the customer language for those notes", async () => {
-    const tools = createReceptionistTools({ domain: { db: {} as never }, channel: "web_voice", snapshot: { ...demoSnapshot, defaultLocale: "en", teamLocale: "sr" } });
+    const tools = createAgentTools({ domain: { db: {} as never }, channel: "web_voice", snapshot: { ...demoSnapshot, defaultLocale: "en", teamLocale: "sr" } });
     expect(JSON.stringify(await asSchema(tools.requestAppointmentCancellation!.inputSchema).jsonSchema)).toContain("Write it in Serbian (Latin script)");
   });
 
   it("uses the trusted caller number and asks for a name before saving", async () => {
     vi.mocked(requestCancellationForCaller).mockClear();
-    const tools = createReceptionistTools({ domain: { db: {} as never }, channel: "voice", callerPhone: "+14165550100", snapshot: { ...demoSnapshot, ...operatorOnly } });
+    const tools = createAgentTools({ domain: { db: {} as never }, channel: "voice", callerPhone: "+14165550100", snapshot: { ...demoSnapshot, ...operatorOnly } });
     const execute = tools.requestAppointmentCancellation!.execute! as (input: object, options: object) => Promise<unknown>;
     await expect(execute({ callerName: " " }, { toolCallId: "1", messages: [] })).resolves.toMatchObject({ ok: false });
     expect(requestCancellationForCaller).not.toHaveBeenCalled();
@@ -148,10 +148,10 @@ describe("requestAppointmentCancellation", () => {
 });
 
 describe("requestAppointmentReschedule", () => {
-  const execute = (tools: ReturnType<typeof createReceptionistTools>) => tools.requestAppointmentReschedule!.execute! as (input: object, options: object) => Promise<unknown>;
+  const execute = (tools: ReturnType<typeof createAgentTools>) => tools.requestAppointmentReschedule!.execute! as (input: object, options: object) => Promise<unknown>;
 
   it("saves the wanted time as a request and says the appointment hasn't moved", async () => {
-    const tools = createReceptionistTools({ domain: { db: {} as never }, channel: "web_voice", callId: "call_1", conversationId: "conversation_1", snapshot: { ...demoSnapshot, timezone: "America/Toronto" } });
+    const tools = createAgentTools({ domain: { db: {} as never }, channel: "web_voice", callId: "call_1", conversationId: "conversation_1", snapshot: { ...demoSnapshot, timezone: "America/Toronto" } });
     await expect(execute(tools)({ callerName: "Milan", newStartsAt: "2099-10-16T11:00", appointmentStartsAt: "2099-10-14T15:00", serviceName: "General Checkup", callbackPhone: "+14165550100" }, { toolCallId: "1", messages: [] }))
       .resolves.toMatchObject({ ok: true, inboxItemId: "inbox_2", rescheduled: false, status: expect.stringContaining("keeps its current time") });
     expect(vi.mocked(requestRescheduleForCaller).mock.lastCall?.[1]).toEqual({
@@ -162,7 +162,7 @@ describe("requestAppointmentReschedule", () => {
 
   it("asks for a name and a future time before saving, and uses the trusted caller number", async () => {
     vi.mocked(requestRescheduleForCaller).mockClear();
-    const tools = createReceptionistTools({ domain: { db: {} as never }, channel: "voice", callerPhone: "+14165550100", snapshot: demoSnapshot });
+    const tools = createAgentTools({ domain: { db: {} as never }, channel: "voice", callerPhone: "+14165550100", snapshot: demoSnapshot });
     await expect(execute(tools)({ callerName: " ", newStartsAt: "2099-10-16T11:00" }, { toolCallId: "1", messages: [] })).resolves.toMatchObject({ ok: false });
     await expect(execute(tools)({ callerName: "Milan", newStartsAt: "2020-01-01T11:00" }, { toolCallId: "2", messages: [] })).resolves.toMatchObject({ ok: false });
     expect(requestRescheduleForCaller).not.toHaveBeenCalled();
@@ -173,7 +173,7 @@ describe("requestAppointmentReschedule", () => {
 
 describe("bookAppointment", () => {
   const book = (startsAt: string) => {
-    const tools = createReceptionistTools({ domain: { db: {} as never }, channel: "voice", callerPhone: "+14165550100", snapshot: { ...demoSnapshot, timezone: "America/Toronto" } });
+    const tools = createAgentTools({ domain: { db: {} as never }, channel: "voice", callerPhone: "+14165550100", snapshot: { ...demoSnapshot, timezone: "America/Toronto" } });
     const execute = tools.bookAppointment!.execute! as (input: object, options: object) => Promise<unknown>;
     return execute({ serviceName: "General Checkup", startsAt, contactName: "Milan" }, { toolCallId: "1", messages: [] });
   };
@@ -191,7 +191,7 @@ describe("bookAppointment", () => {
 
   it("never treats a typed or spoken number as the call's own", async () => {
     const run = (channel: AgentChannel, callId?: string) => {
-      const tools = createReceptionistTools({ domain: { db: {} as never }, channel, ...(callId ? { callId } : {}), snapshot: demoSnapshot });
+      const tools = createAgentTools({ domain: { db: {} as never }, channel, ...(callId ? { callId } : {}), snapshot: demoSnapshot });
       return (tools.bookAppointment!.execute! as (input: object, options: object) => Promise<unknown>)({ serviceName: "General Checkup", startsAt: "2026-10-06T10:00", contactName: "Milan", contactPhone: "+14165550199", smsConsent: "not_asked" }, { toolCallId: "1", messages: [] });
     };
     await run("web_chat");
@@ -213,7 +213,7 @@ describe("bookAppointment", () => {
   });
 
   it("uses the caller's number when the model sends an empty phone", async () => {
-    const tools = createReceptionistTools({ domain: { db: {} as never }, channel: "voice", callerPhone: "+14165550100", snapshot: demoSnapshot });
+    const tools = createAgentTools({ domain: { db: {} as never }, channel: "voice", callerPhone: "+14165550100", snapshot: demoSnapshot });
     const execute = tools.bookAppointment!.execute! as (input: object, options: object) => Promise<unknown>;
     await expect(execute({ serviceName: "General Checkup", startsAt: "2026-10-06T10:00", contactName: "Milan", contactPhone: "" }, { toolCallId: "1", messages: [] })).resolves.toMatchObject({ ok: true });
     expect(vi.mocked(bookForCaller).mock.lastCall?.[1]).toMatchObject({ contactPhone: "+14165550100" });
@@ -221,7 +221,7 @@ describe("bookAppointment", () => {
 
   it("asks for the caller's name before booking", async () => {
     vi.mocked(bookForCaller).mockClear();
-    const tools = createReceptionistTools({ domain: { db: {} as never }, channel: "voice", callerPhone: "+14165550100", snapshot: demoSnapshot });
+    const tools = createAgentTools({ domain: { db: {} as never }, channel: "voice", callerPhone: "+14165550100", snapshot: demoSnapshot });
     const execute = tools.bookAppointment!.execute! as (input: object, options: object) => Promise<unknown>;
     await expect(execute({ serviceName: "General Checkup", startsAt: "2026-10-06T10:00", contactName: " " }, { toolCallId: "1", messages: [] })).resolves.toEqual({ ok: false, reason: "Ask for the caller's name before booking." });
     expect(bookForCaller).not.toHaveBeenCalled();
@@ -237,7 +237,7 @@ describe("bookAppointment", () => {
 describe("getBusinessHours", () => {
   it("gives closures in the business's local time, like its hours", async () => {
     const closures = [{ startsAt: "2026-12-24T23:00:00.000Z", endsAt: "2026-12-25T23:00:00.000Z", reason: "Christmas Day" }];
-    const tools = createReceptionistTools({ domain: { db: {} as never }, channel: "web_chat", snapshot: { ...demoSnapshot, timezone: "Europe/Belgrade", closures } });
+    const tools = createAgentTools({ domain: { db: {} as never }, channel: "web_chat", snapshot: { ...demoSnapshot, timezone: "Europe/Belgrade", closures } });
     const execute = tools.getBusinessHours!.execute! as (input: object, options: object) => Promise<unknown>;
     await expect(execute({}, { toolCallId: "1", messages: [] })).resolves.toMatchObject({
       upcomingClosures: [{ from: "2026-12-25T00:00:00.000+01:00", to: "2026-12-26T00:00:00.000+01:00", reason: "Christmas Day" }],
@@ -248,14 +248,14 @@ describe("getBusinessHours", () => {
 describe("getBusinessServices", () => {
   it("returns what the knowledge base says the business offers when it lists no services", async () => {
     vi.mocked(searchKnowledgeEvidence).mockResolvedValueOnce({ outcome: "found", matches: [{ title: "About", content: "An AI receptionist for small businesses." }] } as never);
-    const tools = createReceptionistTools({ domain: { db: {} as never }, channel: "voice", snapshot: { ...demoSnapshot, services: [] } });
+    const tools = createAgentTools({ domain: { db: {} as never }, channel: "voice", snapshot: { ...demoSnapshot, services: [] } });
     const execute = tools.getBusinessServices!.execute! as (input: object, options: object) => Promise<unknown>;
     await expect(execute({}, { toolCallId: "1", messages: [] })).resolves.toMatchObject({ services: [], knowledge: { outcome: "found", matches: [{ title: "About", text: "An AI receptionist for small businesses." }] } });
   });
 
   it("doesn't search when the business lists services", async () => {
     vi.mocked(searchKnowledgeEvidence).mockClear();
-    const tools = createReceptionistTools({ domain: { db: {} as never }, channel: "voice", snapshot: demoSnapshot });
+    const tools = createAgentTools({ domain: { db: {} as never }, channel: "voice", snapshot: demoSnapshot });
     const execute = tools.getBusinessServices!.execute! as (input: object, options: object) => Promise<unknown>;
     const result = await execute({}, { toolCallId: "1", messages: [] }) as { services: unknown[]; knowledge?: unknown };
     expect(result.services.length).toBeGreaterThan(0);
@@ -269,7 +269,7 @@ describe("searchKnowledge", () => {
     vi.mocked(searchKnowledgeEvidence).mockClear();
     vi.mocked(searchKnowledgeEvidence).mockResolvedValue({ matches: [], mode: "hybrid", outcome: "empty", durationMs: 1 } as never);
     for (const [snapshot, agentId] of [[{ ...demoSnapshot, agentId: "agent-evening" }, "agent-evening"], [demoSnapshot, null]] as const) {
-      const tools = createReceptionistTools({ domain: { db: {} as never }, channel: "sms", snapshot });
+      const tools = createAgentTools({ domain: { db: {} as never }, channel: "sms", snapshot });
       await (tools.searchKnowledge!.execute! as (input: object, options: object) => Promise<unknown>)({ query: "parking" }, { toolCallId: "1", messages: [] });
       expect(vi.mocked(searchKnowledgeEvidence).mock.calls.at(-1)?.[1]).toMatchObject({ agentId });
     }
@@ -285,7 +285,7 @@ describe("searchKnowledge", () => {
   async function search(query: string, snippets: KnowledgeSnippet[], found: ReturnType<typeof evidence> | Error) {
     if (found instanceof Error) vi.mocked(searchKnowledgeEvidence).mockRejectedValueOnce(found);
     else vi.mocked(searchKnowledgeEvidence).mockResolvedValueOnce(found);
-    const tools = createReceptionistTools({ domain: { db: {} as never }, channel: "web_chat", snapshot: { ...demoSnapshot, knowledgeSnippets: snippets } });
+    const tools = createAgentTools({ domain: { db: {} as never }, channel: "web_chat", snapshot: { ...demoSnapshot, knowledgeSnippets: snippets } });
     const execute = tools.searchKnowledge!.execute! as (input: object, options: object) => Promise<{ outcome: string; matches: Array<{ title: string; text: string }> }>;
     const result = await execute({ query }, { toolCallId: "1", messages: [] });
     return { outcome: result.outcome, titles: result.matches.map((match) => match.title) };
@@ -370,7 +370,7 @@ describe("unanswered questions", () => {
     vi.mocked(recordUnansweredQuestion).mockClear();
     if (found instanceof Error) vi.mocked(searchKnowledgeEvidence).mockRejectedValueOnce(found);
     else vi.mocked(searchKnowledgeEvidence).mockResolvedValueOnce(found);
-    const tools = createReceptionistTools({ domain: { db: {} as never }, snapshot: { ...demoSnapshot, knowledgeSnippets: [] }, ...conversation });
+    const tools = createAgentTools({ domain: { db: {} as never }, snapshot: { ...demoSnapshot, knowledgeSnippets: [] }, ...conversation });
     const execute = tools.searchKnowledge!.execute! as (input: object, options: object) => Promise<{ outcome: string }>;
     const result = await execute({ query }, { toolCallId: "1", messages: [] });
     // The save runs after the reply; let it start.
@@ -406,7 +406,7 @@ describe("unanswered questions", () => {
   it("doesn't save the lookup getBusinessServices makes for itself", async () => {
     vi.mocked(recordUnansweredQuestion).mockClear();
     vi.mocked(searchKnowledgeEvidence).mockResolvedValueOnce(evidence("empty"));
-    const tools = createReceptionistTools({ domain: { db: {} as never }, channel: "voice", snapshot: { ...demoSnapshot, services: [], knowledgeSnippets: [] } });
+    const tools = createAgentTools({ domain: { db: {} as never }, channel: "voice", snapshot: { ...demoSnapshot, services: [], knowledgeSnippets: [] } });
     const execute = tools.getBusinessServices!.execute! as (input: object, options: object) => Promise<unknown>;
     await execute({}, { toolCallId: "1", messages: [] });
     await new Promise((resolve) => setTimeout(resolve, 0));

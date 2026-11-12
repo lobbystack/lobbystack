@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { createAgentModel, createReceptionistAgent, describeAgentUsage } from "@lobbystack/agent-core";
+import { createAgentModel, createConversationAgent, describeAgentUsage } from "@lobbystack/agent-core";
 import type { JobEnvelope } from "@lobbystack/contracts";
 import { withBusinessTransaction } from "@lobbystack/db";
 import { alertUnansweredInstagram, claimInstagramDelivery, finishInstagramDelivery, getBusinessSnapshotForAgent, instagramDeliveryLeaseEndsAt, loadInstagramReplyContext, recordAiGenerationEvent, recordInstagramPartSent, refreshInstagramTokenIfDue, releaseInstagramDelivery, reserveWidgetChatUsageInTransaction, saveInstagramReply, type DomainContext } from "@lobbystack/domain";
@@ -52,7 +52,7 @@ export async function replyToInstagramMessage(domain: DomainContext, job: JobEnv
   const locale = normalizeRuntimeLocale(snapshot.defaultLocale);
   // Set once a tool saves a message or books: another attempt would do it twice.
   let acted = false;
-  const agent = createReceptionistAgent({
+  const agent = createConversationAgent({
     model,
     // A text conversation, so it gets the website chat's knowledge, tools and booking.
     context: { domain, snapshot, channel: "instagram", conversationId },

@@ -89,7 +89,7 @@ export function ringStaffTwiml(input: { staffPhone: string; ringSeconds: number;
  * learns the dialled number, and `referUrl` is how a transfer leaves this leg:
  * without it, Twilio refuses the REFER with error 13802.
  */
-export function dialReceptionistTwiml(input: { sipAddress: string; called: string; message?: string | undefined; locale: RuntimeLocale; actionUrl: string; referUrl: string }): string {
+export function dialAgentTwiml(input: { sipAddress: string; called: string; message?: string | undefined; locale: RuntimeLocale; actionUrl: string; referUrl: string }): string {
   return respond((response) => {
     say(response, input.locale, input.message);
     const dial = response.dial({ answerOnBridge: true, action: input.actionUrl, method: "POST", referUrl: input.referUrl, referMethod: "POST" });
@@ -145,7 +145,7 @@ export function staffDialOutcome(params: Record<string, string | undefined>): "a
  * and only a 603, a blocked caller, changes the answer: a 503 or 486, or a
  * refusal with no code, goes to the same fallback a trunk's refused call does.
  */
-export function receptionistDialOutcome(params: Record<string, string | undefined>): "finished" | "blocked" | "refused" {
+export function agentDialOutcome(params: Record<string, string | undefined>): "finished" | "blocked" | "refused" {
   if (params.DialBridged === "true" || params.DialCallStatus === "completed" || callerGone(params)) return "finished";
   return params.DialSipResponseCode === "603" ? "blocked" : "refused";
 }

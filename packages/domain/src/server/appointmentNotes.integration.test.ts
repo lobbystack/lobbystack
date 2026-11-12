@@ -8,7 +8,7 @@ import { agents, appointments, businessHours, businessMemberships, businesses, c
 import { listAppointmentsBetween } from "./operatorActivity";
 import { bookAppointmentForOperator, findBookingOpenings, updateAppointmentNotes } from "./operatorBookings";
 import { loadAppointmentResource } from "./publicApi/resources";
-import { verifyCallerForChange } from "./receptionistActions";
+import { verifyCallerForChange } from "./agentActions";
 import { deleteTimeOff, listTimeOffBetween, saveTimeOff } from "./timeOff";
 import { replaceBusinessHoursInTransaction } from "./catalog";
 

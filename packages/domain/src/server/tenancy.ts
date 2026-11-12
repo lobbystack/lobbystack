@@ -148,7 +148,7 @@ export async function insertOwnerlessBusinessInTransaction(tx: DatabaseTransacti
 }
 
 /** How a new business's receptionist books, and answers calls and texts until someone changes them: the booking policy, and its first call and text rules. */
-export const NEW_BUSINESS_RECEPTIONIST_INSTRUCTIONS = {
+export const NEW_BUSINESS_AGENT_INSTRUCTIONS = {
   bookingPolicy: "Only confirm a booking after availability is checked.",
   voiceInstructions: "Sound calm, confident, and concise. Escalate urgent requests to a human when policy requires it.",
   smsInstructions: "Keep replies concise and friendly. Ask one follow-up question at a time.",
@@ -235,7 +235,7 @@ async function insertBusinessRowsInTransaction(tx: DatabaseTransaction, input: N
   // manage a team get one hidden member that stands for the business itself.
   await tx.insert(staff).values({ businessId, name, timezone });
   const locale = normalizeRuntimeLocale(input.defaultLocale);
-  const { voiceInstructions, smsInstructions, bookingPolicy } = NEW_BUSINESS_RECEPTIONIST_INSTRUCTIONS;
+  const { voiceInstructions, smsInstructions, bookingPolicy } = NEW_BUSINESS_AGENT_INSTRUCTIONS;
   const [agent] = await tx.insert(agents).values({
     businessId,
     isDefault: true,

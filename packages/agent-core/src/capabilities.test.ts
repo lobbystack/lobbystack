@@ -1,7 +1,7 @@
 import { demoSnapshot, type AppointmentChangePolicy, type BookingMode, type BusinessContextSnapshot } from "@lobbystack/shared";
 import { describe, expect, it } from "vitest";
 
-import { receptionistCapabilities, toolUse, type Conversation } from "./capabilities";
+import { agentCapabilities, toolUse, type Conversation } from "./capabilities";
 
 const callerPhone = "+14165550100";
 // A phone call's controls, as the worker gives them.
@@ -9,7 +9,7 @@ const callControl = { transfer: async () => true, hangup: async () => undefined,
 const phoneCall: Conversation = { channel: "voice", callerPhone, callId: "call_1", callControl };
 
 function capabilities(snapshot: Partial<BusinessContextSnapshot> = {}, conversation: Conversation = { channel: "web_chat" }) {
-  return receptionistCapabilities({ ...demoSnapshot, ...snapshot }, conversation);
+  return agentCapabilities({ ...demoSnapshot, ...snapshot }, conversation);
 }
 
 const changePolicy = (policy: Partial<AppointmentChangePolicy>) => ({ appointmentChangePolicy: { enabled: true, allowCancel: true, allowReschedule: true, verificationMode: "phone_match_and_facts" as const, ...policy } });
@@ -19,7 +19,7 @@ function liveChanges(live: string[]): string[] {
   return /^- Appointment changes: (.+?) an appointment /.exec(live.find((line) => line.startsWith("- Appointment changes:")) ?? "")?.[1]?.split(" or ") ?? [];
 }
 
-describe("receptionistCapabilities", () => {
+describe("agentCapabilities", () => {
   it("books directly and passes cancellations to the team by default", () => {
     expect(capabilities().tools).toEqual(["getBusinessHours", "getBusinessServices", "searchKnowledge", "takeMessage", "findAvailability", "bookAppointment", "requestAppointmentCancellation", "requestAppointmentReschedule"]);
   });

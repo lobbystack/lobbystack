@@ -47,7 +47,7 @@ export class LiveLatencyTracker {
     addSpan(this.callerSpans, startMs ?? endMs ?? Number.NaN, endMs ?? Number.NaN);
   }
 
-  receptionistTranscript(startMs: number | undefined, endMs: number | undefined): void {
+  agentTranscript(startMs: number | undefined, endMs: number | undefined): void {
     addSpan(this.transcriptSpans, startMs ?? endMs ?? Number.NaN, endMs ?? Number.NaN);
   }
 

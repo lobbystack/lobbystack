@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 
 import { decideStaffFirstCall, loadStaffFirstHandover, loadStaffPrompt, recordStaffAnsweredCall, resolveRefusedCallForward } from "@lobbystack/domain";
 import { appBaseUrl, sipAddress } from "@lobbystack/providers/telephony/config";
-import { dialReceptionistTwiml, emptyTwiml, forwardTwiml, hangupTwiml, receptionistDialOutcome, referTargetPhone, referTwiml, rejectTwiml, ringStaffTwiml, staffDialOutcome, staffPressTwiml, staffPromptTwiml } from "@lobbystack/providers/twilio/staffFirstTwiml";
+import { dialAgentTwiml, emptyTwiml, forwardTwiml, hangupTwiml, agentDialOutcome, referTargetPhone, referTwiml, rejectTwiml, ringStaffTwiml, staffDialOutcome, staffPressTwiml, staffPromptTwiml } from "@lobbystack/providers/twilio/staffFirstTwiml";
 import { resolveTwilioWebhookUrl, validateTwilioSignature } from "@lobbystack/providers/twilio/webhookSecurity";
 import { isTransferPhone, type RuntimeLocale } from "@lobbystack/shared";
 import { getAppDatabase } from "@/lib/api-helpers";
@@ -34,10 +34,10 @@ async function businessForNumber(phones: Array<string | undefined>): Promise<{ b
   return undefined;
 }
 
-function dialReceptionist(input: { businessId: string; called: string; locale: RuntimeLocale; message?: string | undefined }): string | undefined {
+function dialAgent(input: { businessId: string; called: string; locale: RuntimeLocale; message?: string | undefined }): string | undefined {
   const sip = sipAddress();
   if (!sip) return undefined;
-  return dialReceptionistTwiml({ sipAddress: sip, called: input.called, locale: input.locale, message: input.message, actionUrl: stepUrl("receptionist-result", { business: input.businessId, called: input.called }), referUrl: stepUrl("refer") });
+  return dialAgentTwiml({ sipAddress: sip, called: input.called, locale: input.locale, message: input.message, actionUrl: stepUrl("receptionist-result", { business: input.businessId, called: input.called }), referUrl: stepUrl("refer") });
 }
 
 /** A call the receptionist can't take, handled as on the trunk's disaster recovery URL: forwarded when the business has somewhere to send it, otherwise busy. */
@@ -104,7 +104,7 @@ export async function POST(request: Request, { params: route }: { params: Promis
             promptUrl: stepUrl("staff-prompt", { business: routed.businessId }),
           }));
         }
-        return twiml(dialReceptionist({ ...routed, locale: decision.locale }) ?? await refusedCall({ ...routed, forwardedFrom: params.ForwardedFrom }));
+        return twiml(dialAgent({ ...routed, locale: decision.locale }) ?? await refusedCall({ ...routed, forwardedFrom: params.ForwardedFrom }));
       } catch (error) {
         // The number's voice fallback URL takes it from here.
         console.error("[staff-first] incoming call failed", error instanceof Error ? error.message : error);
@@ -113,7 +113,7 @@ export async function POST(request: Request, { params: route }: { params: Promis
     }
     case "fallback": {
       const dialled = [params.To, params.Called].find((phone) => phone && E164_PATTERN.test(phone));
-      const body = dialled ? dialReceptionist({ businessId: "", called: dialled, locale: "en" }) : undefined;
+      const body = dialled ? dialAgent({ businessId: "", called: dialled, locale: "en" }) : undefined;
       return twiml(body ?? rejectTwiml());
     }
     case "staff-prompt": {
@@ -142,10 +142,10 @@ export async function POST(request: Request, { params: route }: { params: Promis
         console.error("[staff-first] couldn't read the handover", error instanceof Error ? error.message : error);
         return { locale: "en" as const };
       });
-      return twiml(dialReceptionist({ businessId, called, ...handover }) ?? await refusedCallOrBusy({ businessId, called, forwardedFrom: params.ForwardedFrom }));
+      return twiml(dialAgent({ businessId, called, ...handover }) ?? await refusedCallOrBusy({ businessId, called, forwardedFrom: params.ForwardedFrom }));
     }
     case "receptionist-result": {
-      const outcome = receptionistDialOutcome(params);
+      const outcome = agentDialOutcome(params);
       if (outcome === "finished") return twiml(hangupTwiml());
       if (outcome === "blocked") return twiml(rejectTwiml());
       try {

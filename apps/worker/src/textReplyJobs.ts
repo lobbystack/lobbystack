@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { createAgentModel, createReceptionistAgent, describeAgentUsage } from "@lobbystack/agent-core";
+import { createAgentModel, createConversationAgent, describeAgentUsage } from "@lobbystack/agent-core";
 import type { JobEnvelope } from "@lobbystack/contracts";
 import { withBusinessTransaction } from "@lobbystack/db";
 import { alertUnansweredText, getBusinessSnapshotForAgent, loadTextReplyContext, recordAiGenerationEvent, reserveTextReplyUsageInTransaction, saveTextReply, type DomainContext } from "@lobbystack/domain";
@@ -69,7 +69,7 @@ export async function replyToTextMessage(domain: DomainContext, job: JobEnvelope
     const snapshot = await getBusinessSnapshotForAgent(domain, { businessId, agentId: reply.agentId });
     if (!snapshot) throw new Error("The business snapshot is unavailable.");
     const locale = normalizeRuntimeLocale(snapshot.defaultLocale);
-    const agent = createReceptionistAgent({
+    const agent = createConversationAgent({
       model,
       // No callerPhone: a text's sender can be spoofed, so it can't verify an appointment change.
       context: { domain, snapshot, channel: "sms", conversationId },

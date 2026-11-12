@@ -6,22 +6,22 @@ import {
   appointmentChangeVerificationModes,
   bookingModes,
   defaultAppointmentChangePolicy,
-  DEFAULT_RECEPTIONIST_VOICE,
+  DEFAULT_AGENT_VOICE,
   DEFAULT_STAFF_FIRST_RING_SECONDS,
   defaultAgentName,
   defaultGreeting,
   isCurrencyCode,
-  isReceptionistVoice,
+  isAgentVoice,
   isRuntimeLocale,
-  RECEPTIONIST_INSTRUCTIONS_MAX_LENGTH,
-  RECEPTIONIST_TEXT_MAX_LENGTH,
+  AGENT_INSTRUCTIONS_MAX_LENGTH,
+  AGENT_TEXT_MAX_LENGTH,
   STAFF_FIRST_MESSAGE_MAX_LENGTH,
   staffFirstModes,
   staffFirstRingSeconds,
   transferModes,
   type AppointmentChangePolicy,
   type BookingMode,
-  type ReceptionistVoice,
+  type AgentVoice,
   type RuntimeLocale,
   type StaffFirstMode,
   type TransferPolicy,
@@ -61,7 +61,7 @@ export async function loadTestWindowAgentInTransaction(tx: DatabaseTransaction, 
 }
 
 /** Fields a change can set. A missing field stays as it is; null clears an optional one. */
-export type ReceptionistProfilePatch = {
+export type AgentSettingsPatch = {
   greeting?: string;
   tone?: string;
   summary?: string;
@@ -73,7 +73,7 @@ export type ReceptionistProfilePatch = {
   transferNumber?: string | null;
   appointmentChangePolicy?: AppointmentChangePolicy;
   bookingMode?: BookingMode;
-  voice?: ReceptionistVoice;
+  voice?: AgentVoice;
   staffFirstMode?: StaffFirstMode;
   staffFirstNumber?: string | null;
   staffFirstRingSeconds?: number;
@@ -81,10 +81,10 @@ export type ReceptionistProfilePatch = {
   staffFirstHandoverMessage?: string | null;
 };
 
-export type ReceptionistSettingsChange = {
+export type AgentSettingsChange = {
   /** The agent's name, which operators see and callers don't. */
   name?: string;
-  patch: ReceptionistProfilePatch;
+  patch: AgentSettingsPatch;
   locale?: RuntimeLocale;
   /** The language the team reads the receptionist's notes in. Null goes back to following `locale`. */
   teamLocale?: RuntimeLocale | null;
@@ -128,13 +128,13 @@ function appointmentPolicy(value: unknown): AppointmentChangePolicy | undefined 
  * camelCase plus locale, timezone, currency and regenerateSummary. Throws a
  * 400 error that names the first field that is wrong.
  */
-export function readReceptionistSettingsChange(body: unknown): ReceptionistSettingsChange {
+export function readAgentSettingsChange(body: unknown): AgentSettingsChange {
   if (typeof body !== "object" || body === null || Array.isArray(body)) throw invalid("A profile object is required.");
   const input = body as Record<string, unknown>;
   const fields: Partial<Record<ProfileField, string | null>> = {};
   for (const field of profileFields) {
     if (!(field in input)) continue;
-    const maxLength = staffFirstMessageFields.includes(field) ? STAFF_FIRST_MESSAGE_MAX_LENGTH : instructionFields.includes(field) ? RECEPTIONIST_INSTRUCTIONS_MAX_LENGTH : RECEPTIONIST_TEXT_MAX_LENGTH;
+    const maxLength = staffFirstMessageFields.includes(field) ? STAFF_FIRST_MESSAGE_MAX_LENGTH : instructionFields.includes(field) ? AGENT_INSTRUCTIONS_MAX_LENGTH : AGENT_TEXT_MAX_LENGTH;
     const value = optionalText(input[field], field, maxLength);
     if (value === null && !clearableFields.includes(field)) throw invalid(`${field} cannot be empty.`);
     if (value !== undefined) fields[field] = value;
@@ -147,8 +147,8 @@ export function readReceptionistSettingsChange(body: unknown): ReceptionistSetti
   const bookingMode = input.bookingMode;
   if (bookingMode !== undefined && !(bookingModes as readonly unknown[]).includes(bookingMode)) throw invalid("bookingMode is invalid.");
   const voice = input.voice;
-  if (voice !== undefined && !isReceptionistVoice(voice)) throw invalid("voice is invalid.");
-  const patch = { ...fields, ...(policy !== undefined ? { appointmentChangePolicy: policy } : {}), ...(bookingMode !== undefined ? { bookingMode } : {}), ...(voice !== undefined ? { voice } : {}), ...(ringSeconds !== undefined ? { staffFirstRingSeconds: ringSeconds } : {}) } as ReceptionistProfilePatch;
+  if (voice !== undefined && !isAgentVoice(voice)) throw invalid("voice is invalid.");
+  const patch = { ...fields, ...(policy !== undefined ? { appointmentChangePolicy: policy } : {}), ...(bookingMode !== undefined ? { bookingMode } : {}), ...(voice !== undefined ? { voice } : {}), ...(ringSeconds !== undefined ? { staffFirstRingSeconds: ringSeconds } : {}) } as AgentSettingsPatch;
 
   const { locale, teamLocale, timezone, currency, regenerateSummary } = input;
   const name = optionalText(input.name, "name", AGENT_NAME_MAX_LENGTH);
@@ -164,7 +164,7 @@ export function readReceptionistSettingsChange(body: unknown): ReceptionistSetti
 }
 
 /** The settings a receptionist has before anyone edits them. */
-export function defaultReceptionistProfile(businessName: string, locale: RuntimeLocale = "en") {
+export function defaultAgentSettings(businessName: string, locale: RuntimeLocale = "en") {
   return {
     name: defaultAgentName(locale),
     greeting: defaultGreeting(businessName, locale),
@@ -177,7 +177,7 @@ export function defaultReceptionistProfile(businessName: string, locale: Runtime
     transferNumber: null,
     appointmentChangePolicy: defaultAppointmentChangePolicy,
     bookingMode: "instant" as const,
-    voice: DEFAULT_RECEPTIONIST_VOICE,
+    voice: DEFAULT_AGENT_VOICE,
     staffFirstMode: "never" as const,
     staffFirstNumber: null,
     staffFirstRingSeconds: DEFAULT_STAFF_FIRST_RING_SECONDS,
@@ -196,9 +196,9 @@ export function defaultReceptionistProfile(businessName: string, locale: Runtime
  * channels (see channelRules.ts), and the row returned reads them from there.
  * Callers authorize and check the fields first. Null when nothing was saved.
  */
-export async function saveReceptionistProfileInTransaction(
+export async function saveAgentSettingsInTransaction(
   tx: DatabaseTransaction,
-  input: { businessId: string; agentId?: string | undefined; businessName: string; locale?: RuntimeLocale | undefined; name?: string | undefined; patch: ReceptionistProfilePatch; regenerateSummary?: boolean | undefined },
+  input: { businessId: string; agentId?: string | undefined; businessName: string; locale?: RuntimeLocale | undefined; name?: string | undefined; patch: AgentSettingsPatch; regenerateSummary?: boolean | undefined },
 ): Promise<(typeof agents.$inferSelect & BusinessSummary) | null> {
   const { businessId, patch } = input;
   // Without an agentId the change goes to the default agent, as /v1/receptionist and the old dashboard body expect.
@@ -248,11 +248,11 @@ export async function saveReceptionistProfileInTransaction(
  */
 async function insertDefaultAgentInTransaction(
   tx: DatabaseTransaction,
-  input: { businessId: string; businessName: string; locale?: RuntimeLocale | undefined; name?: string | undefined; patch: ReceptionistProfilePatch },
+  input: { businessId: string; businessName: string; locale?: RuntimeLocale | undefined; name?: string | undefined; patch: AgentSettingsPatch },
   changes: Partial<typeof agents.$inferInsert>,
 ): Promise<typeof agents.$inferSelect | undefined> {
   const { businessId, patch } = input;
-  const defaults = defaultReceptionistProfile(input.businessName, input.locale);
+  const defaults = defaultAgentSettings(input.businessName, input.locale);
   const [created] = await tx.insert(agents).values({
     businessId,
     isDefault: true,

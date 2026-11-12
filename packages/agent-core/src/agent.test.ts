@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 const { takeMessageForStaff } = vi.hoisted(() => ({ takeMessageForStaff: vi.fn() }));
 vi.mock("@lobbystack/domain", async (importOriginal) => ({ ...await importOriginal<typeof import("@lobbystack/domain")>(), takeMessageForStaff }));
 
-import { createReceptionistAgent, WEB_CHAT_MAX_OUTPUT_TOKENS } from "./agent";
+import { createConversationAgent, WEB_CHAT_MAX_OUTPUT_TOKENS } from "./agent";
 import type { AgentChannel } from "./tools";
 
 type LanguageModelV4CallOptions = Parameters<MockLanguageModelV4["doGenerate"]>[0];
@@ -23,7 +23,7 @@ async function firstCall(channel: AgentChannel): Promise<LanguageModelV4CallOpti
       };
     },
   });
-  const agent = createReceptionistAgent({ model, context: { domain: { db: {} as never }, snapshot: demoSnapshot, channel } });
+  const agent = createConversationAgent({ model, context: { domain: { db: {} as never }, snapshot: demoSnapshot, channel } });
   await agent.generate({ prompt: "When do you close?" });
   return calls[0]!;
 }
@@ -47,7 +47,7 @@ describe("onAction", () => {
   it("fires for a tool that changed something, before a later step fails", async () => {
     takeMessageForStaff.mockResolvedValue({ ok: true });
     const onAction = vi.fn();
-    const agent = createReceptionistAgent({ model: modelCalling("takeMessage", { message: "Call me back" }, () => { throw new Error("provider down"); }), context, onAction });
+    const agent = createConversationAgent({ model: modelCalling("takeMessage", { message: "Call me back" }, () => { throw new Error("provider down"); }), context, onAction });
     await expect(agent.generate({ prompt: "Have someone call me." })).rejects.toThrow("provider down");
     expect(onAction).toHaveBeenCalledOnce();
   });
@@ -55,23 +55,23 @@ describe("onAction", () => {
   it("fires for an empty last step too", async () => {
     takeMessageForStaff.mockResolvedValue({ ok: true });
     const onAction = vi.fn();
-    const agent = createReceptionistAgent({ model: modelCalling("takeMessage", { message: "Call me back" }, () => ({ content: [] })), context, onAction });
+    const agent = createConversationAgent({ model: modelCalling("takeMessage", { message: "Call me back" }, () => ({ content: [] })), context, onAction });
     expect((await agent.generate({ prompt: "Have someone call me." })).text).toBe("");
     expect(onAction).toHaveBeenCalledOnce();
   });
 
   it("stays quiet for a lookup, and for a tool that refused", async () => {
     const onAction = vi.fn();
-    const lookup = createReceptionistAgent({ model: modelCalling("getBusinessHours", {}, () => ({ content: [{ type: "text", text: "We open at 9." }] })), context, onAction });
+    const lookup = createConversationAgent({ model: modelCalling("getBusinessHours", {}, () => ({ content: [{ type: "text", text: "We open at 9." }] })), context, onAction });
     await lookup.generate({ prompt: "When do you open?" });
     takeMessageForStaff.mockResolvedValue({ ok: false, reason: "Ask for a callback number." });
-    const refused = createReceptionistAgent({ model: modelCalling("takeMessage", { message: "Call me" }, () => ({ content: [{ type: "text", text: "What's your number?" }] })), context, onAction });
+    const refused = createConversationAgent({ model: modelCalling("takeMessage", { message: "Call me" }, () => ({ content: [{ type: "text", text: "What's your number?" }] })), context, onAction });
     await refused.generate({ prompt: "Have someone call me." });
     expect(onAction).not.toHaveBeenCalled();
   });
 });
 
-describe("createReceptionistAgent", () => {
+describe("createConversationAgent", () => {
   it("caps each website chat step's output so a reply can't run long", async () => {
     expect((await firstCall("web_chat")).maxOutputTokens).toBe(WEB_CHAT_MAX_OUTPUT_TOKENS);
   });

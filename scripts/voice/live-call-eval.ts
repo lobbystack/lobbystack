@@ -9,7 +9,7 @@
 import { readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 
-import { buildBrowserSessionConfig, buildPhoneSessionConfig, callerIsDone, callerIsLeaving, createAgentModel, createReceptionistAgent, LiveCallController, liveDelegationEnvironment, SILENCE_CHECK_IN_MS, SILENCE_TIMEOUT_MS, type CallControl, type LiveCallSummary } from "@lobbystack/agent-core";
+import { buildBrowserSessionConfig, buildPhoneSessionConfig, callerIsDone, callerIsLeaving, createAgentModel, createConversationAgent, LiveCallController, liveDelegationEnvironment, SILENCE_CHECK_IN_MS, SILENCE_TIMEOUT_MS, type CallControl, type LiveCallSummary } from "@lobbystack/agent-core";
 import { defaultGreeting, demoSnapshot, isRuntimeLocale, runtimeLocales, type BusinessContextSnapshot } from "@lobbystack/shared";
 import OpenAI from "openai";
 import type { SidebandWS } from "openai/resources/live/sideband/ws";
@@ -150,7 +150,7 @@ async function run(scenario: Scenario, audio: Map<string, Buffer>, agentModel: N
   const callControl: CallControl = {
     hangup: async (reason) => controller.end(reason),
   };
-  const agent = createReceptionistAgent({
+  const agent = createConversationAgent({
     model: agentModel,
     context: { domain: { db: {} as never }, snapshot, channel: values.browser ? "web_voice" : "voice", callId: "eval", callControl },
     directToolAnswers: true,

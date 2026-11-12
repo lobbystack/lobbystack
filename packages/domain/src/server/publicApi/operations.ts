@@ -116,11 +116,11 @@ import { normalizeOnboardingStage, scheduleWelcomeEmailInTransaction } from "../
 import { createPartnerBusiness } from "../partners";
 import { loadNotificationPreferencesInTransaction, loadSavedNotificationPreferencesInTransaction, saveNotificationPreferencesInTransaction } from "../notifications";
 import { completeUploadInTransaction, insertPendingUploadInTransaction, planUpload, type StorageProvider } from "../storage";
-import { bookForCaller } from "../receptionistActions";
+import { bookForCaller } from "../agentActions";
 import { expireAbandonedNumberClaimsInTransaction, lockBusinessNumberClaims, numberEligibilityInTransaction, offerBusinessNumbers, readNumberOffer, reserveApiNumberClaimInTransaction, reservePartnerKeyNumberClaimInTransaction, type NumberInventoryProvider, type NumberOffer, type NumberSelection } from "../phoneNumbers";
 import { isSharedSmsSender, resolveSmsSender } from "../smsSender";
 import { loadBillingContext } from "../usage";
-import { defaultReceptionistProfile, saveReceptionistProfileInTransaction, type ReceptionistProfilePatch } from "../receptionistProfile";
+import { defaultAgentSettings, saveAgentSettingsInTransaction, type AgentSettingsPatch } from "../agentSettings";
 import { loadLegacyInstructions, withLegacyInstructions } from "../channelRules";
 import { loadBusinessSummaryInTransaction } from "../businessSummary";
 import { listActiveAgentsInTransaction, pausedAgentIds } from "../agents";
@@ -1267,7 +1267,7 @@ export async function reorderRulesForApi(context: DomainContext, caller: ApiCall
 
 // Receptionist settings
 
-const receptionistApiFields: Record<keyof ReceptionistProfilePatch, keyof ApiReceptionistUpdate> = {
+const receptionistApiFields: Record<keyof AgentSettingsPatch, keyof ApiReceptionistUpdate> = {
   greeting: "greeting",
   tone: "tone",
   summary: "summary",
@@ -1297,7 +1297,7 @@ async function loadReceptionistState(tx: DatabaseTransaction, businessId: string
   // The instruction fields read the agent's channel rules, not the deprecated columns, and the summary is the business's.
   const summary = await loadBusinessSummaryInTransaction(tx, businessId);
   const profile = agentRow ? { ...await withLegacyInstructions(tx, agentRow), ...summary } : null;
-  return { business, profile, shown: profile ?? { ...defaultReceptionistProfile(business.name, business.locale), ...summary, updatedAt: business.updatedAt } };
+  return { business, profile, shown: profile ?? { ...defaultAgentSettings(business.name, business.locale), ...summary, updatedAt: business.updatedAt } };
 }
 
 // Agents. Read-only for now: the dashboard creates, archives and edits them.
@@ -1338,7 +1338,7 @@ export async function updateReceptionistForApi(context: DomainContext, caller: A
   return await inBusiness(context, caller, async (tx) => {
     const { business, profile: current, shown } = await loadReceptionistState(tx, caller.businessId, true);
     const policy = input.appointment_change_policy;
-    const requested: ReceptionistProfilePatch = {
+    const requested: AgentSettingsPatch = {
       ...(input.greeting !== undefined ? { greeting: input.greeting } : {}),
       ...(input.tone !== undefined ? { tone: input.tone } : {}),
       ...(input.summary !== undefined ? { summary: input.summary } : {}),
@@ -1357,18 +1357,18 @@ export async function updateReceptionistForApi(context: DomainContext, caller: A
       ...(input.staff_first_handover_message !== undefined ? { staffFirstHandoverMessage: input.staff_first_handover_message } : {}),
       ...(policy ? { appointmentChangePolicy: { enabled: policy.enabled, allowCancel: policy.allow_cancel, allowReschedule: policy.allow_reschedule, verificationMode: policy.verification_mode } } : {}),
     };
-    const unchanged = (field: keyof ReceptionistProfilePatch): boolean => {
+    const unchanged = (field: keyof AgentSettingsPatch): boolean => {
       if (!current) return false;
       if (field === "summary") return requested.summary === current.summary && current.summarySource === "operator";
       if (field === "appointmentChangePolicy") return JSON.stringify(requested.appointmentChangePolicy) === JSON.stringify(normalizeAppointmentChangePolicy(current.appointmentChangePolicy));
       return requested[field] === current[field];
     };
-    const patch = Object.fromEntries(Object.entries(requested).filter(([field]) => !unchanged(field as keyof ReceptionistProfilePatch))) as ReceptionistProfilePatch;
+    const patch = Object.fromEntries(Object.entries(requested).filter(([field]) => !unchanged(field as keyof AgentSettingsPatch))) as AgentSettingsPatch;
     const regenerateSummary = input.regenerate_summary === true;
     if (!Object.keys(patch).length && !regenerateSummary) return serializeReceptionist(shown);
-    const profile = await saveReceptionistProfileInTransaction(tx, { businessId: caller.businessId, businessName: business.name, locale: business.locale, patch, regenerateSummary });
+    const profile = await saveAgentSettingsInTransaction(tx, { businessId: caller.businessId, businessName: business.name, locale: business.locale, patch, regenerateSummary });
     if (!profile) throw new Error("The receptionist settings could not be saved.");
-    const fields = [...(Object.keys(patch) as Array<keyof ReceptionistProfilePatch>).map((field) => receptionistApiFields[field]), ...(regenerateSummary ? ["regenerate_summary"] : [])];
+    const fields = [...(Object.keys(patch) as Array<keyof AgentSettingsPatch>).map((field) => receptionistApiFields[field]), ...(regenerateSummary ? ["regenerate_summary"] : [])];
     await audit(tx, caller, { eventType: "api.receptionist.updated", entityType: "receptionist_profile", entityId: profile.id, payload: { fields } });
     return serializeReceptionist(profile);
   });

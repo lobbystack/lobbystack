@@ -8,7 +8,7 @@ import { SNAPSHOT_SCHEMA_VERSION } from "@lobbystack/shared";
 
 import { isCurrentSnapshot } from "../snapshot";
 import { loadLatestBusinessSnapshot, refreshBusinessSnapshot } from "./knowledge";
-import { saveReceptionistProfileInTransaction } from "./receptionistProfile";
+import { saveAgentSettingsInTransaction } from "./agentSettings";
 import { getBusinessSnapshotForAgent } from "./snapshotCache";
 
 // Migration 0203 and the old instruction fields, against a dedicated test database. Every test rolls back.
@@ -189,7 +189,7 @@ describe.skipIf(!testUrl)("the old instruction fields", () => {
     await rollbackTest(async (tx) => {
       const businessId = await business(tx, "fr");
       const [agent] = await tx.insert(agents).values({ ...agentFields, businessId, isDefault: true }).returning({ id: agents.id });
-      const save = async (patch: Parameters<typeof saveReceptionistProfileInTransaction>[1]["patch"]) => await saveReceptionistProfileInTransaction(tx, { businessId, businessName: "Harbor Dental", patch });
+      const save = async (patch: Parameters<typeof saveAgentSettingsInTransaction>[1]["patch"]) => await saveAgentSettingsInTransaction(tx, { businessId, businessName: "Harbor Dental", patch });
 
       expect(await save({ voiceInstructions: "Parlez lentement.", chatInstructions: "Soyez bref." })).toMatchObject({ voiceInstructions: "Parlez lentement.", smsInstructions: null, chatInstructions: "Soyez bref." });
       expect(await rulesOf(tx, agent!.id)).toEqual([

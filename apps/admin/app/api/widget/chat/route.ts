@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { createUIMessageStream, createUIMessageStreamResponse, type LanguageModelUsage } from "ai";
 import { NextResponse } from "next/server";
 
-import { createReceptionistAgent } from "@lobbystack/agent-core/agent";
+import { createConversationAgent } from "@lobbystack/agent-core/agent";
 import { createAgentModel, describeAgentUsage } from "@lobbystack/agent-core/model";
 import { announceLateWidgetReply, appendMessage, getBusinessSnapshotForAgent, getCachedBusinessSnapshot, getOrCreateWidgetConversation, loadWidgetChatHistory, recordAiGenerationEvent, reserveWidgetChatUsageInTransaction, returnQuietTeamChat } from "@lobbystack/domain";
 import { withBusinessTransaction } from "@lobbystack/db";
@@ -158,7 +158,7 @@ export async function POST(request: Request) {
           // The widget's language answers; when it shows English, the widget's set language, else the business's caller language.
           // The widget's interface falls back to English for languages it lacks, so "en" says nothing about the visitor.
           const locale = normalizeRuntimeLocale(body.locale && body.locale !== "en" ? body.locale : session.config.localeOverride ?? session.defaultLocale);
-          const agent = createReceptionistAgent({
+          const agent = createConversationAgent({
             model: model!,
             context: {
               domain: context,

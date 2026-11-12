@@ -4,7 +4,7 @@ import { asc, eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 
 import { agentRules, agents, createDatabaseClient, users, type Database, type DatabaseTransaction } from "@lobbystack/db";
-import { createBusiness, getBusinessSnapshotForAgent, NEW_BUSINESS_RECEPTIONIST_INSTRUCTIONS, refreshBusinessSnapshot } from "@lobbystack/domain";
+import { createBusiness, getBusinessSnapshotForAgent, NEW_BUSINESS_AGENT_INSTRUCTIONS, refreshBusinessSnapshot } from "@lobbystack/domain";
 
 import { buildAgentInstructions, buildLiveInstructions } from "./instructions";
 
@@ -50,8 +50,8 @@ describe.skipIf(!testUrl)("a new business's default instructions", () => {
       expect(agent).toMatchObject({ voiceInstructions: null, smsInstructions: null, chatInstructions: null });
       const rules = await tx.select({ title: agentRules.title, content: agentRules.content, channel: agentRules.channel, active: agentRules.active }).from(agentRules).where(eq(agentRules.agentId, agent!.id)).orderBy(asc(agentRules.sortOrder));
       expect(rules).toEqual([
-        { title: "Pendant les appels", content: NEW_BUSINESS_RECEPTIONIST_INSTRUCTIONS.voiceInstructions, channel: "voice", active: true },
-        { title: "Par texto", content: NEW_BUSINESS_RECEPTIONIST_INSTRUCTIONS.smsInstructions, channel: "sms", active: true },
+        { title: "Pendant les appels", content: NEW_BUSINESS_AGENT_INSTRUCTIONS.voiceInstructions, channel: "voice", active: true },
+        { title: "Par texto", content: NEW_BUSINESS_AGENT_INSTRUCTIONS.smsInstructions, channel: "sms", active: true },
       ]);
 
       await as(tx, "lobbystack_worker");
@@ -60,15 +60,15 @@ describe.skipIf(!testUrl)("a new business's default instructions", () => {
       await as(tx, null);
 
       const call = buildLiveInstructions(snapshot, "voice");
-      expect(call).toContain(NEW_BUSINESS_RECEPTIONIST_INSTRUCTIONS.voiceInstructions);
-      expect(call).not.toContain(NEW_BUSINESS_RECEPTIONIST_INSTRUCTIONS.smsInstructions);
+      expect(call).toContain(NEW_BUSINESS_AGENT_INSTRUCTIONS.voiceInstructions);
+      expect(call).not.toContain(NEW_BUSINESS_AGENT_INSTRUCTIONS.smsInstructions);
       const text = buildAgentInstructions(snapshot, { channel: "sms", callerPhone: "+14165550100" });
-      expect(text).toContain(NEW_BUSINESS_RECEPTIONIST_INSTRUCTIONS.smsInstructions);
-      expect(text).not.toContain(NEW_BUSINESS_RECEPTIONIST_INSTRUCTIONS.voiceInstructions);
+      expect(text).toContain(NEW_BUSINESS_AGENT_INSTRUCTIONS.smsInstructions);
+      expect(text).not.toContain(NEW_BUSINESS_AGENT_INSTRUCTIONS.voiceInstructions);
       // Website chat follows neither.
       const chat = buildAgentInstructions(snapshot, { channel: "web_chat" });
-      expect(chat).not.toContain(NEW_BUSINESS_RECEPTIONIST_INSTRUCTIONS.smsInstructions);
-      expect(chat).not.toContain(NEW_BUSINESS_RECEPTIONIST_INSTRUCTIONS.voiceInstructions);
+      expect(chat).not.toContain(NEW_BUSINESS_AGENT_INSTRUCTIONS.smsInstructions);
+      expect(chat).not.toContain(NEW_BUSINESS_AGENT_INSTRUCTIONS.voiceInstructions);
     });
   });
 });

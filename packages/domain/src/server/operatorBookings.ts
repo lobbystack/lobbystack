@@ -6,7 +6,7 @@ import { BookingUnavailableError, type NoOpeningsReason } from "../availability"
 import { requireBusinessMembership } from "../authz";
 import { appointmentNotes, findOpeningsInTransaction } from "./booking";
 import type { DomainContext } from "./context";
-import { bookForCaller } from "./receptionistActions";
+import { bookForCaller } from "./agentActions";
 
 function serviceUnavailable(): Error {
   return Object.assign(new Error("Service is not available."), { status: 409, code: "service_unavailable" });

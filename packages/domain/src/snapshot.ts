@@ -11,7 +11,7 @@ import type {
   TransferPolicy,
   AppointmentChangePolicy,
   BookingMode,
-  ReceptionistVoice,
+  AgentVoice,
 } from "@lobbystack/shared";
 import { CHANNEL_RULE_CONTENT_CALL_MAX_LENGTH, RULE_CONTENT_CALL_MAX_LENGTH, RULE_TITLE_MAX_LENGTH, RULES_CALL_MAX, SNAPSHOT_SCHEMA_VERSION } from "@lobbystack/shared";
 
@@ -34,7 +34,7 @@ type SnapshotBuilderInput = {
   businessType: BusinessContextSnapshot["businessType"];
   telemetryEnabled?: boolean;
   greeting: string;
-  voice?: ReceptionistVoice;
+  voice?: AgentVoice;
   tone: string;
   bookingPolicy: string;
   voiceInstructions?: string;

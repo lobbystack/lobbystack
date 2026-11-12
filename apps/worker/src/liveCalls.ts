@@ -1,7 +1,7 @@
 import { randomUUID, timingSafeEqual } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 
-import { callerIsDone, callerIsLeaving, closeLiveSession, createAgentModel, createReceptionistAgent, LiveCallController, liveDelegationEnvironment, SILENCE_CHECK_IN_MS, SILENCE_TIMEOUT_MS, WRAP_UP_MAX_MS, type AgentChannel, type CallControl, type KeypadPasscodeCheck, type LiveCallSetup, type LiveCallSummary, withCallLanguage } from "@lobbystack/agent-core";
+import { callerIsDone, callerIsLeaving, closeLiveSession, createAgentModel, createConversationAgent, LiveCallController, liveDelegationEnvironment, SILENCE_CHECK_IN_MS, SILENCE_TIMEOUT_MS, WRAP_UP_MAX_MS, type AgentChannel, type CallControl, type KeypadPasscodeCheck, type LiveCallSetup, type LiveCallSummary, withCallLanguage } from "@lobbystack/agent-core";
 import {
   blockLiveCaller,
   checkNumberTrialMinutes,
@@ -443,7 +443,7 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
       if (!loaded) throw new Error("The business has no published snapshot.");
       // A caller who picked a language before the call hears the greeting in it.
       const snapshot = withCallLanguage(loaded, request.language);
-      const agent = createReceptionistAgent({
+      const agent = createConversationAgent({
         model,
         context: {
           domain: input.domain,

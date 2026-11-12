@@ -3,7 +3,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 import { agents, businesses, createDatabaseClient, outboxMessages, phoneNumbers, type DatabaseTransaction, defaultAgentIdOf } from "@lobbystack/db";
 
-import { saveReceptionistProfileInTransaction } from "./receptionistProfile";
+import { saveAgentSettingsInTransaction } from "./agentSettings";
 import { deleteAgentRuleInTransaction, insertAgentRuleInTransaction, listAgentRulesInTransaction, reorderAgentRulesInTransaction, updateAgentRuleInTransaction } from "./rules";
 import { enqueueStaffFirstRouting } from "./staffFirst";
 
@@ -60,29 +60,29 @@ const greetingOf = async (tx: DatabaseTransaction, agentId: string) => (await tx
 describe.skipIf(!testUrl)("one agent's settings, rules and routing", () => {
   it("saves settings to the agent named, and to the default agent without one", async () => {
     await withTwoAgents(async ({ tx, businessId, agentA, agentB }) => {
-      await saveReceptionistProfileInTransaction(tx, { businessId, agentId: agentB, businessName: "Harbor Dental", patch: { greeting: "Evening, Harbor Dental" } });
+      await saveAgentSettingsInTransaction(tx, { businessId, agentId: agentB, businessName: "Harbor Dental", patch: { greeting: "Evening, Harbor Dental" } });
       expect([await greetingOf(tx, agentA), await greetingOf(tx, agentB)]).toEqual(["Front desk here", "Evening, Harbor Dental"]);
-      await saveReceptionistProfileInTransaction(tx, { businessId, businessName: "Harbor Dental", patch: { greeting: "Morning, Harbor Dental" } });
+      await saveAgentSettingsInTransaction(tx, { businessId, businessName: "Harbor Dental", patch: { greeting: "Morning, Harbor Dental" } });
       expect([await greetingOf(tx, agentA), await greetingOf(tx, agentB)]).toEqual(["Morning, Harbor Dental", "Evening, Harbor Dental"]);
     });
   });
 
   it("refuses an agent the business doesn't have, or one that's archived", async () => {
     await withTwoAgents(async ({ tx, businessId, agentB }) => {
-      await expect(saveReceptionistProfileInTransaction(tx, { businessId, agentId: randomUUID(), businessName: "Harbor Dental", patch: { greeting: "Hi" } })).rejects.toMatchObject({ status: 404, code: "agent_not_found" });
+      await expect(saveAgentSettingsInTransaction(tx, { businessId, agentId: randomUUID(), businessName: "Harbor Dental", patch: { greeting: "Hi" } })).rejects.toMatchObject({ status: 404, code: "agent_not_found" });
       // An agent can't be archived while it holds a channel.
       await tx.execute(sql`update public.phone_numbers set agent_id = (select id from public.agents where business_id = ${businessId}::uuid and is_default) where business_id = ${businessId}::uuid`);
       await tx.update(agents).set({ archivedAt: new Date() }).where(eq(agents.id, agentB));
-      await expect(saveReceptionistProfileInTransaction(tx, { businessId, agentId: agentB, businessName: "Harbor Dental", patch: { greeting: "Hi" } })).rejects.toMatchObject({ status: 404 });
+      await expect(saveAgentSettingsInTransaction(tx, { businessId, agentId: agentB, businessName: "Harbor Dental", patch: { greeting: "Hi" } })).rejects.toMatchObject({ status: 404 });
     });
   });
 
   it("creates the default agent from the defaults when the business has none", async () => {
     await rolledBack(async (tx) => {
       const businessId = await business(tx);
-      const saved = await saveReceptionistProfileInTransaction(tx, { businessId, businessName: "Harbor Dental", patch: { greeting: "Hello from Harbor" } });
+      const saved = await saveAgentSettingsInTransaction(tx, { businessId, businessName: "Harbor Dental", patch: { greeting: "Hello from Harbor" } });
       expect(saved).toMatchObject({ isDefault: true, greeting: "Hello from Harbor" });
-      const again = await saveReceptionistProfileInTransaction(tx, { businessId, businessName: "Harbor Dental", patch: { tone: "calm" } });
+      const again = await saveAgentSettingsInTransaction(tx, { businessId, businessName: "Harbor Dental", patch: { tone: "calm" } });
       expect(again?.id).toBe(saved?.id);
       expect(await tx.select({ id: agents.id }).from(agents).where(eq(agents.businessId, businessId))).toHaveLength(1);
     });

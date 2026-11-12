@@ -21,7 +21,7 @@ const mocks = vi.hoisted(() => ({
   reserveWidgetChatUsageInTransaction: vi.fn(),
   getWorkerDatabase: vi.fn(),
   createAgentModel: vi.fn(),
-  createReceptionistAgent: vi.fn(),
+  createConversationAgent: vi.fn(),
 }));
 
 vi.mock("@lobbystack/domain", () => ({
@@ -48,7 +48,7 @@ vi.mock("@lobbystack/agent-core/model", () => ({
 }));
 
 vi.mock("@lobbystack/agent-core/agent", () => ({
-  createReceptionistAgent: mocks.createReceptionistAgent,
+  createConversationAgent: mocks.createConversationAgent,
 }));
 
 function agentStreaming(textStream: AsyncIterable<string>, finishReason = "stop") {
@@ -155,7 +155,7 @@ beforeEach(() => {
   mocks.withBusinessTransaction.mockImplementation(async (_db, _ctx, callback) => await callback({}));
   mocks.reserveWidgetChatUsageInTransaction.mockResolvedValue({ allowed: true, plan: "scale" });
   mocks.createAgentModel.mockReturnValue({ modelId: "test" });
-  mocks.createReceptionistAgent.mockReturnValue(agentStreaming((async function* () { yield "Thanks"; })()));
+  mocks.createConversationAgent.mockReturnValue(agentStreaming((async function* () { yield "Thanks"; })()));
 });
 
 afterEach(() => {
@@ -198,7 +198,7 @@ describe("POST /api/widget/chat", () => {
     mocks.resolveWidgetSessionAccess.mockResolvedValue({ ok: true, session: { ...session, config: { liveChat: { enabled: true } } } });
     mocks.getOrCreateWidgetConversation.mockResolvedValue({ conversationId, automationState: "human_handoff" });
     mocks.returnQuietTeamChat.mockResolvedValue("ai_active");
-    mocks.createReceptionistAgent.mockReturnValue(agentReplyingIn(["We're open Sunday."]));
+    mocks.createConversationAgent.mockReturnValue(agentReplyingIn(["We're open Sunday."]));
 
     const body = await readSse(await POST(widgetRequest()));
 
@@ -216,7 +216,7 @@ describe("POST /api/widget/chat", () => {
 
     expect(mocks.returnQuietTeamChat).not.toHaveBeenCalled();
     expect(mocks.createAgentModel).not.toHaveBeenCalled();
-    expect(mocks.createReceptionistAgent).not.toHaveBeenCalled();
+    expect(mocks.createConversationAgent).not.toHaveBeenCalled();
     expect(body).toContain('"messageMetadata":{"automationState":"human_handoff"}');
     expect(savedReplies()).toEqual([]);
   });
@@ -251,7 +251,7 @@ describe("POST /api/widget/chat", () => {
     let openRest!: () => void;
     const rest = new Promise<void>((resolve) => { openRest = resolve; });
     const agent = agentReplyingIn(["We're open ", "Sunday 10 to 4."], [Promise.resolve(), rest]);
-    mocks.createReceptionistAgent.mockReturnValue(agent);
+    mocks.createConversationAgent.mockReturnValue(agent);
     const connection = new AbortController();
     const reader = await readReplyUntil("We're open", connection);
 
@@ -272,7 +272,7 @@ describe("POST /api/widget/chat", () => {
     let openReply!: () => void;
     const reply = new Promise<void>((resolve) => { openReply = resolve; });
     const agent = agentReplyingIn(["We're open Sunday."], [reply]);
-    mocks.createReceptionistAgent.mockReturnValue(agent);
+    mocks.createConversationAgent.mockReturnValue(agent);
     const connection = new AbortController();
     const reader = await readReplyUntil('"type":"text-start"', connection);
 
@@ -287,7 +287,7 @@ describe("POST /api/widget/chat", () => {
   });
 
   it("doesn't announce a reply the visitor stayed for", async () => {
-    mocks.createReceptionistAgent.mockReturnValue(agentReplyingIn(["We're open ", "Sunday 10 to 4."]));
+    mocks.createConversationAgent.mockReturnValue(agentReplyingIn(["We're open ", "Sunday 10 to 4."]));
     const body = await readSse(await POST(widgetRequest()));
     expect(body).toContain("Sunday 10 to 4.");
     expect(savedReplies()).toEqual([expect.objectContaining({ body: "We're open Sunday 10 to 4." })]);
@@ -330,18 +330,18 @@ describe("POST /api/widget/chat", () => {
     mocks.getCachedBusinessSnapshot.mockResolvedValue(stored);
     mocks.getBusinessSnapshotForAgent.mockResolvedValue(projected);
     mocks.loadWidgetChatHistory.mockResolvedValue([]);
-    mocks.createReceptionistAgent.mockReturnValue(agentStreaming((async function* () { yield "Hello"; })()));
+    mocks.createConversationAgent.mockReturnValue(agentStreaming((async function* () { yield "Hello"; })()));
     await readSse(await POST(widgetRequest()));
     expect(mocks.getOrCreateWidgetConversation).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ agentId: "agent_of_key" }));
     expect(mocks.getBusinessSnapshotForAgent).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ agentId: "agent_of_chat", loaded: stored }));
-    expect(mocks.createReceptionistAgent.mock.calls[0]?.[0].context.snapshot).toBe(projected);
+    expect(mocks.createConversationAgent.mock.calls[0]?.[0].context.snapshot).toBe(projected);
   });
 
   it("streams an AI reply and persists the outbound message when automation is active", async () => {
     vi.stubEnv("AI_CHAT_API_KEY", "test-api-key");
     mocks.getCachedBusinessSnapshot.mockResolvedValue({ businessId } as BusinessContextSnapshot);
     mocks.loadWidgetChatHistory.mockResolvedValue([]);
-    mocks.createReceptionistAgent.mockReturnValue(agentStreaming((async function* () {
+    mocks.createConversationAgent.mockReturnValue(agentStreaming((async function* () {
       yield "Thanks";
       yield " for reaching out!";
     })()));
@@ -353,7 +353,7 @@ describe("POST /api/widget/chat", () => {
     expect(body).toContain("Thanks");
     expect(body).toContain("for reaching out!");
     expect(mocks.appendMessage).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ direction: "outbound", channel: "web_chat", aiGenerated: true }));
-    expect(mocks.createReceptionistAgent).toHaveBeenCalledWith(expect.objectContaining({ context: expect.objectContaining({ channel: "web_chat", conversationId }) }));
+    expect(mocks.createConversationAgent).toHaveBeenCalledWith(expect.objectContaining({ context: expect.objectContaining({ channel: "web_chat", conversationId }) }));
     await vi.waitFor(() => expect(mocks.recordAiGenerationEvent).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
       businessId,
       conversationId,
@@ -368,7 +368,7 @@ describe("POST /api/widget/chat", () => {
     mocks.getCachedBusinessSnapshot.mockResolvedValue({ businessId } as BusinessContextSnapshot);
     mocks.loadWidgetChatHistory.mockResolvedValue([]);
     // eslint-disable-next-line require-yield -- the model wrote no text before the cap.
-    mocks.createReceptionistAgent.mockReturnValue(agentStreaming((async function* () {})(), "length"));
+    mocks.createConversationAgent.mockReturnValue(agentStreaming((async function* () {})(), "length"));
 
     const body = await readSse(await POST(widgetRequest({ locale: "fr" })));
 
@@ -380,7 +380,7 @@ describe("POST /api/widget/chat", () => {
 
   it("keeps the error for an empty reply that didn't hit the cap", async () => {
     // eslint-disable-next-line require-yield -- the model wrote no text.
-    mocks.createReceptionistAgent.mockReturnValue(agentStreaming((async function* () {})(), "stop"));
+    mocks.createConversationAgent.mockReturnValue(agentStreaming((async function* () {})(), "stop"));
     const body = await readSse(await POST(widgetRequest()));
     expect(body).toContain("The chat could not be processed.");
     expect(savedReplies()).toEqual([]);
@@ -398,14 +398,14 @@ describe("POST /api/widget/chat", () => {
     mocks.getCachedBusinessSnapshot.mockResolvedValue({ businessId } as BusinessContextSnapshot);
     mocks.loadWidgetChatHistory.mockResolvedValue([]);
     await readSse(await POST(widgetRequest(body)));
-    expect(mocks.createReceptionistAgent).toHaveBeenCalledWith(expect.objectContaining({ extraInstructions: `Reply in ${language} unless the visitor clearly asks to switch languages.` }));
+    expect(mocks.createConversationAgent).toHaveBeenCalledWith(expect.objectContaining({ extraInstructions: `Reply in ${language} unless the visitor clearly asks to switch languages.` }));
   });
 
   it("lets a visitor ask for someone from the team when the widget has live chat on, and tells the widget the chat waits for them", async () => {
     mocks.resolveWidgetSessionAccess.mockResolvedValue({ ok: true, session: { ...session, config: { liveChat: { enabled: true } } } });
     mocks.getCachedBusinessSnapshot.mockResolvedValue({ businessId } as BusinessContextSnapshot);
     mocks.loadWidgetChatHistory.mockResolvedValue([]);
-    mocks.createReceptionistAgent.mockImplementation((input: { context: { liveChat?: { onTeamRequested?: () => void } } }) => ({
+    mocks.createConversationAgent.mockImplementation((input: { context: { liveChat?: { onTeamRequested?: () => void } } }) => ({
       stream: vi.fn(async () => {
         input.context.liveChat?.onTeamRequested?.();
         return { textStream: (async function* () { yield "I've let the team know."; })(), totalUsage: Promise.resolve({ inputTokens: 1, outputTokens: 1, totalTokens: 2 }), finishReason: Promise.resolve("stop") };
@@ -414,7 +414,7 @@ describe("POST /api/widget/chat", () => {
 
     const body = await readSse(await POST(widgetRequest({ locale: "fr" })));
 
-    expect(mocks.createReceptionistAgent).toHaveBeenCalledWith(expect.objectContaining({ context: expect.objectContaining({ liveChat: expect.objectContaining({ locale: "fr" }) }) }));
+    expect(mocks.createConversationAgent).toHaveBeenCalledWith(expect.objectContaining({ context: expect.objectContaining({ liveChat: expect.objectContaining({ locale: "fr" }) }) }));
     expect(body).toContain('"messageMetadata":{"automationState":"human_handoff","waitingForTeam":true}');
     expect(mocks.appendMessage).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ body: "I've let the team know.", direction: "outbound", aiGenerated: true }));
   });
@@ -425,13 +425,13 @@ describe("POST /api/widget/chat", () => {
 
     const body = await readSse(await POST(widgetRequest()));
 
-    expect(mocks.createReceptionistAgent.mock.calls[0]![0].context).not.toHaveProperty("liveChat");
+    expect(mocks.createConversationAgent.mock.calls[0]![0].context).not.toHaveProperty("liveChat");
     expect(body).toContain('"messageMetadata":{"automationState":"ai_active"}');
   });
 
   it("does not expose provider error details in the UI stream", async () => {
     // eslint-disable-next-line require-yield -- mock generator must throw before yielding.
-    mocks.createReceptionistAgent.mockReturnValue(agentStreaming((async function* () { throw new Error("secret provider token"); })(), "error"));
+    mocks.createConversationAgent.mockReturnValue(agentStreaming((async function* () { throw new Error("secret provider token"); })(), "error"));
     const body = await readSse(await POST(widgetRequest()));
     expect(body).toContain("The chat could not be processed.");
     expect(body).not.toContain("secret provider token");

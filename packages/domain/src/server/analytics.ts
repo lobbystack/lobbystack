@@ -7,7 +7,7 @@ import { discountedAmount, isNonBillableCallDisposition, MAX_PHONE_CALL_MS, MIN_
 import { requireBusinessMembership } from "../authz";
 import { listActiveAgentsInTransaction } from "./agents";
 import type { DomainContext } from "./context";
-import type { ReceptionistChannel } from "./receptionistActions";
+import type { AgentActionChannel } from "./agentActions";
 
 export const analyticsGranularities = ["hour", "day", "week", "month", "year"] as const;
 export type AnalyticsGranularity = (typeof analyticsGranularities)[number];
@@ -65,7 +65,7 @@ export function analyticsMessageChannel(channel: string): AnalyticsChannel {
  * The channels the receptionist books on. Bookings from the public API, MCP,
  * or the dashboard come from people, so they don't count toward booked value.
  */
-export const analyticsReceptionistBookingChannels = ["voice", "web_voice", "web_chat", "instagram", "sms"] as const satisfies readonly ReceptionistChannel[];
+export const analyticsAgentBookingChannels = ["voice", "web_voice", "web_chat", "instagram", "sms"] as const satisfies readonly AgentActionChannel[];
 
 /**
  * What one booking of a service adds to booked value, in the currency's
@@ -102,7 +102,7 @@ export function summarizeAnalyticsBookedValue(groups: AnalyticsBookingGroup[]): 
   const total = { current: 0, previous: 0 };
   for (const group of groups) {
     if (group.status === "canceled") continue;
-    if (!(analyticsReceptionistBookingChannels as readonly string[]).includes(group.sourceChannel)) continue;
+    if (!(analyticsAgentBookingChannels as readonly string[]).includes(group.sourceChannel)) continue;
     const value = analyticsBookedValueMinor(group);
     if (value === null) continue;
     total[group.current ? "current" : "previous"] += value * group.count;

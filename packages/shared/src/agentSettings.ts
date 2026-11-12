@@ -22,19 +22,19 @@ export const bookingModes = ["off", "request", "instant"] as const;
  * The GPT-Live built-in voices a business can pick for its receptionist.
  * agent-core checks this list against the OpenAI SDK's BuiltInVoice type.
  */
-export const receptionistVoices = ["alloy", "ash", "ballad", "beacon", "bossa", "cedar", "cinder", "coral", "delta", "echo", "gleam", "marin", "meridian", "quartz", "ripple", "sage", "shimmer", "stone", "tempo", "verse", "vesper", "willow"] as const;
+export const agentVoices = ["alloy", "ash", "ballad", "beacon", "bossa", "cedar", "cinder", "coral", "delta", "echo", "gleam", "marin", "meridian", "quartz", "ripple", "sage", "shimmer", "stone", "tempo", "verse", "vesper", "willow"] as const;
 
-export type ReceptionistVoice = (typeof receptionistVoices)[number];
+export type AgentVoice = (typeof agentVoices)[number];
 
-export type ReceptionistVoicePitch = "low" | "mid" | "high";
-export type ReceptionistVoicePace = "slow" | "steady" | "quick";
+export type AgentVoicePitch = "low" | "mid" | "high";
+export type AgentVoicePace = "slow" | "steady" | "quick";
 
 /**
  * How each voice sounds, measured from the preview clips (scripts/voice/record-voice-previews.ts):
  * pitch from the median fundamental frequency, pace from how long the same line takes.
  * The dashboard shows these as each voice's description.
  */
-export const receptionistVoiceTraits: Record<ReceptionistVoice, { pitch: ReceptionistVoicePitch; pace: ReceptionistVoicePace }> = {
+export const agentVoiceTraits: Record<AgentVoice, { pitch: AgentVoicePitch; pace: AgentVoicePace }> = {
   alloy: { pitch: "mid", pace: "quick" },
   ash: { pitch: "low", pace: "quick" },
   ballad: { pitch: "high", pace: "steady" },
@@ -59,7 +59,7 @@ export const receptionistVoiceTraits: Record<ReceptionistVoice, { pitch: Recepti
   willow: { pitch: "high", pace: "steady" },
 };
 
-export type ReceptionistVoiceGender = "female" | "male" | "neutral";
+export type AgentVoiceGender = "female" | "male" | "neutral";
 
 /**
  * Whether each voice sounds like a woman or a man, so the receptionist uses
@@ -68,7 +68,7 @@ export type ReceptionistVoiceGender = "female" | "male" | "neutral";
  * pitch: 99 to 117 Hz is male, 188 to 213 Hz female. alloy sits between them,
  * at 150 Hz, and OpenAI calls it neutral.
  */
-export const receptionistVoiceGenders: Record<ReceptionistVoice, ReceptionistVoiceGender> = {
+export const agentVoiceGenders: Record<AgentVoice, AgentVoiceGender> = {
   alloy: "neutral",
   ash: "male",
   ballad: "male",
@@ -94,22 +94,22 @@ export const receptionistVoiceGenders: Record<ReceptionistVoice, ReceptionistVoi
 };
 
 /** The voice calls used before businesses could pick one, and still the default. */
-export const DEFAULT_RECEPTIONIST_VOICE: ReceptionistVoice = "marin";
+export const DEFAULT_AGENT_VOICE: AgentVoice = "marin";
 
-export function isReceptionistVoice(value: unknown): value is ReceptionistVoice {
-  return (receptionistVoices as readonly unknown[]).includes(value);
+export function isAgentVoice(value: unknown): value is AgentVoice {
+  return (agentVoices as readonly unknown[]).includes(value);
 }
 
 /** Missing, unknown or retired voices fall back to the default, so a call always has a voice. */
-export function normalizeReceptionistVoice(value: unknown): ReceptionistVoice {
-  return isReceptionistVoice(value) ? value : DEFAULT_RECEPTIONIST_VOICE;
+export function normalizeAgentVoice(value: unknown): AgentVoice {
+  return isAgentVoice(value) ? value : DEFAULT_AGENT_VOICE;
 }
 
 /** Longest greeting, tone, summary or booking policy. */
-export const RECEPTIONIST_TEXT_MAX_LENGTH = 2_000;
+export const AGENT_TEXT_MAX_LENGTH = 2_000;
 
 /** Longest voice, SMS or chat instructions. */
-export const RECEPTIONIST_INSTRUCTIONS_MAX_LENGTH = 8_000;
+export const AGENT_INSTRUCTIONS_MAX_LENGTH = 8_000;
 
 /** Longest rule title. */
 export const RULE_TITLE_MAX_LENGTH = 160;

@@ -8,7 +8,7 @@ import { appointments, businessMemberships, businesses, calls, contacts, convers
 import { createAppointmentChangeVerification } from "./appointmentChanges";
 import { cancelAppointment, cancelAppointmentInTransaction } from "./booking";
 import { listCurrentAppointments, listUpcomingAppointments } from "./operatorActivity";
-import { lookupCallerAppointments, requestCancellationForCaller, requestRescheduleForCaller, takeMessageForStaff } from "./receptionistActions";
+import { lookupCallerAppointments, requestCancellationForCaller, requestRescheduleForCaller, takeMessageForStaff } from "./agentActions";
 import { CANCELLATION_REQUEST, completeVoiceFollowUpTasks, getCallDetail, listOpenVoiceFollowUps, RESCHEDULE_REQUEST } from "./voice";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.

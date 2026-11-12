@@ -14,7 +14,7 @@ import { finishLiveCall, startLiveWebCall } from "./liveCalls";
 import { refreshBusinessSnapshot } from "./knowledge";
 import { getActiveOnboardingState } from "./onboarding";
 import { acceptPartnerInvitation, hashPartnerToken, invitePartnerMember, listPartnerBusinesses, releaseBusiness, signUpPartner, type PartnerMemberActor } from "./partners";
-import { listUserBusinesses, NEW_BUSINESS_RECEPTIONIST_INSTRUCTIONS, readActiveBusinessId } from "./tenancy";
+import { listUserBusinesses, NEW_BUSINESS_AGENT_INSTRUCTIONS, readActiveBusinessId } from "./tenancy";
 import { periodKeyFor } from "./usage";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
@@ -258,7 +258,7 @@ describe.skipIf(!client)("a partner's prospect demos against PostgreSQL", () => 
         bookingPolicy: (await tx.select({ bookingPolicy: agents.bookingPolicy }).from(agents).where(eq(agents.businessId, demo.businessId)))[0]?.bookingPolicy,
         rules: await tx.select({ channel: agentRules.channel, content: agentRules.content }).from(agentRules).where(eq(agentRules.businessId, demo.businessId)).orderBy(agentRules.sortOrder),
       }));
-      expect(receptionist).toEqual({ bookingPolicy: NEW_BUSINESS_RECEPTIONIST_INSTRUCTIONS.bookingPolicy, rules: [{ channel: "voice", content: NEW_BUSINESS_RECEPTIONIST_INSTRUCTIONS.voiceInstructions }, { channel: "sms", content: "Text back within the hour." }] });
+      expect(receptionist).toEqual({ bookingPolicy: NEW_BUSINESS_AGENT_INSTRUCTIONS.bookingPolicy, rules: [{ channel: "voice", content: NEW_BUSINESS_AGENT_INSTRUCTIONS.voiceInstructions }, { channel: "sms", content: "Text back within the hour." }] });
       const refresh = await asMigrator(tx, async () => await tx.select({ id: outboxMessages.id }).from(outboxMessages).where(and(eq(outboxMessages.businessId, demo.businessId), eq(outboxMessages.topic, "snapshot.refresh"), eq(outboxMessages.aggregateType, "agent"))));
       expect(refresh).toHaveLength(1);
       // A claim can't be turned off.

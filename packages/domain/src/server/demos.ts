@@ -17,10 +17,10 @@ import { actorUserId, partnerActorRole, partnerRls } from "./partnerActors";
 import { deletePartnerBusinessInTransaction, reserveSubdomainIn, type PartnerActor } from "./partners";
 import { recordProductEventBestEffort } from "./productEvents";
 import { PROSPECT_DEMO_BOOKING_POLICY, PROSPECT_DEMO_SMS_INSTRUCTIONS, prospectDemoSettingsIn, prospectDemoVoiceInstructions, type ProspectDemoSetting } from "./prospectDemoSettings";
-import { saveReceptionistProfileInTransaction } from "./receptionistProfile";
+import { saveAgentSettingsInTransaction } from "./agentSettings";
 import { withLegacyInstructions } from "./channelRules";
 import { insertAgentRuleInTransaction } from "./rules";
-import { NEW_BUSINESS_RECEPTIONIST_INSTRUCTIONS, partnerMemberNotOnTeam, rememberActiveBusinessInTransaction } from "./tenancy";
+import { NEW_BUSINESS_AGENT_INSTRUCTIONS, partnerMemberNotOnTeam, rememberActiveBusinessInTransaction } from "./tenancy";
 import { periodKeyFor } from "./usage";
 
 // Prospect demos: an expiring receptionist built from a prospect's website,
@@ -716,9 +716,9 @@ async function endDemoSettingsInTransaction(tx: DatabaseTransaction, input: { bu
   // The demo's call and text instructions are rules kept to those channels.
   const profile = await withLegacyInstructions(tx, agent);
   const patch: Partial<Record<ProspectDemoSetting, string>> = {};
-  for (const field of prospectDemoSettingsIn(profile)) patch[field] = NEW_BUSINESS_RECEPTIONIST_INSTRUCTIONS[field];
+  for (const field of prospectDemoSettingsIn(profile)) patch[field] = NEW_BUSINESS_AGENT_INSTRUCTIONS[field];
   if (!Object.keys(patch).length) return;
-  await saveReceptionistProfileInTransaction(tx, { businessId: input.businessId, businessName: input.businessName, locale: normalizeRuntimeLocale(input.locale), patch });
+  await saveAgentSettingsInTransaction(tx, { businessId: input.businessId, businessName: input.businessName, locale: normalizeRuntimeLocale(input.locale), patch });
 }
 
 function claimFailureReason(error: unknown): string {

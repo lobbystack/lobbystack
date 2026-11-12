@@ -5,7 +5,7 @@ import type OpenAI from "openai";
 import type { DelegationCreatedEvent } from "openai/resources/live/live";
 import { SidebandWS } from "openai/resources/live/sideband/ws";
 
-import type { ReceptionistAgent } from "../agent";
+import type { ConversationAgent } from "../agent";
 import { toolUse } from "../capabilities";
 import type { KeypadPasscodeCheck, KeypadPasscodeOutcome } from "../tools";
 import { CALL_ENDING, DIRECT_ANSWER_TOOLS, directToolAnswer, fitToAppend, type DirectAnswerStep } from "./directAnswer";
@@ -120,7 +120,7 @@ export type GreetingEvent = {
 
 /** What the controller needs from the business. The worker may still be loading it when the call connects. */
 export type LiveCallSetup = {
-  agent: ReceptionistAgent;
+  agent: ConversationAgent;
   /**
    * The business greeting. The controller sends it to GPT-Live as soon as
    * the session starts.
@@ -493,7 +493,7 @@ export class LiveCallController {
     // the receptionist is speaking.
     socket.on("session.output_transcript.delta", (event) => {
       if (event.delta.trim()) this.heardSpeech(event.end_ms);
-      this.measure(() => this.latency.receptionistTranscript(event.start_ms, event.end_ms));
+      this.measure(() => this.latency.agentTranscript(event.start_ms, event.end_ms));
       this.appendTranscript("receptionist", event.delta, event.end_ms);
       this.watchForMissedGoodbye();
     });

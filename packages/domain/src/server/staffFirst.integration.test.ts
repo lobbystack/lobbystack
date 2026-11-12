@@ -9,7 +9,7 @@ import { loadEntitlement } from "./entitlement";
 import { refreshBusinessSnapshot } from "./knowledge";
 import { desiredNumberRouting, loadNumberTrialEmail } from "./numberTrials";
 import { completeNumberProvisioning } from "./phoneNumbers";
-import { saveReceptionistProfileInTransaction } from "./receptionistProfile";
+import { saveAgentSettingsInTransaction } from "./agentSettings";
 import { decideStaffFirstCall, recordStaffAnsweredCall, recordStaffCallStatus, STAFF_BRIDGED_MINUTES_PER_DAY } from "./staffFirst";
 import { createBusiness } from "./tenancy";
 
@@ -62,14 +62,14 @@ async function business(tx: DatabaseTransaction, input: { plan?: "free_cloud" | 
   return businessId;
 }
 
-type Patch = Parameters<typeof saveReceptionistProfileInTransaction>[1]["patch"];
+type Patch = Parameters<typeof saveAgentSettingsInTransaction>[1]["patch"];
 // The dashboard saves in the app role, as the signed-in operator.
 async function save(tx: DatabaseTransaction, businessId: string, patch: Patch) {
   const [member] = await tx.select({ userId: businessMemberships.userId }).from(businessMemberships).where(eq(businessMemberships.businessId, businessId));
-  return await as(tx, "lobbystack_app", (db) => withBusinessTransaction(db, { userId: member!.userId, businessId, actorType: "operator" }, (inner) => saveReceptionistProfileInTransaction(inner, { businessId, businessName: "Harbor dental", patch })));
+  return await as(tx, "lobbystack_app", (db) => withBusinessTransaction(db, { userId: member!.userId, businessId, actorType: "operator" }, (inner) => saveAgentSettingsInTransaction(inner, { businessId, businessName: "Harbor dental", patch })));
 }
 // The v1 API saves in the worker role.
-const saveFromApi = (tx: DatabaseTransaction, businessId: string, patch: Patch) => as(tx, "lobbystack_worker", (db) => withBusinessTransaction(db, { businessId, actorType: "worker" }, (inner) => saveReceptionistProfileInTransaction(inner, { businessId, businessName: "Harbor dental", patch })));
+const saveFromApi = (tx: DatabaseTransaction, businessId: string, patch: Patch) => as(tx, "lobbystack_worker", (db) => withBusinessTransaction(db, { businessId, actorType: "worker" }, (inner) => saveAgentSettingsInTransaction(inner, { businessId, businessName: "Harbor dental", patch })));
 // The webhooks run as the worker role.
 const decide = (tx: DatabaseTransaction, input: Parameters<typeof decideStaffFirstCall>[1]) => as(tx, "lobbystack_worker", (db) => decideStaffFirstCall({ db }, input));
 

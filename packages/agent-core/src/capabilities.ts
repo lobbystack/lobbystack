@@ -168,7 +168,7 @@ function employeeGuidance(snapshot: BusinessContextSnapshot, booking: BookingMod
  * about them, and what GPT-Live hears the backend can do. Every place that
  * offers or describes a tool reads this one decision.
  */
-export function receptionistCapabilities(snapshot: BusinessContextSnapshot, conversation: Conversation): Capabilities {
+export function agentCapabilities(snapshot: BusinessContextSnapshot, conversation: Conversation): Capabilities {
   const { channel, callerPhone, callControl, intakeOnly, testChat } = conversation;
   // Prospect demos only answer questions and take messages: no booking, no
   // transfers. Test chats only answer questions.

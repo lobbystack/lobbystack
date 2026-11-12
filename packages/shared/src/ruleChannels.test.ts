@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import { runtimeLocales } from "./locales";
 import { apiRuleReorderSchema } from "./publicApi/schemas";
-import { RULES_MAX, RULES_REORDER_MAX } from "./receptionist";
+import { RULES_MAX, RULES_REORDER_MAX } from "./agentSettings";
 import { channelRuleTitle, channelRuleTitles, ruleChannelOf, ruleChannels } from "./ruleChannels";
 
 const migration = readFileSync(fileURLToPath(new URL("../../db/migrations/0203_rule_channels.sql", import.meta.url)), "utf8");

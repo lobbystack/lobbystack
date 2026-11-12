@@ -13,7 +13,7 @@ import { join } from "node:path";
 import { parseArgs } from "node:util";
 
 import { buildPhoneSessionConfig } from "@lobbystack/agent-core";
-import { demoSnapshot, isReceptionistVoice, isRuntimeLocale, receptionistVoices, runtimeLocales, type ReceptionistVoice, type RuntimeLocale } from "@lobbystack/shared";
+import { demoSnapshot, isAgentVoice, isRuntimeLocale, agentVoices, runtimeLocales, type AgentVoice, type RuntimeLocale } from "@lobbystack/shared";
 import OpenAI from "openai";
 import { LiveWS } from "openai/resources/live/ws";
 
@@ -63,7 +63,7 @@ const { values } = parseArgs({
   },
 });
 if (!process.env.OPENAI_API_KEY) throw new Error("Set OPENAI_API_KEY.");
-const voices = values.voice.length ? values.voice.map((voice): ReceptionistVoice => { if (!isReceptionistVoice(voice)) throw new Error(`Unknown voice ${voice}.`); return voice; }) : [...receptionistVoices];
+const voices = values.voice.length ? values.voice.map((voice): AgentVoice => { if (!isAgentVoice(voice)) throw new Error(`Unknown voice ${voice}.`); return voice; }) : [...agentVoices];
 const locales = values.locale.length ? values.locale.map((locale): RuntimeLocale => { if (!isRuntimeLocale(locale)) throw new Error(`--locale must be one of ${runtimeLocales.join(", ")}.`); return locale; }) : [...runtimeLocales];
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -92,7 +92,7 @@ function quietLimitMs(transcript: string, line: string): number {
 }
 
 /** The opening line, spoken by GPT-Live as the greeting of a call in that voice and language. Returns 24 kHz mono PCM16. */
-async function record(voice: ReceptionistVoice, locale: RuntimeLocale): Promise<{ pcm: Buffer; transcript: string }> {
+async function record(voice: AgentVoice, locale: RuntimeLocale): Promise<{ pcm: Buffer; transcript: string }> {
   const ws = new LiveWS(client);
   const chunks: Buffer[] = [];
   let lastAudioAt = 0;

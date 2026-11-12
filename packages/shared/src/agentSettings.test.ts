@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { DEFAULT_RECEPTIONIST_VOICE, receptionistVoiceTraits, isContactPasscode, isGuessableContactPasscode, isReceptionistVoice, normalizeReceptionistVoice, randomContactPasscode, receptionistVoices } from "./receptionist";
+import { DEFAULT_AGENT_VOICE, agentVoiceTraits, isContactPasscode, isGuessableContactPasscode, isAgentVoice, normalizeAgentVoice, randomContactPasscode, agentVoices } from "./agentSettings";
 
 describe("isContactPasscode", () => {
   it("takes 4 to 8 digits", () => {
@@ -62,21 +62,21 @@ describe("randomContactPasscode", () => {
 
 describe("receptionist voices", () => {
   it("defaults to marin, the voice every call used before businesses could pick one", () => {
-    expect(DEFAULT_RECEPTIONIST_VOICE).toBe("marin");
-    expect(receptionistVoices).toContain(DEFAULT_RECEPTIONIST_VOICE);
+    expect(DEFAULT_AGENT_VOICE).toBe("marin");
+    expect(agentVoices).toContain(DEFAULT_AGENT_VOICE);
   });
 
   it("accepts only the listed voices", () => {
-    expect(receptionistVoices.every(isReceptionistVoice)).toBe(true);
-    for (const value of ["Marin", "nova", "", " cedar", null, undefined, 3]) expect(isReceptionistVoice(value)).toBe(false);
+    expect(agentVoices.every(isAgentVoice)).toBe(true);
+    for (const value of ["Marin", "nova", "", " cedar", null, undefined, 3]) expect(isAgentVoice(value)).toBe(false);
   });
 
   it("falls back to marin for a missing, unknown or retired voice", () => {
-    expect(normalizeReceptionistVoice("cedar")).toBe("cedar");
-    for (const value of [undefined, null, "", "nova", "MARIN", { voice: "cedar" }]) expect(normalizeReceptionistVoice(value)).toBe("marin");
+    expect(normalizeAgentVoice("cedar")).toBe("cedar");
+    for (const value of [undefined, null, "", "nova", "MARIN", { voice: "cedar" }]) expect(normalizeAgentVoice(value)).toBe("marin");
   });
 
   it("describes every voice", () => {
-    expect(Object.keys(receptionistVoiceTraits).sort()).toEqual([...receptionistVoices].sort());
+    expect(Object.keys(agentVoiceTraits).sort()).toEqual([...agentVoices].sort());
   });
 });

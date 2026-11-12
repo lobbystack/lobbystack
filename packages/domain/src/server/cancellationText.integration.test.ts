@@ -10,7 +10,7 @@ import { bookAppointment, cancelAppointment, cancelAppointmentForCaller, resched
 import type { SmsConsentAnswer } from "./contactSmsConsent";
 import { CANCELLATION_CONFIRMATION, releaseCallTexts, RESCHEDULE_CONFIRMATION, resolveNotificationDelivery } from "./notifications";
 import { cancelAppointmentForApi } from "./publicApi/operations";
-import { recordTextConsentForCaller } from "./receptionistActions";
+import { recordTextConsentForCaller } from "./agentActions";
 import { CANCELLATION_REQUEST } from "./voice";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.

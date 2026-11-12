@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { RECEPTIONIST_INSTRUCTIONS_MAX_LENGTH, RECEPTIONIST_TEXT_MAX_LENGTH } from "../receptionist";
+import { AGENT_INSTRUCTIONS_MAX_LENGTH, AGENT_TEXT_MAX_LENGTH } from "../agentSettings";
 import { CONTACT_PASSCODES_MAX_PER_REQUEST, KNOWLEDGE_UPLOAD_MAX_BYTES } from "./constants";
 import { apiAgentSchema, apiCallSchema, apiMessageSchema, apiReceptionistSchema, apiAppointmentCreateSchema,apiAppointmentRescheduleSchema, apiContactCreateSchema, apiContactPasscodesGenerateSchema, apiContactPasscodesUpdateSchema, apiKnowledgeEntryCreateSchema, apiKnowledgeUploadCreateSchema, apiReceptionistUpdateSchema, parseApiInput } from "./schemas";
 
@@ -43,9 +43,9 @@ describe("parseApiInput", () => {
   it("checks receptionist changes with the dashboard's limits", () => {
     expect(parseApiInput(apiReceptionistUpdateSchema, { summary: "Written by hand.", regenerate_summary: true })).toEqual({ ok: false, details: [{ path: "regenerate_summary", message: "Send summary or regenerate_summary, not both." }] });
     expect(parseApiInput(apiReceptionistUpdateSchema, { greeting: "  Hello.  ", transfer_number: null, regenerate_summary: true })).toEqual({ ok: true, data: { greeting: "Hello.", transfer_number: null, regenerate_summary: true } });
-    expect(parseApiInput(apiReceptionistUpdateSchema, { voice_instructions: "x".repeat(RECEPTIONIST_INSTRUCTIONS_MAX_LENGTH) }).ok).toBe(true);
+    expect(parseApiInput(apiReceptionistUpdateSchema, { voice_instructions: "x".repeat(AGENT_INSTRUCTIONS_MAX_LENGTH) }).ok).toBe(true);
     for (const bad of [
-      { greeting: "x".repeat(RECEPTIONIST_TEXT_MAX_LENGTH + 1) },
+      { greeting: "x".repeat(AGENT_TEXT_MAX_LENGTH + 1) },
       { greeting: null },
       { transfer_number: "416-555-0134" },
       { transfer_mode: "sometimes" },

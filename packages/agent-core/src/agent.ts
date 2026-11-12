@@ -5,9 +5,9 @@ import { isWrittenChannel } from "@lobbystack/shared";
 import { toolUse } from "./capabilities";
 import { buildAgentInstructions } from "./instructions";
 import { directToolAnswer } from "./live/directAnswer";
-import { createReceptionistTools, type AgentToolContext } from "./tools";
+import { createAgentTools, type AgentToolContext } from "./tools";
 
-export type ReceptionistAgent = ToolLoopAgent<never, ToolSet>;
+export type ConversationAgent = ToolLoopAgent<never, ToolSet>;
 
 /**
  * A text chat's cap on each model step's output, so no reply runs long even
@@ -17,7 +17,7 @@ export type ReceptionistAgent = ToolLoopAgent<never, ToolSet>;
  */
 export const WEB_CHAT_MAX_OUTPUT_TOKENS = 4_000;
 
-export function createReceptionistAgent(input: {
+export function createConversationAgent(input: {
   model: LanguageModel;
   context: AgentToolContext;
   extraInstructions?: string;
@@ -33,14 +33,14 @@ export function createReceptionistAgent(input: {
    * that running the agent again would do the change twice.
    */
   onAction?: () => void;
-}): ReceptionistAgent {
+}): ConversationAgent {
   // One lookup, maybe a second, then the answer. Voice callers are waiting.
   const stopWhen: Array<StopCondition<ToolSet>> = [stepCountIs(4)];
   if (input.directToolAnswers) stopWhen.push(({ steps }) => directToolAnswer(steps.at(-1)) !== undefined);
   return new ToolLoopAgent({
     model: input.model,
     instructions: [buildAgentInstructions(input.context.snapshot, input.context), input.extraInstructions].filter(Boolean).join("\n\n"),
-    tools: createReceptionistTools(input.context),
+    tools: createAgentTools(input.context),
     stopWhen,
     ...(isWrittenChannel(input.context.channel) ? { maxOutputTokens: WEB_CHAT_MAX_OUTPUT_TOKENS } : {}),
     ...(input.onAction ? { onStepEnd: ({ toolResults }: { toolResults: ReadonlyArray<{ toolName: string; output: unknown }> }) => { if (toolResults.some(changedSomething)) input.onAction?.(); } } : {}),

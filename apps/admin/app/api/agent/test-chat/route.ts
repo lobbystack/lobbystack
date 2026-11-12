@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { createReceptionistAgent } from "@lobbystack/agent-core/agent";
+import { createConversationAgent } from "@lobbystack/agent-core/agent";
 import { createAgentModel, describeAgentUsage } from "@lobbystack/agent-core/model";
 import { activeAgentExistsInTransaction, getBusinessSnapshotForAgent, recordAiGenerationEvent } from "@lobbystack/domain";
 import { normalizeRuntimeLocale, runtimeLocaleName, testChatRequestSchema } from "@lobbystack/shared";
@@ -34,7 +34,7 @@ export const POST = operatorRoute(async ({ request, userId, body, businessId, tr
   const snapshot = await getBusinessSnapshotForAgent(domain, { businessId, agentId });
   if (!snapshot) throw jsonError("The agent isn't ready yet.", 409, "snapshot_missing");
 
-  const agent = createReceptionistAgent({
+  const agent = createConversationAgent({
     model,
     context: { domain, snapshot, channel: "web_chat", testChat: true },
     extraInstructions: `Reply in ${runtimeLocaleName(normalizeRuntimeLocale(snapshot.defaultLocale))} unless the visitor clearly asks to switch languages.`,

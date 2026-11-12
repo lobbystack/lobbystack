@@ -1,4 +1,4 @@
-import { defaultAppointmentChangePolicy, defaultGreeting, RECEPTIONIST_INSTRUCTIONS_MAX_LENGTH, RECEPTIONIST_TEXT_MAX_LENGTH } from "@lobbystack/shared";
+import { defaultAppointmentChangePolicy, defaultGreeting, AGENT_INSTRUCTIONS_MAX_LENGTH, AGENT_TEXT_MAX_LENGTH } from "@lobbystack/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ enqueueOutbox: vi.fn() }));
@@ -8,12 +8,12 @@ vi.mock("@lobbystack/db", async (original) => ({
   enqueueOutbox: mocks.enqueueOutbox,
 }));
 
-import { defaultReceptionistProfile, readReceptionistSettingsChange, saveReceptionistProfileInTransaction } from "./receptionistProfile";
+import { defaultAgentSettings, readAgentSettingsChange, saveAgentSettingsInTransaction } from "./agentSettings";
 
 beforeEach(() => mocks.enqueueOutbox.mockReset());
 
 // The dashboard answers with these messages, so moving the rules here must not reword them.
-describe("readReceptionistSettingsChange", () => {
+describe("readAgentSettingsChange", () => {
   it.each([
     [null, "A profile object is required."],
     [[], "A profile object is required."],
@@ -22,8 +22,8 @@ describe("readReceptionistSettingsChange", () => {
     [{ greeting: "   " }, "greeting is invalid."],
     [{ greeting: null }, "greeting cannot be empty."],
     [{ tone: 5 }, "tone must be a string."],
-    [{ summary: "x".repeat(RECEPTIONIST_TEXT_MAX_LENGTH + 1) }, "summary is invalid."],
-    [{ voiceInstructions: "x".repeat(RECEPTIONIST_INSTRUCTIONS_MAX_LENGTH + 1) }, "voiceInstructions is invalid."],
+    [{ summary: "x".repeat(AGENT_TEXT_MAX_LENGTH + 1) }, "summary is invalid."],
+    [{ voiceInstructions: "x".repeat(AGENT_INSTRUCTIONS_MAX_LENGTH + 1) }, "voiceInstructions is invalid."],
     [{ transferMode: "sometimes" }, "transferMode is invalid."],
     [{ bookingMode: "later" }, "bookingMode is invalid."],
     [{ voice: "nova" }, "voice is invalid."],
@@ -48,16 +48,16 @@ describe("readReceptionistSettingsChange", () => {
     [{ locale: "ja", bookingMode: "later" }, "bookingMode is invalid."],
     [{ regenerateSummary: false, locale: "ja" }, "locale is invalid."],
   ])("refuses %j with a 400", (body, message) => {
-    expect(() => readReceptionistSettingsChange(body)).toThrow(message);
+    expect(() => readAgentSettingsChange(body)).toThrow(message);
     try {
-      readReceptionistSettingsChange(body);
+      readAgentSettingsChange(body);
     } catch (error) {
       expect(error).toMatchObject({ status: 400, message });
     }
   });
 
   it("trims text, keeps only the fields sent, and clears optional ones with null", () => {
-    expect(readReceptionistSettingsChange({ greeting: "  Hi there.  ", voiceInstructions: null, transferNumber: null, bookingMode: "request", locale: "fr" })).toEqual({
+    expect(readAgentSettingsChange({ greeting: "  Hi there.  ", voiceInstructions: null, transferNumber: null, bookingMode: "request", locale: "fr" })).toEqual({
       patch: { greeting: "Hi there.", voiceInstructions: null, transferNumber: null, bookingMode: "request" },
       locale: "fr",
       regenerateSummary: false,
@@ -65,32 +65,32 @@ describe("readReceptionistSettingsChange", () => {
   });
 
   it("keeps a voice from the shared list", () => {
-    expect(readReceptionistSettingsChange({ voice: "cedar" })).toEqual({ patch: { voice: "cedar" }, regenerateSummary: false });
+    expect(readAgentSettingsChange({ voice: "cedar" })).toEqual({ patch: { voice: "cedar" }, regenerateSummary: false });
   });
 
   it("reads the team language, and null as going back to the customer language", () => {
-    expect(readReceptionistSettingsChange({ teamLocale: "sr" })).toEqual({ patch: {}, teamLocale: "sr", regenerateSummary: false });
-    expect(readReceptionistSettingsChange({ teamLocale: null })).toEqual({ patch: {}, teamLocale: null, regenerateSummary: false });
+    expect(readAgentSettingsChange({ teamLocale: "sr" })).toEqual({ patch: {}, teamLocale: "sr", regenerateSummary: false });
+    expect(readAgentSettingsChange({ teamLocale: null })).toEqual({ patch: {}, teamLocale: null, regenerateSummary: false });
   });
 
   it("keeps only the policy's known fields, and the longest allowed text", () => {
     const policy = { enabled: true, allowCancel: false, allowReschedule: true, verificationMode: "otp_required" };
-    const longest = "x".repeat(RECEPTIONIST_TEXT_MAX_LENGTH);
-    expect(readReceptionistSettingsChange({ appointmentChangePolicy: { ...policy, extra: "dropped" }, tone: longest }).patch).toEqual({ tone: longest, appointmentChangePolicy: policy });
+    const longest = "x".repeat(AGENT_TEXT_MAX_LENGTH);
+    expect(readAgentSettingsChange({ appointmentChangePolicy: { ...policy, extra: "dropped" }, tone: longest }).patch).toEqual({ tone: longest, appointmentChangePolicy: policy });
   });
 
   it("takes a summary regeneration on its own", () => {
-    expect(readReceptionistSettingsChange({ regenerateSummary: true })).toEqual({ patch: {}, regenerateSummary: true });
+    expect(readAgentSettingsChange({ regenerateSummary: true })).toEqual({ patch: {}, regenerateSummary: true });
   });
 });
 
-describe("defaultReceptionistProfile", () => {
+describe("defaultAgentSettings", () => {
   it("greets callers with the business's name until someone writes a greeting", () => {
-    expect(defaultReceptionistProfile("Maple Clinic")).toMatchObject({ greeting: defaultGreeting("Maple Clinic"), transferMode: "on_request", bookingMode: "instant", voice: "marin" });
+    expect(defaultAgentSettings("Maple Clinic")).toMatchObject({ greeting: defaultGreeting("Maple Clinic"), transferMode: "on_request", bookingMode: "instant", voice: "marin" });
   });
 });
 
-describe("saveReceptionistProfileInTransaction", () => {
+describe("saveAgentSettingsInTransaction", () => {
   const savedAt = new Date("2026-10-11T12:00:00.000Z");
 
   /**
@@ -117,7 +117,7 @@ describe("saveReceptionistProfileInTransaction", () => {
 
   it("changes only the fields sent on the default agent, and refreshes the snapshot", async () => {
     const { tx, recorded } = store({ id: "profile_1" }, { id: "profile_1", updatedAt: savedAt });
-    expect(await saveReceptionistProfileInTransaction(tx, { businessId: "biz_1", businessName: "Maple", patch: { tone: "warm" } })).toMatchObject({ id: "profile_1" });
+    expect(await saveAgentSettingsInTransaction(tx, { businessId: "biz_1", businessName: "Maple", patch: { tone: "warm" } })).toMatchObject({ id: "profile_1" });
     expect(recorded.values).toBeUndefined();
     expect(recorded.set).toEqual({ tone: "warm", updatedAt: expect.any(Date) });
     expect(mocks.enqueueOutbox).toHaveBeenCalledTimes(1);
@@ -126,34 +126,34 @@ describe("saveReceptionistProfileInTransaction", () => {
 
   it("creates a missing default agent from the defaults and the fields sent", async () => {
     const { tx, recorded } = store(null, { id: "profile_1", updatedAt: savedAt });
-    expect(await saveReceptionistProfileInTransaction(tx, { businessId: "biz_1", businessName: "Maple", patch: { tone: "warm" } })).toMatchObject({ id: "profile_1" });
+    expect(await saveAgentSettingsInTransaction(tx, { businessId: "biz_1", businessName: "Maple", patch: { tone: "warm" } })).toMatchObject({ id: "profile_1" });
     expect(recorded.values).toMatchObject({ businessId: "biz_1", isDefault: true, greeting: defaultGreeting("Maple"), tone: "warm", transferMode: "on_request", appointmentChangePolicy: defaultAppointmentChangePolicy });
     expect(recorded.values).not.toHaveProperty("summary");
   });
 
   it("refuses an agent the business doesn't have", async () => {
     const { tx } = store(null, null);
-    await expect(saveReceptionistProfileInTransaction(tx, { businessId: "biz_1", agentId: "agent_2", businessName: "Maple", patch: { tone: "warm" } })).rejects.toMatchObject({ status: 404, code: "agent_not_found" });
+    await expect(saveAgentSettingsInTransaction(tx, { businessId: "biz_1", agentId: "agent_2", businessName: "Maple", patch: { tone: "warm" } })).rejects.toMatchObject({ status: 404, code: "agent_not_found" });
     expect(mocks.enqueueOutbox).not.toHaveBeenCalled();
   });
 
   it("saves a written summary on the business, as the business's own", async () => {
     const { tx, recorded } = store({ id: "profile_1" }, { id: "profile_1", updatedAt: savedAt });
-    await saveReceptionistProfileInTransaction(tx, { businessId: "biz_1", businessName: "Maple", patch: { summary: "Maple cuts hair." } });
+    await saveAgentSettingsInTransaction(tx, { businessId: "biz_1", businessName: "Maple", patch: { summary: "Maple cuts hair." } });
     expect(recorded.sets[0]).toMatchObject({ summary: "Maple cuts hair.", summarySource: "operator", summaryRegenerateStatus: null });
     expect(recorded.set).toEqual({ updatedAt: expect.any(Date) });
   });
 
   it("hands the summary back to AI and queues the rewrite", async () => {
     const { tx, recorded } = store({ id: "profile_1" }, { id: "profile_1", updatedAt: savedAt });
-    await saveReceptionistProfileInTransaction(tx, { businessId: "biz_1", businessName: "Maple", patch: {}, regenerateSummary: true });
+    await saveAgentSettingsInTransaction(tx, { businessId: "biz_1", businessName: "Maple", patch: {}, regenerateSummary: true });
     expect(recorded.sets[0]).toMatchObject({ summarySource: "generated", summaryRegenerateStatus: "pending" });
     expect(mocks.enqueueOutbox).toHaveBeenLastCalledWith(tx, expect.objectContaining({ topic: "business.generateSummary", businessId: "biz_1", payload: { businessId: "biz_1", reason: "operator_regenerate", force: true } }));
   });
 
   it("returns null and queues nothing when nothing was saved", async () => {
     const { tx } = store({ id: "profile_1" }, null);
-    expect(await saveReceptionistProfileInTransaction(tx, { businessId: "biz_1", businessName: "Maple", patch: { tone: "warm" } })).toBeNull();
+    expect(await saveAgentSettingsInTransaction(tx, { businessId: "biz_1", businessName: "Maple", patch: { tone: "warm" } })).toBeNull();
     expect(mocks.enqueueOutbox).not.toHaveBeenCalled();
   });
 });

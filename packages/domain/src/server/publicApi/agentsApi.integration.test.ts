@@ -7,7 +7,7 @@ import { agentRules, agents, billingAccounts, businesses, calls, contacts, conve
 import { apiAgentSchema, apiCallSchema, apiMessageSchema } from "@lobbystack/shared";
 
 import { runPrivacyRetentionSweep } from "../privacy";
-import { takeMessageForStaff } from "../receptionistActions";
+import { takeMessageForStaff } from "../agentActions";
 import { createVoiceFollowUpTask } from "../voice";
 import { PublicApiError } from "./errors";
 import { getAgentForApi, getCallForApi, getReceptionistForApi, listAgentsForApi, listCallsForApi, listMessagesForApi, type ApiKeyCaller } from "./operations";

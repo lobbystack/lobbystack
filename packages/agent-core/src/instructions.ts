@@ -1,9 +1,9 @@
-import { isWrittenChannel, normalizeBookingMode, normalizeReceptionistVoice, normalizeRuntimeLocale, receptionistVoiceGenders, ruleChannelOf, runtimeLocaleName, type AgentRuleSummary, type BusinessContextSnapshot, type RuleChannel, type SnapshotEmployee } from "@lobbystack/shared";
+import { isWrittenChannel, normalizeBookingMode, normalizeAgentVoice, normalizeRuntimeLocale, agentVoiceGenders, ruleChannelOf, runtimeLocaleName, type AgentRuleSummary, type BusinessContextSnapshot, type RuleChannel, type SnapshotEmployee } from "@lobbystack/shared";
 import { countKnowledgeTokens } from "@lobbystack/domain";
 import { DateTime } from "luxon";
 
 import { businessSummary, describeClosure, describeServices, serviceFacts, upcomingClosures, weeklyHours } from "./businessFacts";
-import { receptionistCapabilities, type Conversation } from "./capabilities";
+import { agentCapabilities, type Conversation } from "./capabilities";
 import type { AgentChannel } from "./tools";
 
 // The highest-priority text entries. Knowledge search covers the rest of the snapshot's.
@@ -87,7 +87,7 @@ function topicRule(snapshot: BusinessContextSnapshot, decline: string): string {
 // ravi", "spreman sam"), even in a woman's voice. Each agent has its own voice,
 // so this follows the snapshot's.
 function selfGenderRule(snapshot: BusinessContextSnapshot): string {
-  switch (receptionistVoiceGenders[normalizeReceptionistVoice(snapshot.voice)]) {
+  switch (agentVoiceGenders[normalizeAgentVoice(snapshot.voice)]) {
     case "female":
       return "Speak of yourself as a woman, to match your voice on calls. In languages that mark gender, use feminine forms when you talk about yourself, such as \"ravie\" in French, \"encantada\" in Spanish, \"spremna sam\" in Serbian, \"obrigada\" in Portuguese, \"lieta\" in Italian, \"Rezeptionistin\" in German, \"gotowa\" in Polish, and \"рада\" in Russian and Ukrainian. In English, you're she, not he.";
     case "male":
@@ -102,7 +102,7 @@ function selfGenderRule(snapshot: BusinessContextSnapshot): string {
 export function buildAgentInstructions(snapshot: BusinessContextSnapshot, conversation: Conversation): string {
   const now = DateTime.now().setZone(snapshot.timezone);
   const voice = !isWrittenChannel(conversation.channel);
-  const capabilities = receptionistCapabilities(snapshot, conversation);
+  const capabilities = agentCapabilities(snapshot, conversation);
   return [
     `You are the receptionist for ${snapshot.displayName}. You represent this business, not the software platform.`,
     voice
@@ -227,7 +227,7 @@ export function liveLanguage(snapshot: BusinessContextSnapshot): string {
 // a delegation policy listing the backend's capabilities on this channel.
 export function buildLiveInstructions(snapshot: BusinessContextSnapshot, channel: Extract<AgentChannel, "voice" | "web_voice">, now: DateTime = DateTime.now()): string {
   const phone = channel === "voice";
-  const capabilities = receptionistCapabilities(snapshot, { channel });
+  const capabilities = agentCapabilities(snapshot, { channel });
   const ruleLines = withinTokens(rulesFor(snapshot, null), LIVE_RULES_TOKENS, (rule) => `- ${rule.title}: ${rule.content.trim().replace(/\s+/g, " ")}`);
   const callRuleLines = withinTokens(rulesFor(snapshot, "voice"), LIVE_CHANNEL_RULES_TOKENS, (rule) => `- ${rule.title}: ${rule.content.trim()}`);
   return [

@@ -30,7 +30,7 @@ import {
   type PartnerMemberCaller,
 } from "./publicApi/operations";
 import { uploadObjectKey } from "./storage";
-import { NEW_BUSINESS_RECEPTIONIST_INSTRUCTIONS } from "./tenancy";
+import { NEW_BUSINESS_AGENT_INSTRUCTIONS } from "./tenancy";
 import type { DomainContext } from "./context";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
@@ -212,8 +212,8 @@ const harborTemplate = {
   ],
   // Every new business starts with call and text rules, and a template carries them as it carries the rest.
   rules: [
-    { title: "On calls", content: NEW_BUSINESS_RECEPTIONIST_INSTRUCTIONS.voiceInstructions, active: true, channel: "voice" },
-    { title: "In texts", content: NEW_BUSINESS_RECEPTIONIST_INSTRUCTIONS.smsInstructions, active: true, channel: "sms" },
+    { title: "On calls", content: NEW_BUSINESS_AGENT_INSTRUCTIONS.voiceInstructions, active: true, channel: "voice" },
+    { title: "In texts", content: NEW_BUSINESS_AGENT_INSTRUCTIONS.smsInstructions, active: true, channel: "sms" },
     { title: "Emergencies", content: "Send dental emergencies to the dentist on call.", active: true },
   ],
   knowledge: {
@@ -311,7 +311,7 @@ describe.skipIf(!client)("business templates", () => {
       expect(await getReceptionistForApi(setup.worker, at)).toMatchObject({ greeting: "Thanks for calling Pier $& Dental. How can we help?", voice_instructions: "Say Pier $& Dental opens at 8, next to Harbor Dentalview." });
       expect((await listServicesForApi(setup.worker, at, { includeInactive: true })).map((service) => [service.name, service.description])).toEqual([["Pier $& Dental checkup", "A Pier $& Dental cleaning."]]);
       // The call instructions travel as the rule for calls they became.
-      expect((await listRulesForApi(setup.worker, at)).map((rule) => [rule.title, rule.content, rule.channel])).toEqual([["On calls", "Say Pier $& Dental opens at 8, next to Harbor Dentalview.", "voice"], ["In texts", NEW_BUSINESS_RECEPTIONIST_INSTRUCTIONS.smsInstructions, "sms"], ["Pier $& Dental hours", "Pier $& Dental closes on Sundays.", null]]);
+      expect((await listRulesForApi(setup.worker, at)).map((rule) => [rule.title, rule.content, rule.channel])).toEqual([["On calls", "Say Pier $& Dental opens at 8, next to Harbor Dentalview.", "voice"], ["In texts", NEW_BUSINESS_AGENT_INSTRUCTIONS.smsInstructions, "sms"], ["Pier $& Dental hours", "Pier $& Dental closes on Sundays.", null]]);
       expect((await listKnowledgeEntriesForApi(setup.worker, at, {})).data.map((entry) => [entry.title, entry.content])).toEqual([["Where is Pier $& Dental?", "Pier $& Dental is on Main Street."]]);
     });
   });

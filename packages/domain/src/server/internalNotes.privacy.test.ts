@@ -19,7 +19,7 @@ function sources(directory: string): string[] {
 const ALLOWED = new Set([
   "packages/db/src/schema/index.ts",
   "packages/domain/src/server/booking.ts",
-  "packages/domain/src/server/receptionistActions.ts",
+  "packages/domain/src/server/agentActions.ts",
   "packages/domain/src/server/operatorBookings.ts",
   "packages/domain/src/server/operatorActivity.ts",
 ]);
