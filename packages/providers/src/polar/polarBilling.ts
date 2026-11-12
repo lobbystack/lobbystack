@@ -123,6 +123,11 @@ export class PolarBillingProvider {
     return { endsAt: result.ends_at ?? result.current_period_end ?? null };
   }
 
+  /** Sets whether the subscription ends when its current period ends, so false takes a cancellation back. */
+  async setCancelAtPeriodEnd(input: { subscriptionId: string; cancelAtPeriodEnd: boolean }): Promise<void> {
+    await this.request(`/v1/subscriptions/${encodeURIComponent(input.subscriptionId)}`, { method: "PATCH", body: JSON.stringify({ cancel_at_period_end: input.cancelAtPeriodEnd }) });
+  }
+
   /** Ends the subscription now, with no further charge. A subscription that already ended, or that Polar no longer has, counts as done. */
   async revokeSubscription(input: { subscriptionId: string }): Promise<void> {
     assertCertificationBillingSandbox(this.config.baseUrl ?? "https://api.polar.sh");

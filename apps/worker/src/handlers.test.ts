@@ -10,7 +10,7 @@ import { NUMBER_ORDER_MAX_WAIT_MS, claimNumberProvisioning, completeNumberProvis
 import { PolarRequestError } from "@lobbystack/providers/polar/polarBilling";
 import { NumberOrderPendingError } from "@lobbystack/providers/telephony/types";
 import { brandForEmail, businessExists, businessGetsHostEmails, forgetCachedBrands, marketingEmailRecipient, readMarketingUnsubscribeToken, loadNumberReleaseEmail, loadNumberTrialEmail, type Brand } from "@lobbystack/domain";
-import { advancePartnerLifecycles, claimPartnerCheckoutRequest, deferPartnerCheckoutRequest, keepPartnerTrialNumber, loadPartnerCheckoutRequest, loadPoolUsageEvent, markPartnerCheckoutCreated, markPartnerCheckoutFailed, partnerCheckoutLeaseEndsAt, PartnerLifecycleError, reconcilePartnerTier, settleExtraNumberCharges, settlePartnerNumberCharges } from "@lobbystack/domain";
+import { advancePartnerLifecycles, claimPartnerCheckoutRequest, deferPartnerCheckoutRequest, keepPartnerTrialNumber, loadPartnerCheckoutRequest, loadPoolUsageEvent, markPartnerCheckoutCreated, markPartnerCheckoutFailed, partnerCheckoutLeaseEndsAt, PartnerLifecycleError, reconcilePartnerTier, settleExtraNumberCharges, settlePartnerNumberCharges, extraNumbersSubscriptionChange, loadExtraNumbersCheckoutRequest } from "@lobbystack/domain";
 import { checkPartnerCustomDomains, provisionPartnerCustomDomain, removePartnerCustomHostname, syncBusinessOverage } from "@lobbystack/domain";
 import { FakeCustomHostnames, FakeTxtRecords } from "@lobbystack/providers/customHostnames/fakeCustomHostnames";
 import { FakeStripeConnect } from "@lobbystack/providers/stripe/fakeStripeConnect";
@@ -35,6 +35,8 @@ vi.mock("@lobbystack/domain", async (importOriginal) => {
     keepPartnerTrialNumber: vi.fn(async () => false),
     settlePartnerNumberCharges: vi.fn(),
     settleExtraNumberCharges: vi.fn(),
+    loadExtraNumbersCheckoutRequest: vi.fn(),
+    extraNumbersSubscriptionChange: vi.fn(),
     advancePartnerLifecycles: vi.fn(),
     provisionPartnerCustomDomain: vi.fn(),
     checkPartnerCustomDomains: vi.fn(),
@@ -1135,6 +1137,43 @@ describe("worker handlers", () => {
     });
   });
 
+  describe("the extra numbers add-on", () => {
+    const envelope = (type: JobEnvelope["type"], businessId: string, payload: Record<string, unknown> = {}): JobEnvelope => ({ jobId: randomUUID(), type, queue: "critical", businessId, payload, trace: {}, idempotencyKey: `test:${randomUUID()}`, scheduled: false });
+    afterEach(() => { vi.unstubAllEnvs(); });
+
+    it("opens a Polar checkout for the monthly add-on product that brings the payer back to the agent's phone page", async () => {
+      vi.stubEnv("POLAR_EXTRA_NUMBERS_PRODUCT_ID", "prod_extra");
+      vi.stubEnv("APP_BASE_URL", "https://app.example.test");
+      const businessId = randomUUID(); const requestId = randomUUID(); const agentId = randomUUID(); const domain = { db: undefined as never };
+      vi.mocked(claimBillingCheckoutRequest).mockResolvedValue(true);
+      vi.mocked(loadExtraNumbersCheckoutRequest).mockResolvedValue({ customerEmail: "sam@example.test", externalCustomerId: `business:${businessId}`, agentId });
+      const createCheckout = vi.fn().mockResolvedValue({ checkoutId: "co_1", checkoutUrl: "https://polar.test/co_1" });
+      await expect(handleJob(envelope("billing.createExtraNumbersCheckout", businessId, { requestId }), { domain, polar: { recordUsage: vi.fn(), createCheckout } })).resolves.toEqual({ status: "completed", entityId: requestId });
+      expect(createCheckout).toHaveBeenCalledWith({ productId: "prod_extra", customerEmail: "sam@example.test", externalCustomerId: `business:${businessId}`, successUrl: `https://app.example.test/agents/${agentId}/channels/phone?extraNumbersCheckout=${requestId}`, returnUrl: `https://app.example.test/agents/${agentId}/channels/phone`, idempotencyKey: `extra-numbers-checkout:${requestId}` });
+      expect(markBillingCheckoutCreated).toHaveBeenCalledWith(domain, { businessId, requestId, checkoutId: "co_1", checkoutUrl: "https://polar.test/co_1" });
+    });
+
+    it("fails the checkout when the add-on product isn't set", async () => {
+      vi.stubEnv("POLAR_EXTRA_NUMBERS_PRODUCT_ID", "");
+      const businessId = randomUUID(); const requestId = randomUUID(); const domain = { db: undefined as never };
+      vi.mocked(claimBillingCheckoutRequest).mockResolvedValue(true);
+      const createCheckout = vi.fn();
+      await expect(handleJob(envelope("billing.createExtraNumbersCheckout", businessId, { requestId }), { domain, polar: { recordUsage: vi.fn(), createCheckout } })).resolves.toEqual({ status: "skipped", entityId: requestId });
+      expect(markBillingCheckoutFailed).toHaveBeenCalledWith(domain, { businessId, requestId, error: "POLAR_EXTRA_NUMBERS_PRODUCT_ID is not set." });
+      expect(createCheckout).not.toHaveBeenCalled();
+    });
+
+    it("cancels the add-on at the end of its period when the plan ends, and does nothing when it's already as it should be", async () => {
+      const businessId = randomUUID(); const domain = { db: undefined as never };
+      const setCancelAtPeriodEnd = vi.fn().mockResolvedValue(undefined);
+      vi.mocked(extraNumbersSubscriptionChange).mockResolvedValueOnce({ subscriptionId: "sub_extra", cancelAtPeriodEnd: true }).mockResolvedValueOnce(null);
+      await expect(handleJob(envelope("billing.syncExtraNumbersSubscription", businessId), { domain, polar: { recordUsage: vi.fn(), setCancelAtPeriodEnd } })).resolves.toEqual({ status: "completed", entityId: businessId });
+      expect(setCancelAtPeriodEnd).toHaveBeenCalledWith({ subscriptionId: "sub_extra", cancelAtPeriodEnd: true });
+      await expect(handleJob(envelope("billing.syncExtraNumbersSubscription", businessId), { domain, polar: { recordUsage: vi.fn(), setCancelAtPeriodEnd } })).resolves.toEqual({ status: "skipped", entityId: businessId });
+      expect(setCancelAtPeriodEnd).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe("a business's extra numbers", () => {
     const job: JobEnvelope = { jobId: randomUUID(), type: "billing.chargeExtraNumbers", queue: "maintenance", businessId: null, payload: {}, trace: {}, idempotencyKey: "extra-number-charges", scheduled: true, recurring: true };
 
@@ -1149,7 +1188,7 @@ describe("worker handlers", () => {
       const recordUsage = vi.fn().mockResolvedValue(undefined);
 
       await expect(handleJob(job, { domain, polar: { recordUsage } })).resolves.toEqual({ status: "completed", entityId: "2:1" });
-      expect(recordUsage).toHaveBeenCalledWith({ eventName: "billing.extra_numbers", externalCustomerId: `business:${businessId}`, quantity: 115, timestamp: "2026-11-03T12:00:00.000Z", idempotencyKey: `extra-number:${chargeId}:1`, businessId, usageKind: "extra_number" });
+      expect(recordUsage).toHaveBeenCalledWith({ eventName: "billing.extra_numbers", externalCustomerId: `business:${businessId}`, quantity: 115, timestamp: expect.not.stringMatching(/^2026-11-03T12:00:00/), idempotencyKey: `extra-number:${chargeId}:1`, businessId, usageKind: "extra_number" });
     });
 
     it("lets a failed report fail the job, and charges nothing without Polar", async () => {

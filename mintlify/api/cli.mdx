@@ -196,3 +196,14 @@ Without a state file, a platform key won't create a business when you already on
 `lobbystack` has a command for every API endpoint, grouped like the API: `lobbystack services list`, `lobbystack knowledge upload`, `lobbystack numbers search`, and so on. `lobbystack --help` lists the groups, and `--help` after any command lists its options. With a partner's key, eight more groups run the [Partner endpoints](/api/authentication#partner-endpoints): `partner`, `demos`, `packages`, `brand`, `domain`, `templates`, `partner-team` and `payments`. For example, `lobbystack demos list` lists your prospect demos.
 
 `lobbystack agents list` shows the business's agents. `lobbystack receptionist` and `lobbystack rules` change the default agent. `lobbystack rules add --channel sms` adds a rule for texts only, and `lobbystack rules list` shows each rule's channel.
+
+### Buy a number for another agent
+
+`lobbystack numbers search-extra` lists numbers you can buy for another agent, each with its monthly price. Extra numbers bill monthly, apart from the plan. The first time, run `lobbystack billing extra-numbers --wait` and send the page it prints to whoever pays. Then buy a number at the price the search showed:
+
+```bash
+lobbystack numbers search-extra --country CA
+lobbystack numbers buy-extra <offer_token> --agent-id <agent_id> --accept-monthly-price-cents 115 --wait
+```
+
+`--accept-monthly-price-cents` has to match the offer's price, or the API refuses the purchase. Send `null` for an offer with no price, as on a self-hosted server. `lobbystack numbers list` shows each number's agent and monthly price. `--kind toll_free` searches toll-free numbers in the US and Canada, which cost $2.15 a month.

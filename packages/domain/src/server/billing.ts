@@ -14,6 +14,7 @@ import { poolLeft, readPartnerPoolInTransaction } from "./partnerPool";
 import { PROVIDER_RETRY_WINDOW_MS, providerRetryDelayMs } from "./providerRetry";
 import { enqueuePlanSnapshotRefresh } from "./agentSnapshot";
 import { subscriptionEventEffect } from "./polarSubscriptions";
+import { applyExtraNumbersSubscriptionInTransaction, enqueueExtraNumbersSubscriptionSync } from "./extraNumbersSubscription";
 import { recordProductEventInTransaction } from "./productEvents";
 import { requireBusinessAdmin } from "../authz";
 import { correctUsageInTransaction, enqueueUsageSyncInTransaction, getUsageStatusInTransaction, getVoiceSecondsLeftInTransaction, loadBillingContext, periodKeyFor, readUsageStatusInTransaction, readVoiceSecondsLeftInTransaction, reserveUsageInTransaction } from "./usage";
@@ -176,7 +177,7 @@ export async function createBillingCheckoutRequestInTransaction(
   }
   const open = (await tx.select({ id: billingCheckoutRequests.id, requestedByUserId: billingCheckoutRequests.requestedByUserId, target: billingCheckoutRequests.target, billingInterval: billingCheckoutRequests.billingInterval })
     .from(billingCheckoutRequests)
-    .where(and(eq(billingCheckoutRequests.businessId, input.businessId), inArray(billingCheckoutRequests.status, ["pending", "processing", "ready"]), gt(billingCheckoutRequests.createdAt, new Date(Date.now() - openCheckoutWindowMs))))
+    .where(and(eq(billingCheckoutRequests.businessId, input.businessId), inArray(billingCheckoutRequests.target, ["starter", "pro"]), inArray(billingCheckoutRequests.status, ["pending", "processing", "ready"]), gt(billingCheckoutRequests.createdAt, new Date(Date.now() - openCheckoutWindowMs))))
     .orderBy(desc(billingCheckoutRequests.createdAt))
     .limit(1))[0];
   if (open) {
@@ -252,6 +253,7 @@ export async function setManagedPlanInTransaction(tx: DatabaseTransaction, input
   // A managed plan is a paid plan: a trial number becomes the business's number, and a scheduled release is called off.
   await keepBusinessNumbersInTransaction(tx, { businessId: input.businessId, now });
   await enqueuePlanSnapshotRefresh(tx, input.businessId);
+  await enqueueExtraNumbersSubscriptionSync(tx, input.businessId, "managed-plan");
   await enqueueOutbox(tx, { topic: "realtime.publish", businessId: input.businessId, aggregateType: "billing_account", aggregateId: input.businessId, dedupeKey: `billing:${input.businessId}:managed:${now.getTime()}`, payload: { type: "billing.updated", entityId: input.businessId } });
   return "set";
 }
@@ -273,6 +275,7 @@ export async function endManagedPlanInTransaction(tx: DatabaseTransaction, input
   // As when a paid plan ends: the numbers stay 30 more days, then go.
   await scheduleNumberReleaseInTransaction(tx, { businessId: input.businessId, now });
   await enqueuePlanSnapshotRefresh(tx, input.businessId);
+  await enqueueExtraNumbersSubscriptionSync(tx, input.businessId, "managed-plan-ended");
   await enqueueOutbox(tx, { topic: "realtime.publish", businessId: input.businessId, aggregateType: "billing_account", aggregateId: input.businessId, dedupeKey: `billing:${input.businessId}:managed-ended:${now.getTime()}`, payload: { type: "billing.updated", entityId: input.businessId } });
   return true;
 }
@@ -706,6 +709,8 @@ export async function reconcileBillingProviderEvent(
     const transactionPayload = recordObject(payload.order ?? payload);
     const customer = recordObject(payload.customer);
     const subscription = recordObject(payload.subscription);
+    // The extra numbers add-on's product, from the webhook route.
+    const addonProduct = payload.extraNumbersAddon === true;
     const existing = (await tx.select({
       billingKey: billingAccounts.billingKey,
       customerId: billingAccounts.customerId,
@@ -721,6 +726,25 @@ export async function reconcileBillingProviderEvent(
       // The subscription this event is about, if it names one. The account's own stays in existing.
       const eventSubscriptionId = stringField(transactionPayload, "subscriptionId", "subscription_id") ?? stringField(payload, "subscriptionId", "subscription_id") ?? stringField(subscription, "id");
       const subscriptionId = eventSubscriptionId ?? existing?.subscriptionId;
+      const extraNumbersAddon = addonProduct && (eventSubscriptionId === undefined || eventSubscriptionId !== existing?.subscriptionId);
+      // The extra numbers add-on is a subscription of its own beside the plan's, so its events leave the plan alone.
+      // A plan's own subscription moved to the add-on's product in the portal still reads as the plan's, and ends it below.
+      if (extraNumbersAddon) {
+        if (event.eventType.startsWith("subscription.") && eventSubscriptionId) {
+          await applyExtraNumbersSubscriptionInTransaction(tx, {
+            businessId: input.businessId,
+            billingKey,
+            customerId: customerId ?? undefined,
+            snapshot: {
+              subscriptionId: eventSubscriptionId,
+              state: stringField(payload, "subscriptionState") ?? stringField(payload, "status") ?? event.eventType.slice("subscription.".length),
+              currentPeriodEnd: dateField(payload, "currentPeriodEnd", "current_period_end") ?? null,
+              cancelAtPeriodEnd: payload.cancel_at_period_end === true,
+              modifiedAt: dateField(payload, "subscriptionModifiedAt") ?? null,
+            },
+          });
+        }
+      } else {
       // An unmapped product (a retired or legacy product id) keeps the stored plan rather than a display name.
       const plan = stringField(transactionPayload, "plan") ?? stringField(payload, "plan");
       const billingInterval = stringField(transactionPayload, "billingInterval", "billing_interval", "interval") ?? stringField(payload, "billingInterval", "billing_interval", "interval") ?? stringField(subscription, "billingInterval", "billing_interval", "interval");
@@ -732,7 +756,7 @@ export async function reconcileBillingProviderEvent(
       // One Polar customer can hold several subscriptions, so the event changes the plan only
       // when it's about the subscription the account stores, or a live plan that replaces it.
       // A support plan, or a product from the other catalog, sells this account nothing.
-      const sellsNothing = payload.selfHostedSupport === true || payload.foreignProduct === true;
+      const sellsNothing = payload.selfHostedSupport === true || payload.foreignProduct === true || payload.extraNumbersAddon === true;
       const effect = subscriptionEventEffect({
         storedSubscriptionId: existing?.subscriptionId,
         eventSubscriptionId,
@@ -823,6 +847,9 @@ export async function reconcileBillingProviderEvent(
           started: Boolean(startedSubscription),
           periodEnd: appliedPeriodEnd ?? null,
         });
+        // The extra numbers add-on bills only while the plan is live, so it's canceled or resumed with it.
+        if (isPaid !== wasPaid) await enqueueExtraNumbersSubscriptionSync(tx, input.businessId, isPaid ? "plan-started" : "plan-ended");
+      }
       }
     }
 
@@ -876,7 +903,8 @@ export async function reconcileBillingProviderEvent(
         },
       }).returning({ id: billingTransactions.id });
       if (!transaction) throw new Error("Billing transaction could not be persisted.");
-      await recordAffiliateCommissionInTransaction(tx, {
+      // Extra numbers sell at the carrier's cost, so their orders earn no commission.
+      if (!addonProduct) await recordAffiliateCommissionInTransaction(tx, {
         businessId: input.businessId,
         billingTransactionId: transaction.id,
         kind: transactionKind,

@@ -21,7 +21,8 @@ import { formatPhoneNumberDisplay } from "@/lib/phone";
 import { requestJson } from "@/lib/request-json";
 import type { BillingUsageViewModel, PhoneNumberViewModel } from "@/lib/page-view-models";
 import { formatDateTime, intlLocale } from "@/lib/locale";
-import { extraNumberPrices, isExtraNumberCountry } from "@lobbystack/shared";
+import { extraNumberMonthlyCents, soldNumberKind } from "@lobbystack/shared";
+import { ExtraNumbersCheckoutButton, useExtraNumbersCheckoutReturn } from "./extra-numbers-checkout";
 
 type NumbersResponse = {
   phoneNumbers: PhoneNumberViewModel[];
@@ -34,7 +35,7 @@ type NumbersResponse = {
    */
   partnerNumbers?: { available: boolean; trial?: boolean; refusal?: string | null; phoneVerified?: boolean } | null;
   /** Whether the business can buy another number for an agent, and whether it pays for one. */
-  extraNumbers?: { available: boolean; priced: boolean; refusal: string | null };
+  extraNumbers?: { available: boolean; priced: boolean; subscribed?: boolean; checkoutAvailable?: boolean; refusal: string | null };
   extraClaim?: { id: string; status: string } | null;
 };
 
@@ -112,6 +113,9 @@ export function LivePhoneNumberSettingsSurface({ agentId }: { agentId?: string }
   const buysExtra = Boolean(agentId) && !isReplacement && businessHasNumber;
   const extraNumbers = numbers.data?.extraNumbers;
   const extraPriced = Boolean(buysExtra && extraNumbers?.priced);
+  // A priced extra number bills through its own monthly subscription, which a Polar checkout starts before the first one.
+  const needsExtraNumbersBilling = Boolean(buysExtra && extraNumbers?.available && extraNumbers.priced && !extraNumbers.subscribed);
+  const confirmingExtraNumbersBilling = useExtraNumbersCheckoutReturn(businessId);
   const replacedNumberId = primaryPhoneNumber?.id;
   const numberApi = useMemo(() => phoneNumberChooserApi(isReplacement, { phoneNumberId: replacedNumberId, extraForAgentId: buysExtra ? agentId : undefined }), [agentId, buysExtra, isReplacement, replacedNumberId]);
   const [confirming, setConfirming] = useState<AvailableNumberSummary | null>(null);
@@ -126,7 +130,8 @@ export function LivePhoneNumberSettingsSurface({ agentId }: { agentId?: string }
       setConfirming(number);
     });
   }
-  const priceOf = (country: string) => isExtraNumberCountry(country) ? formatMonthlyPrice(extraNumberPrices[country].monthlyCents, i18n.language) : null;
+  // The dashboard searches the kind each country sells by default, so that kind's price is the one the operator pays.
+  const priceOf = (country: string) => { const cents = extraNumberMonthlyCents(country, soldNumberKind(country)); return cents === undefined ? null : formatMonthlyPrice(cents, i18n.language); };
   // Stable across renders, so opening the price confirmation doesn't make the chooser load again.
   const chooserText = useMemo(() => phoneNumberChooserText(t), [t]);
   const displayPhoneNumber = primaryPhoneNumber
@@ -150,6 +155,8 @@ export function LivePhoneNumberSettingsSurface({ agentId }: { agentId?: string }
   // A trial number's release date isn't the owner's deadline: the trial banner says when it ends,
   // and keeping or changing the number takes a paid plan.
   const isTrialNumber = primaryPhoneNumber?.reclaimReason === "trial";
+  // An extra number whose monthly billing ended goes unless the operator sets it up again.
+  const extraNumbersEnded = primaryPhoneNumber?.reclaimReason === "extra_numbers_ended";
   const reclaimScheduledAt = isTrialNumber ? null :
     (primaryPhoneNumber?.reclaimScheduledAt ? new Date(primaryPhoneNumber.reclaimScheduledAt).getTime() : null) ??
     billingStatus?.phoneNumberReclaimScheduledAt ??
@@ -175,7 +182,7 @@ export function LivePhoneNumberSettingsSurface({ agentId }: { agentId?: string }
             </ItemContent>
             {businesses.isLoading || canManageTenant ? (
               <ItemActions>
-                <SmallButtonSkeleton label={[t("phoneNumber.actions.getNumber"), t("phoneNumber.extra.buy"), t("phoneNumber.actions.requestChange"), t("phoneNumber.freeTrial.cta"), t("phoneNumber.requiresPaidPlan.upgradeCta")].reduce((widest, label) => label.length > widest.length ? label : widest)} />
+                <SmallButtonSkeleton label={[t("phoneNumber.actions.getNumber"), t("phoneNumber.extra.buy"), t("phoneNumber.extra.subscribe"), t("phoneNumber.actions.requestChange"), t("phoneNumber.freeTrial.cta"), t("phoneNumber.requiresPaidPlan.upgradeCta")].reduce((widest, label) => label.length > widest.length ? label : widest)} />
               </ItemActions>
             ) : null}
           </Item>
@@ -203,11 +210,13 @@ export function LivePhoneNumberSettingsSurface({ agentId }: { agentId?: string }
               })}
             </p>
             <p className="mt-1 type-body-muted">
-              {t("phoneNumber.reclaim.description", {
+              {t(extraNumbersEnded ? "phoneNumber.reclaim.extraNumbersEnded" : "phoneNumber.reclaim.description", {
                 number: displayPhoneNumber ?? primaryPhoneNumber?.e164,
               })}
             </p>
-            {canManageTenant ? (
+            {canManageTenant && extraNumbersEnded ? (
+              extraNumbers?.checkoutAvailable && !confirmingExtraNumbersBilling ? <div className="mt-3"><ExtraNumbersCheckoutButton agentId={agentId} businessId={businessId} label={t("phoneNumber.extra.subscribe")} /></div> : null
+            ) : canManageTenant ? (
               <Button
                 className="mt-3"
                 onClick={openUpgradePlanDialog}
@@ -232,8 +241,10 @@ export function LivePhoneNumberSettingsSurface({ agentId }: { agentId?: string }
                   <p className="type-body text-foreground">{displayPhoneNumber}</p>
                   {primaryPhoneNumber?.monthlyPriceCents != null ? <p className="type-caption text-muted-foreground">{t("phoneNumber.extra.monthly", { price: formatMonthlyPrice(primaryPhoneNumber.monthlyPriceCents, i18n.language) })}</p> : null}
                 </>
-              ) : buysExtra && extraNumbers?.refusal === "extra_numbers_unavailable" ? (
+              ) : buysExtra && (extraNumbers?.refusal === "extra_numbers_unavailable" || (needsExtraNumbersBilling && !extraNumbers?.checkoutAvailable)) ? (
                 <p className="type-body-muted">{t("phoneNumber.extra.unavailable")}</p>
+              ) : needsExtraNumbersBilling ? (
+                <p className="type-body-muted">{t(confirmingExtraNumbersBilling ? "phoneNumber.extra.confirmingPayment" : "phoneNumber.extra.billingDescription")}</p>
               ) : (
                 <p className="type-body-muted">
                   {offersFreeTrial || partnerNumbers?.trial
@@ -248,7 +259,9 @@ export function LivePhoneNumberSettingsSurface({ agentId }: { agentId?: string }
             </ItemContent>
             {canManageTenant ? (
               <ItemActions>
-                {offersFreeTrial ? (
+                {needsExtraNumbersBilling ? (
+                  extraNumbers?.checkoutAvailable && !confirmingExtraNumbersBilling ? <ExtraNumbersCheckoutButton agentId={agentId} businessId={businessId} label={t("phoneNumber.extra.subscribe")} /> : null
+                ) : offersFreeTrial ? (
                   <Button onClick={() => void openNumberStep(businessId)} size="sm" type="button">
                     {t("phoneNumber.freeTrial.cta")}
                   </Button>

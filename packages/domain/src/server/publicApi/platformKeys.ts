@@ -207,12 +207,13 @@ export async function resolvePlatformKey(context: DomainContext, token: string, 
 }
 
 /** What only the host's platform keys may do. */
-export type HostOnlyPlatformOperation = "checkout" | "claim_link" | "managed_plan";
+export type HostOnlyPlatformOperation = "checkout" | "claim_link" | "managed_plan" | "extra_numbers";
 
 const partnerPlatformKeyRefusals: Record<HostOnlyPlatformOperation, string> = {
   checkout: "A partner's platform key can't start a Polar checkout. A partner's businesses don't buy the host's plans.",
   claim_link: "A partner's platform key can't create claim links. A partner's business stays with the partner, which can release it to its owner.",
   managed_plan: "A partner's platform key can't manage a plan outside Polar. Only the host's platform keys with access to every business can.",
+  extra_numbers: "A partner's platform key can't buy extra numbers. A partner's tier sets its businesses' numbers.",
 };
 
 /**

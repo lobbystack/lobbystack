@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 
 import { businesses, onboardingNumberClaimEvents, phoneNumbers } from "@lobbystack/db";
 import { extraNumberAvailabilityInTransaction, extraNumberPricesInTransaction, partnerNumberAvailabilityInTransaction, schedulePhoneNumberRelease, verifiedPhone } from "@lobbystack/domain";
+import { extraNumbersProductId } from "@lobbystack/shared";
 import { jsonError } from "@/lib/api-helpers";
 import { operatorRoute } from "@/lib/operator-request";
 
@@ -22,8 +23,9 @@ export const GET = operatorRoute(async ({ userId, businessId, transaction }) => 
     // A partner's business gets its numbers from its partner's tier, not a plan its billing page shows. Its partner's trial
     // number needs the claimer's verified mobile, so the settings ask this person for one first when they have none here.
     partnerNumbers: partnerNumbers?.trial ? { ...partnerNumbers, phoneVerified: Boolean(await verifiedPhone(tx, { userId, businessId })) } : partnerNumbers,
-    // Whether the business can buy another number for an agent, whether it pays for one, and why not.
-    extraNumbers: await extraNumberAvailabilityInTransaction(tx, businessId),
+    // Whether the business can buy another number for an agent, whether it pays for one, whether its monthly add-on
+    // bills yet, whether this deployment sells that add-on, and why not.
+    extraNumbers: { ...await extraNumberAvailabilityInTransaction(tx, businessId), checkoutAvailable: Boolean(extraNumbersProductId(process.env) && process.env.POLAR_ACCESS_TOKEN) },
     extraClaim: activeClaims.find(claim => claim.purpose === "extra") ?? null,
   };
 })));

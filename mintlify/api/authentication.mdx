@@ -69,8 +69,8 @@ Each endpoint except `GET /me` requires one scope. A key without it gets `403` w
 | `messages:read` | `GET /messages` |
 | `knowledge:read` | `GET /knowledge`, `GET /knowledge/{entry_id}`, `GET /knowledge/sources`, `GET /knowledge/sources/{source_id}` |
 | `knowledge:write` | `POST /knowledge`, `PATCH` and `DELETE` on `/knowledge/{entry_id}`, `POST /knowledge/sources`, `PATCH` and `DELETE` on `/knowledge/sources/{source_id}`, `POST /knowledge/sources/{source_id}/expand`, `/retry` and `/cancel`, `POST /knowledge/uploads` and `POST /knowledge/uploads/{upload_id}/complete` |
-| `billing:manage` | `GET` and `PATCH /billing`, `POST /billing/checkout`, `GET /billing/checkout/{checkout_id}` and, with a platform key that has access to every business, `POST` and `DELETE /billing/managed-plan` |
-| `phone_numbers:manage` | `GET /phone-numbers`, `POST /phone-numbers/search`, `POST /phone-numbers/claims`, `GET /phone-numbers/claims/{claim_id}`, `DELETE /phone-numbers/{phone_number_id}` and `POST /phone-numbers/{phone_number_id}/replace` |
+| `billing:manage` | `GET` and `PATCH /billing`, `POST /billing/checkout`, `GET /billing/checkout/{checkout_id}`, `POST /billing/extra-numbers/checkout`, `GET /billing/extra-numbers/checkout/{checkout_id}` and, with a platform key that has access to every business, `POST` and `DELETE /billing/managed-plan` |
+| `phone_numbers:manage` | `GET /phone-numbers`, `POST /phone-numbers/search`, `POST /phone-numbers/claims`, `POST /phone-numbers/extra/search`, `POST /phone-numbers/extra/claims`, `GET /phone-numbers/claims/{claim_id}`, `DELETE /phone-numbers/{phone_number_id}` and `POST /phone-numbers/{phone_number_id}/replace` |
 | `phone_numbers:purchase` | Only for a partner's platform key, with `phone_numbers:manage`: `POST /phone-numbers/search`, `POST /phone-numbers/claims`, `POST /phone-numbers/{phone_number_id}/replace` |
 | `team:manage` | `GET /team`, `POST /team/invitations`, `DELETE /team/invitations/{invitation_id}`, `PATCH` and `DELETE` on `/team/members/{membership_id}`, `POST /team/claim-link` |
 | `webhooks:manage` | `GET`, `POST`, `PATCH` and `DELETE` on `/webhooks`, and `POST /webhooks/{webhook_id}/test` |
