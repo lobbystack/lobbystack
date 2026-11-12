@@ -23,7 +23,7 @@ function setup(input: { plan: string; extraNumbers: { available: boolean; priced
   client.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true, role: "business_owner" }] });
   client.setQueryData(["phone-numbers", "business"], { phoneNumbers: input.numbers ?? [{ id: "included", e164: "+14165550100", agentId: DEFAULT_AGENT, status: "active", reclaimScheduledAt: null, monthlyPriceCents: null }], replacement: { usedAt: null, activeClaim: null }, extraNumbers: input.extraNumbers, extraClaim: null });
   client.setQueryData(["billing", "business"], { effectivePlan: input.plan, entitlement: planEntitlement(input.plan as BillingPlanSlug, { live: input.plan !== "free_cloud", capMinor: null }), account: { plan: input.plan } });
-  const fetchMock = vi.fn(async (input: string) => {
+  const fetchMock = vi.fn(async (input: string, _init?: RequestInit) => {
     if (input.includes("/extra/claim/claim?")) return Response.json({ claim: { status: "claimed", phoneNumberId: "extra-phone", requestedE164: "+14165550200" } });
     if (input.includes("/extra/claim?")) return Response.json({ claimId: "claim" }, { status: 202 });
     if (input.includes("/extra/search?")) return Response.json({ market: { countryCode: "CA" }, price: { countryCode: "CA", monthlyCents: 115, currency: "USD" }, numbers: [0, 1, 2].map((index) => ({ phoneE164: `+141655502${String(index).padStart(2, "0")}`, countryCode: "CA", claimToken: `offer-${index}`, capabilities: { voice: true, sms: true } })) });
