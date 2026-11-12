@@ -14,12 +14,12 @@ import { Button } from "@/components/ui/button";
 import { Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxItem, ComboboxList } from "@/components/ui/combobox";
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { NumberField } from "@/components/ui/number-field";
+import { DurationPicker } from "@/components/ui/duration-picker";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { dayKey } from "@/lib/calendar-days";
 import { getContactDisplayName } from "@/lib/contact-display";
-import { formatDateTimeRange } from "@/lib/locale";
+import { formatDateTimeRange, intlLocale } from "@/lib/locale";
 import { formatPhoneNumberDisplay } from "@/lib/phone";
 import { requestJson } from "@/lib/request-json";
 
@@ -266,8 +266,8 @@ export function AppointmentForm({ businessId, timeZone: fallbackTimeZone, initia
           </Field>}
           <Field data-invalid={durationInvalid || undefined}>
             <FieldLabel htmlFor={durationId}>{t("appointments.create.duration")}</FieldLabel>
-            <NumberField allowOutOfRange decrementLabel={t("accessibility.decrease")} id={durationId} integer incrementLabel={t("accessibility.increase")} invalid={durationInvalid} max={MAX_MINUTES} min={MIN_MINUTES} onValueChange={(value) => setDuration(value === null ? "" : String(value))} step={5} value={typedMinutes ?? minutes} />
-            {durationInvalid ? <FieldError>{t("appointments.create.durationInvalid", { min: MIN_MINUTES, max: MAX_MINUTES })}</FieldError> : null}
+            <DurationPicker aria-describedby={durationInvalid ? `${durationId}-error` : undefined} className="w-40" columnLabels={{ hours: t("appointments.timeOff.picker.hours"), minutes: t("appointments.timeOff.picker.minutes") }} id={durationId} invalid={durationInvalid} locale={intlLocale(i18n.language)} onChange={(next) => setDuration(String(next))} value={typedMinutes ?? minutes} />
+            {durationInvalid ? <FieldError id={`${durationId}-error`}>{t("appointments.create.durationInvalid", { min: MIN_MINUTES, max: MAX_MINUTES })}</FieldError> : null}
           </Field>
           {/* Always shown, so the form asks for a time from the start and keeps its height once a service is picked. */}
           <Field data-invalid={timeMissing || Boolean(timeError) || undefined}>

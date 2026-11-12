@@ -49,7 +49,7 @@ describe("AppointmentForm", () => {
   it("starts on the clicked slot, an hour long until a service gives its length", async () => {
     const { drafts } = await setup({ initialStartsAt: slot });
     expect(drafts.at(-1)).toEqual({ startsAt: slot, durationMinutes: 60, serviceId: null });
-    expect((screen.getByLabelText(copy.duration) as HTMLInputElement).value).toBe("60");
+    expect(screen.getByLabelText(copy.duration).textContent).toBe("1h");
     await chooseService();
     await waitFor(() => expect(drafts.at(-1)).toEqual({ startsAt: slot, durationMinutes: 30, serviceId: "service-1" }));
     expect((await screen.findByRole("button", { name: "10:00 AM" })).getAttribute("aria-pressed")).toBe("true");
@@ -60,8 +60,9 @@ describe("AppointmentForm", () => {
     await userEvent.click(screen.getByLabelText(copy.contact));
     await userEvent.click(await screen.findByRole("option", { name: /Milan/ }));
     await chooseService();
-    await userEvent.clear(screen.getByLabelText(copy.duration));
-    await userEvent.type(screen.getByLabelText(copy.duration), "45");
+    // 30 minutes from the service becomes 45 through the picker's minute column.
+    await userEvent.click(screen.getByLabelText(copy.duration));
+    await userEvent.click(await screen.findByRole("option", { name: "45" }));
     await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => String(url).includes("durationMinutes=45"))).toBe(true));
     await userEvent.type(screen.getByLabelText(copy.notes), "Bring the forms");
     await userEvent.type(screen.getByLabelText(copy.internalNotes), "Pays cash");

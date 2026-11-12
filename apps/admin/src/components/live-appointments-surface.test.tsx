@@ -122,7 +122,7 @@ describe("new appointments locale baseline", () => {
     const sheet = await screen.findByRole("dialog", { name: "Rosa" });
     expect(within(sheet).getByText("Feniranje na ravno + ampula - nadogradnja")).toBeTruthy();
     expect(within(sheet).getByText("Marija")).toBeTruthy();
-    expect(within(sheet).getByText("45 min")).toBeTruthy();
+    expect(within(sheet).getByText("45m")).toBeTruthy();
     expect(within(sheet).getByRole("link", { name: "rosa@example.invalid" }).getAttribute("href")).toBe("mailto:rosa@example.invalid");
     expect(within(sheet).getByRole("link", { name: /555/ }).getAttribute("href")).toBe("tel:+14155550100");
   });

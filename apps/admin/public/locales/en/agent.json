@@ -172,9 +172,7 @@
           "hint": "Appointment length, used for availability checks.",
           "required": "Choose a duration of at least 1 minute.",
           "hours": "Hours",
-          "minutes": "Minutes",
-          "hoursTitle": "h",
-          "minutesTitle": "min"
+          "minutes": "Minutes"
         },
         "price": {
           "label": "Price",
