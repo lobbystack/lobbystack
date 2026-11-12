@@ -39,7 +39,6 @@ async function main(): Promise<void> {
       isDefault: true,
       greeting: "Thanks for calling.",
       tone: "professional",
-      summary: "Appointment audit certification",
       bookingPolicy: "Confirm availability before booking.",
       transferMode: "on_request",
       appointmentChangePolicy: { enabled: true, verificationMode: "otp_required", allowCancel: true, allowReschedule: true },

@@ -86,7 +86,7 @@ describe("readReceptionistSettingsChange", () => {
 
 describe("defaultReceptionistProfile", () => {
   it("greets callers with the business's name until someone writes a greeting", () => {
-    expect(defaultReceptionistProfile("Maple Clinic")).toMatchObject({ greeting: defaultGreeting("Maple Clinic"), summary: "Maple Clinic", summarySource: "placeholder", transferMode: "on_request", bookingMode: "instant", voice: "marin" });
+    expect(defaultReceptionistProfile("Maple Clinic")).toMatchObject({ greeting: defaultGreeting("Maple Clinic"), transferMode: "on_request", bookingMode: "instant", voice: "marin" });
   });
 });
 
@@ -98,12 +98,13 @@ describe("saveReceptionistProfileInTransaction", () => {
    * or null for a business without one; `saved` is the row the write returns.
    */
   function store(existing: { id: string } | null, saved: Record<string, unknown> | null) {
-    const recorded: { values?: Record<string, unknown>; set?: Record<string, unknown> } = {};
+    // `set` is the last write, the agent's; `sets` has every write, the business's summary first.
+    const recorded: { values?: Record<string, unknown>; set?: Record<string, unknown>; sets: Array<Record<string, unknown>> } = { sets: [] };
     // The agent's channel rules, which the row returned reads its instructions from, come back empty.
     const rows = (value: unknown[]) => ({ limit: async () => value, orderBy: async () => [] });
     const tx = {
       select: () => ({ from: () => ({ where: () => rows(existing ? [existing] : []) }) }),
-      update: () => ({ set: (set: Record<string, unknown>) => { recorded.set = set; return { where: () => ({ returning: async () => (saved ? [saved] : []) }) }; } }),
+      update: () => ({ set: (set: Record<string, unknown>) => { recorded.set = set; recorded.sets.push(set); return { where: () => ({ returning: async () => (saved ? [saved] : []) }) }; } }),
       insert: () => ({
         values: (values: Record<string, unknown>) => {
           recorded.values = values;
@@ -126,7 +127,8 @@ describe("saveReceptionistProfileInTransaction", () => {
   it("creates a missing default agent from the defaults and the fields sent", async () => {
     const { tx, recorded } = store(null, { id: "profile_1", updatedAt: savedAt });
     expect(await saveReceptionistProfileInTransaction(tx, { businessId: "biz_1", businessName: "Maple", patch: { tone: "warm" } })).toMatchObject({ id: "profile_1" });
-    expect(recorded.values).toMatchObject({ businessId: "biz_1", isDefault: true, greeting: defaultGreeting("Maple"), tone: "warm", summary: "Maple", summarySource: "placeholder", transferMode: "on_request", appointmentChangePolicy: defaultAppointmentChangePolicy });
+    expect(recorded.values).toMatchObject({ businessId: "biz_1", isDefault: true, greeting: defaultGreeting("Maple"), tone: "warm", transferMode: "on_request", appointmentChangePolicy: defaultAppointmentChangePolicy });
+    expect(recorded.values).not.toHaveProperty("summary");
   });
 
   it("refuses an agent the business doesn't have", async () => {
@@ -135,16 +137,17 @@ describe("saveReceptionistProfileInTransaction", () => {
     expect(mocks.enqueueOutbox).not.toHaveBeenCalled();
   });
 
-  it("marks a written summary as the business's own", async () => {
+  it("saves a written summary on the business, as the business's own", async () => {
     const { tx, recorded } = store({ id: "profile_1" }, { id: "profile_1", updatedAt: savedAt });
     await saveReceptionistProfileInTransaction(tx, { businessId: "biz_1", businessName: "Maple", patch: { summary: "Maple cuts hair." } });
-    expect(recorded.set).toMatchObject({ summary: "Maple cuts hair.", summarySource: "operator" });
+    expect(recorded.sets[0]).toMatchObject({ summary: "Maple cuts hair.", summarySource: "operator", summaryRegenerateStatus: null });
+    expect(recorded.set).toEqual({ updatedAt: expect.any(Date) });
   });
 
   it("hands the summary back to AI and queues the rewrite", async () => {
     const { tx, recorded } = store({ id: "profile_1" }, { id: "profile_1", updatedAt: savedAt });
     await saveReceptionistProfileInTransaction(tx, { businessId: "biz_1", businessName: "Maple", patch: {}, regenerateSummary: true });
-    expect(recorded.set).toMatchObject({ summarySource: "generated" });
+    expect(recorded.sets[0]).toMatchObject({ summarySource: "generated", summaryRegenerateStatus: "pending" });
     expect(mocks.enqueueOutbox).toHaveBeenLastCalledWith(tx, expect.objectContaining({ topic: "business.generateSummary", businessId: "biz_1", payload: { businessId: "biz_1", reason: "operator_regenerate", force: true } }));
   });
 

@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
-import { readReceptionistSettingsChange, requireActiveAgentInTransaction, saveReceptionistProfileInTransaction, staffFirstBlockInTransaction, updateBusinessInTransaction } from "@lobbystack/domain";
+import { readReceptionistSettingsChange, requireActiveAgentInTransaction, saveReceptionistProfileInTransaction, staffFirstBlockInTransaction, updateBusinessInTransaction, withBusinessSummary } from "@lobbystack/domain";
 import { agents, businesses, defaultAgentOf, knowledgeDocuments, knowledgeSnippets } from "@lobbystack/db";
 import { isUuid, normalizeRuntimeLocale } from "@lobbystack/shared";
 import { jsonError } from "@/lib/api-helpers";
@@ -23,7 +23,8 @@ export const GET = operatorRoute(async ({ request, businessId, transaction }) =>
       tx.select({ id: knowledgeDocuments.id }).from(knowledgeDocuments).where(and(eq(knowledgeDocuments.businessId, businessId), eq(knowledgeDocuments.active, true), eq(knowledgeDocuments.status, "indexed"))).limit(1),
     ]);
     // The same sources the summary rewrite reads; without any, "Rewrite with AI" has nothing to go on.
-    return { business: business[0] ?? null, profile: profile[0] ?? null, hasKnowledgeSources: snippet.length > 0 || document.length > 0, staffFirstBlock };
+    // The profile carries the business's summary, which every agent shares.
+    return { business: business[0] ?? null, profile: profile[0] ? await withBusinessSummary(tx, profile[0]) : null, hasKnowledgeSources: snippet.length > 0 || document.length > 0, staffFirstBlock };
   }));
 });
 

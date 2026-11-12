@@ -198,6 +198,7 @@ async function insertBusinessRowsInTransaction(tx: DatabaseTransaction, input: N
       slug: attempt === 0 ? baseSlug : `${baseSlug}-${randomBytes(6).toString("hex")}`,
       timezone,
       currency: defaultCurrencyForTimezone(timezone),
+      summary: `${name} uses LobbyStack to answer calls.`,
       businessType: input.businessType,
       // A self-hosted server's businesses get its unlimited plan, not the cloud's free one. Any other mode, development included, keeps them cloud, as before:
       // every mode but cloud skips billing and the paid-plan check on numbers.
@@ -241,7 +242,6 @@ async function insertBusinessRowsInTransaction(tx: DatabaseTransaction, input: N
     name: defaultAgentName(locale),
     greeting: defaultGreeting(name, locale),
     tone: "warm and direct",
-    summary: `${name} uses LobbyStack to answer calls.`,
     bookingPolicy,
     transferMode: "on_request",
     appointmentChangePolicy: defaultAppointmentChangePolicy,

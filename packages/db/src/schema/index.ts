@@ -185,6 +185,15 @@ export const businesses = pgTable(
     teamLocale: varchar("team_locale", { length: 8 }),
     /** ISO 4217 code every service price is in. */
     currency: varchar("currency", { length: 3 }).default("USD").notNull(),
+    // What every agent says the business is (migration 0215). Who wrote it:
+    // "placeholder" (sign-up default), "generated" (AI, from the shared
+    // knowledge) or "operator". Generation never replaces an operator's summary.
+    summary: text("summary").default("").notNull(),
+    summarySource: varchar("summary_source", { length: 16 }).$type<"placeholder" | "generated" | "operator">().default("placeholder").notNull(),
+    summaryFingerprint: varchar("summary_fingerprint", { length: 64 }),
+    summaryGeneratedAt: timestamp("summary_generated_at", { withTimezone: true }),
+    // The outcome of the last "Rewrite with AI"; null when none was asked for.
+    summaryRegenerateStatus: varchar("summary_regenerate_status", { length: 16 }).$type<"pending" | "completed" | "empty" | "failed">(),
     businessType: varchar("business_type", { length: 64 }).notNull(),
     deploymentMode: varchar("deployment_mode", { length: 32 }).default("cloud").notNull(),
     status: varchar("status", { length: 32 }).default("active").notNull(),
@@ -749,15 +758,9 @@ export const agents = pgTable(
     archivedAt: timestamp("archived_at", { withTimezone: true }),
     greeting: text("greeting").notNull(),
     tone: text("tone").notNull(),
-    summary: text("summary").notNull(),
-    // Who wrote the summary: "placeholder" (sign-up default), "generated" (AI,
-    // from the knowledge sources) or "operator". Generation never replaces an
-    // operator's summary.
-    summarySource: varchar("summary_source", { length: 16 }).$type<"placeholder" | "generated" | "operator">().default("placeholder").notNull(),
-    summaryFingerprint: varchar("summary_fingerprint", { length: 64 }),
-    summaryGeneratedAt: timestamp("summary_generated_at", { withTimezone: true }),
-    // The outcome of the last "Rewrite with AI"; null when none was asked for.
-    summaryRegenerateStatus: varchar("summary_regenerate_status", { length: 16 }).$type<"pending" | "completed" | "empty" | "failed">(),
+    // The summary columns moved to businesses in migration 0215. The table
+    // keeps them, in step with the business, until the previous release stops
+    // reading them, so no code here names them.
     bookingPolicy: text("booking_policy").notNull(),
     // Deprecated: migration 0203 moved them into rules kept to their channel,
     // and no code reads or writes them. A later release drops them.

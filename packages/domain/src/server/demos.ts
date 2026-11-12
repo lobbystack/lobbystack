@@ -282,6 +282,7 @@ async function insertDemoInTransaction(
     timezone,
     currency: defaultCurrencyForTimezone(timezone),
     defaultLocale: locale,
+    summary: `${name} virtual receptionist`,
     websiteUrl: demo.websiteUrl,
     businessType: "general",
     deploymentMode: process.env.DEPLOYMENT_MODE === "cloud" ? "cloud" : "development",
@@ -298,7 +299,6 @@ async function insertDemoInTransaction(
     name: defaultAgentName(locale),
     greeting: input.greeting?.trim() || defaultGreeting(name, locale),
     tone: "professional and friendly",
-    summary: `${name} virtual receptionist`,
     bookingPolicy: PROSPECT_DEMO_BOOKING_POLICY,
     transferMode: "on_request",
   }).returning({ id: agents.id });

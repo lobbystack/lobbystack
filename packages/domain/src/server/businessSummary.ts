@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { and, asc, desc, eq, inArray, isNotNull, lt, ne, sql } from "drizzle-orm";
 
 import { countKnowledgeTokens } from "../knowledgeRanking";
-import { agents, businesses, defaultAgentOf, enqueueOutbox, knowledgeChunks, knowledgeDocuments, knowledgeSnippets, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { businesses, enqueueOutbox, knowledgeChunks, knowledgeDocuments, knowledgeSnippets, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { BUSINESS_KNOWLEDGE_SCOPE, documentInScope, snippetInScope } from "./knowledgeScope";
 
 import type { DomainContext } from "./context";
@@ -52,9 +52,8 @@ export type BusinessSummaryInput = {
 /** The knowledge to summarize: text entries first, then the start of each indexed document, within a token budget. */
 export async function loadBusinessSummaryInput(context: DomainContext, input: { businessId: string }): Promise<BusinessSummaryInput | null> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const [business] = await tx.select({ name: businesses.name, defaultLocale: businesses.defaultLocale }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1);
-    const [profile] = await tx.select({ summarySource: agents.summarySource, summaryFingerprint: agents.summaryFingerprint }).from(agents).where(defaultAgentOf(input.businessId)).limit(1);
-    if (!business || !profile) return null;
+    const [business] = await tx.select({ name: businesses.name, defaultLocale: businesses.defaultLocale, summarySource: businesses.summarySource, summaryFingerprint: businesses.summaryFingerprint }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1);
+    if (!business) return null;
     const snippets = await tx.select({ title: knowledgeSnippets.title, content: knowledgeSnippets.content }).from(knowledgeSnippets)
       .where(and(eq(knowledgeSnippets.businessId, input.businessId), snippetInScope("knowledge_snippets", input.businessId, BUSINESS_KNOWLEDGE_SCOPE)))
       .orderBy(desc(knowledgeSnippets.priority), asc(knowledgeSnippets.createdAt)).limit(SUMMARY_MAX_SNIPPETS);
@@ -84,9 +83,9 @@ export async function loadBusinessSummaryInput(context: DomainContext, input: { 
     return {
       businessName: business.name,
       locale: business.defaultLocale,
-      summarySource: profile.summarySource,
+      summarySource: business.summarySource,
       fingerprint,
-      currentFingerprint: profile.summaryFingerprint,
+      currentFingerprint: business.summaryFingerprint,
       sources,
     };
   });
@@ -98,15 +97,15 @@ export async function loadBusinessSummaryInput(context: DomainContext, input: { 
  */
 export async function resetGeneratedBusinessSummary(context: DomainContext, input: { businessId: string; businessName: string }): Promise<boolean> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const updated = await tx.update(agents)
+    const updated = await tx.update(businesses)
       .set({ summary: `${input.businessName.trim()} uses LobbyStack to answer calls.`, summarySource: "placeholder", summaryFingerprint: null, summaryGeneratedAt: null, updatedAt: new Date() })
-      .where(and(defaultAgentOf(input.businessId), eq(agents.summarySource, "generated")))
-      .returning({ id: agents.id });
+      .where(and(eq(businesses.id, input.businessId), eq(businesses.summarySource, "generated")))
+      .returning({ id: businesses.id });
     if (!updated[0]) return false;
     await enqueueOutbox(tx, {
       topic: "snapshot.refresh",
       businessId: input.businessId,
-      aggregateType: "receptionist_profile",
+      aggregateType: "business",
       aggregateId: updated[0].id,
       dedupeKey: `business-summary:${input.businessId}:snapshot:reset:${Date.now()}`,
       payload: { businessId: input.businessId, reason: "summary_reset" },
@@ -118,15 +117,15 @@ export async function resetGeneratedBusinessSummary(context: DomainContext, inpu
 /** Saves a generated summary unless an operator wrote one meanwhile, and refreshes the snapshot. */
 export async function saveGeneratedBusinessSummary(context: DomainContext, input: { businessId: string; summary: string; fingerprint: string }): Promise<boolean> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const updated = await tx.update(agents)
+    const updated = await tx.update(businesses)
       .set({ summary: input.summary, summarySource: "generated", summaryFingerprint: input.fingerprint, summaryGeneratedAt: new Date(), updatedAt: new Date() })
-      .where(and(defaultAgentOf(input.businessId), ne(agents.summarySource, "operator")))
-      .returning({ id: agents.id });
+      .where(and(eq(businesses.id, input.businessId), ne(businesses.summarySource, "operator")))
+      .returning({ id: businesses.id });
     if (!updated[0]) return false;
     await enqueueOutbox(tx, {
       topic: "snapshot.refresh",
       businessId: input.businessId,
-      aggregateType: "receptionist_profile",
+      aggregateType: "business",
       aggregateId: updated[0].id,
       dedupeKey: `business-summary:${input.businessId}:snapshot:${input.fingerprint}:${Date.now()}`,
       payload: { businessId: input.businessId, reason: "summary_generated" },
@@ -141,6 +140,20 @@ export type SummaryRegenerateOutcome = "completed" | "empty" | "failed";
 export async function finishBusinessSummaryRegenerate(context: DomainContext, input: { businessId: string; outcome: SummaryRegenerateOutcome | null }): Promise<void> {
   await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     // Only a rewrite that was asked for; a retry that succeeds after a failure still reports it.
-    await tx.update(agents).set({ summaryRegenerateStatus: input.outcome }).where(and(defaultAgentOf(input.businessId), isNotNull(agents.summaryRegenerateStatus)));
+    await tx.update(businesses).set({ summaryRegenerateStatus: input.outcome }).where(and(eq(businesses.id, input.businessId), isNotNull(businesses.summaryRegenerateStatus)));
   });
+}
+
+/** The summary every agent of the business shares, and how it was written. */
+export type BusinessSummary = Pick<typeof businesses.$inferSelect, "summary" | "summarySource" | "summaryRegenerateStatus">;
+
+/** Reads the business's summary. A business that isn't there reads as the sign-up placeholder with no text. */
+export async function loadBusinessSummaryInTransaction(tx: DatabaseTransaction, businessId: string): Promise<BusinessSummary> {
+  const [row] = await tx.select({ summary: businesses.summary, summarySource: businesses.summarySource, summaryRegenerateStatus: businesses.summaryRegenerateStatus }).from(businesses).where(eq(businesses.id, businessId)).limit(1);
+  return row ?? { summary: "", summarySource: "placeholder", summaryRegenerateStatus: null };
+}
+
+/** Adds the business's summary to an agent's settings, the shape the dashboard and /v1/receptionist show. */
+export async function withBusinessSummary<T extends { businessId: string }>(tx: DatabaseTransaction, row: T): Promise<T & BusinessSummary> {
+  return { ...row, ...await loadBusinessSummaryInTransaction(tx, row.businessId) };
 }

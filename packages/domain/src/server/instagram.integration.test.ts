@@ -163,7 +163,7 @@ describe.skipIf(!testUrl)("connecting Instagram for one agent against PostgreSQL
       expect(await world.connect(world.evening)).toEqual({ agentId: world.evening });
       await tx.execute(sql`reset role`);
       expect((await tx.select({ agentId: conversations.agentId }).from(conversations).where(eq(conversations.id, open!.id)))[0]?.agentId).toBe(world.evening);
-      const [weekend] = await tx.insert(agents).values({ businessId: world.businessId, name: "Weekend", greeting: "Hi", tone: "warm", summary: "A shop", bookingPolicy: "Book", transferMode: "never", archivedAt: new Date() }).returning({ id: agents.id });
+      const [weekend] = await tx.insert(agents).values({ businessId: world.businessId, name: "Weekend", greeting: "Hi", tone: "warm", bookingPolicy: "Book", transferMode: "never", archivedAt: new Date() }).returning({ id: agents.id });
       await tx.execute(sql`set local role lobbystack_app`);
       expect(await world.connect(weekend!.id)).toEqual({ agentId: world.evening });
     });

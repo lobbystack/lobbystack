@@ -122,6 +122,7 @@ import { isSharedSmsSender, resolveSmsSender } from "../smsSender";
 import { loadBillingContext } from "../usage";
 import { defaultReceptionistProfile, saveReceptionistProfileInTransaction, type ReceptionistProfilePatch } from "../receptionistProfile";
 import { loadLegacyInstructions, withLegacyInstructions } from "../channelRules";
+import { loadBusinessSummaryInTransaction } from "../businessSummary";
 import { listActiveAgentsInTransaction, pausedAgentIds } from "../agents";
 import { deleteAgentRuleInTransaction, insertAgentRuleInTransaction, listAgentRulesInTransaction, lockAgentRulesInTransaction, reorderAgentRulesInTransaction, updateAgentRuleInTransaction } from "../rules";
 import { insertWidgetKeyInTransaction, updateWidgetKeyInTransaction, type WidgetKeyPatch } from "../widgetKeys";
@@ -1293,9 +1294,10 @@ async function loadReceptionistState(tx: DatabaseTransaction, businessId: string
   const business = { ...row, locale: normalizeRuntimeLocale(row.defaultLocale) };
   const query = tx.select().from(agents).where(defaultAgentOf(businessId)).limit(1);
   const [agentRow] = lock ? await query.for("update") : await query;
-  // The instruction fields read the agent's channel rules, not the deprecated columns.
-  const profile = agentRow ? await withLegacyInstructions(tx, agentRow) : null;
-  return { business, profile, shown: profile ?? { ...defaultReceptionistProfile(business.name, business.locale), updatedAt: business.updatedAt } };
+  // The instruction fields read the agent's channel rules, not the deprecated columns, and the summary is the business's.
+  const summary = await loadBusinessSummaryInTransaction(tx, businessId);
+  const profile = agentRow ? { ...await withLegacyInstructions(tx, agentRow), ...summary } : null;
+  return { business, profile, shown: profile ?? { ...defaultReceptionistProfile(business.name, business.locale), ...summary, updatedAt: business.updatedAt } };
 }
 
 // Agents. Read-only for now: the dashboard creates, archives and edits them.

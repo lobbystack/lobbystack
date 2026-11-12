@@ -680,7 +680,8 @@ export function serializeCalendarConnection(row: { id: string; provider: string;
 const summarySources = ["placeholder", "generated", "operator"] as const;
 
 // The instruction fields come from the agent's channel rules (withLegacyInstructions), not its deprecated columns.
-type ReceptionistRow = Pick<typeof agents.$inferSelect, "greeting" | "tone" | "summary" | "summarySource" | "bookingPolicy" | "voiceInstructions" | "smsInstructions" | "chatInstructions" | "transferMode" | "transferNumber" | "appointmentChangePolicy" | "bookingMode" | "voice" | "staffFirstMode" | "staffFirstNumber" | "staffFirstRingSeconds" | "staffFirstMessage" | "staffFirstHandoverMessage" | "updatedAt">;
+// The summary is the business's (withBusinessSummary).
+type ReceptionistRow = { summary: string; summarySource: string } & Pick<typeof agents.$inferSelect, "greeting" | "tone" | "bookingPolicy" | "voiceInstructions" | "smsInstructions" | "chatInstructions" | "transferMode" | "transferNumber" | "appointmentChangePolicy" | "bookingMode" | "voice" | "staffFirstMode" | "staffFirstNumber" | "staffFirstRingSeconds" | "staffFirstMessage" | "staffFirstHandoverMessage" | "updatedAt">;
 
 /** Shows the settings as calls use them: a transfer mode, booking mode, voice or policy calls don't know reads as what they fall back to. */
 export function serializeReceptionist(row: ReceptionistRow): ApiReceptionist {
@@ -689,7 +690,7 @@ export function serializeReceptionist(row: ReceptionistRow): ApiReceptionist {
     greeting: row.greeting,
     tone: row.tone,
     summary: row.summary,
-    summary_source: (summarySources as readonly string[]).includes(row.summarySource) ? row.summarySource : "placeholder",
+    summary_source: (summarySources as readonly string[]).includes(row.summarySource) ? row.summarySource as (typeof summarySources)[number] : "placeholder",
     booking_policy: row.bookingPolicy,
     voice_instructions: row.voiceInstructions,
     sms_instructions: row.smsInstructions,
@@ -711,8 +712,8 @@ export function serializeReceptionist(row: ReceptionistRow): ApiReceptionist {
 // Agents
 
 /** An agent with the settings it has of its own, as calls use them. The summary is the business's, so it stays on /receptionist. */
-export function serializeAgent(row: ReceptionistRow & Pick<typeof agents.$inferSelect, "id" | "name" | "isDefault" | "createdAt">, paused: boolean): ApiAgent {
-  const { summary: _summary, summary_source: _summarySource, updated_at, ...settings } = serializeReceptionist(row);
+export function serializeAgent(row: Omit<ReceptionistRow, "summary" | "summarySource"> & Pick<typeof agents.$inferSelect, "id" | "name" | "isDefault" | "createdAt">, paused: boolean): ApiAgent {
+  const { summary: _summary, summary_source: _summarySource, updated_at, ...settings } = serializeReceptionist({ ...row, summary: "", summarySource: "placeholder" });
   return { id: row.id, name: row.name, is_default: row.isDefault, paused, ...settings, created_at: iso(row.createdAt), updated_at };
 }
 

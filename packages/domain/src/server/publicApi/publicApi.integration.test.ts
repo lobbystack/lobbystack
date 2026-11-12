@@ -50,8 +50,8 @@ let ownerId: string;
 
 async function createFixture(label: string): Promise<Fixture> {
   const businessId = randomUUID();
-  await admin!.db.insert(businesses).values({ id: businessId, slug: `api-${label}-${businessId}`, name: `API ${label}`, timezone: "UTC", businessType: "test" });
-  await admin!.db.insert(agents).values({ businessId, isDefault: true, greeting: "Hi", tone: "warm", summary: label, bookingPolicy: "Book", transferMode: "never", bookingMode: "instant" });
+  await admin!.db.insert(businesses).values({ id: businessId, slug: `api-${label}-${businessId}`, name: `API ${label}`, timezone: "UTC", businessType: "test", summary: label });
+  await admin!.db.insert(agents).values({ businessId, isDefault: true, greeting: "Hi", tone: "warm", bookingPolicy: "Book", transferMode: "never", bookingMode: "instant" });
   const [member] = await admin!.db.insert(staff).values({ businessId, name: "Sam", timezone: "UTC" }).returning({ id: staff.id });
   const [service] = await admin!.db.insert(services).values({ businessId, name: "Cut", slug: "cut", durationMinutes: 30 }).returning({ id: services.id });
   await admin!.db.insert(businessHours).values(Array.from({ length: 7 }, (_, dayOfWeek) => ({ businessId, dayOfWeek, openMinutes: 8 * 60, closeMinutes: 20 * 60 })));
@@ -684,7 +684,7 @@ describe.skipIf(!testUrl)("public API against PostgreSQL with RLS", () => {
     expect(await updateReceptionistForApi(context, a.caller, { voice_instructions: null, transfer_number: null })).toMatchObject({ voice_instructions: null, transfer_number: null });
 
     // Sending the summary it already has still makes it the business's own, so AI won't replace it.
-    await admin!.db.update(agents).set({ summary: "Maple cuts hair.", summarySource: "generated" }).where(eq(agents.id, profile!.id));
+    await admin!.db.update(businesses).set({ summary: "Maple cuts hair.", summarySource: "generated" }).where(eq(businesses.id, a.businessId));
     expect(await updateReceptionistForApi(context, a.caller, { summary: "Maple cuts hair." })).toMatchObject({ summary: "Maple cuts hair.", summary_source: "operator" });
     // Asking for a new summary hands it back to AI and queues the rewrite.
     expect(await updateReceptionistForApi(context, a.caller, { regenerate_summary: true })).toMatchObject({ summary_source: "generated" });

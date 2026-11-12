@@ -813,7 +813,7 @@ export async function refreshBusinessSnapshot(
       greeting: currentProfile?.greeting ?? defaultGreeting(business[0].name, defaultLocale),
       ...snapshotAgentFields(currentProfile),
       // A sign-up placeholder says nothing about the business, so prompts get no summary until AI or a person writes one.
-      summary: currentProfile && currentProfile.summarySource !== "placeholder" ? currentProfile.summary : "",
+      summary: business[0].summarySource !== "placeholder" ? business[0].summary : "",
       knowledgeDigest: defaultKnowledge.knowledgeDigest,
       hours: hours.map((row) => ({ dayOfWeek: row.dayOfWeek, openMinutes: row.openMinutes, closeMinutes: row.closeMinutes })),
       closures: closureRows.map((row) => ({ startsAt: row.startsAt.toISOString(), endsAt: row.endsAt.toISOString(), reason: row.reason })),

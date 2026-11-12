@@ -28,6 +28,7 @@ import {
 } from "@lobbystack/shared";
 
 import { enqueueAgentSnapshotRefresh } from "./agentSnapshot";
+import { withBusinessSummary, type BusinessSummary } from "./businessSummary";
 import { saveLegacyInstructionsInTransaction, withLegacyInstructions } from "./channelRules";
 import { assertTransferNumberAllowed, enqueueRefusedCallForwardRefresh } from "./numberTrials";
 import { assertStaffFirstChange, enqueueStaffFirstRouting } from "./staffFirst";
@@ -168,8 +169,6 @@ export function defaultReceptionistProfile(businessName: string, locale: Runtime
     name: defaultAgentName(locale),
     greeting: defaultGreeting(businessName, locale),
     tone: "professional",
-    summary: businessName,
-    summarySource: "placeholder" as const,
     bookingPolicy: "Confirm availability before booking.",
     voiceInstructions: null,
     smsInstructions: null,
@@ -200,7 +199,7 @@ export function defaultReceptionistProfile(businessName: string, locale: Runtime
 export async function saveReceptionistProfileInTransaction(
   tx: DatabaseTransaction,
   input: { businessId: string; agentId?: string | undefined; businessName: string; locale?: RuntimeLocale | undefined; name?: string | undefined; patch: ReceptionistProfilePatch; regenerateSummary?: boolean | undefined },
-): Promise<typeof agents.$inferSelect | null> {
+): Promise<(typeof agents.$inferSelect & BusinessSummary) | null> {
   const { businessId, patch } = input;
   // Without an agentId the change goes to the default agent, as /v1/receptionist and the old dashboard body expect.
   const target = input.agentId ? eq(agents.id, input.agentId) : eq(agents.isDefault, true);
@@ -212,9 +211,12 @@ export async function saveReceptionistProfileInTransaction(
   const changesStaffFirst = patch.staffFirstMode !== undefined || patch.staffFirstNumber !== undefined;
   if (changesStaffFirst) await assertStaffFirstChange(tx, { businessId, agentId, mode: patch.staffFirstMode, number: patch.staffFirstNumber });
   // The old per-channel instructions are rules kept to their channel now, and their columns stay unwritten.
-  const { voiceInstructions, smsInstructions, chatInstructions, ...columns } = patch;
+  // The summary is the business's, which every agent shares.
+  const { voiceInstructions, smsInstructions, chatInstructions, summary, ...columns } = patch;
   const instructions = { ...(voiceInstructions !== undefined ? { voiceInstructions } : {}), ...(smsInstructions !== undefined ? { smsInstructions } : {}), ...(chatInstructions !== undefined ? { chatInstructions } : {}) };
-  const changes = { ...columns, ...(input.name !== undefined ? { name: input.name } : {}), ...(patch.summary !== undefined ? { summarySource: "operator" as const, summaryRegenerateStatus: null } : {}), ...(input.regenerateSummary ? { summarySource: "generated" as const, summaryRegenerateStatus: "pending" as const } : {}), updatedAt: new Date() };
+  const summaryChange = { ...(summary !== undefined ? { summary, summarySource: "operator" as const, summaryRegenerateStatus: null } : {}), ...(input.regenerateSummary ? { summarySource: "generated" as const, summaryRegenerateStatus: "pending" as const } : {}) };
+  if (Object.keys(summaryChange).length) await tx.update(businesses).set({ ...summaryChange, updatedAt: new Date() }).where(eq(businesses.id, businessId));
+  const changes = { ...columns, ...(input.name !== undefined ? { name: input.name } : {}), updatedAt: new Date() };
   // Updates by id, so nothing depends on the one-agent-per-business index that
   // release 5b drops. A business without a default agent gets one from the defaults.
   const profile = agentId
@@ -236,8 +238,8 @@ export async function saveReceptionistProfileInTransaction(
       payload: { businessId, reason: "operator_regenerate", force: true },
     });
   }
-  // Callers show the instructions as the rules now hold them.
-  return await withLegacyInstructions(tx, profile);
+  // Callers show the instructions as the rules now hold them, and the business's summary.
+  return await withBusinessSummary(tx, await withLegacyInstructions(tx, profile));
 }
 
 /**
@@ -257,9 +259,6 @@ async function insertDefaultAgentInTransaction(
     name: input.name ?? defaults.name,
     greeting: patch.greeting ?? defaults.greeting,
     tone: patch.tone ?? defaults.tone,
-    summary: patch.summary ?? defaults.summary,
-    // A summary a person writes is never replaced by AI.
-    summarySource: patch.summary !== undefined ? "operator" : "placeholder",
     bookingPolicy: patch.bookingPolicy ?? defaults.bookingPolicy,
     transferMode: patch.transferMode ?? defaults.transferMode,
     ...(patch.transferNumber !== undefined ? { transferNumber: patch.transferNumber } : {}),

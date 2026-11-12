@@ -50,7 +50,7 @@ async function seed(tx: DatabaseTransaction) {
     await tx.insert(businessMemberships).values({ businessId, userId: id, role: key === "owner" ? "business_owner" : "scheduler" });
   }
   await tx.insert(businessHours).values(Array.from({ length: 7 }, (_, dayOfWeek) => ({ businessId, dayOfWeek, openMinutes: 0, closeMinutes: 1439 })));
-  await tx.insert(agents).values({ businessId, isDefault: true, greeting: "Hi", tone: "warm", summary: "Test", bookingPolicy: "Book", transferMode: "never", bookingMode: "instant", appointmentChangePolicy: { enabled: true, verificationMode: "phone_match_and_facts", allowCancel: true, allowReschedule: true } });
+  await tx.insert(agents).values({ businessId, isDefault: true, greeting: "Hi", tone: "warm", bookingPolicy: "Book", transferMode: "never", bookingMode: "instant", appointmentChangePolicy: { enabled: true, verificationMode: "phone_match_and_facts", allowCancel: true, allowReschedule: true } });
   const [milan] = await tx.insert(contacts).values({ businessId, name: "Milan", phone: "+14165550100" }).returning();
   const [business] = await tx.insert(staff).values({ businessId, name: "Front desk", timezone }).returning();
   const [ana] = await tx.insert(staff).values({ businessId, name: "Ana", timezone, isEmployee: true }).returning();

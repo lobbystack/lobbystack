@@ -30,7 +30,6 @@ describe.skipIf(!client)("agents in the business snapshot", () => {
       name: "Front desk",
       greeting: "Hi there",
       tone: "warm",
-      summary: "Test",
       bookingPolicy: "Book",
       bookingMode: "request",
       transferMode: "on_request",

@@ -50,7 +50,7 @@ async function seed(tx: DatabaseTransaction) {
   // A paid plan, so the second agent answers as itself and isn't paused.
   await tx.insert(billingAccounts).values({ businessId, billingKey: `business:${businessId}`, plan: "starter", subscriptionState: "active" }).onConflictDoUpdate({ target: billingAccounts.businessId, set: { plan: "starter", subscriptionState: "active" } });
   const [front] = await tx.select({ id: agents.id }).from(agents).where(eq(agents.businessId, businessId));
-  const [evening] = await tx.insert(agents).values({ businessId, isDefault: false, name: "Evening", greeting: "Evening desk", tone: "warm", summary: "", bookingPolicy: "Book", transferMode: "on_request" }).returning({ id: agents.id });
+  const [evening] = await tx.insert(agents).values({ businessId, isDefault: false, name: "Evening", greeting: "Evening desk", tone: "warm", bookingPolicy: "Book", transferMode: "on_request" }).returning({ id: agents.id });
   const document = async (input: { title: string; text: string; sourceType?: string; sourceUrl?: string; agentId?: string; websiteDocumentId?: string }) => {
     const [row] = await tx.insert(knowledgeDocuments).values({ businessId, title: input.title, sourceType: input.sourceType ?? "upload", sourceUrl: input.sourceUrl ?? null, status: "indexed", agentId: input.agentId ?? null, websiteDocumentId: input.websiteDocumentId ?? null }).returning({ id: knowledgeDocuments.id });
     await tx.insert(knowledgeChunks).values({ businessId, documentId: row!.id, sequence: 0, content: input.text, contentHash: randomUUID() });

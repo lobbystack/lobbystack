@@ -48,6 +48,7 @@ import {
 import { listKnowledgeEntryResources, listKnowledgeSourceResources, listServiceResources, loadBusinessResource, serializeReceptionist, serializeRule, type Page } from "./publicApi/resources";
 import { listAgentRulesInTransaction } from "./rules";
 import { withLegacyInstructions } from "./channelRules";
+import { withBusinessSummary } from "./businessSummary";
 import { storageFileName, uploadObjectKey, type BinaryStorageProvider } from "./storage";
 
 // Business templates: a partner saves one of its businesses' setup in the
@@ -154,7 +155,7 @@ async function readBusinessSetup(tx: DatabaseTransaction, businessId: string): P
   if (!business) throw businessNotFound();
   const locale = normalizeRuntimeLocale(business.locale);
   const [agentRow] = await tx.select().from(agents).where(defaultAgentOf(businessId)).limit(1);
-  const profile = agentRow ? await withLegacyInstructions(tx, agentRow) : undefined;
+  const profile = agentRow ? await withBusinessSummary(tx, await withLegacyInstructions(tx, agentRow)) : undefined;
   const receptionist = profile ? serializeReceptionist(profile) : null;
   const demoOnly = profile ? prospectDemoSettingsIn(profile) : new Set();
   const services = await listServiceResources(tx, businessId, { includeInactive: true });
