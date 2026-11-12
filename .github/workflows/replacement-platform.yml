@@ -43,6 +43,10 @@ jobs:
       LOBBYSTACK_WORKER_DATABASE_URL: postgres://lobbystack_worker:worker@127.0.0.1:5432/lobbystack
       LOBBYSTACK_DISPATCHER_DATABASE_URL: postgres://lobbystack_dispatcher:dispatcher@127.0.0.1:5432/lobbystack
       VERIFY_RLS_BEHAVIOR: "true"
+      # The marketing site links to, and asks about the session on, the e2e server
+      # (playwright.config.ts) rather than production. The build fixes it, as in
+      # scripts/e2e-local.sh.
+      NEXT_PUBLIC_APP_URL: http://localhost:13000
     services:
       postgres:
         image: pgvector/pgvector:pg16
