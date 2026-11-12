@@ -73,6 +73,9 @@ export function TimeOffDialog({ businessId, timeZone, entry, day, onOpenChange }
   const queryClient = useQueryClient();
   const ids = { staff: useId(), name: useId(), start: useId(), end: useId(), note: useId() };
   const [values, setValues] = useState<TimeOffValues>(() => entry ? timeOffValues(entry, timeZone) : { scope: "business", staffId: null, name: "", span: "day", startDate: day, endDate: day, startTime: "09:00", endTime: "13:00", note: "" });
+  // Time off can't start in the past. One already under way keeps its own start.
+  const today = DateTime.now().setZone(timeZone).toISODate() ?? day;
+  const [firstStart] = useState(() => entry ? [timeOffValues(entry, timeZone).startDate, today].sort()[0]! : today);
   const [submitted, setSubmitted] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const hourCycle = useTimeFormatPreference() ?? (i18n.language.startsWith("en") ? "ampm" : "24h");
@@ -156,7 +159,7 @@ export function TimeOffDialog({ businessId, timeZone, entry, day, onOpenChange }
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field data-invalid={datesMissing || undefined}>
                     <FieldLabel htmlFor={ids.start}>{t("appointments.timeOff.startDate")}</FieldLabel>
-                    <DatePicker id={ids.start} invalid={datesMissing} language={i18n.language} locale={intlLocale(i18n.language)} onChange={(startDate) => set({ startDate, ...(values.endDate < startDate ? { endDate: startDate } : {}) })} value={values.startDate} />
+                    <DatePicker id={ids.start} invalid={datesMissing} language={i18n.language} locale={intlLocale(i18n.language)} min={firstStart} onChange={(startDate) => set({ startDate, ...(values.endDate < startDate ? { endDate: startDate } : {}) })} value={values.startDate} />
                   </Field>
                   <Field data-invalid={endBeforeStart || datesMissing || undefined}>
                     <FieldLabel htmlFor={ids.end}>{t("appointments.timeOff.endDate")}</FieldLabel>
