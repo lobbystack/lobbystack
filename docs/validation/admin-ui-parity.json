@@ -45,6 +45,7 @@
     "/[locale]/reset-password",
     "/[locale]/reset-password/[token]",
     "/[locale]/signup",
+    "/[locale]/unsubscribe/[token]",
     "/[locale]/verify-email"
   ],
   "capabilities": [
@@ -369,6 +370,12 @@
     },
     {
       "path": "/check-in/[token]",
+      "fixtureState": "public",
+      "state": "invalid-link",
+      "comparison": "port-baseline"
+    },
+    {
+      "path": "/unsubscribe/[token]",
       "fixtureState": "public",
       "state": "invalid-link",
       "comparison": "port-baseline"
