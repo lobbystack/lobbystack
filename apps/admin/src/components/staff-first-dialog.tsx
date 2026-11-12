@@ -133,7 +133,7 @@ export function StaffFirstDialog({ businessId, defaultLocale, onOpenChange, onSa
 
   return (
     <Dialog onOpenChange={(next) => { if (!isSaving) onOpenChange(next); }} open={open}>
-      <DialogContent size="sm" className="max-h-[calc(100dvh-2rem)] grid-rows-[auto_minmax(0,1fr)_auto]">
+      <DialogContent className="max-h-[calc(100dvh-2rem)] grid-rows-[auto_minmax(0,1fr)_auto]">
         <DialogHeader>
           <DialogTitle>{t("agent:staffFirst.mode.label")}</DialogTitle>
         </DialogHeader>
