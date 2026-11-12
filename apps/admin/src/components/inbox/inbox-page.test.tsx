@@ -186,11 +186,11 @@ describe("the Inbox", () => {
     expect(document.querySelector("[aria-busy='true']")?.querySelectorAll("[data-slot='skeleton']").length).toBeGreaterThan(0);
     cleanup();
     setup({ respond: () => ({ items: [], nextCursor: null, agents: twoAgents }) });
-    expect(await screen.findByText("inbox:empty")).toBeTruthy();
+    expect((await screen.findByText("inbox:empty")).closest("[data-slot='empty-state']")).toBeTruthy();
     cleanup();
     route.search = "channel=sms";
     setup({ respond: () => ({ items: [], nextCursor: null, agents: twoAgents }) });
-    expect(await screen.findByText("inbox:noMatch")).toBeTruthy();
+    expect((await screen.findByText("inbox:noMatch")).closest("[data-slot='empty-state']")).toBeTruthy();
   });
 
   it("loads the next page with the cursor", async () => {

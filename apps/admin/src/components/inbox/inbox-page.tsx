@@ -13,6 +13,7 @@ import { HiddenTextSkeleton } from "@/components/loading-skeletons";
 import { PageHeader } from "@/components/page-header";
 import { useTelemetry } from "@/components/product-analytics";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import { ScrollRow } from "@/components/ui/scroll-row";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -179,7 +180,7 @@ export function InboxPage() {
         ) : null}
         <div aria-busy={loading || undefined} className="-mx-1 no-scrollbar px-1 md:min-h-0 md:flex-1 md:overflow-y-auto">
           {loading ? <RowsSkeleton /> : null}
-          {!loading && !items.length ? <p className="type-body-muted p-2">{filters.channel || filters.agentId ? t("inbox:noMatch") : t("inbox:empty")}</p> : null}
+          {!loading && !items.length ? <EmptyState title={filters.channel || filters.agentId ? t("inbox:noMatch") : t("inbox:empty")} /> : null}
           {items.map((item) => <InboxRow href={href(openItemChange(item))} item={item} key={item.key} onOpen={() => openRow(item)} selected={item.key === open} showAgent={hasChoice} />)}
           {inbox.hasNextPage ? <Button className="w-full" loading={inbox.isFetchingNextPage} onClick={() => void inbox.fetchNextPage()} size="sm" variant="ghost">{t("inbox:loadMore")}</Button> : null}
         </div>
