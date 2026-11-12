@@ -25,8 +25,7 @@ function DialogClose({ ...props }: DialogPrimitive.Close.Props) {
 }
 
 function DialogOverlay({ className, ...props }: DialogPrimitive.Backdrop.Props) {
-  // Base UI skips the backdrop of a dialog opened from a drawer or another dialog; forceRender still dims the page behind it.
-  return <DialogPrimitive.Backdrop forceRender data-slot="dialog-overlay" className={cn("fixed inset-0 z-50 bg-black/80 duration-100 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0", className)} {...props} />
+  return <DialogPrimitive.Backdrop data-slot="dialog-overlay" className={cn("fixed inset-0 z-50 bg-black/80 duration-100 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0", className)} {...props} />
 }
 
 /**
@@ -35,11 +34,12 @@ function DialogOverlay({ className, ...props }: DialogPrimitive.Backdrop.Props) 
  * picker or one choice. Below the cap a dialog keeps a 1rem gutter on each
  * side.
  */
-function DialogContent({ className, children, overlayClassName, showCloseButton = true, size = "default", ...props }: DialogPrimitive.Popup.Props & { showCloseButton?: boolean; overlayClassName?: string; size?: "default" | "sm" }) {
+function DialogContent({ className, children, forceOverlay = false, overlayClassName, showCloseButton = true, size = "default", ...props }: DialogPrimitive.Popup.Props & { forceOverlay?: boolean; showCloseButton?: boolean; overlayClassName?: string; size?: "default" | "sm" }) {
   const { t } = useTranslation("common")
   return (
     <DialogPortal>
-      <DialogOverlay className={overlayClassName} />
+      {/* Base UI skips the backdrop of a dialog opened from a drawer. Pass forceOverlay there only: inside another dialog it would stack a second dim layer. */}
+      <DialogOverlay className={overlayClassName} forceRender={forceOverlay} />
       <DialogPrimitive.Popup data-size={size} data-slot="dialog-content" className={cn(size === "sm" ? "max-w-[min(448px,calc(100%-2rem))]" : "max-w-[min(600px,calc(100%-2rem))]", "fixed top-1/2 left-1/2 z-50 grid w-full grid-cols-[minmax(0,1fr)] -translate-x-1/2 -translate-y-1/2 gap-6 rounded-3xl bg-popover p-6 shadow-lg type-body text-popover-foreground ring-1 ring-foreground/5 duration-100 outline-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95", className)} {...props}>
         {children}
         {showCloseButton ? <DialogPrimitive.Close data-slot="dialog-close" render={<Button className="absolute top-4 right-4" size="icon-sm" variant="ghost" />}><XIcon /><span className="sr-only">{t("accessibility.close")}</span></DialogPrimitive.Close> : null}
