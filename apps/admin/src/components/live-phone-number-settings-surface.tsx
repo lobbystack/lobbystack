@@ -127,7 +127,8 @@ export function LivePhoneNumberSettingsSurface({ agentId }: { agentId?: string }
     });
   }
   const priceOf = (country: string) => isExtraNumberCountry(country) ? formatMonthlyPrice(extraNumberPrices[country].monthlyCents, i18n.language) : null;
-  const chooserText = phoneNumberChooserText(t);
+  // Stable across renders, so opening the price confirmation doesn't make the chooser load again.
+  const chooserText = useMemo(() => phoneNumberChooserText(t), [t]);
   const displayPhoneNumber = primaryPhoneNumber
     ? formatPhoneNumberDisplay(primaryPhoneNumber.e164, i18n.language)
     : null;
