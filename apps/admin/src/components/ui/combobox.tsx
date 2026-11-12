@@ -72,12 +72,22 @@ function ComboboxInput({
 }) {
   const inputRef = React.useRef<HTMLInputElement>(null)
   const [hasText, setHasText] = React.useState(false)
+  // Follows the input's real value, however it changes: typing, the clear button, or the combobox resetting it.
+  React.useEffect(() => {
+    const input = inputRef.current
+    if (!input) return
+    const sync = () => setHasText(input.value.length > 0)
+    sync()
+    input.addEventListener("input", sync)
+    return () => input.removeEventListener("input", sync)
+  }, [])
   function clearText() {
     const input = inputRef.current
     if (!input) return
     // Goes through the input's own setter and an input event, so the combobox sees the change.
     Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set?.call(input, "")
     input.dispatchEvent(new Event("input", { bubbles: true }))
+    setHasText(input.value.length > 0)
     input.focus()
   }
   return (
@@ -85,10 +95,7 @@ function ComboboxInput({
       <ComboboxPrimitive.Input
         ref={inputRef}
         render={<InputGroupInput disabled={disabled} />}
-        onChange={(event) => {
-          setHasText(event.currentTarget.value.length > 0)
-          onChange?.(event)
-        }}
+        {...(onChange ? { onChange } : {})}
         {...props}
       />
       <InputGroupAddon align="inline-end">
@@ -225,7 +232,7 @@ function ComboboxItem({
     <ComboboxPrimitive.Item
       data-slot="combobox-item"
       className={cn(
-        "relative flex w-full cursor-default items-center gap-2.5 rounded-md py-2 pr-8 pl-3 type-body outline-hidden select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground not-data-[variant=destructive]:data-highlighted:**:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "relative flex w-full cursor-pointer items-center gap-2.5 rounded-md py-2 pr-8 pl-3 type-body outline-hidden select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground not-data-[variant=destructive]:data-highlighted:**:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className
       )}
       {...props}

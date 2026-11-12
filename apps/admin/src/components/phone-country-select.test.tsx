@@ -30,6 +30,7 @@ describe("PhoneCountrySelect", () => {
     expect(screen.queryByText("United States")).toBeNull();
     await user.click(screen.getByRole("button", { name: "accessibility.clearSearch" }));
     expect(search.value).toBe("");
+    expect(screen.queryByRole("button", { name: "accessibility.clearSearch" })).toBeNull();
     expect(screen.getByText("United States")).toBeTruthy();
   });
 });
