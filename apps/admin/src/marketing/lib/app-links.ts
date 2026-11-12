@@ -46,3 +46,13 @@ export const appPartnerSignupUrl = (locale: Locale) => {
   url.searchParams.set("lng", locale)
   return url.toString()
 }
+
+// The dashboard's pages aren't under a locale prefix, so `lng` carries the language.
+export const appDashboardUrl = (locale: Locale) => {
+  const url = new URL("/", APP_ORIGIN)
+  url.searchParams.set("lng", locale)
+  return url.toString()
+}
+
+// Answers only whether the visitor is signed in to the dashboard.
+export const appSessionCheckUrl = () => new URL("/api/marketing/session", APP_ORIGIN).toString()

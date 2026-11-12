@@ -51,6 +51,16 @@ HOSTNAME=0.0.0.0 PORT=13099 MARKETING_HOSTS=lobbystack.localhost \
 
 Then open `http://lobbystack.localhost:13099`. Bind to `0.0.0.0` as production does. With `127.0.0.1`, Next.js treats the proxy's rewrites as requests to another server.
 
+## Show signed-in visitors the dashboard
+
+The pages are the same for every visitor, so the navbar renders Log in and Try for free. After the page loads, it asks `/api/marketing/session` on `NEXT_PUBLIC_APP_URL` whether the visitor is signed in. When they are, one Dashboard link replaces both, on the desktop bar and in the phone menu.
+
+The dashboard's session cookie belongs to `app.lobbystack.com` alone, so the site can't read it. The browser still sends it with the site's request, because `lobbystack.com` and `app.lobbystack.com` are the same site and the cookie is `SameSite=Lax`. Keep the dashboard on a subdomain of the marketing domain, or the navbar always shows the signed-out links.
+
+The endpoint answers `{ "signedIn": true }` or `{ "signedIn": false }`, and nothing else about the session. It lets only the origins in `MARKETING_HOSTS` read the answer: over `https`, or over `http` for a `.localhost` name. Any other origin gets a `403`.
+
+Locally, `lobbystack.localhost` and `localhost` are two sites, so the browser leaves the cookie out and the navbar shows the signed-out links. `e2e/marketing-navbar.e2e.ts` lets the cookie cross to check the signed-in links.
+
 ## Set the build arguments and variables
 
 The marketing pages are built ahead of time, so the admin image needs their settings at build time. Only `MARKETING_HOSTS` and the runtime half of `INDEXNOW_KEY` are read while the server runs. Set them all in the admin's environment in Dokploy: [Release a commit to Dokploy](dokploy-release.md) builds the admin image with build arguments taken from there, and its list of build arguments must name the ones below.
@@ -60,7 +70,7 @@ The marketing pages are built ahead of time, so the admin image needs their sett
 | `MARKETING_SITE` | Build | `true` | Builds the marketing site into the image. `Dockerfile.admin` defaults to `false`, so self-hosted images leave out its pages, social cards and search index, about 380 MB. `pnpm build` includes it unless you set `false`. |
 | `MARKETING_HOSTS` | Runtime | `lobbystack.com,www.lobbystack.com` | Hosts that get the marketing site. The first is canonical. Leave it unset to serve only the dashboard. An image built without the site ignores it and logs a warning. |
 | `NEXT_PUBLIC_LANDING_SITE_URL` | Build | `https://lobbystack.com` | The site's origin. Any other origin makes `robots.txt` disallow crawling. |
-| `NEXT_PUBLIC_APP_URL` | Build | `https://app.lobbystack.com` | Origin of the sign-up and log-in links. Unset falls back to the production dashboard. |
+| `NEXT_PUBLIC_APP_URL` | Build | `https://app.lobbystack.com` | Origin of the sign-up, log-in and Dashboard links, and of the navbar's session check. Unset falls back to the production dashboard. |
 | `NEXT_PUBLIC_WEB_CALL_BUSINESS_SLUG` | Build | `lobbystack-mp35s9y1` | Business the hero demo call reaches. Keep it equal to the admin's `WEB_CALL_PUBLIC_BUSINESS_SLUG`. |
 | `NEXT_PUBLIC_LIVE_CALL_ENDPOINT` | Build | Unset | Demo call endpoint. Unset uses `https://app.lobbystack.com/api/voice/live/session`. |
 | `GOOGLE_SITE_VERIFICATION`, `BING_SITE_VERIFICATION` | Build | The current tokens | Search console verification meta tags. |

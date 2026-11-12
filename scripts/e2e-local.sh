@@ -49,6 +49,7 @@ TESTS=(
   e2e/getting-started.e2e.ts
   e2e/home-analytics-metrics.e2e.ts
   e2e/manual-create.e2e.ts
+  e2e/marketing-navbar.e2e.ts
   e2e/mobile-navigation.e2e.ts
   e2e/navigation.e2e.ts
   e2e/notifications.e2e.ts
@@ -116,6 +117,8 @@ export LOBBYSTACK_WORKER_PASSWORD=worker
 export LOBBYSTACK_DISPATCHER_PASSWORD=dispatcher
 export REDIS_URL="redis://127.0.0.1:${REDIS_PORT}"
 export PLAYWRIGHT_BASE_URL="http://localhost:${ADMIN_PORT}"
+# The marketing site links to, and asks about the session on, this server rather than production.
+export NEXT_PUBLIC_APP_URL="${NEXT_PUBLIC_APP_URL:-$PLAYWRIGHT_BASE_URL}"
 export SMTP_HOST=127.0.0.1
 export SMTP_PORT="$MAILPIT_SMTP_PORT"
 export SMTP_SECURE=false
