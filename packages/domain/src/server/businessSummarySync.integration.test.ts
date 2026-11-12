@@ -84,6 +84,59 @@ describe.skipIf(!client)("the business summary while the previous release drains
     expect((await businessSummary(businessId))?.summary).toBe("A family dental clinic.");
   });
 
+  it("queues an old write to the agent behind a new write to the business instead of deadlocking", async () => {
+    // A third transaction holds the business row, so the new write queues for it
+    // first and the old write queues behind it. Without a shared lock order the
+    // old write would hold the agent row while it waits, and the new write's
+    // copy would then wait on the agent: a deadlock.
+    const pidOf = async (tx: DatabaseTransaction) => (await tx.execute<{ pid: number }>(sql`select pg_backend_pid() as pid`)).rows[0]!.pid;
+    const waitUntilBlocked = async (pid: Promise<number>) => {
+      const backend = await pid;
+      for (let attempt = 0; attempt < 200; attempt += 1) {
+        const [row] = (await client!.db.execute<{ waiting: boolean }>(sql`select wait_event_type = 'Lock' as waiting from pg_stat_activity where pid = ${backend}`)).rows;
+        if (row?.waiting) return;
+        await new Promise((resolve) => setTimeout(resolve, 25));
+      }
+      throw new Error(`Backend ${backend} never waited on a lock.`);
+    };
+    const started = () => {
+      let resolve!: (pid: number) => void;
+      const pid = new Promise<number>((done) => { resolve = done; });
+      return { pid, resolve: (value: number) => resolve(value) };
+    };
+
+    let release!: () => void;
+    const released = new Promise<void>((done) => { release = done; });
+    const holder = started();
+    const holding = client!.db.transaction(async (tx) => {
+      await tx.execute(sql`select 1 from public.businesses where id = ${businessId}::uuid for no key update`);
+      holder.resolve(await pidOf(tx));
+      await released;
+    });
+    await holder.pid;
+
+    const newWrite = started();
+    const writingBusiness = asWorker(businessId, async (tx) => {
+      newWrite.resolve(await pidOf(tx));
+      await tx.update(businesses).set({ summary: "Written by the owner.", summarySource: "operator" }).where(eq(businesses.id, businessId));
+    });
+    await waitUntilBlocked(newWrite.pid);
+
+    const oldWrite = started();
+    const writingAgent = asWorker(businessId, async (tx) => {
+      oldWrite.resolve(await pidOf(tx));
+      await tx.execute(sql`update public.agents set summary = 'A family dental clinic.', summary_source = 'generated' where id = ${defaultAgentId}::uuid`);
+    });
+    await waitUntilBlocked(oldWrite.pid);
+
+    release();
+    const results = await Promise.allSettled([holding, writingBusiness, writingAgent]);
+    expect(results.map((result) => result.status === "rejected" ? String((result.reason as { cause?: unknown }).cause ?? result.reason) : "ok")).toEqual(["ok", "ok", "ok"]);
+    // The old write committed last, so both tables end on its summary.
+    expect(await businessSummary(businessId)).toMatchObject({ summary: "A family dental clinic.", summary_source: "generated" });
+    expect(await agentSummary(defaultAgentId)).toMatchObject({ summary: "A family dental clinic.", summary_source: "generated" });
+  });
+
   it("takes the summary of the first agent old code inserts for a business with none", async () => {
     const otherBusinessId = randomUUID();
     await client!.db.insert(businesses).values({ id: otherBusinessId, slug: `summary-${otherBusinessId}`, name: "Maple", timezone: "UTC", businessType: "test" });

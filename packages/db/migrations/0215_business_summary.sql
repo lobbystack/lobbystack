@@ -16,6 +16,14 @@
 --
 -- Each copy writes only what differs, and a copy made inside the other
 -- trigger stops there, so neither runs twice for one change.
+--
+-- Both copies lock the business row before the default agent's, so an old
+-- write and a new write for one business queue instead of deadlocking. A new
+-- write to businesses locks the business row, then its AFTER trigger locks the
+-- agent. An old write to agents would lock the agent row first: Postgres locks
+-- the row it updates before BEFORE ROW triggers run, so the agent trigger is
+-- too late to reorder. A BEFORE STATEMENT trigger runs before the statement
+-- locks any row, so it locks the business named by the RLS context first.
 
 SET LOCAL lock_timeout = '5s';
 
@@ -129,6 +137,33 @@ DROP TRIGGER IF EXISTS agents_sync_summary ON public.agents;
 CREATE TRIGGER agents_sync_summary
   BEFORE INSERT OR UPDATE OF summary, summary_source, summary_fingerprint, summary_generated_at, summary_regenerate_status, is_default ON public.agents
   FOR EACH ROW EXECUTE FUNCTION app.sync_agent_summary();
+
+-- Old code writes the summary inside withBusinessTransaction, which sets
+-- app.business_id. Without it, as in a migration, there is no old write to
+-- queue behind and nothing is locked.
+CREATE OR REPLACE FUNCTION app.lock_business_before_agent_summary()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_catalog
+AS $$
+DECLARE
+  v_business_id uuid := NULLIF(current_setting('app.business_id', true), '')::uuid;
+BEGIN
+  -- The business trigger's own copy already holds the business row.
+  IF pg_trigger_depth() > 1 OR v_business_id IS NULL THEN
+    RETURN NULL;
+  END IF;
+  PERFORM 1 FROM public.businesses business WHERE business.id = v_business_id FOR NO KEY UPDATE;
+  RETURN NULL;
+END
+$$;
+REVOKE ALL ON FUNCTION app.lock_business_before_agent_summary() FROM PUBLIC;
+
+DROP TRIGGER IF EXISTS agents_lock_business_before_summary ON public.agents;
+CREATE TRIGGER agents_lock_business_before_summary
+  BEFORE UPDATE OF summary, summary_source, summary_fingerprint, summary_generated_at, summary_regenerate_status ON public.agents
+  FOR EACH STATEMENT EXECUTE FUNCTION app.lock_business_before_agent_summary();
 
 CREATE OR REPLACE FUNCTION app.sync_business_summary()
 RETURNS trigger

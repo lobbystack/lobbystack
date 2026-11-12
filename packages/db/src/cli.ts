@@ -298,7 +298,7 @@ async function main(): Promise<void> {
           ) as missing
           union all
           select expected.table_name, expected.trigger_name
-          from (values ('agents', 'agents_guard_archive'), ('phone_numbers', 'phone_numbers_guard_agent'), ('widget_keys', 'widget_keys_guard_agent'), ('instagram_accounts', 'instagram_accounts_guard_agent'), ('agents', 'agents_sync_summary'), ('businesses', 'businesses_sync_summary')) as expected(table_name, trigger_name)
+          from (values ('agents', 'agents_guard_archive'), ('phone_numbers', 'phone_numbers_guard_agent'), ('widget_keys', 'widget_keys_guard_agent'), ('instagram_accounts', 'instagram_accounts_guard_agent'), ('agents', 'agents_sync_summary'), ('agents', 'agents_lock_business_before_summary'), ('businesses', 'businesses_sync_summary')) as expected(table_name, trigger_name)
           where not exists (select 1 from pg_trigger trg where trg.tgrelid = to_regclass('public.' || expected.table_name) and trg.tgname = expected.trigger_name and trg.tgenabled = 'O')
         `);
         if (agentLinkFailures.rows.length > 0) {
@@ -310,7 +310,7 @@ async function main(): Promise<void> {
         const agentFunctionGrantFailures = await migrator.db.execute<{ role_name: string; object_name: string }>(sql`
           select role.name as role_name, fn.name as object_name
           from (values ('lobbystack_app'), ('lobbystack_worker'), ('lobbystack_dispatcher'), ('lobbystack_auth'), ('lobbystack_readonly')) as role(name)
-          cross join (values ('app.default_agent_id(uuid)'), ('app.assign_default_agent()'), ('app.assign_agent_before_business_delete()'), ('app.guard_agent_archive()'), ('app.guard_channel_agent()'), ('app.sync_agent_summary()'), ('app.sync_business_summary()')) as fn(name)
+          cross join (values ('app.default_agent_id(uuid)'), ('app.assign_default_agent()'), ('app.assign_agent_before_business_delete()'), ('app.guard_agent_archive()'), ('app.guard_channel_agent()'), ('app.sync_agent_summary()'), ('app.lock_business_before_agent_summary()'), ('app.sync_business_summary()')) as fn(name)
           where has_function_privilege(role.name, fn.name, 'EXECUTE')
           union all
           select 'lobbystack_readonly', 'public.instagram_accounts.agent_id'
