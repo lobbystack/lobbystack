@@ -3,7 +3,9 @@
     "close": "Fermer",
     "toggleSidebar": "Afficher ou masquer la barre latérale",
     "skipToContent": "Aller au contenu principal",
-    "clearSearch": "Effacer la recherche"
+    "clearSearch": "Effacer la recherche",
+    "decrease": "Diminuer",
+    "increase": "Augmenter"
   },
   "errors": {
     "unexpected": "Une erreur est survenue. Veuillez réessayer."

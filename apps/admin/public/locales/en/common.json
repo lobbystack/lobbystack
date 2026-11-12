@@ -3,7 +3,9 @@
     "close": "Close",
     "toggleSidebar": "Toggle sidebar",
     "skipToContent": "Skip to main content",
-    "clearSearch": "Clear search"
+    "clearSearch": "Clear search",
+    "decrease": "Decrease",
+    "increase": "Increase"
   },
   "errors": {
     "unexpected": "Something went wrong. Please try again."

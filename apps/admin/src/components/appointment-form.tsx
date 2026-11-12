@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxItem, ComboboxList } from "@/components/ui/combobox";
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { NumberField } from "@/components/ui/number-field";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { dayKey } from "@/lib/calendar-days";
@@ -265,7 +266,7 @@ export function AppointmentForm({ businessId, timeZone: fallbackTimeZone, initia
           </Field>}
           <Field data-invalid={durationInvalid || undefined}>
             <FieldLabel htmlFor={durationId}>{t("appointments.create.duration")}</FieldLabel>
-            <Input aria-invalid={durationInvalid || undefined} className="w-32" id={durationId} inputMode="numeric" max={MAX_MINUTES} min={MIN_MINUTES} onChange={(event) => setDuration(event.target.value)} step={5} type="number" value={duration ?? String(minutes)} />
+            <NumberField allowOutOfRange decrementLabel={t("accessibility.decrease")} id={durationId} integer incrementLabel={t("accessibility.increase")} invalid={durationInvalid} max={MAX_MINUTES} min={MIN_MINUTES} onValueChange={(value) => setDuration(value === null ? "" : String(value))} step={5} value={typedMinutes ?? minutes} />
             {durationInvalid ? <FieldError>{t("appointments.create.durationInvalid", { min: MIN_MINUTES, max: MAX_MINUTES })}</FieldError> : null}
           </Field>
           {/* Always shown, so the form asks for a time from the start and keeps its height once a service is picked. */}

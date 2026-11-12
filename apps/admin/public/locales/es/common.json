@@ -3,7 +3,9 @@
     "close": "Cerrar",
     "toggleSidebar": "Mostrar u ocultar la barra lateral",
     "skipToContent": "Ir al contenido principal",
-    "clearSearch": "Borrar búsqueda"
+    "clearSearch": "Borrar búsqueda",
+    "decrease": "Disminuir",
+    "increase": "Aumentar"
   },
   "errors": {
     "unexpected": "Algo salió mal. Inténtelo de nuevo."
