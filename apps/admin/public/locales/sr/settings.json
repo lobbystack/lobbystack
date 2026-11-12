@@ -1088,6 +1088,12 @@
         "unavailable": "Ovaj kod više ne važi. Zatražite novi.",
         "checkFailed": "Provera koda nije uspela. Pokušajte ponovo."
       }
+    },
+    "marketing": {
+      "title": "Marketinški imejlovi",
+      "label": "Saveti i podsetnici",
+      "description": "Saveti za podešavanje i podsetnici da izaberete paket.",
+      "saveFailed": "Nismo uspeli da sačuvamo Vaš izbor. Pokušajte ponovo."
     }
   },
   "secretReveal": {

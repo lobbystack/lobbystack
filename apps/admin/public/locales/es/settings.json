@@ -1088,6 +1088,12 @@
         "unavailable": "Este código ya no funciona. Pida uno nuevo.",
         "checkFailed": "No se pudo comprobar el código. Vuelva a intentarlo."
       }
+    },
+    "marketing": {
+      "title": "Correos de marketing",
+      "label": "Consejos y recordatorios",
+      "description": "Consejos de configuración y recordatorios para elegir un plan.",
+      "saveFailed": "No pudimos guardar su elección. Inténtelo de nuevo."
     }
   },
   "secretReveal": {

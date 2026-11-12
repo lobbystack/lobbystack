@@ -1081,6 +1081,12 @@
         "unavailable": "This code no longer works. Ask for a new one.",
         "checkFailed": "Couldn't check the code. Try again."
       }
+    },
+    "marketing": {
+      "title": "Marketing emails",
+      "label": "Tips and reminders",
+      "description": "Setup tips and reminders to choose a plan.",
+      "saveFailed": "We couldn't save your choice. Try again."
     }
   },
   "secretReveal": {

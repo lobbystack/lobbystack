@@ -6,6 +6,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LiveNotificationSettingsSurface } from "./live-notification-settings-surface";
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { language: "en", resolvedLanguage: "en" }, t: (key: string) => key }) }));
 vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
+const branding = vi.hoisted(() => ({ partner: null as null | { name: string } }));
+vi.mock("./branding-provider", () => ({ useBranding: () => branding }));
 const clients: QueryClient[] = [];
 beforeEach(() => { Object.defineProperty(document, "elementFromPoint", { configurable: true, value: () => null }); vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} unobserve() {} }); });
 afterEach(async () => {
@@ -19,11 +21,14 @@ function setup(reason: "phone_unverified" | "sender_missing" | null = null, widg
   client.setQueryData(["businesses"], { businesses: [{ businessId: "business-1", active: true }] });
   let preferences = { emailEnabled: true, smsEnabled: false, smsConsent, canUseSms: reason === null, smsUnavailableReason: reason, eventPreferences: Object.fromEntries(["callCompleted", "voiceMessage", "pausedSms", "widgetChat", "liveChatRequest", "smsFailed", "calendarSync", "transferFailed", "aiReplyFailed", "webhookDisabled"].map(key => [key, { email: true, sms: false }])), dailySummaryEnabled: false, dailySummarySendTime: null };
   client.setQueryData(["notification-preferences", "business-1"], preferences);
+  let marketing = { subscribed: true };
+  client.setQueryData(["marketing-email-preference"], marketing);
   const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
     // The server records consent and turns SMS on when it approves the code.
     if (url.startsWith("/api/account/phone-verification/check")) { preferences = { ...preferences, smsEnabled: true, smsConsent: true, canUseSms: true, smsUnavailableReason: null }; return Response.json({ approved: true, status: "approved" }); }
     if (url.startsWith("/api/account/phone-verification") && init?.method === "POST") return Response.json({ attemptId: "attempt-1", phoneE164: "+14165550123" }, { status: 202 });
     if (url.startsWith("/api/account/phone-verification")) return Response.json({ attempt: { id: "attempt-1", status: "sent" } });
+    if (url === "/api/preferences/marketing-emails") { if (init?.method === "PATCH") marketing = JSON.parse(String(init.body)); return Response.json(marketing); }
     if (init?.method === "PUT") { preferences = { ...preferences, ...JSON.parse(String(init.body)) }; return Response.json({ ok: true }); }
     return Response.json(preferences);
   });
@@ -121,14 +126,15 @@ describe("notification loading state", () => {
     render(<QueryClientProvider client={client}><LiveNotificationSettingsSurface widgetOnly={widgetOnly} /></QueryClientProvider>);
   }
 
-  it.each([["the workspace", false], ["the saved preferences", true]])("shows the three sections as placeholders, titles and rows included, while %s load", (_, workspace) => {
+  it.each([["the workspace", false], ["the saved preferences", true]])("shows the four sections as placeholders, titles and rows included, while %s load", (_, workspace) => {
     renderPending({ workspace });
-    // The sources, the communication events and the system issues.
-    expect(document.querySelectorAll("section").length).toBe(3);
-    for (const title of ["notifications.sources.title", "notifications.communication.title", "notifications.systemIssues.title"]) expect(screen.getByText(title).className).toContain("invisible");
+    // The sources, the communication events, the system issues and marketing emails.
+    expect(document.querySelectorAll("section").length).toBe(4);
+    for (const title of ["notifications.sources.title", "notifications.communication.title", "notifications.systemIssues.title", "notifications.marketing.title", "notifications.marketing.label", "notifications.marketing.description"]) expect(screen.getByText(title).className).toContain("invisible");
     expect(document.querySelectorAll("tbody tr").length).toBe(3 + 4);
     expect(document.querySelectorAll("tbody")[0]?.getAttribute("aria-busy")).toBe("true");
-    expect(skeletons()).toBe(41);
+    expect(skeletons()).toBe(45);
+    expect(document.querySelectorAll("section")[3]?.getAttribute("aria-busy")).toBe("true");
     expect(screen.queryByRole("switch")).toBeNull();
     expect(screen.queryByRole("checkbox")).toBeNull();
   });
@@ -144,7 +150,34 @@ describe("notification loading state", () => {
   it("turns all the sections real together once the preferences have loaded", () => {
     setup();
     expect(skeletons()).toBe(0);
-    expect(screen.getAllByRole("switch").length).toBe(2);
+    expect(screen.getAllByRole("switch").length).toBe(3);
     expect(screen.getAllByRole("checkbox").length).toBeGreaterThan(0);
+  });
+});
+describe("marketing emails", () => {
+  afterEach(() => { branding.partner = null; });
+
+  it("turns the person's marketing emails off and back on", async () => {
+    const fetchMock = setup();
+    const toggle = await screen.findByRole("switch", { name: "notifications.marketing.label" });
+    expect(toggle.getAttribute("aria-checked")).toBe("true");
+    await userEvent.click(toggle);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/preferences/marketing-emails", expect.objectContaining({ method: "PATCH", body: JSON.stringify({ subscribed: false }) })));
+    await waitFor(() => expect(screen.getByRole("switch", { name: "notifications.marketing.label" }).getAttribute("aria-checked")).toBe("false"));
+    await userEvent.click(screen.getByRole("switch", { name: "notifications.marketing.label" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/preferences/marketing-emails", expect.objectContaining({ method: "PATCH", body: JSON.stringify({ subscribed: true }) })));
+    await waitFor(() => expect(screen.getByRole("switch", { name: "notifications.marketing.label" }).getAttribute("aria-checked")).toBe("true"));
+  });
+
+  it("isn't offered on a partner's pages or in the widget view, which get none of the host's marketing", async () => {
+    branding.partner = { name: "Bright Desk" };
+    setup();
+    expect(await screen.findByRole("switch", { name: "notifications.sources.email.title" })).toBeTruthy();
+    expect(screen.queryByText("notifications.marketing.title")).toBeNull();
+    cleanup();
+    branding.partner = null;
+    setup(null, true);
+    expect(await screen.findByText("notifications.events.widgetChat.title")).toBeTruthy();
+    expect(screen.queryByText("notifications.marketing.title")).toBeNull();
   });
 });
