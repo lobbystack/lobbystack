@@ -39,6 +39,7 @@ export default defineConfig({
   test: {
     environment: "node",
     exclude: ["**/node_modules/**", "**/.git/**", "**/.next/**"],
+    setupFiles: ["./vitest.setup.ts"],
     // Component suites drive user-event and route navigation; the 5s default is
     // flaky when all workspaces run concurrently under `pnpm -r test`.
     testTimeout: 20000,
