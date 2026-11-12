@@ -5,7 +5,7 @@ import { UnrecoverableError } from "bullmq";
 
 import { hasSummarizableTranscript, type BusinessHoursExtractor, type BusinessSummarizer, type CallSummarizer } from "@lobbystack/agent-core";
 import { realtimeEventSchema, type JobEnvelope } from "@lobbystack/contracts";
-import { HOST_EMAIL_BRAND, billingMeterEventNames, detectSiteLanguage, emailSender, getPolarMeteredUsagePayload, intlLocale, isUuid, normalizeRuntimeLocale, parseEmailBrandReference, partnerFeatures, partnerTierProductId, type BillingUsageKind, type EmailBrandReference, type ProductUpdateEntry } from "@lobbystack/shared";
+import { HOST_EMAIL_BRAND, billingMeterEventNames, detectSiteLanguage, emailSender, getPolarMeteredUsagePayload, intlLocale, isUuid, normalizeRuntimeLocale, parseEmailBrandReference, extraNumbersProductId, partnerFeatures, partnerTierProductId, type BillingUsageKind, type EmailBrandReference, type ProductUpdateEntry } from "@lobbystack/shared";
 import { appointments, calls, contacts, enqueueOutbox, knowledgeChunks, knowledgeDocuments, messages, notifications, phoneNumbers, storageObjects, websiteIngestionJobs, withBusinessTransaction, type Database } from "@lobbystack/db";
 import { enqueueKnowledgeDerivedRefresh, finishBusinessSummaryRegenerate, forgetStaleRetiredCalendarTokens, loadBusinessHoursInput, loadBusinessSummaryInput, markBusinessHoursChecked, resetGeneratedBusinessSummary, saveGeneratedBusinessHours, saveGeneratedBusinessSummary, type SummaryRegenerateOutcome } from "@lobbystack/domain";
 import { billingCheckoutLeaseEndsAt, checkKnowledgeStorageLimit, claimBillingCheckoutRequest, countPublishableOutboxMessages, deferBillingCheckoutRequest, deleteCallRecordingForRetention, deleteExpiredObjectsForBusiness, deleteStoredObjects, deleteSentProductEventsBefore, expireProspectDemos, finalizeConversationSession, loadCallSummaryInput, generateAffiliatePayoutRun, indexCrawledWebsitePage, indexDocumentText, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markKnowledgeDocumentFailed, markProductEventsSent, reconcileBillingProviderEvent, recordAiGenerationEvent, recordCallProviderPricing, loadLiveCallForPricing, recordProductEvent, recordSmsProviderPricing, refreshBusinessSnapshot, runPrivacyRetentionSweep, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, chunkText, embeddingInputsForChunk, hashContent, upsertWebsiteDocument, queuePlanReminderEmail, queueWelcomeEmail, type DurableAiUsage, type GeneratedCallSummary } from "@lobbystack/domain";
@@ -17,6 +17,7 @@ import { LIVE_RECORDING_ATTEMPTS, listBusinessesWithOpenLiveCalls, listOpenLiveC
 import { applySiteLanguageInTransaction, closePassedAppointmentRequests, expireTeamRequest, postWebsiteImportFinishedInTransaction } from "@lobbystack/domain";
 import { syncBusinessOverage, PROVIDER_RETRY_WINDOW_MS, providerRetryDelayMs } from "@lobbystack/domain";
 import { advancePartnerLifecycles, claimPartnerCheckoutRequest, deferPartnerCheckoutRequest, keepPartnerTrialNumber, loadPartnerCheckoutRequest, loadPoolUsageEvent, markPartnerCheckoutCreated, markPartnerCheckoutFailed, partnerBillingKey, partnerCheckoutLeaseEndsAt, reconcilePartnerTier, settleExtraNumberCharges, settlePartnerNumberCharges } from "@lobbystack/domain";
+import { extraNumbersSubscriptionChange, loadExtraNumbersCheckoutRequest } from "@lobbystack/domain";
 import { checkPartnerCustomDomains, provisionPartnerCustomDomain, removePartnerCustomHostname, type CustomDomainProviders } from "@lobbystack/domain";
 import { brandForEmail, businessExists, businessGetsHostEmails, hostBrandFromEnvironment, isHostOnlyEmailTemplate } from "@lobbystack/domain";
 import type { DomainContext } from "@lobbystack/domain";
@@ -68,7 +69,7 @@ export type WorkerDependencies = {
   email?: Pick<SmtpEmailProvider, "sendTemplate">;
   /** The carriers: each number's own for operations on it, and the shared sender's for alert texts. */
   telephony?: Pick<Telephony, "forNumber" | "alertSms">;
-  polar?: { recordUsage(input: { eventName: string; externalCustomerId: string; quantity: number; timestamp: string; idempotencyKey: string; businessId: string; usageKind: string }): Promise<void>; createCheckout?(input: { productId: string; customerEmail: string; externalCustomerId: string; successUrl: string; returnUrl: string; idempotencyKey?: string }): Promise<{ checkoutUrl: string; checkoutId: string }> };
+  polar?: { recordUsage(input: { eventName: string; externalCustomerId: string; quantity: number; timestamp: string; idempotencyKey: string; businessId: string; usageKind: string }): Promise<void>; createCheckout?(input: { productId: string; customerEmail: string; externalCustomerId: string; successUrl: string; returnUrl: string; idempotencyKey?: string }): Promise<{ checkoutUrl: string; checkoutId: string }>; setCancelAtPeriodEnd?(input: { subscriptionId: string; cancelAtPeriodEnd: boolean }): Promise<void> };
   /** Sets partners' own domains up: Cloudflare for SaaS or Caddy, as partnerFeatures decides, and DNS for partners' TXT records. Without it, their jobs are skipped. */
   customDomains?: CustomDomainProviders;
   embeddings?: { fingerprint?: string; embed(values: string[], onUsage?: (usage: DurableAiUsage) => Promise<void> | void): Promise<number[][]> };
@@ -900,6 +901,58 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       });
       return { status: "completed", entityId: requestId };
     }
+    case "billing.createExtraNumbersCheckout": {
+      // The extra numbers add-on: a monthly subscription beside the plan's, bought once before the first extra number.
+      const businessId = businessIdOrThrow(job);
+      const requestId = String(job.payload.requestId ?? "");
+      if (!requestId) return { status: "skipped", entityId: requestId };
+      if (!await claimBillingCheckoutRequest(dependencies.domain, { businessId, requestId })) return retryAfterLease(await billingCheckoutLeaseEndsAt(dependencies.domain, { businessId, requestId }), requestId);
+      const productId = extraNumbersProductId(process.env);
+      if (!dependencies.polar?.createCheckout || !productId) {
+        await markBillingCheckoutFailed(dependencies.domain, { businessId, requestId, error: productId ? "Billing checkout provider is not configured." : "POLAR_EXTRA_NUMBERS_PRODUCT_ID is not set." });
+        return { status: "skipped", entityId: requestId };
+      }
+      const request = await loadExtraNumbersCheckoutRequest(dependencies.domain, { businessId, requestId });
+      if (!request) return { status: "skipped", entityId: requestId };
+      let checkout!: ProviderCheckout;
+      try {
+        const appUrl = (process.env.APP_BASE_URL ?? "http://localhost:3000").replace(/\/$/, "");
+        const pageUrl = request.agentId ? `${appUrl}/agents/${encodeURIComponent(request.agentId)}/channels/phone` : `${appUrl}/agents`;
+        checkout = await dependencies.polar.createCheckout({
+          productId,
+          customerEmail: request.customerEmail,
+          externalCustomerId: request.externalCustomerId,
+          successUrl: `${pageUrl}?extraNumbersCheckout=${encodeURIComponent(requestId)}`,
+          returnUrl: pageUrl,
+          idempotencyKey: `extra-numbers-checkout:${requestId}`,
+        });
+      } catch (error) {
+        const failure = providerFailure(error);
+        if (failure.transient) {
+          const retry = await deferBillingCheckoutRequest(dependencies.domain, { businessId, requestId });
+          if (retry.status === "deferred") {
+            logCheckout("billing.checkout_deferred", { requestId, target: "extra_numbers", interval: "monthly", status: failure.status ?? 0, elapsedMs: Date.now() - (execution.queuedAtMs ?? Date.now()), retryInMs: retry.retryAt.getTime() - Date.now() });
+            return { status: "deferred", entityId: requestId, retryAt: retry.retryAt };
+          }
+          if (retry.status !== "failed") return { status: "skipped", entityId: requestId };
+        }
+        await markBillingCheckoutFailed(dependencies.domain, { businessId, requestId, error: providerFailureReason(failure) });
+        throw new UnrecoverableError(`Checkout failed: ${providerFailureReason(failure)}`);
+      }
+      await markBillingCheckoutCreated(dependencies.domain, { businessId, requestId, ...checkout });
+      logCheckout("billing.checkout_created", { requestId, target: "extra_numbers", interval: "monthly", elapsedMs: Date.now() - (execution.queuedAtMs ?? Date.now()) });
+      return { status: "completed", entityId: requestId };
+    }
+    case "billing.syncExtraNumbersSubscription": {
+      // The add-on bills only while the plan is live: canceled at the end of its period when the plan ends, renewing again when it's back.
+      const businessId = businessIdOrThrow(job);
+      const change = await extraNumbersSubscriptionChange(dependencies.domain, { businessId });
+      if (!change) return { status: "skipped", entityId: businessId };
+      if (!dependencies.polar?.setCancelAtPeriodEnd) throw new Error("Polar isn't configured, so the extra numbers subscription can't follow the plan.");
+      // Polar's webhook then records the change; until it does, a repeat asks for the same thing.
+      await dependencies.polar.setCancelAtPeriodEnd(change);
+      return { status: "completed", entityId: businessId };
+    }
     case "billing.createPartnerCheckout": {
       // A partner's tier belongs to no business, so the job names the partner.
       const partnerId = String(job.payload.partnerId ?? "");
@@ -996,8 +1049,9 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       return { status: result.settled > 0 ? "completed" : "skipped", entityId: `${result.settled}:${result.charged}` };
     }
     case "billing.chargeExtraNumbers": {
-      // Polar charges a business on Starter or Pro, under its own customer, each month of each number past its plan's included one.
-      // Only a cloud business on a live plan has such months, so without Polar there's nothing to charge.
+      // Polar charges a business on Starter, Pro or Enterprise, under its own customer, each month of each number past its plan's
+      // included one, through the monthly extra numbers add-on. Only a cloud business on a live plan with a live add-on has such
+      // months, so without Polar there's nothing to charge.
       const polar = dependencies.polar;
       if (!polar) return { status: "skipped" };
       const result = await settleExtraNumberCharges(dependencies.domain, {
@@ -1006,7 +1060,8 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
             eventName: billingMeterEventNames.extraNumbers,
             externalCustomerId: charge.billingKey,
             quantity: charge.amountCents,
-            timestamp: charge.periodStart.toISOString(),
+            // When it's reported, not when the month began: a month that waited for the add-on lands in its current period.
+            timestamp: new Date().toISOString(),
             idempotencyKey: charge.idempotencyKey,
             businessId: charge.businessId,
             usageKind: "extra_number",

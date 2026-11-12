@@ -1583,6 +1583,14 @@ export const billingAccounts = pgTable(
     // partner's Stripe, one per meter, for the subscription they name
     // (migration 0156). Only the worker and the system actor write them.
     stripeOverageItems: jsonb("stripe_overage_items").$type<StripeOverageItems>(),
+    // The business's monthly Polar subscription for extra numbers, beside its
+    // plan's, which bills their metered months (migration 0217). Only the
+    // worker writes these, from Polar's webhooks.
+    extraNumbersSubscriptionId: text("extra_numbers_subscription_id"),
+    extraNumbersSubscriptionState: varchar("extra_numbers_subscription_state", { length: 32 }),
+    extraNumbersCurrentPeriodEnd: timestamp("extra_numbers_current_period_end", { withTimezone: true }),
+    extraNumbersCancelAtPeriodEnd: boolean("extra_numbers_cancel_at_period_end").default(false).notNull(),
+    extraNumbersModifiedAt: timestamp("extra_numbers_modified_at", { withTimezone: true }),
     ...legacyId,
     ...timestamps,
   },
@@ -1605,6 +1613,8 @@ export const billingCheckoutRequests = pgTable(
     firstFailedAt: timestamp("first_failed_at", { withTimezone: true }),
     // When the worker tries the provider again, while the request stays processing.
     retryAt: timestamp("retry_at", { withTimezone: true }),
+    // For an extra numbers checkout (target extra_numbers, migration 0217), the agent whose page Polar sends the payer back to.
+    agentId: uuid("agent_id"),
     ...timestamps,
   },
   (table) => [uniqueIndex("billing_checkout_requests_id_unique").on(table.id), index("billing_checkout_requests_business_status_idx").on(table.businessId, table.status, table.createdAt)],

@@ -247,6 +247,9 @@ export const queueForJobType = {
   "billing.chargePartnerNumbers": "maintenance",
   // Each month of a number a business on Starter or Pro holds past its plan's included one, charged to the business in Polar.
   "billing.chargeExtraNumbers": "maintenance",
+  // The monthly extra numbers add-on: its Polar checkout, and keeping it canceled or renewing as the plan is.
+  "billing.createExtraNumbersCheckout": "critical",
+  "billing.syncExtraNumbersSubscription": "default",
   // The hourly clock that pauses a partner's businesses 30 days after its tier ends, and deletes them at 90.
   "partnerLifecycle.advance": "maintenance",
   // A partner's own domain: registered with the custom hostname provider, checked until it's active, and removed.

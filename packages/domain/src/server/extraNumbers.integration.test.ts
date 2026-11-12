@@ -2,10 +2,12 @@ import { randomUUID } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 
-import { agents, billingAccounts, businesses, businessNumberCharges, createDatabaseClient, defaultAgentIdOf, onboardingNumberClaimEvents, phoneNumbers, productEvents, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { agents, billingAccounts, billingCheckoutRequests, businesses, businessNumberCharges, createDatabaseClient, defaultAgentIdOf, onboardingNumberClaimEvents, outboxMessages, phoneNumbers, productEvents, providerEvents, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 
 import { createAgent } from "./agents";
-import { reserveExtraNumberClaim, searchExtraNumbers, settleExtraNumberCharges, type ExtraNumberCharge } from "./extraNumbers";
+import { reconcileBillingProviderEvent } from "./billing";
+import { createExtraNumbersCheckoutRequest, reserveExtraNumberClaim, searchExtraNumbers, settleExtraNumberCharges, type ExtraNumberCharge } from "./extraNumbers";
+import { extraNumbersSubscriptionChange } from "./extraNumbersSubscription";
 import { claimNumberProvisioning, completeNumberProvisioning, reserveReplacementNumberClaim, searchBusinessNumberInventory, type NumberInventoryProvider } from "./phoneNumbers";
 import { createBusiness } from "./tenancy";
 
@@ -85,6 +87,26 @@ async function buy(tx: DatabaseTransaction, businessId: string, claimId: string)
   });
 }
 
+/** The business's monthly extra numbers add-on bills, as its Polar webhook would leave it. */
+async function subscribe(tx: DatabaseTransaction, businessId: string, state = "active"): Promise<void> {
+  await tx.update(billingAccounts).set({ extraNumbersSubscriptionId: `sub_extra_${businessId}`, extraNumbersSubscriptionState: state }).where(eq(billingAccounts.businessId, businessId));
+}
+
+/** Stores a normalized Polar webhook for the business and reconciles it as the worker. */
+let modified = 0;
+async function webhook(tx: DatabaseTransaction, businessId: string, eventType: string, payload: Record<string, unknown>): Promise<void> {
+  modified += 1;
+  const [event] = await tx.insert(providerEvents).values({ provider: "polar", providerEventId: `evt-${randomUUID()}`, eventType, businessId, payload: { billingKey: `business:${businessId}`, subscriptionModifiedAt: new Date(Date.UTC(2026, 10, 1, 0, 0, modified)).toISOString(), ...payload } }).returning({ id: providerEvents.id });
+  await worker(tx, async (db) => await reconcileBillingProviderEvent({ db }, { businessId, providerEventId: event!.id }));
+}
+
+/** Buys an extra number for the owner's second agent, with the add-on live. */
+async function buyExtra(tx: DatabaseTransaction, owner: { userId: string; businessId: string; agentId: string }): Promise<string> {
+  const search = await as(tx, "lobbystack_app", async (db) => await searchExtraNumbers({ db }, { ...owner, claimTokenSecret }, inventory));
+  const claimId = await as(tx, "lobbystack_app", async (db) => await reserveExtraNumberClaim({ db }, { ...owner, claimToken: search.numbers[0]!.claimToken, claimTokenSecret, idempotencyKey: randomUUID() }));
+  return await buy(tx, owner.businessId, claimId);
+}
+
 async function outcome(run: Promise<unknown>): Promise<string> {
   try {
     await run;
@@ -95,11 +117,15 @@ async function outcome(run: Promise<unknown>): Promise<string> {
 }
 
 describe.skipIf(!testUrl)("extra numbers against dedicated PostgreSQL roles", () => {
-  it("sells a Starter business a number for its second agent at the country's price, and charges each month past the included one", async () => {
+  it("sells a Starter business a number for its second agent at the country's price once its add-on bills, and charges each month past the included one", async () => {
     await rollbackTest(async (tx) => {
       const owner = await businessWithNumber(tx, { plan: "starter", subscriptionState: "active" });
       const search = await as(tx, "lobbystack_app", async (db) => await searchExtraNumbers({ db }, { ...owner, claimTokenSecret }, inventory));
-      expect(search.price).toEqual({ countryCode: "CA", monthlyCents: 115, currency: "USD" });
+      expect(search.price).toEqual({ countryCode: "CA", kind: "local", monthlyCents: 115, currency: "USD" });
+      expect(search.subscribed).toBe(false);
+      // The monthly add-on bills the number, so it comes first.
+      expect(await as(tx, "lobbystack_app", async (db) => await outcome(reserveExtraNumberClaim({ db }, { ...owner, claimToken: search.numbers[0]!.claimToken, claimTokenSecret, idempotencyKey: randomUUID() })))).toBe("extra_numbers_subscription_required");
+      await subscribe(tx, owner.businessId);
       const claimId = await as(tx, "lobbystack_app", async (db) => await reserveExtraNumberClaim({ db }, { ...owner, claimToken: search.numbers[0]!.claimToken, claimTokenSecret, idempotencyKey: randomUUID() }));
       const [claim] = await tx.select({ purpose: onboardingNumberClaimEvents.purpose, agentId: onboardingNumberClaimEvents.agentId, monthlyPriceCents: onboardingNumberClaimEvents.monthlyPriceCents }).from(onboardingNumberClaimEvents).where(eq(onboardingNumberClaimEvents.id, claimId));
       expect(claim).toEqual({ purpose: "extra", agentId: owner.agentId, monthlyPriceCents: 115 });
@@ -123,6 +149,11 @@ describe.skipIf(!testUrl)("extra numbers against dedicated PostgreSQL roles", ()
       expect(mine()).toEqual([expect.objectContaining({ chargeId: charge!.id, billingKey: `business:${owner.businessId}`, countryCode: "CA", month: 0, amountCents: 115, idempotencyKey: `extra-number:${charge!.id}:0` })]);
       await settle(new Date(start + 60_000));
       expect(mine()).toHaveLength(1);
+      // While the add-on doesn't bill, the month waits instead of settling, and is charged once it bills again.
+      await subscribe(tx, owner.businessId, "canceled");
+      await settle(new Date(start + 32 * 86_400_000));
+      expect(mine().map((item) => item.month)).toEqual([0]);
+      await subscribe(tx, owner.businessId);
       await settle(new Date(start + 32 * 86_400_000));
       expect(mine().map((item) => item.month)).toEqual([0, 1]);
 
@@ -138,6 +169,7 @@ describe.skipIf(!testUrl)("extra numbers against dedicated PostgreSQL roles", ()
   it("stops charging when the extra number becomes the business's only one", async () => {
     await rollbackTest(async (tx) => {
       const owner = await businessWithNumber(tx, { plan: "pro", subscriptionState: "active" });
+      await subscribe(tx, owner.businessId);
       const search = await as(tx, "lobbystack_app", async (db) => await searchExtraNumbers({ db }, { ...owner, claimTokenSecret }, inventory));
       const claimId = await as(tx, "lobbystack_app", async (db) => await reserveExtraNumberClaim({ db }, { ...owner, claimToken: search.numbers[0]!.claimToken, claimTokenSecret, idempotencyKey: randomUUID() }));
       const phoneNumberId = await buy(tx, owner.businessId, claimId);
@@ -150,19 +182,35 @@ describe.skipIf(!testUrl)("extra numbers against dedicated PostgreSQL roles", ()
     });
   });
 
-  it("gives Enterprise extra numbers free, and refuses Free, a business with no number and a changed price", async () => {
+  it("sells Enterprise extra numbers at Starter's price, gives a self-hosted server's free, and refuses Free, a business with no number and a changed price", async () => {
     await rollbackTest(async (tx) => {
       const enterprise = await businessWithNumber(tx, { plan: "enterprise", subscriptionState: "active" });
+      await subscribe(tx, enterprise.businessId);
       const search = await as(tx, "lobbystack_app", async (db) => await searchExtraNumbers({ db }, { ...enterprise, claimTokenSecret }, inventory));
-      expect(search.price).toBeNull();
+      expect(search.price).toEqual({ countryCode: "CA", kind: "local", monthlyCents: 115, currency: "USD" });
       const claimId = await as(tx, "lobbystack_app", async (db) => await reserveExtraNumberClaim({ db }, { ...enterprise, claimToken: search.numbers[0]!.claimToken, claimTokenSecret, idempotencyKey: randomUUID() }));
       const phoneNumberId = await buy(tx, enterprise.businessId, claimId);
-      expect(await tx.select().from(businessNumberCharges).where(eq(businessNumberCharges.phoneNumberId, phoneNumberId))).toEqual([]);
+      expect(await tx.select({ price: businessNumberCharges.monthlyPriceCents }).from(businessNumberCharges).where(eq(businessNumberCharges.phoneNumberId, phoneNumberId))).toEqual([{ price: 115 }]);
 
-      // Enterprise's free offer can't buy a number once the plan sells them.
-      const free = await as(tx, "lobbystack_app", async (db) => await searchExtraNumbers({ db }, { ...enterprise, claimTokenSecret }, inventory));
-      await tx.update(billingAccounts).set({ plan: "starter" }).where(eq(billingAccounts.businessId, enterprise.businessId));
-      expect(await as(tx, "lobbystack_app", async (db) => await outcome(reserveExtraNumberClaim({ db }, { ...enterprise, claimToken: free.numbers[0]!.claimToken, claimTokenSecret, idempotencyKey: randomUUID() })))).toBe("extra_number_price_changed");
+      // Toll-free numbers cost their own price, and a kind a country doesn't sell is refused.
+      const tollFree = await as(tx, "lobbystack_app", async (db) => await searchExtraNumbers({ db }, { ...enterprise, selection: { countryCode: "US", kind: "toll_free" }, claimTokenSecret }, inventory));
+      expect(tollFree.price).toEqual({ countryCode: "US", kind: "toll_free", monthlyCents: 215, currency: "USD" });
+      expect(await as(tx, "lobbystack_app", async (db) => await outcome(searchExtraNumbers({ db }, { ...enterprise, selection: { countryCode: "PR", kind: "toll_free" }, claimTokenSecret }, inventory)))).toBe("unsupported_number_kind");
+
+      const selfHosted = await businessWithNumber(tx, null);
+      await tx.update(businesses).set({ deploymentMode: "self_hosted_standard" }).where(eq(businesses.id, selfHosted.businessId));
+      const free = await as(tx, "lobbystack_app", async (db) => await searchExtraNumbers({ db }, { ...selfHosted, claimTokenSecret }, inventory));
+      expect(free.price).toBeNull();
+      const freeClaim = await as(tx, "lobbystack_app", async (db) => await reserveExtraNumberClaim({ db }, { ...selfHosted, claimToken: free.numbers[0]!.claimToken, claimTokenSecret, idempotencyKey: randomUUID() }));
+      const freeNumberId = await buy(tx, selfHosted.businessId, freeClaim);
+      expect(await tx.select().from(businessNumberCharges).where(eq(businessNumberCharges.phoneNumberId, freeNumberId))).toEqual([]);
+
+      // A free offer can't buy a number once the plan sells them.
+      const stale = await as(tx, "lobbystack_app", async (db) => await searchExtraNumbers({ db }, { ...selfHosted, claimTokenSecret }, inventory));
+      await tx.update(businesses).set({ deploymentMode: "cloud" }).where(eq(businesses.id, selfHosted.businessId));
+      await tx.update(billingAccounts).set({ plan: "starter", subscriptionState: "active" }).where(eq(billingAccounts.businessId, selfHosted.businessId));
+      await subscribe(tx, selfHosted.businessId);
+      expect(await as(tx, "lobbystack_app", async (db) => await outcome(reserveExtraNumberClaim({ db }, { ...selfHosted, claimToken: stale.numbers[0]!.claimToken, claimTokenSecret, idempotencyKey: randomUUID() })))).toBe("extra_number_price_changed");
 
       const onFree = await businessWithNumber(tx, null);
       expect(await as(tx, "lobbystack_app", async (db) => await outcome(searchExtraNumbers({ db }, { ...onFree, claimTokenSecret }, inventory)))).toBe("dedicated_number_requires_paid_plan");
@@ -176,6 +224,7 @@ describe.skipIf(!testUrl)("extra numbers against dedicated PostgreSQL roles", ()
   it("puts a number the previous worker buys on the claim's agent and starts its months", async () => {
     await rollbackTest(async (tx) => {
       const owner = await businessWithNumber(tx, { plan: "starter", subscriptionState: "active" });
+      await subscribe(tx, owner.businessId);
       const search = await as(tx, "lobbystack_app", async (db) => await searchExtraNumbers({ db }, { ...owner, claimTokenSecret }, inventory));
       const claimId = await as(tx, "lobbystack_app", async (db) => await reserveExtraNumberClaim({ db }, { ...owner, claimToken: search.numbers[0]!.claimToken, claimTokenSecret, idempotencyKey: randomUUID() }));
       // The previous release inserts the number on the default agent and marks the claim bought.
@@ -195,6 +244,7 @@ describe.skipIf(!testUrl)("extra numbers against dedicated PostgreSQL roles", ()
   it("replaces the number the operator picked and keeps its agent", async () => {
     await rollbackTest(async (tx) => {
       const owner = await businessWithNumber(tx, { plan: "starter", subscriptionState: "active" });
+      await subscribe(tx, owner.businessId);
       const search = await as(tx, "lobbystack_app", async (db) => await searchExtraNumbers({ db }, { ...owner, claimTokenSecret }, inventory));
       const extraClaim = await as(tx, "lobbystack_app", async (db) => await reserveExtraNumberClaim({ db }, { ...owner, claimToken: search.numbers[0]!.claimToken, claimTokenSecret, idempotencyKey: randomUUID() }));
       const extraNumberId = await buy(tx, owner.businessId, extraClaim);
@@ -218,6 +268,7 @@ describe.skipIf(!testUrl)("extra numbers against dedicated PostgreSQL roles", ()
   it("keeps an extra number's price on its replacement", async () => {
     await rollbackTest(async (tx) => {
       const owner = await businessWithNumber(tx, { plan: "starter", subscriptionState: "active" });
+      await subscribe(tx, owner.businessId);
       const search = await as(tx, "lobbystack_app", async (db) => await searchExtraNumbers({ db }, { ...owner, claimTokenSecret }, inventory));
       const extraClaim = await as(tx, "lobbystack_app", async (db) => await reserveExtraNumberClaim({ db }, { ...owner, claimToken: search.numbers[0]!.claimToken, claimTokenSecret, idempotencyKey: randomUUID() }));
       const extraNumberId = await buy(tx, owner.businessId, extraClaim);
@@ -227,6 +278,81 @@ describe.skipIf(!testUrl)("extra numbers against dedicated PostgreSQL roles", ()
       const [number] = await tx.select({ agentId: phoneNumbers.agentId }).from(phoneNumbers).where(eq(phoneNumbers.id, replacementId));
       expect(number?.agentId).toBe(owner.agentId);
       expect(await tx.select({ price: businessNumberCharges.monthlyPriceCents }).from(businessNumberCharges).where(eq(businessNumberCharges.phoneNumberId, replacementId))).toEqual([{ price: 115 }]);
+    });
+  });
+
+  it("queues one checkout for the add-on, and refuses it once the add-on bills", async () => {
+    await rollbackTest(async (tx) => {
+      const owner = await businessWithNumber(tx, { plan: "starter", subscriptionState: "active" });
+      const requestId = await as(tx, "lobbystack_app", async (db) => await createExtraNumbersCheckoutRequest({ db }, { ...owner }));
+      expect(await as(tx, "lobbystack_app", async (db) => await createExtraNumbersCheckoutRequest({ db }, owner))).toBe(requestId);
+      const [request] = await tx.select({ target: billingCheckoutRequests.target, interval: billingCheckoutRequests.billingInterval, agentId: billingCheckoutRequests.agentId }).from(billingCheckoutRequests).where(eq(billingCheckoutRequests.id, requestId));
+      expect(request).toEqual({ target: "extra_numbers", interval: "monthly", agentId: owner.agentId });
+      const queued = await tx.select({ topic: outboxMessages.topic }).from(outboxMessages).where(and(eq(outboxMessages.businessId, owner.businessId), eq(outboxMessages.aggregateId, requestId)));
+      expect(queued).toEqual([{ topic: "billing.createExtraNumbersCheckout" }]);
+      await subscribe(tx, owner.businessId);
+      expect(await as(tx, "lobbystack_app", async (db) => await outcome(createExtraNumbersCheckoutRequest({ db }, owner)))).toBe("extra_numbers_subscribed");
+      const onFree = await businessWithNumber(tx, null);
+      expect(await as(tx, "lobbystack_app", async (db) => await outcome(createExtraNumbersCheckoutRequest({ db }, onFree)))).toBe("dedicated_number_requires_paid_plan");
+    });
+  });
+
+  it("keeps the operator from marking the add-on live", async () => {
+    await rollbackTest(async (tx) => {
+      const owner = await businessWithNumber(tx, { plan: "starter", subscriptionState: "active" });
+      const error = await as(tx, "lobbystack_app", async (db) => await withBusinessTransaction(db, { userId: owner.userId, businessId: owner.businessId, actorType: "operator" }, async (inner) => {
+        await inner.update(billingAccounts).set({ extraNumbersSubscriptionId: "sub_forged", extraNumbersSubscriptionState: "active" }).where(eq(billingAccounts.businessId, owner.businessId));
+      })).then(() => null, (failure: unknown) => failure);
+      expect((error as { cause?: { message?: string } } | null)?.cause?.message).toBe("extra_numbers_subscription_locked");
+    });
+  });
+
+  it("follows the add-on's webhooks apart from the plan, and releases extra numbers 30 days after it ends while the plan is live", async () => {
+    await rollbackTest(async (tx) => {
+      const owner = await businessWithNumber(tx, { plan: "starter", subscriptionState: "active" });
+      await tx.update(billingAccounts).set({ subscriptionId: "sub_plan" }).where(eq(billingAccounts.businessId, owner.businessId));
+      const addon = { extraNumbersAddon: true, subscriptionId: "sub_addon", current_period_end: "2026-12-01T00:00:00.000Z" };
+      await webhook(tx, owner.businessId, "subscription.active", { ...addon, status: "active", subscriptionState: "active" });
+      const account = async () => (await tx.select({ plan: billingAccounts.plan, subscriptionId: billingAccounts.subscriptionId, subscriptionState: billingAccounts.subscriptionState, addonId: billingAccounts.extraNumbersSubscriptionId, addonState: billingAccounts.extraNumbersSubscriptionState }).from(billingAccounts).where(eq(billingAccounts.businessId, owner.businessId)))[0];
+      expect(await account()).toEqual({ plan: "starter", subscriptionId: "sub_plan", subscriptionState: "active", addonId: "sub_addon", addonState: "active" });
+
+      const extraNumberId = await buyExtra(tx, owner);
+      // The add-on ends while the plan is live: the extra number goes in 30 days, the included one stays.
+      await webhook(tx, owner.businessId, "subscription.revoked", { ...addon, status: "canceled", subscriptionState: "canceled" });
+      expect((await account())?.addonState).toBe("canceled");
+      const numbers = async () => await tx.select({ id: phoneNumbers.id, reason: phoneNumbers.reclaimReason, at: phoneNumbers.reclaimScheduledAt }).from(phoneNumbers).where(eq(phoneNumbers.businessId, owner.businessId));
+      const afterEnd = await numbers();
+      expect(afterEnd.find((row) => row.id === extraNumberId)?.reason).toBe("extra_numbers_ended");
+      expect(afterEnd.find((row) => row.id === extraNumberId)!.at!.getTime()).toBeGreaterThan(Date.now() + 29 * 86_400_000);
+      expect(afterEnd.find((row) => row.id === owner.includedNumberId)?.reason).toBeNull();
+
+      // A new add-on keeps the number.
+      await webhook(tx, owner.businessId, "subscription.active", { ...addon, subscriptionId: "sub_addon_2", status: "active", subscriptionState: "active" });
+      expect((await numbers()).find((row) => row.id === extraNumberId)).toEqual(expect.objectContaining({ reason: null, at: null }));
+      // A late event about the old add-on doesn't end the new one.
+      await webhook(tx, owner.businessId, "subscription.revoked", { ...addon, status: "canceled", subscriptionState: "canceled" });
+      expect(await account()).toEqual(expect.objectContaining({ addonId: "sub_addon_2", addonState: "active" }));
+
+      // The plan ends: the add-on is asked to cancel at the end of its period.
+      await webhook(tx, owner.businessId, "subscription.revoked", { subscriptionId: "sub_plan", plan: "starter", billingInterval: "annual", status: "canceled", subscriptionState: "canceled" });
+      expect(await account()).toEqual(expect.objectContaining({ subscriptionState: "canceled", addonId: "sub_addon_2", addonState: "active" }));
+      const sync = await tx.select({ topic: outboxMessages.topic }).from(outboxMessages).where(and(eq(outboxMessages.businessId, owner.businessId), eq(outboxMessages.topic, "billing.syncExtraNumbersSubscription")));
+      expect(sync.length).toBeGreaterThan(0);
+      expect(await worker(tx, async (db) => await extraNumbersSubscriptionChange({ db }, { businessId: owner.businessId }))).toEqual({ subscriptionId: "sub_addon_2", cancelAtPeriodEnd: true });
+      // Once Polar says it's canceling, there's nothing left to ask.
+      await webhook(tx, owner.businessId, "subscription.canceled", { ...addon, subscriptionId: "sub_addon_2", status: "active", subscriptionState: "active", cancel_at_period_end: true });
+      expect(await worker(tx, async (db) => await extraNumbersSubscriptionChange({ db }, { businessId: owner.businessId }))).toBeNull();
+    });
+  });
+
+  it("records the add-on's orders without a commission", async () => {
+    await rollbackTest(async (tx) => {
+      const owner = await businessWithNumber(tx, { plan: "starter", subscriptionState: "active" });
+      await webhook(tx, owner.businessId, "order.paid", { extraNumbersAddon: true, subscriptionId: "sub_addon", id: `order_${randomUUID()}`, status: "paid", totalAmount: 230, currency: "usd" });
+      const rows = await tx.execute<{ amount_cents: number; commissions: number }>(sql`select t.amount_cents, (select count(*)::int from public.affiliate_commissions c where c.billing_transaction_id = t.id) as commissions from public.billing_transactions t where t.business_id = ${owner.businessId}::uuid`);
+      expect(rows.rows).toEqual([{ amount_cents: 230, commissions: 0 }]);
+      const [account] = await tx.select({ plan: billingAccounts.plan, state: billingAccounts.subscriptionState }).from(billingAccounts).where(eq(billingAccounts.businessId, owner.businessId));
+      expect(account).toEqual({ plan: "starter", state: "active" });
     });
   });
 });

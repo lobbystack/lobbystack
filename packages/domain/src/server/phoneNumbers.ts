@@ -9,7 +9,7 @@ import { requireBusinessAdmin } from "../authz";
 import type { DomainContext } from "./context";
 import { loadEntitlement } from "./entitlement";
 import { activateNumberTrialInTransaction, enqueueNumberRouting, failNumberTrialInTransaction, isNumberCountry, keepBusinessNumbersInTransaction, trialCountries, trialEmailInTransaction, directTrialNetworkRefusalInTransaction, trialNumberPaidForInTransaction, verifiedPhone, type NumberCountry } from "./numberTrials";
-import { isPastNumberStage, LEGACY_PHONE_STAGES } from "@lobbystack/shared";
+import { isPastNumberStage, LEGACY_PHONE_STAGES, soldNumberKind } from "@lobbystack/shared";
 import { normalizeOnboardingStage, NUMBER_CLAIM_STAGES, numberRequired } from "./onboarding";
 import { loadPartnerNumberStanding, newPartnerNumberRefusal, numberCountsForPartnerInTransaction, partnerKeyNumberRefusal, partnerReplacementRefusal, partnerTrialOffered, recordPartnerNumberCostInTransaction, unclaimedPartnerDemoInTransaction } from "./partnerNumbers";
 import { resolveBusinessNumberMarket, type BusinessNumberMarket } from "./phoneNumberMarket";
@@ -92,6 +92,8 @@ const claimRefusals: Record<string, [status: number, message: string]> = {
   agent_not_found: [404, "Agent not found."],
   business_number_required: [409, "Get this workspace's first number before you buy another."],
   extra_number_price_changed: [409, "The price of this number changed. Search again to see the new price."],
+  // Migration 0217: extra numbers bill through their own monthly subscription.
+  extra_numbers_subscription_required: [409, "Set up monthly billing for extra numbers before you buy one."],
 };
 
 /** The refusal the dashboard shows for a claim check's reason. */
@@ -232,7 +234,7 @@ export async function offerBusinessNumbers(input: { userId: string; businessId: 
   if (!isNumberCountry(countryCode)) throw numberClaimError(400, "unsupported_country", "Phone numbers aren't available in this country yet.");
   // LobbyStack's UK and Australian registrations cover mobile numbers; local
   // numbers there need a local address we don't have.
-  const kind: NumberSelection["kind"] = countryCode === "GB" || countryCode === "AU" ? "mobile" : countryCode === "NZ" ? "local" : input.selection?.kind ?? "local";
+  const kind: NumberSelection["kind"] = soldNumberKind(countryCode, input.selection?.kind);
   const selection: NumberSelection = { countryCode, kind, ...(input.selection?.areaCode ? { areaCode: input.selection.areaCode.replace(/\D/g, "") } : {}), ...(input.selection?.city ? { city: input.selection.city.trim() } : {}), ...(input.selection?.regionCode ? { regionCode: input.selection.regionCode.trim() } : {}), ...(input.selection?.postalCode ? { postalCode: input.selection.postalCode.trim() } : {}) };
   const limit = Math.max(1, Math.min(20, Math.trunc(input.limit ?? 10)));
   const exp = Date.now() + offerLifetimeMs;

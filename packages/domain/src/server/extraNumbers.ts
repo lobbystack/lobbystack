@@ -1,65 +1,86 @@
 import { createHash } from "node:crypto";
 
-import { and, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, isNull, sql } from "drizzle-orm";
 
-import { agents, businesses, businessNumberCharges, enqueueOutbox, phoneNumbers, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
-import { extraNumberPrices, isExtraNumberCountry, planSellsExtraNumbers, type ExtraNumberCountry } from "@lobbystack/shared";
+import { agents, billingAccounts, billingCheckoutRequests, businesses, businessNumberCharges, enqueueOutbox, phoneNumbers, users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { extraNumberMonthlyCents, isExtraNumberCountry, planSellsExtraNumbers, soldNumberKind, type ExtraNumberKind } from "@lobbystack/shared";
 
 import { requireBusinessAdmin } from "../authz";
 import type { DomainContext } from "./context";
 import { loadBusinessBilling } from "./entitlement";
+import { extraNumbersSubscriptionLiveInTransaction } from "./extraNumbersSubscription";
 import { resolveBusinessNumberMarket } from "./phoneNumberMarket";
 import { claimRefusal, offerBusinessNumbers, readNumberOffer, refused, type NumberInventoryProvider, type NumberSelection } from "./phoneNumbers";
 
-// Extra numbers (migration 0216). Starter and Pro include one number, and a
-// business on either buys more, each for one of its agents, at what the
-// carrier charges the host for a number in that country, from
-// extraNumberPrices. A plan with no number limit, such as Enterprise or a
-// self-hosted server, gets them free. A partner's businesses keep their tier's
-// limits, so they buy none here. When the claim is bought, the claim's trigger
-// moves the number to its agent and starts its months, and
-// settleExtraNumberCharges charges each month to the business's Polar
-// customer while the number is past the plan's included one.
+// Extra numbers (migrations 0216 and 0217). Starter, Pro and Enterprise
+// include one number, and a business on any of them buys more, each for one of
+// its agents, at what the carrier charges the host for a number in that
+// country, from extraNumberPrices. A self-hosted server gets them free. A
+// partner's businesses keep their tier's limits, so they buy none here.
+//
+// Extra numbers bill monthly, apart from the plan, through the extra numbers
+// add-on: a monthly Polar subscription whose only price is metered on
+// billing.extra_numbers (extraNumbersSubscription.ts). A business subscribes
+// through a Polar checkout before its first priced extra number. When a claim
+// is bought, the claim's trigger moves the number to its agent and starts its
+// months, and settleExtraNumberCharges reports each month to Polar while the
+// number is past the plan's included one and the add-on bills.
 
 /** Why a business can't buy an extra number now, as app.reserve_extra_number_claim decides. */
 export type ExtraNumberRefusal = "extra_numbers_unavailable" | "dedicated_number_requires_paid_plan" | "business_number_required";
 
-/** Whether a business can buy an extra number now, and whether it pays for one. */
+/**
+ * Whether a business can buy an extra number now, whether it pays for one,
+ * and whether its add-on bills already. A priced number needs the add-on, so
+ * `priced` without `subscribed` means a checkout for the add-on comes first.
+ */
 export type ExtraNumberAvailability =
-  | { available: true; priced: boolean; refusal: null }
-  | { available: false; priced: false; refusal: ExtraNumberRefusal };
+  | { available: true; priced: boolean; subscribed: boolean; refusal: null }
+  | { available: false; priced: false; subscribed: boolean; refusal: ExtraNumberRefusal };
 
 /**
  * Whether the business can buy an extra number now: a direct business that
- * holds a number already, on a live paid plan on the cloud. `priced` says the
- * plan sells them, so each costs its country's price.
+ * holds a number already, on a live paid plan on the cloud, or on a
+ * self-hosted server. `priced` says the plan sells them, so each costs its
+ * country's price.
  */
 export async function extraNumberAvailabilityInTransaction(tx: DatabaseTransaction, businessId: string): Promise<ExtraNumberAvailability> {
   const [business] = await tx.select({ partnerId: businesses.partnerId, deploymentMode: businesses.deploymentMode }).from(businesses).where(eq(businesses.id, businessId)).limit(1);
-  if (!business || business.partnerId) return { available: false, priced: false, refusal: "extra_numbers_unavailable" };
+  if (!business || business.partnerId) return { available: false, priced: false, subscribed: false, refusal: "extra_numbers_unavailable" };
+  const subscribed = await extraNumbersSubscriptionLiveInTransaction(tx, businessId);
   let priced = false;
   if (business.deploymentMode === "cloud") {
     const billing = await loadBusinessBilling(tx, businessId);
-    if (!billing.entitlement.live) return { available: false, priced: false, refusal: "dedicated_number_requires_paid_plan" };
+    if (!billing.entitlement.live) return { available: false, priced: false, subscribed, refusal: "dedicated_number_requires_paid_plan" };
     priced = planSellsExtraNumbers(billing.plan);
-    // A live plan that neither sells numbers nor leaves them unlimited.
-    if (!priced && billing.entitlement.includedNumbers !== null) return { available: false, priced: false, refusal: "extra_numbers_unavailable" };
+    // A live plan that doesn't sell them.
+    if (!priced) return { available: false, priced: false, subscribed, refusal: "extra_numbers_unavailable" };
   }
   const [held] = await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, businessId), inArray(phoneNumbers.status, ["active", "provisioning"]), isNull(phoneNumbers.reclaimScheduledAt))).limit(1);
-  if (!held) return { available: false, priced: false, refusal: "business_number_required" };
-  return { available: true, priced, refusal: null };
+  if (!held) return { available: false, priced: false, subscribed, refusal: "business_number_required" };
+  return { available: true, priced, subscribed, refusal: null };
 }
 
-/** What an extra number in the country costs the business each month, in US cents, or undefined when it's free. */
-export function extraNumberMonthlyCents(availability: ExtraNumberAvailability, countryCode: ExtraNumberCountry): number | undefined {
-  return availability.priced ? extraNumberPrices[countryCode].monthlyCents : undefined;
+/**
+ * What an extra number of this country and kind costs the business each
+ * month, in US cents: null when it's free, and undefined when the plan sells
+ * it but extraNumberPrices has no price for that kind there.
+ */
+export function extraNumberPriceFor(availability: ExtraNumberAvailability, countryCode: string, kind: ExtraNumberKind): number | null | undefined {
+  if (!availability.priced) return null;
+  return extraNumberMonthlyCents(countryCode, kind);
+}
+
+function unsupportedKind(): Error {
+  return Object.assign(new Error("Extra numbers of this kind aren't sold in this country."), { status: 400, code: "unsupported_number_kind" });
 }
 
 /**
  * Searches numbers the business can buy as extra ones, in the country it
- * picks or its time zone's, and signs each offer with the price the operator
- * sees: the country's from extraNumberPrices, or none on a plan with no
- * number limit. Throws the claim refusals when the business can't buy one.
+ * picks or its time zone's, of the kind the country sells, and signs each
+ * offer with the price the operator sees: Twilio's for that country and kind,
+ * from extraNumberPrices, or none on a self-hosted server. Throws the claim
+ * refusals when the business can't buy one.
  */
 export async function searchExtraNumbers(context: DomainContext, input: { userId: string; businessId: string; selection?: Partial<NumberSelection> | undefined; limit?: number | undefined; claimTokenSecret: string }, provider: NumberInventoryProvider) {
   const { availability, timezone } = await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
@@ -71,12 +92,13 @@ export async function searchExtraNumbers(context: DomainContext, input: { userId
   const market = resolveBusinessNumberMarket({ selection: input.selection, timezone });
   const countryCode = market.countryCode;
   if (!isExtraNumberCountry(countryCode)) throw Object.assign(new Error("Phone numbers aren't available in this country yet."), { status: 400, code: "unsupported_country" });
-  const monthlyCents = extraNumberMonthlyCents(availability, countryCode);
-  // An extra number is the country's usual kind, which is what its price is for.
-  const selection: Partial<NumberSelection> = { ...input.selection, countryCode, kind: extraNumberPrices[countryCode].kind };
-  const numbers = (await offerBusinessNumbers({ userId: input.userId, businessId: input.businessId, purpose: "extra", eligibility: { market, trial: undefined, countryFixed: false, smsRequired: false }, selection, limit: input.limit, claimTokenSecret: input.claimTokenSecret, monthlyPriceCents: monthlyCents }, provider))
-    .map(({ kind: _kind, trial: _trial, expiresAt: _expiresAt, ...number }) => number);
-  return { market, numbers, price: monthlyCents === undefined ? null : { countryCode, monthlyCents, currency: "USD" as const } };
+  const kind = soldNumberKind(countryCode, input.selection?.kind);
+  const monthlyCents = extraNumberPriceFor(availability, countryCode, kind);
+  if (monthlyCents === undefined) throw unsupportedKind();
+  const selection: Partial<NumberSelection> = { ...input.selection, countryCode, kind };
+  const numbers = (await offerBusinessNumbers({ userId: input.userId, businessId: input.businessId, purpose: "extra", eligibility: { market, trial: undefined, countryFixed: false, smsRequired: false }, selection, limit: input.limit, claimTokenSecret: input.claimTokenSecret, ...(monthlyCents === null ? {} : { monthlyPriceCents: monthlyCents }) }, provider))
+    .map(({ trial: _trial, ...number }) => number);
+  return { market, kind, numbers, price: monthlyCents === null ? null : { countryCode, kind, monthlyCents, currency: "USD" as const }, subscribed: availability.subscribed };
 }
 
 /**
@@ -93,9 +115,12 @@ export async function reserveExtraNumberClaim(context: DomainContext, input: { u
     if (!agent) throw refused("agent_not_found");
     const availability = await extraNumberAvailabilityInTransaction(tx, input.businessId);
     if (!availability.available) throw refused(availability.refusal);
-    const countryCode = offer.countryCode.toUpperCase();
-    const expected = isExtraNumberCountry(countryCode) ? extraNumberMonthlyCents(availability, countryCode) : undefined;
-    if (expected !== offer.selection.monthlyPriceCents) throw refused("extra_number_price_changed");
+    const price = extraNumberPriceFor(availability, offer.countryCode.toUpperCase(), offer.selection.kind);
+    // A kind no longer priced, a price that changed, or a plan that now prices what was free.
+    const expected = price ?? undefined;
+    if (price === undefined || expected !== offer.selection.monthlyPriceCents) throw refused("extra_number_price_changed");
+    // The add-on bills the number's months, so a priced number waits for it.
+    if (expected !== undefined && !availability.subscribed) throw refused("extra_numbers_subscription_required");
     const tokenHash = createHash("sha256").update(input.claimToken).digest("hex");
     const result = await tx.execute(sql`SELECT app.reserve_extra_number_claim(${input.businessId}::uuid, ${input.userId}::uuid, ${input.agentId}::uuid, ${offer.e164}::text, ${JSON.stringify(offer.selection)}::jsonb, ${tokenHash}::text, ${input.idempotencyKey}::text, ${expected ?? null}::integer) AS id`);
     const claimId = String((result.rows[0] as { id?: unknown } | undefined)?.id ?? "");
@@ -103,6 +128,84 @@ export async function reserveExtraNumberClaim(context: DomainContext, input: { u
     await enqueueOutbox(tx, { topic: "phoneNumber.provision", businessId: input.businessId, aggregateType: "number_claim", aggregateId: claimId, dedupeKey: `phone-claim:${claimId}:provision`, payload: { claimId } });
     return claimId;
   }).catch((error: unknown) => { throw claimRefusal(error) ?? error; });
+}
+
+/** The checkout request target of the extra numbers add-on, in billing_checkout_requests. */
+export const EXTRA_NUMBERS_CHECKOUT_TARGET = "extra_numbers";
+
+const openExtraNumbersCheckoutMs = 30 * 60_000;
+
+function conflictError(message: string, code: string): Error {
+  return Object.assign(new Error(message), { status: 409, code });
+}
+
+/**
+ * Queues a Polar checkout for the extra numbers add-on, made out to the
+ * person asking, whose email Polar fills in. Only a business that can buy a
+ * priced extra number, and whose add-on doesn't bill yet, gets one. Asking
+ * again for your own open checkout returns it; someone else's is a 409.
+ * `agentId` names the agent whose phone page Polar sends the payer back to.
+ * Callers authorize first.
+ */
+export async function createExtraNumbersCheckoutRequestInTransaction(tx: DatabaseTransaction, input: { userId: string; businessId: string; agentId?: string | null | undefined }): Promise<string> {
+  await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`billing-checkout:${input.businessId}`}, 0))`);
+  const availability = await extraNumberAvailabilityInTransaction(tx, input.businessId);
+  if (!availability.available) throw refused(availability.refusal);
+  if (!availability.priced) throw conflictError("Extra numbers are free on this server, so there's nothing to subscribe to.", "extra_numbers_free");
+  if (availability.subscribed) throw conflictError("Monthly billing for extra numbers is already set up.", "extra_numbers_subscribed");
+  if (input.agentId) {
+    const [agent] = await tx.select({ id: agents.id }).from(agents).where(and(eq(agents.businessId, input.businessId), eq(agents.id, input.agentId), isNull(agents.archivedAt))).limit(1);
+    if (!agent) throw refused("agent_not_found");
+  }
+  const [open] = await tx.select({ id: billingCheckoutRequests.id, requestedByUserId: billingCheckoutRequests.requestedByUserId })
+    .from(billingCheckoutRequests)
+    .where(and(eq(billingCheckoutRequests.businessId, input.businessId), eq(billingCheckoutRequests.target, EXTRA_NUMBERS_CHECKOUT_TARGET), inArray(billingCheckoutRequests.status, ["pending", "processing", "ready"]), gt(billingCheckoutRequests.createdAt, new Date(Date.now() - openExtraNumbersCheckoutMs))))
+    .orderBy(desc(billingCheckoutRequests.createdAt))
+    .limit(1);
+  if (open) {
+    if (open.requestedByUserId !== input.userId) throw conflictError("A checkout is already open for this workspace.", "checkout_in_progress");
+    return open.id;
+  }
+  await tx.insert(billingAccounts).values({ businessId: input.businessId, billingKey: `business:${input.businessId}` }).onConflictDoNothing({ target: billingAccounts.businessId });
+  const [request] = await tx.insert(billingCheckoutRequests).values({ businessId: input.businessId, requestedByUserId: input.userId, target: EXTRA_NUMBERS_CHECKOUT_TARGET, billingInterval: "monthly", status: "pending", agentId: input.agentId ?? null }).returning({ id: billingCheckoutRequests.id });
+  if (!request) throw new Error("Extra numbers checkout request could not be created.");
+  // Its own topic, so a worker from before the add-on leaves it for one that knows it.
+  await enqueueOutbox(tx, { topic: "billing.createExtraNumbersCheckout", businessId: input.businessId, aggregateType: "billing_checkout_request", aggregateId: request.id, dedupeKey: `extra-numbers-checkout:${request.id}`, payload: { requestId: request.id } });
+  return request.id;
+}
+
+export async function createExtraNumbersCheckoutRequest(context: DomainContext, input: { userId: string; businessId: string; agentId?: string | null | undefined }): Promise<string> {
+  return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
+    await requireBusinessAdmin(tx, input);
+    return await createExtraNumbersCheckoutRequestInTransaction(tx, input);
+  });
+}
+
+/** An extra numbers checkout, and whether the add-on it sells bills now. */
+export type ExtraNumbersCheckout = { id: string; status: "pending" | "processing" | "ready" | "error"; checkoutUrl: string | null; error: string | null; subscribed: boolean; createdAt: Date; updatedAt: Date };
+
+export async function loadExtraNumbersCheckoutInTransaction(tx: DatabaseTransaction, input: { businessId: string; requestId: string }): Promise<ExtraNumbersCheckout | null> {
+  const [row] = await tx.select({ id: billingCheckoutRequests.id, status: billingCheckoutRequests.status, checkoutUrl: billingCheckoutRequests.checkoutUrl, error: billingCheckoutRequests.error, createdAt: billingCheckoutRequests.createdAt, updatedAt: billingCheckoutRequests.updatedAt })
+    .from(billingCheckoutRequests)
+    .where(and(eq(billingCheckoutRequests.id, input.requestId), eq(billingCheckoutRequests.businessId, input.businessId), eq(billingCheckoutRequests.target, EXTRA_NUMBERS_CHECKOUT_TARGET)))
+    .limit(1);
+  if (!row) return null;
+  const status = row.status === "canceled" || row.status === "superseded" ? "error" : (["pending", "processing", "ready", "error"] as const).find((value) => value === row.status) ?? "pending";
+  return { ...row, status, subscribed: await extraNumbersSubscriptionLiveInTransaction(tx, input.businessId) };
+}
+
+/** What the worker needs to make an extra numbers checkout: who pays, the Polar customer, and the page to come back to. */
+export async function loadExtraNumbersCheckoutRequest(context: DomainContext, input: { businessId: string; requestId: string }): Promise<{ customerEmail: string; externalCustomerId: string; agentId: string | null } | null> {
+  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    const [row] = await tx.select({ customerEmail: users.email, billingKey: billingAccounts.billingKey, agentId: billingCheckoutRequests.agentId })
+      .from(billingCheckoutRequests)
+      .innerJoin(users, eq(users.id, billingCheckoutRequests.requestedByUserId))
+      .leftJoin(billingAccounts, eq(billingAccounts.businessId, billingCheckoutRequests.businessId))
+      .where(and(eq(billingCheckoutRequests.id, input.requestId), eq(billingCheckoutRequests.businessId, input.businessId), eq(billingCheckoutRequests.target, EXTRA_NUMBERS_CHECKOUT_TARGET)))
+      .limit(1);
+    if (!row) return null;
+    return { customerEmail: row.customerEmail, externalCustomerId: row.billingKey ?? `business:${input.businessId}`, agentId: row.agentId };
+  });
 }
 
 /** Each extra number's monthly price, by phone number, for the business's own numbers. */
