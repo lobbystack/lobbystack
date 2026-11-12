@@ -86,7 +86,7 @@ Les deux produits au 9 octobre 2026 :
 | Numéro de téléphone | Nouveau numéro inclus, ou portez le vôtre | Un numéro sur Starter et Pro, aux États-Unis, au Canada, au Royaume-Uni, en Australie ou en Nouvelle-Zélande |
 | Fonctionne avec votre numéro actuel | Oui, par renvoi d'appel ou SIP | Oui, par le renvoi d'appel de votre opérateur |
 | Langues des appelants | Anglais, espagnol, français, italien, allemand et portugais selon sa FAQ, d'autres annoncées comme à venir ; change de langue pendant l'appel | Commence dans l'une des 8 langues au choix, puis répond dans la langue de l'appelant : plus de 70 langues avec OpenAI GPT-Live |
-| Calendriers | Google et Outlook | Google Calendar |
+| Calendriers | Google et Outlook | Google Calendar, Cal.com et Calendly |
 | CRM | Salesforce, HubSpot et Zoho intégrés | Webhooks et API REST ; Zapier s'y connecte |
 | Réponses IA aux SMS | Oui, avec son agent SMS IA (RingCentral précise que des frais supplémentaires peuvent s'appliquer) | Non ; votre équipe répond elle-même |
 | Transferts et routage | Par nom, lieu et mot-clé, avec relais en direct | Un numéro de transfert, et un message si le transfert échoue |
@@ -179,7 +179,7 @@ LobbyStack vous convient si vous voulez un coût à la minute plus bas et un moy
 - Le forfait gratuit vous donne 30 minutes vocales par mois et un numéro américain ou canadien gratuit pendant 14 jours, sans carte.
 - Starter coûte 30 $ pour 150 minutes, puis 0,20 $ la minute, comptée à la seconde. Les appels de moins de 10 secondes et ceux que le réceptionniste termine comme spam ne comptent pas.
 - Chaque appel commence dans la langue par défaut de l'entreprise : anglais, français, espagnol, serbe, allemand, portugais du Brésil, italien ou néerlandais. Le réceptionniste répond ensuite dans la langue de l'appelant : plus de 70 langues avec OpenAI GPT-Live, dont l'espagnol et le serbe.
-- Il réserve dans Google Calendar et, si l'appelant accepte, envoie par SMS une confirmation et un rappel 24 heures avant le rendez-vous aux numéros américains et canadiens.
+- Il réserve dans Google Calendar, Cal.com ou Calendly et, si l'appelant accepte, envoie par SMS une confirmation et un rappel 24 heures avant le rendez-vous aux numéros américains et canadiens.
 - Starter inclut 20 tentatives de transfert par mois vers votre numéro de transfert, et le réceptionniste propose de prendre un message si un transfert échoue.
 - Aucun forfait n'a de frais de mise en service, et vous pouvez annuler depuis les paramètres de facturation, sans frais d'annulation.
 - Le code est sous licence MIT. Vous pouvez l'auto-héberger avec vos propres comptes OpenAI et Twilio et garder les enregistrements et transcriptions sur des serveurs que vous contrôlez. Twilio et OpenAI traitent l'audio des appels en direct, même en auto-hébergement.

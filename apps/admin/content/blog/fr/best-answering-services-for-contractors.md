@@ -30,7 +30,7 @@ Partez de l'appel qui vous coûte le plus cher quand il tombe sur la messagerie.
 - **Jobber Receptionist, le meilleur pour les entreprises sur Jobber :** une option à 29 $ avec 30 conversations par mois.
 - **Sameday AI, le meilleur pour les couvreurs sur JobNimbus ou AccuLynx qui ont le budget :** un système téléphonique IA dès 449 $ par mois pour 500 minutes.
 - **OnCrew, la facture IA la plus basse dans notre mois de tempête :** 49 $ pour 100 appels, puis 0,99 $ l'appel.
-- **LobbyStack (le nôtre), le meilleur pour les entreprises sur Google Calendar au budget serré :** 30 $ par mois pour 150 minutes, sans frais de mise en service. Il répond à chaque appelant dans sa langue, parmi plus de 70 langues.
+- **LobbyStack (le nôtre), le meilleur pour les entreprises sur Google Calendar, Cal.com ou Calendly au budget serré :** 30 $ par mois pour 150 minutes, sans frais de mise en service. Il répond à chaque appelant dans sa langue, parmi plus de 70 langues.
 
 ## Comment ces services se comparent-ils ?
 
@@ -90,7 +90,7 @@ Posh facture au mois civil plutôt que tous les 28 jours, sans engagement long, 
 
 ## Quels réceptionnistes IA existent pour les artisans ?
 
-Jobber et Housecall Pro vendent un réceptionniste IA intégré à leur logiciel. Sameday AI cite ServiceTitan, JobNimbus et AccuLynx parmi ses connexions. OnCrew vise les métiers du bâtiment et facture à l'appel. Smith.ai place des réceptionnistes humains derrière son IA. LobbyStack réserve dans Google Calendar et transfère les appels urgents vers un numéro. Choisissez le service IA qui planifie là où vos chantiers vivent déjà.
+Jobber et Housecall Pro vendent un réceptionniste IA intégré à leur logiciel. Sameday AI cite ServiceTitan, JobNimbus et AccuLynx parmi ses connexions. OnCrew vise les métiers du bâtiment et facture à l'appel. Smith.ai place des réceptionnistes humains derrière son IA. LobbyStack réserve dans Google Calendar, Cal.com ou Calendly et transfère les appels urgents vers un numéro. Choisissez le service IA qui planifie là où vos chantiers vivent déjà.
 
 ### Jobber Receptionist : le meilleur pour les entreprises sur Jobber
 
@@ -118,13 +118,13 @@ L'espagnol s'active gratuitement, et sa [page de réponse IA](https://oncrew.ai/
 
 L'[AI Receptionist](https://smith.ai/pricing/ai-receptionist) de Smith.ai propose un forfait gratuit de 25 appels par mois, puis 3,00 $ l'appel. Pro facture 2,00 $ l'appel pour 75 appels (150 $), 1,80 $ pour 150 et 1,67 $ pour 300, avec des appels supplémentaires de 2,17 $ à 2,50 $. Les appels peuvent passer à un réceptionniste humain basé en Amérique du Nord, et la page tarifaire n'indique aucun frais pour ce relais. Les forfaits sont au mois, avec 30 jours de préavis pour résilier, et vous pouvez retirer de la facture jusqu'à 10 % des appels de chaque cycle comme spam.
 
-### LobbyStack (le nôtre) : le meilleur pour les entreprises sur Google Calendar au budget serré
+### LobbyStack (le nôtre) : le meilleur pour les entreprises sur Google Calendar, Cal.com ou Calendly au budget serré
 
 Le forfait Starter de LobbyStack coûte 30 $ par mois pour 150 minutes, puis 0,20 $ la minute. Pro coûte 100 $ pour 500 minutes, puis 0,18 $. En facturation annuelle, ils reviennent à 24 $ et 80 $ par mois, et aucun forfait n'a de frais de mise en service. LobbyStack compte l'utilisation à la seconde et ne facture ni le spam ni les appels de moins de 10 secondes. Les forfaits ne limitent pas le nombre d'appels auxquels il répond en même temps.
 
-Vous obtenez un numéro aux États-Unis, au Canada, au Royaume-Uni, en Australie ou en Nouvelle-Zélande, et vous pouvez y renvoyer votre numéro professionnel actuel. Il répond à tous les appels, ou seulement aux appels en débordement ou hors horaires. Il réserve les rendez-vous de devis dans Google Calendar et, si l'appelant accepte, envoie par SMS une confirmation et un rappel 24 heures avant aux numéros américains et canadiens. Le résumé, la transcription et l'enregistrement de chaque appel arrivent dans le tableau de bord, et vous recevez un e-mail quand il prend un message, avec des alertes SMS en option. Chaque appel commence dans la langue par défaut de l'entreprise (anglais, français, espagnol, serbe, allemand, portugais du Brésil, italien ou néerlandais), puis le réceptionniste répond dans la langue de l'appelant : plus de 70 langues avec GPT-Live d'OpenAI, dont l'espagnol. Le code est open source sous licence MIT, et vous pouvez l'héberger vous-même.
+Vous obtenez un numéro aux États-Unis, au Canada, au Royaume-Uni, en Australie ou en Nouvelle-Zélande, et vous pouvez y renvoyer votre numéro professionnel actuel. Il répond à tous les appels, ou seulement aux appels en débordement ou hors horaires. Il réserve les rendez-vous de devis dans Google Calendar, Cal.com ou Calendly et, si l'appelant accepte, envoie par SMS une confirmation et un rappel 24 heures avant aux numéros américains et canadiens. Le résumé, la transcription et l'enregistrement de chaque appel arrivent dans le tableau de bord, et vous recevez un e-mail quand il prend un message, avec des alertes SMS en option. Chaque appel commence dans la langue par défaut de l'entreprise (anglais, français, espagnol, serbe, allemand, portugais du Brésil, italien ou néerlandais), puis le réceptionniste répond dans la langue de l'appelant : plus de 70 langues avec GPT-Live d'OpenAI, dont l'espagnol. Le code est open source sous licence MIT, et vous pouvez l'héberger vous-même.
 
-Il n'a aucune intégration avec Jobber, Housecall Pro, ServiceTitan, JobNimbus ni aucun CRM, et Google Calendar reste son seul agenda. Des webhooks signés pour 6 événements et une API REST peuvent envoyer les données d'appel ailleurs, mais c'est à vous de construire ce lien. Les transferts sont directs, sans présentation de l'appelant, et vont vers un seul numéro. Si un transfert n'aboutit pas, il prévient l'appelant, propose de prendre un message, et votre équipe peut recevoir une alerte d'échec de transfert. Aucun agent humain ne prend le relais, et l'IA ne répond pas aux SMS. Le forfait Gratuit vous donne 30 minutes vocales et un numéro américain ou canadien gratuit pendant 14 jours, sans carte. Pendant l'essai, les transferts vont uniquement vers le numéro mobile que vous avez vérifié. Voyez comment il traite les appels après une tempête sur la page [permanence téléphonique pour couvreurs](/fr/solutions/roofing-answering-service/).
+Il n'a aucune intégration avec Jobber, Housecall Pro, ServiceTitan, JobNimbus ni aucun CRM, et il ne réserve que dans Google Calendar, Cal.com ou Calendly. Des webhooks signés pour 6 événements et une API REST peuvent envoyer les données d'appel ailleurs, mais c'est à vous de construire ce lien. Les transferts sont directs, sans présentation de l'appelant, et vont vers un seul numéro. Si un transfert n'aboutit pas, il prévient l'appelant, propose de prendre un message, et votre équipe peut recevoir une alerte d'échec de transfert. Aucun agent humain ne prend le relais, et l'IA ne répond pas aux SMS. Le forfait Gratuit vous donne 30 minutes vocales et un numéro américain ou canadien gratuit pendant 14 jours, sans carte. Pendant l'essai, les transferts vont uniquement vers le numéro mobile que vous avez vérifié. Voyez comment il traite les appels après une tempête sur la page [permanence téléphonique pour couvreurs](/fr/solutions/roofing-answering-service/).
 
 ## Combien coûte un télésecrétariat pour artisans ?
 
@@ -156,7 +156,7 @@ LobbyStack n'a de frais de mise en service sur aucun forfait. Si vous fixez un p
 
 ## Quels services planifient les devis dans Jobber, Housecall Pro, ServiceTitan ou JobNimbus ?
 
-PATLive cite les quatre sur ses pages construction et chauffage. AnswerForce cite Jobber, Housecall Pro et ServiceTitan. Sameday AI cite ServiceTitan, Housecall Pro et JobNimbus. Jobber et Housecall Pro ont leur propre réceptionniste. LobbyStack ne se connecte à aucun d'eux et réserve dans Google Calendar.
+PATLive cite les quatre sur ses pages construction et chauffage. AnswerForce cite Jobber, Housecall Pro et ServiceTitan. Sameday AI cite ServiceTitan, Housecall Pro et JobNimbus. Jobber et Housecall Pro ont leur propre réceptionniste. LobbyStack ne se connecte à aucun d'eux et réserve dans Google Calendar, Cal.com ou Calendly.
 
 | Service | Jobber | Housecall Pro | ServiceTitan | JobNimbus | Autres outils du bâtiment cités |
 |---|---|---|---|---|---|
@@ -169,11 +169,11 @@ PATLive cite les quatre sur ses pages construction et chauffage. AnswerForce cit
 | Housecall Pro CSR AI | Non | Intégré | Non | Non | Housecall Pro uniquement |
 | Sameday AI | Non cité | Cité | Application certifiée | Cité | AccuLynx, FieldRoutes, Service Fusion |
 | OnCrew | Une fiche par appel via webhook | Connexion avec le forfait MAX de Housecall Pro | Une fiche par appel via webhook | Non cité | Synchronisation Google Calendar |
-| LobbyStack (le nôtre) | Non | Non | Non | Non | Google Calendar ; webhooks signés pour 6 événements ; API REST |
+| LobbyStack (le nôtre) | Non | Non | Non | Non | Google Calendar, Cal.com, Calendly ; webhooks signés pour 6 événements ; API REST |
 
 « Cité » signifie que le fournisseur nomme l'outil sur sa propre page. Cela ne dit pas si un agent saisit l'intervention à la main ou si le rendez-vous arrive dans votre planning pendant l'appel. Demandez à chaque finaliste de planifier un devis test dans votre logiciel, puis vérifiez la fiche client, le type de travaux, l'adresse et les notes.
 
-Avec LobbyStack, quelqu'un de votre bureau recopie chaque rendez-vous depuis Google Calendar ou le résumé d'appel dans votre logiciel, ou vous automatisez cette étape avec les webhooks et l'API.
+Avec LobbyStack, quelqu'un de votre bureau recopie chaque rendez-vous depuis Google Calendar, Cal.com, Calendly ou le résumé d'appel dans votre logiciel, ou vous automatisez cette étape avec les webhooks et l'API.
 
 ## Que se passe-t-il la nuit, le week-end et après une tempête ?
 
@@ -231,7 +231,7 @@ Aucun service humain de ce comparatif n'est gratuit, mais plusieurs proposent un
 
 ### Un télésecrétariat peut-il planifier des devis ?
 
-Oui. PATLive, AnswerForce et Smith.ai disent que leurs réceptionnistes planifient des devis, et Smith.ai liste ses questions. Jobber Receptionist et Housecall Pro CSR AI réservent dans leur propre logiciel. OnCrew envoie les demandes dans votre agenda pour confirmation, ou réserve des créneaux libres si vous l'activez. LobbyStack réserve les rendez-vous de devis dans Google Calendar.
+Oui. PATLive, AnswerForce et Smith.ai disent que leurs réceptionnistes planifient des devis, et Smith.ai liste ses questions. Jobber Receptionist et Housecall Pro CSR AI réservent dans leur propre logiciel. OnCrew envoie les demandes dans votre agenda pour confirmation, ou réserve des créneaux libres si vous l'activez. LobbyStack réserve les rendez-vous de devis dans Google Calendar, Cal.com ou Calendly.
 
 ### Peut-on utiliser un télésecrétariat seulement en dehors des horaires ?
 
@@ -239,7 +239,7 @@ Oui. Réglez votre opérateur pour renvoyer les appels une fois le bureau fermé
 
 ### LobbyStack fonctionne-t-il avec Jobber, ServiceTitan ou JobNimbus ?
 
-Non. LobbyStack n'a aucune intégration avec Jobber, Housecall Pro, ServiceTitan, JobNimbus ni aucun CRM, et Google Calendar reste son seul agenda. Des webhooks signés pour 6 événements et une API REST peuvent envoyer les données d'appel vers d'autres outils, mais quelqu'un doit construire ce lien. Si l'intervention doit arriver dans votre logiciel pendant l'appel, choisissez un autre fournisseur.
+Non. LobbyStack n'a aucune intégration avec Jobber, Housecall Pro, ServiceTitan, JobNimbus ni aucun CRM, et il ne réserve que dans Google Calendar, Cal.com ou Calendly. Des webhooks signés pour 6 événements et une API REST peuvent envoyer les données d'appel vers d'autres outils, mais quelqu'un doit construire ce lien. Si l'intervention doit arriver dans votre logiciel pendant l'appel, choisissez un autre fournisseur.
 
 ### Un télésecrétariat peut-il répondre en espagnol ?
 
@@ -268,6 +268,6 @@ Sources, toutes consultées les 9 ou 10 octobre 2026 :
 - **Des agents humains au prix à la minute le plus bas :** AnswerHero.
 - **Déjà sur Jobber ou Housecall Pro :** essayez d'abord le réceptionniste intégré.
 - **Un couvreur sur JobNimbus ou AccuLynx qui veut de l'IA :** Sameday AI.
-- **Des rendez-vous dans Google Calendar pour 30 $ à 100 $ par mois, avec des appelants qui parlent plusieurs langues :** LobbyStack.
+- **Des rendez-vous dans Google Calendar, Cal.com ou Calendly pour 30 $ à 100 $ par mois, avec des appelants qui parlent plusieurs langues :** LobbyStack.
 
 Vous voulez entendre LobbyStack prendre une demande de devis avant de payer ? [Créez un compte gratuit](https://app.lobbystack.com/fr/signup) et testez-le avec 30 minutes vocales et un numéro gratuit pendant 14 jours, sans carte. Les forfaits payants n'ont aucuns frais de mise en service. Voyez ensuite comment il couvre les nuits et les week-ends sur la page [permanence téléphonique hors horaires pour les artisans](/fr/solutions/after-hours-answering-service-for-contractors/).

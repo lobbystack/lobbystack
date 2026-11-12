@@ -34,7 +34,7 @@ Pokušali smo da uključimo i CallFluent. Njegov sajt nam se nije učitao 27. ok
 
 ## LobbyStack: white-label AI recepcioner sa zajedničkim fondom
 
-[LobbyStack White Label](/sr/white-label/) prodaje jedan proizvod: AI recepcionera koji odgovara na pozive i četove sa sajta, zakazuje u Google Calendar, šalje potvrde SMS-om i prebacuje hitne pozive. Agente ne pravite od nule. Podešavate recepcionera za svakog klijenta, ili ga pokrećete iz šablona.
+[LobbyStack White Label](/sr/white-label/) prodaje jedan proizvod: AI recepcionera koji odgovara na pozive i četove sa sajta, zakazuje u Google Calendar, Cal.com ili Calendly, šalje potvrde SMS-om i prebacuje hitne pozive. Agente ne pravite od nule. Podešavate recepcionera za svakog klijenta, ili ga pokrećete iz šablona.
 
 **Partnerska cena.** Nivo Free košta $0 i uključuje 30 minuta razgovora, 50 četova i jedan probni broj na 14 dana. Starter košta $49 mesečno za 250 minuta i 1,000 četova, Growth $199 za 1,300 minuta i 5,000 četova, a Scale $499 za 4,000 minuta i 10,000 četova. Svi klijenti troše taj jedan fond, bez naknade po firmi. Posle fonda minut košta $0.20, $0.15 ili $0.12, zavisno od nivoa.
 
@@ -46,7 +46,7 @@ Pokušali smo da uključimo i CallFluent. Njegov sajt nam se nije učitao 27. ok
 
 **Kod.** [Kod je pod MIT licencom](https://github.com/lobbystack/lobbystack), i svaka partnerska funkcija radi na vašim serverima. [Priča o izradi](/sr/blog/white-label-ai-receptionist/) objašnjava kako program radi iznutra.
 
-**Ograničenja.** LobbyStack je recepcioner, pa ne vodi odlazne kampanje i ne daje vam da dizajnirate tokove poziva za druge poslove. Zakazivanje radi samo sa Google Calendar-om.
+**Ograničenja.** LobbyStack je recepcioner, pa ne vodi odlazne kampanje i ne daje vam da dizajnirate tokove poziva za druge poslove. Zakazivanje radi samo sa Google Calendar-om, Cal.com-om i Calendly-jem.
 
 ## Frontdesk (ranije My AI Front Desk)
 

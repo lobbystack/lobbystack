@@ -70,10 +70,10 @@ Sa LobbyStackom, na primer:
 
 - poziv počinje na francuskom kada je francuski Vaš podrazumevani jezik i prelazi na engleski ako ga pozivalac govori;
 - odgovara na osnovu Vašeg sajta, Vaših dokumenata i cena koje mu date;
-- zakazuje u Google Calendar i šalje SMS potvrdu klijentima koji pristanu;
+- zakazuje u Google Calendar, Cal.com ili Calendly i šalje SMS potvrdu klijentima koji pristanu;
 - prebacuje hitne pozive na Vaš mobilni, a za sve ostalo prima poruku i šalje Vam obaveštenje imejlom ili SMS-om.
 
-Starter košta US$30 mesečno za 150 minuta, zatim US$0.20 po minutu. Za 40 poziva od 3 minuta račun ostaje US$30. Javlja se i u 21 h i vikendom, po istoj ceni. Njegova ograničenja: naplaćuje u američkim dolarima, povezuje se samo sa Google Calendar-om i ne zamenjuje osobu u osetljivom razgovoru ni za administrativni posao.
+Starter košta US$30 mesečno za 150 minuta, zatim US$0.20 po minutu. Za 40 poziva od 3 minuta račun ostaje US$30. Javlja se i u 21 h i vikendom, po istoj ceni. Njegova ograničenja: naplaćuje u američkim dolarima, povezuje se samo sa Google Calendar-om, Cal.com-om i Calendly-jem i ne zamenjuje osobu u osetljivom razgovoru ni za administrativni posao.
 
 ## Kako da birate između virtuelne sekretarice i AI recepcionera?
 
@@ -95,7 +95,7 @@ Samo ako kupite te sate. Većina radi danju. Za pozive uveče i vikendom dodajte
 
 ### Može li virtuelna sekretarica da zakazuje moje termine?
 
-Da, ako joj date pristup kalendaru. AI recepcioner kao što je LobbyStack takođe zakazuje tokom poziva, u Google Calendar, i šalje SMS potvrdu klijentima koji pristanu.
+Da, ako joj date pristup kalendaru. AI recepcioner kao što je LobbyStack takođe zakazuje tokom poziva, u Google Calendar, Cal.com ili Calendly, i šalje SMS potvrdu klijentima koji pristanu.
 
 ### Može li AI recepcioner da zameni virtuelnu sekretaricu?
 

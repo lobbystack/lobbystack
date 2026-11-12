@@ -69,7 +69,7 @@ Cette séparation aide les clients à comprendre qui exploite le service. Votre 
 
 L'open source donne le contrôle aux agences et aux équipes techniques. Plusieurs entreprises préfèrent confier l'infrastructure, la surveillance des fournisseurs, les mises à jour et le soutien à une autre équipe.
 
-[LobbyStack Cloud](https://lobbystack.com/fr/pricing/) reste l'option gérée pour ces clients. Ils configurent le réceptionniste, les connaissances, les règles, les numéros de téléphone et Google Calendar sans exploiter PostgreSQL, Redis ou la passerelle vocale.
+[LobbyStack Cloud](https://lobbystack.com/fr/pricing/) reste l'option gérée pour ces clients. Ils configurent le réceptionniste, les connaissances, les règles, les numéros de téléphone et Google Calendar, Cal.com ou Calendly sans exploiter PostgreSQL, Redis ou la passerelle vocale.
 
 Les agences peuvent choisir le modèle adapté à chaque mandat. Utilisez le code MIT quand le client demande un produit sous sa marque, une infrastructure personnalisée ou des intégrations poussées. Utilisez LobbyStack Cloud quand le client veut un produit géré et que votre valeur vient de la configuration, des workflows et du service continu.
 

@@ -34,7 +34,7 @@ Nous avons aussi voulu inclure CallFluent. Son site ne s'est pas chargé chez no
 
 ## LobbyStack : une réceptionniste IA en marque blanche avec une réserve partagée
 
-[LobbyStack White Label](/fr/white-label/) vend un seul produit : une réceptionniste IA qui répond aux appels et aux clavardages du site, prend les rendez-vous dans Google Agenda, envoie des confirmations par texto et transfère les appels urgents. Vous ne construisez pas d'agents de zéro. Vous configurez la réceptionniste de chaque client, ou vous partez d'un modèle.
+[LobbyStack White Label](/fr/white-label/) vend un seul produit : une réceptionniste IA qui répond aux appels et aux clavardages du site, prend les rendez-vous dans Google Agenda, Cal.com ou Calendly, envoie des confirmations par texto et transfère les appels urgents. Vous ne construisez pas d'agents de zéro. Vous configurez la réceptionniste de chaque client, ou vous partez d'un modèle.
 
 **Prix partenaire.** Le palier Gratuit coûte 0 $ et comprend 30 minutes vocales, 50 clavardages et un numéro d'essai de 14 jours. Starter coûte 49 $ par mois pour 250 minutes et 1 000 clavardages, Growth 199 $ pour 1 300 minutes et 5 000 clavardages, et Scale 499 $ pour 4 000 minutes et 10 000 clavardages. Chaque client puise dans cette réserve unique, sans frais par entreprise. Au-delà, la minute coûte 0,20 $, 0,15 $ ou 0,12 $ selon le palier.
 
@@ -46,7 +46,7 @@ Nous avons aussi voulu inclure CallFluent. Son site ne s'est pas chargé chez no
 
 **Code source.** Le [code est sous licence MIT](https://github.com/lobbystack/lobbystack), et chaque fonction partenaire marche sur vos propres serveurs. Le [récit de la construction](/fr/blog/white-label-ai-receptionist/) explique le fonctionnement interne du programme.
 
-**Limites.** LobbyStack est une réceptionniste : elle ne lance pas de campagnes d'appels sortants et ne vous laisse pas concevoir des parcours d'appel pour d'autres usages. La prise de rendez-vous se fait uniquement dans Google Agenda.
+**Limites.** LobbyStack est une réceptionniste : elle ne lance pas de campagnes d'appels sortants et ne vous laisse pas concevoir des parcours d'appel pour d'autres usages. La prise de rendez-vous se fait uniquement dans Google Agenda, Cal.com et Calendly.
 
 ## Frontdesk (anciennement My AI Front Desk)
 

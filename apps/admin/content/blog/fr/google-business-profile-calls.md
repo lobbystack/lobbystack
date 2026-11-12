@@ -128,13 +128,13 @@ Vous réglez la règle chez votre opérateur : renvoi sur occupation ou non-rép
 Avec LobbyStack comme exemple :
 
 - Vous obtenez un numéro LobbyStack (disponible aux États-Unis, au Canada, au Royaume-Uni, en Australie et en Nouvelle-Zélande) et vous y renvoyez votre numéro professionnel. Il peut répondre à tous les appels ou seulement aux appels en débordement ou hors horaires.
-- Il prend les rendez-vous dans Google Calendar. Avec l'accord de l'appelant, il envoie par SMS une confirmation et un rappel 24 heures avant le rendez-vous aux numéros américains et canadiens.
+- Il prend les rendez-vous dans Google Calendar, Cal.com ou Calendly. Avec l'accord de l'appelant, il envoie par SMS une confirmation et un rappel 24 heures avant le rendez-vous aux numéros américains et canadiens.
 - Il transfère les appels urgents vers un seul numéro par entreprise. Les transferts se font à l'aveugle : il ne présente pas l'appel à la personne qui décroche. Si un transfert échoue, il prévient l'appelant, propose de prendre un message, et votre équipe peut recevoir une alerte d'échec de transfert.
 - Chaque appel reçoit un résumé, une transcription et un enregistrement. Vous recevez une alerte par e-mail quand il prend un message, et les alertes SMS sont en option.
 - Les appels commencent dans la langue par défaut de votre entreprise (anglais, français, espagnol, serbe, allemand, portugais du Brésil, italien ou néerlandais), puis le réceptionniste répond dans la langue de l'appelant : plus de 70 langues, dont l'espagnol.
 - LobbyStack ne facture ni les appels indésirables ni les appels de moins de 10 secondes.
 
-Connaissez les limites avant de renvoyer une ligne : Google Calendar est le seul agenda, l'IA ne répond pas aux SMS, et il n'y a pas de synchronisation avec un CRM ou un logiciel de gestion d'interventions. Pour une couverture complète du soir et du week-end, voyez [la permanence hors horaires](/fr/solutions/after-hours-answering-service/).
+Connaissez les limites avant de renvoyer une ligne : il ne réserve que dans Google Calendar, Cal.com ou Calendly, l'IA ne répond pas aux SMS, et il n'y a pas de synchronisation avec un CRM ou un logiciel de gestion d'interventions. Pour une couverture complète du soir et du week-end, voyez [la permanence hors horaires](/fr/solutions/after-hours-answering-service/).
 
 ### 4. Testez depuis votre propre fiche
 
@@ -170,7 +170,7 @@ Oui. Google n'affiche les données de performances que pour les fiches d'établi
 
 ### Un réceptionniste IA peut-il répondre aux appels de ma fiche d'établissement Google ?
 
-Oui. Gardez votre numéro sur la fiche et renvoyez-le vers le réceptionniste IA pour les appels manqués, hors horaires ou pour tous. LobbyStack répond aux appels renvoyés, prend les rendez-vous dans Google Calendar, transfère les urgences vers un numéro et garde résumé, transcription et enregistrement de chaque appel. Forfaits payants dès 30 $ par mois, ou 24 $ en annuel.
+Oui. Gardez votre numéro sur la fiche et renvoyez-le vers le réceptionniste IA pour les appels manqués, hors horaires ou pour tous. LobbyStack répond aux appels renvoyés, prend les rendez-vous dans Google Calendar, Cal.com ou Calendly, transfère les urgences vers un numéro et garde résumé, transcription et enregistrement de chaque appel. Forfaits payants dès 30 $ par mois, ou 24 $ en annuel.
 
 ## Répondez aux appels que votre fiche vous envoie déjà
 

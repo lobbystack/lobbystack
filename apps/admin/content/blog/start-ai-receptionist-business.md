@@ -78,7 +78,7 @@ For the next client in the same niche:
 2. Pick the package, or mark the business as billed outside LobbyStack.
 3. Choose **Full access**, so the owner can edit the receptionist, or **Activity only**, so they see calls and you manage the setup.
 4. Enter the owner's email. LobbyStack sends your invitation under your brand.
-5. Add the client's website on the **Knowledge** page, connect Google Calendar, and set a transfer number.
+5. Add the client's website on the **Knowledge** page, connect Google Calendar, Cal.com or Calendly, and set a transfer number.
 6. Call the number and test every rule before you hand it over.
 
 If you onboard many clients, make a platform key on the **API keys** page and use the `lobbystack onboard` command. It builds a business from one YAML file and only changes what differs when you run it again. The [API keys guide](https://docs.lobbystack.com/white-label/api-keys) has an example file.

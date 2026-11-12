@@ -65,7 +65,7 @@ LobbyStack is one Rosie AI alternative. The table lines up the limits that chang
 | Going over your minutes | Moves you to the next plan at its standard price until you downgrade (see the terms note above) | $0.20 a minute on Starter, $0.18 on Pro, with an optional spending cap |
 | Billing increment | Each call rounded up to the next 60 seconds | Counted in seconds, with no rounding up |
 | Free option | 7-day free trial; the terms require a payment method on file | Free plan: 30 voice minutes, no card, US or Canadian number free for 14 days |
-| Calendars | Google Calendar, Calendly, Acuity, Appointlet (Scale and up) | Google Calendar only |
+| Calendars | Google Calendar, Calendly, Acuity, Appointlet (Scale and up) | Google Calendar, Cal.com, Calendly (Calendly needs a paid Calendly plan) |
 | Transfers | Live and warm (Scale), waterfall (Growth) | Blind transfer to one number (Starter and Pro) |
 | Texts to callers | Booking links on every plan; texts during the call on Scale and up | Booking confirmation and 24-hour reminder when the caller agrees, to US and Canadian numbers; the AI doesn't reply to texts |
 | Caller languages | English and Spanish on every call | Opens in your choice of 8 languages, then answers in the caller's language (70+, including Spanish) |
@@ -119,20 +119,20 @@ Assume a salon takes 240 calls a month, each lasting 2 minutes 30 seconds, and w
 - **Rosie:** 720 minutes is past Professional's 250, and calendar booking needs Scale anyway. The salon pays $149 a month, or $124 a month on annual billing.
 - **LobbyStack:** Pro costs $100 for 500 minutes, plus 100 × $0.18 = $18, for $118 a month. Starter would cost $120 ($30 + 450 × $0.20). On annual billing, Pro costs $80 plus the same $18, or $98 a month.
 
-Before you pick, test how each product handles service length, stylist schedules, buffers and cancellations. LobbyStack books into Google Calendar only, for the whole business or for each staff member. Rosie Scale also connects Calendly, Acuity and Appointlet.
+Before you pick, test how each product handles service length, stylist schedules, buffers and cancellations. LobbyStack books into Google Calendar, Cal.com or Calendly, and you can connect a Google Calendar for the whole business or for each staff member. Rosie Scale connects Acuity and Appointlet, which LobbyStack doesn't.
 
 ## Where Rosie is the better choice
 
 Rosie gives you more minutes per dollar at high volume. Scale's 1,000 minutes for $149 cost less than LobbyStack Pro from about 773 to 1,000 minutes, and Growth's 2,000 minutes for $299 cost less from about 1,606 to 2,000 minutes. Rosie also offers:
 
 - Warm transfers that brief your team first, and waterfall transfers that try several numbers. LobbyStack sends a blind transfer to one number.
-- Four calendars on Scale: Google Calendar, Calendly, Acuity and Appointlet. LobbyStack connects to Google Calendar only.
+- Four calendars on Scale: Google Calendar, Calendly, Acuity and Appointlet. LobbyStack connects to Google Calendar, Cal.com and Calendly, but not Acuity or Appointlet.
 - Free website chat on every plan.
 - Native iOS and Android apps and a choice of 10+ voices.
 - Automatic training from your Google Business Profile and website.
 - Warning emails before you reach your minute limit.
 
-LobbyStack has four gaps that might rule it out. It offers no website chat. Its AI doesn't reply to texts, so your team answers them by hand from the dashboard. It transfers to one number, and it connects to no calendar except Google. Rosie includes website chat on every plan, and more transfer types and calendars on Scale and Growth.
+LobbyStack has four gaps that might rule it out. It offers no website chat. Its AI doesn't reply to texts, so your team answers them by hand from the dashboard. It transfers to one number, and it connects to no calendar except Google Calendar, Cal.com and Calendly. Rosie includes website chat on every plan, and more transfer types and calendars on Scale and Growth.
 
 ## Which languages do Rosie and LobbyStack answer in?
 
@@ -175,7 +175,7 @@ If you're weighing human receptionists too, compare the [best answering services
 
 1. Sign up at [app.lobbystack.com](https://app.lobbystack.com/en/signup). Free gives you 30 voice minutes a month and a US or Canadian number free for 14 days, without a card.
 2. Setup walks you through your business details, a website import, your knowledge, the greeting and a plan.
-3. Write your call rules in plain language and pick a booking mode: book the appointment, take a request for your team to confirm, or take a message. Connect Google Calendar and set your opening hours. Booking won't work without them.
+3. Write your call rules in plain language and pick a booking mode: book the appointment, take a request for your team to confirm, or take a message. Connect Google Calendar, Cal.com or Calendly and set your opening hours. Booking won't work without them.
 4. Run test calls from the dashboard in your browser.
 5. On Starter or Pro, pick a local number, or a toll-free one where available, in the US, Canada, the UK, Australia or New Zealand. To keep your existing number, set your carrier to forward calls to LobbyStack when you're busy or don't answer, when you're closed, or all the time. To port the number instead, contact the LobbyStack team. Then add a transfer number and choose when transfers happen.
 6. Run the same five calls on Rosie's trial, on the plan you'd keep: a policy question, a booking that needs a buffer, an urgent caller who needs a transfer, a request for a confirmation text and a cancellation. Note which tasks work on that plan and which need Scale or Growth.
@@ -186,7 +186,7 @@ Rosie supports the same forwarding setup for overflow and after-hours calls. Rea
 
 - Your calls run from about 773 to 1,000 minutes a month, or from about 1,606 to 2,000, and you need booking and transfers anyway.
 - You want warm or waterfall transfers, website chat, native mobile apps or a choice of voices.
-- You book in Calendly, Acuity or Appointlet.
+- You book in Acuity or Appointlet.
 - Your callers speak English and Spanish, and you want Spanish ready on every call.
 - You'd rather move up a plan than pay per-minute overage.
 

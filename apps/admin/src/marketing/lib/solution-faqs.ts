@@ -4,7 +4,7 @@ export const aiPhoneAnsweringFaqs: FaqItem[] = [
   {
     question: "What is an AI phone answering service?",
     answer:
-      "An AI phone answering service picks up your business calls with a voice AI instead of a person. LobbyStack talks with the caller, answers questions from the details you add, books appointments into Google Calendar, takes messages and transfers urgent calls to your team, following the rules you write.",
+      "An AI phone answering service picks up your business calls with a voice AI instead of a person. LobbyStack talks with the caller, answers questions from the details you add, books appointments into Google Calendar, Cal.com or Calendly, takes messages and transfers urgent calls to your team, following the rules you write.",
   },
   {
     question: "Is it a good AI answering service for a small business?",
@@ -29,7 +29,7 @@ export const aiPhoneAnsweringFaqs: FaqItem[] = [
   {
     question: "Can it book appointments during the call?",
     answer:
-      "Yes. Connect Google Calendar and add your services. LobbyStack offers open times within your opening hours, books the one the caller picks and, if the caller agrees, texts a confirmation and a reminder 24 hours before. Texts go to US and Canadian numbers on LobbyStack Cloud.",
+      "Yes. Connect Google Calendar, Cal.com or Calendly and add your services. LobbyStack offers open times within your opening hours, books the one the caller picks and, if the caller agrees, texts a confirmation and a reminder 24 hours before. Texts go to US and Canadian numbers on LobbyStack Cloud.",
   },
   {
     question: "What happens when a caller needs a real person?",

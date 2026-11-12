@@ -30,7 +30,7 @@ Pick by three things: who should take a 2 a.m. leak call, where the work order h
 - **Continental Message Solution, best for Rent Manager users who want live agents:** Rent Manager lists it as an integration partner. Plans run per 28 days from $50.
 - **Buildium Maintenance Contact Center, best for Buildium users:** $0.70 or $1.10 per unit a month, with a $140 monthly minimum and $300 setup.
 - **Smith.ai, best AI with live receptionists behind it:** 25 free AI calls a month, and its property management page names AppFolio, Buildium and Yardi.
-- **LobbyStack (ours), best low-cost AI for Google Calendar showings and callers in many languages:** $30 a month for 150 minutes with no setup fee, and no property management software sync.
+- **LobbyStack (ours), best low-cost AI for showings in Google Calendar, Cal.com or Calendly and callers in many languages:** $30 a month for 150 minutes with no setup fee, and no property management software sync.
 
 ## How do property management answering services compare?
 
@@ -130,11 +130,11 @@ Goodcall charges per unique caller and doesn't meter minutes: $79 a month covers
 
 Rosie's $49 plan covers 250 minutes but has no transfers and books only by texted link. The $149 plan adds calendar booking and live transfers, and the $299 plan adds waterfall transfers that try several numbers ([pricing page](https://heyrosie.com/pricing)). Going over your minutes moves you up a plan. Its [property management page](https://heyrosie.com/industries/property-management) says Rosie "notifies you immediately" about after-hours emergencies and offers showing slots. It speaks English and Spanish and names no property management software.
 
-### LobbyStack (ours): best low-cost AI for Google Calendar showings and callers in many languages
+### LobbyStack (ours): best low-cost AI for showings in Google Calendar, Cal.com or Calendly and callers in many languages
 
 LobbyStack's Starter plan costs $30 a month for 150 minutes, then $0.20 a minute. Pro costs $100 for 500 minutes, then $0.18. Billed annually, they cost $24 and $80 a month, and no plan has a setup fee. LobbyStack counts usage in seconds, and spam and calls under 10 seconds aren't billed. Plans don't limit how many calls it answers at once, which matters when a building-wide outage sends many tenants to the phone together.
 
-Each call opens in the business's default language: English, French, Spanish, Serbian, German, Brazilian Portuguese, Italian or Dutch. The receptionist then answers in the caller's language: 70+ languages on OpenAI GPT-Live, including Spanish and Serbian. You write your emergency list in plain language, and it transfers matching calls to one number. If the transfer can't go through, it tells the caller, offers to take a message, and your team can get a "Live call transfer failed" alert. It books showings into Google Calendar and, when the caller agrees, texts a confirmation and a 24-hour reminder to US and Canadian numbers. Every call gets a summary, transcript and recording in the dashboard, and messages trigger an email alert.
+Each call opens in the business's default language: English, French, Spanish, Serbian, German, Brazilian Portuguese, Italian or Dutch. The receptionist then answers in the caller's language: 70+ languages on OpenAI GPT-Live, including Spanish and Serbian. You write your emergency list in plain language, and it transfers matching calls to one number. If the transfer can't go through, it tells the caller, offers to take a message, and your team can get a "Live call transfer failed" alert. It books showings into Google Calendar, Cal.com or Calendly and, when the caller agrees, texts a confirmation and a 24-hour reminder to US and Canadian numbers. Every call gets a summary, transcript and recording in the dashboard, and messages trigger an email alert.
 
 LobbyStack doesn't sync with AppFolio, Buildium, Yardi or Rent Manager, so it creates no work orders there. Signed webhooks for 6 events and a REST API can push call details into other tools if someone on your team builds it. Transfers go to one number with no briefing, so there's no on-call rotation, and owner calls can't go live to a different person than emergencies. No human agents back it up, and the AI doesn't reply to texts. Free gives you 30 voice minutes and a US or Canadian number free for 14 days, with no card. See how it sorts tenant calls on the [property management answering page](/solutions/property-management-answering-service/).
 
@@ -218,7 +218,7 @@ The software vendors' own lines do: Buildium's connects to Buildium, Rent Manage
 | Goodcall | Not named | Not named | Not named | API page | FAQ: native links to Google Calendar, Google Sheets and HighLevel |
 | Ambs Call Center | Not named | Not named | Not named | Not named | LeadSimple, PropertyBase, Salesforce, Zapier |
 | MAP, SAS, Rosie | Not named | Not named | Not named | Not named | Calendars; Rosie uses Zapier |
-| LobbyStack (ours) | No | No | No | No | Google Calendar; signed webhooks; REST API |
+| LobbyStack (ours) | No | No | No | No | Google Calendar, Cal.com, Calendly; signed webhooks; REST API |
 
 Before you sign, ask the vendor to take a test call and show you the result in your software: a work order or service issue, the right unit, and the call notes. A logo on a web page doesn't tell you whether the agent can read your tenant list or only emails you a message.
 
@@ -290,6 +290,6 @@ Sources:
 - **People on every emergency call and a confirmed handoff:** MAP Communications, Specialty Answering Service or Ambs Call Center.
 - **Work orders written in your software by live agents:** PATLive or Continental Message Solution, or your software vendor's own line if you run Buildium, AppFolio or Rent Manager.
 - **AI with live receptionists to fall back on:** Smith.ai.
-- **Showings in Google Calendar, after-hours triage to one on-call number for $30 to $100 a month, and tenants who speak many languages:** LobbyStack.
+- **Showings in Google Calendar, Cal.com or Calendly, after-hours triage to one on-call number for $30 to $100 a month, and tenants who speak many languages:** LobbyStack.
 
 Want to hear LobbyStack tell a 2 a.m. leak from a dripping faucet before you pay? [Create a free account](https://app.lobbystack.com/en/signup), write your emergency list, and test it with 30 voice minutes and a free number for 14 days, no card needed. To keep the number, paid plans start at $30 a month with no setup fee. See how triage and showings work on the [property management answering page](/solutions/property-management-answering-service/).

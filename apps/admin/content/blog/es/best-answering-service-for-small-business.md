@@ -164,10 +164,10 @@ Una recepcionista con IA contesta con software y después reserva, transfiere o 
 
 - **Precio (revisado el 9 de octubre de 2026):** Starter cuesta $30 al mes por 150 minutos, y después $0.20 por minuto. Vea los [precios de LobbyStack](/es/pricing/).
 - **Cómo factura:** por segundo, sin redondeo: una llamada de 90 segundos usa 1.5 minutos. No cuentan las llamadas de menos de 10 segundos ni las que la recepcionista corta por spam.
-- **Incluye:** reservas en Google Calendar según su horario, sus servicios y su personal; SMS de confirmación y de recordatorio 24 horas antes a números de Estados Unidos y Canadá cuando quien llama lo acepta; y 20 intentos de transferencia al mes a un número.
+- **Incluye:** reservas en Google Calendar, Cal.com o Calendly según su horario, sus servicios y su personal; SMS de confirmación y de recordatorio 24 horas antes a números de Estados Unidos y Canadá cuando quien llama lo acepta; y 20 intentos de transferencia al mes a un número.
 - **Idiomas:** cada llamada empieza en el idioma predeterminado del negocio: inglés, francés, español, serbio, alemán, portugués de Brasil, italiano o neerlandés. Después, la recepcionista responde en el idioma de quien llama: más de 70 idiomas con OpenAI GPT-Live, entre ellos el español y el serbio.
 - **Números y configuración:** números en Estados Unidos, Canadá, el Reino Unido, Australia y Nueva Zelanda, o desvíe su número actual. Los planes no limitan cuántas llamadas contesta a la vez. No hay tarifa de configuración en ningún plan, y puede cancelar en cualquier momento sin cargos por cancelación. El plan Free le da 30 minutos de voz al mes y un número de EE. UU. o Canadá gratis durante 14 días, sin tarjeta.
-- **Dónde se queda corto:** no hay una persona al teléfono, solo conecta Google Calendar y no se sincroniza con software de gestión de consultorios ni de servicios de campo. LobbyStack transfiere sin anunciar la llamada y a un solo número. La IA no responde mensajes de texto, y LobbyStack no afirma cumplir HIPAA.
+- **Dónde se queda corto:** no hay una persona al teléfono, no conecta más calendarios que Google Calendar, Cal.com y Calendly, y no se sincroniza con software de gestión de consultorios ni de servicios de campo. LobbyStack transfiere sin anunciar la llamada y a un solo número. La IA no responde mensajes de texto, y LobbyStack no afirma cumplir HIPAA.
 - **Elíjalo si** quiere que la recepcionista conteste cada llamada y reserve citas por $30 al mes, su propio equipo se encarga de las transferencias urgentes y sus clientes hablan muchos idiomas.
 
 ### Upfirst
@@ -177,7 +177,7 @@ Una recepcionista con IA contesta con software y después reserva, transfiere o 
 - **No cobra:** el spam, las llamadas de menos de 15 segundos ni las llamadas en las que nadie habla.
 - **Idiomas y prueba:** más de 35 idiomas y una prueba de 14 días sin tarjeta.
 - **Dónde gana:** conecta más calendarios que LobbyStack e incluye reservas, transferencias y mensajes de texto en su plan más barato.
-- **Elíjalo si** reserva fuera de Google Calendar o sus llamadas son largas.
+- **Elíjalo si** reserva en Outlook, Clio, Acuity o Square, o si sus llamadas son largas.
 
 ### Rosie
 
@@ -256,7 +256,7 @@ La mayoría no. PATLive, SAS, Smith.ai, Abby Connect, Upfirst y Goodcall funcion
 
 ### ¿Un servicio de atención telefónica puede reservar citas?
 
-Sí, aunque el precio varía. Las recepcionistas humanas de Smith.ai cobran $1.50 por cada llamada con reserva, Davinci Virtual solo reserva en los planes Premium desde $249, y Rosie reserva en un calendario desde $149. Upfirst, AI-Receptionist.com y LobbyStack reservan en sus planes de pago más baratos. LobbyStack reserva en Google Calendar, el único calendario que conecta.
+Sí, aunque el precio varía. Las recepcionistas humanas de Smith.ai cobran $1.50 por cada llamada con reserva, Davinci Virtual solo reserva en los planes Premium desde $249, y Rosie reserva en un calendario desde $149. Upfirst, AI-Receptionist.com y LobbyStack reservan en sus planes de pago más baratos. LobbyStack reserva en Google Calendar, Cal.com o Calendly, los únicos calendarios que conecta.
 
 ### ¿Los servicios de atención telefónica cobran las llamadas de spam?
 
@@ -272,7 +272,7 @@ Elija según quién debe contestar su teléfono.
 
 - **Una persona en cada llamada:** PATLive por su tarifa publicada y su prueba de 14 días, Specialty Answering Service por la facturación por segundo y un excedente bajo, o Ruby por su personal premium 24/7 con español incluido. AnswerNet es la opción publicada más barata si sus clientes hablan inglés.
 - **IA con personas detrás:** Smith.ai si quiere empezar gratis, o Abby Connect si prefiere que un solo equipo gestione la atención humana y la de IA.
-- **Solo IA:** LobbyStack si quiere que la recepcionista conteste cada llamada y reserve en Google Calendar por $30 al mes, su propio equipo se encarga de las transferencias urgentes y sus clientes hablan muchos idiomas. AI-Receptionist.com tiene un plan de pago más barato ($14), Upfirst conecta más calendarios y Goodcall encaja con clientes que llaman a menudo.
+- **Solo IA:** LobbyStack si quiere que la recepcionista conteste cada llamada y reserve en Google Calendar, Cal.com o Calendly por $30 al mes, su propio equipo se encarga de las transferencias urgentes y sus clientes hablan muchos idiomas. AI-Receptionist.com tiene un plan de pago más barato ($14), Upfirst conecta más calendarios y Goodcall encaja con clientes que llaman a menudo.
 
 Si necesita una persona en cada llamada o sincronización con software de gestión de consultorios o de servicios de campo, LobbyStack no le conviene. Elija un servicio con personas o uno hecho para su sector.
 

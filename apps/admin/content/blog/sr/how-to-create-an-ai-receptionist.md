@@ -136,7 +136,7 @@ Ne morate. Svaki korak u ovom vodiču odvija se na sajtu ili u četu. Ako želit
 
 ### Može li da zakazuje termine?
 
-Može. Dodajte svoje usluge, povežite Google Calendar ili Cal.com i podesite **Termini** na **Zakazuje termine**. I vaš asistent može da zakazuje i pomera termine.
+Može. Dodajte svoje usluge, povežite Google Calendar, Cal.com ili Calendly i podesite **Termini** na **Zakazuje termine**. I vaš asistent može da zakazuje i pomera termine.
 
 ### Može li da odgovara na SMS poruke?
 

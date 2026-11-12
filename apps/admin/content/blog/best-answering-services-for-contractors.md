@@ -30,7 +30,7 @@ Start with the call that costs you the most when it reaches voicemail. For a rem
 - **Jobber Receptionist, best for Jobber shops:** a $29 add-on with 30 conversations a month.
 - **Sameday AI, best for roofers on JobNimbus or AccuLynx with a budget:** an AI phone system from $449 a month for 500 minutes.
 - **OnCrew, lowest AI bill in our storm month:** $49 for 100 calls, then $0.99 a call.
-- **LobbyStack (ours), best for Google Calendar shops on a small budget:** $30 a month for 150 minutes with no setup fee. It answers each caller in their own language, from 70+ languages.
+- **LobbyStack (ours), best for shops on Google Calendar, Cal.com or Calendly with a small budget:** $30 a month for 150 minutes with no setup fee. It answers each caller in their own language, from 70+ languages.
 
 ## How do these contractor answering services compare?
 
@@ -90,7 +90,7 @@ Posh bills on a calendar-month cycle rather than every 28 days, has no long-term
 
 ## What are some AI answering services available for contractors?
 
-Jobber and Housecall Pro sell AI receptionists inside their own software. Sameday AI lists ServiceTitan, JobNimbus and AccuLynx among its connections. OnCrew is built for trades and bills per call. Smith.ai puts live receptionists behind its AI. LobbyStack books into Google Calendar and transfers urgent calls to one number. Pick the AI service that books where your jobs already live.
+Jobber and Housecall Pro sell AI receptionists inside their own software. Sameday AI lists ServiceTitan, JobNimbus and AccuLynx among its connections. OnCrew is built for trades and bills per call. Smith.ai puts live receptionists behind its AI. LobbyStack books into Google Calendar, Cal.com or Calendly and transfers urgent calls to one number. Pick the AI service that books where your jobs already live.
 
 ### Jobber Receptionist: best for Jobber shops
 
@@ -118,13 +118,13 @@ Spanish is a free setting, and its [AI answering page](https://oncrew.ai/ai-answ
 
 Smith.ai's [AI Receptionist](https://smith.ai/pricing/ai-receptionist) has a Free plan with 25 calls a month, then $3.00 a call. Pro charges $2.00 a call for 75 calls ($150), $1.80 for 150 and $1.67 for 300, with extra calls at $2.17 to $2.50. Calls can transfer to a live receptionist in North America, and the pricing page lists no fee for that. Plans run month to month with 30 days' notice to cancel, and you can remove up to 10% of each cycle's calls from the bill as spam.
 
-### LobbyStack (ours): best for Google Calendar shops on a small budget
+### LobbyStack (ours): best for shops on Google Calendar, Cal.com or Calendly with a small budget
 
 LobbyStack's Starter plan costs $30 a month for 150 minutes, then $0.20 a minute. Pro costs $100 for 500 minutes, then $0.18. Billed annually, they cost $24 and $80 a month, and no plan has a setup fee. LobbyStack counts usage in seconds and doesn't bill spam or calls under 10 seconds. Plans don't limit how many calls it answers at once.
 
-You get a number in the US, Canada, the UK, Australia or New Zealand and can forward your existing business number to it. It answers every call or only overflow or after-hours calls. It books estimate visits into Google Calendar and, with the caller's consent, texts a confirmation and a 24-hour reminder to US and Canadian numbers. Every call's summary, transcript and recording lands in the dashboard, and you get an email when it takes a message, with text alerts optional. Each call opens in the business's default language (English, French, Spanish, Serbian, German, Brazilian Portuguese, Italian or Dutch), then the receptionist answers in the caller's language: 70+ languages on OpenAI GPT-Live, Spanish included. The code is MIT open source, and you can self-host it.
+You get a number in the US, Canada, the UK, Australia or New Zealand and can forward your existing business number to it. It answers every call or only overflow or after-hours calls. It books estimate visits into Google Calendar, Cal.com or Calendly and, with the caller's consent, texts a confirmation and a 24-hour reminder to US and Canadian numbers. Every call's summary, transcript and recording lands in the dashboard, and you get an email when it takes a message, with text alerts optional. Each call opens in the business's default language (English, French, Spanish, Serbian, German, Brazilian Portuguese, Italian or Dutch), then the receptionist answers in the caller's language: 70+ languages on OpenAI GPT-Live, Spanish included. The code is MIT open source, and you can self-host it.
 
-It has no integration with Jobber, Housecall Pro, ServiceTitan, JobNimbus or any CRM, and Google Calendar is its only calendar. Signed webhooks for 6 events and a REST API can send call data elsewhere, but you build that connection. Transfers are blind and go to one number without a briefing. If a transfer can't go through, it tells the caller, offers to take a message, and your team can get a "Live call transfer failed" alert. No human agents back it up, and the AI doesn't reply to texts. Free gives you 30 voice minutes and a US or Canadian number free for 14 days, with no card. During the trial, transfers go only to the mobile number you verified. See how it handles storm calls on the [roofing answering service](/solutions/roofing-answering-service/) page. LobbyStack also has pages for [garage door companies](/solutions/ai-receptionist-for-garage-door-repair/), [restoration companies](/solutions/ai-receptionist-for-restoration-companies/), [appliance repair](/solutions/ai-receptionist-for-appliance-repair/) and [locksmiths](/solutions/ai-receptionist-for-locksmiths/).
+It has no integration with Jobber, Housecall Pro, ServiceTitan, JobNimbus or any CRM, and it books only into Google Calendar, Cal.com or Calendly. Signed webhooks for 6 events and a REST API can send call data elsewhere, but you build that connection. Transfers are blind and go to one number without a briefing. If a transfer can't go through, it tells the caller, offers to take a message, and your team can get a "Live call transfer failed" alert. No human agents back it up, and the AI doesn't reply to texts. Free gives you 30 voice minutes and a US or Canadian number free for 14 days, with no card. During the trial, transfers go only to the mobile number you verified. See how it handles storm calls on the [roofing answering service](/solutions/roofing-answering-service/) page. LobbyStack also has pages for [garage door companies](/solutions/ai-receptionist-for-garage-door-repair/), [restoration companies](/solutions/ai-receptionist-for-restoration-companies/), [appliance repair](/solutions/ai-receptionist-for-appliance-repair/) and [locksmiths](/solutions/ai-receptionist-for-locksmiths/).
 
 ## How much does an answering service for contractors cost?
 
@@ -156,7 +156,7 @@ LobbyStack has no setup fee on any plan. If you set a monthly overage spending c
 
 ## Which services book estimates into Jobber, Housecall Pro, ServiceTitan or JobNimbus?
 
-PATLive names all four across its construction and HVAC pages. AnswerForce names Jobber, Housecall Pro and ServiceTitan. Sameday AI lists ServiceTitan, Housecall Pro and JobNimbus. Jobber and Housecall Pro build their own receptionists. LobbyStack connects to none of them and books into Google Calendar.
+PATLive names all four across its construction and HVAC pages. AnswerForce names Jobber, Housecall Pro and ServiceTitan. Sameday AI lists ServiceTitan, Housecall Pro and JobNimbus. Jobber and Housecall Pro build their own receptionists. LobbyStack connects to none of them and books into Google Calendar, Cal.com or Calendly.
 
 | Service | Jobber | Housecall Pro | ServiceTitan | JobNimbus | Other contractor tools named |
 |---|---|---|---|---|---|
@@ -169,11 +169,11 @@ PATLive names all four across its construction and HVAC pages. AnswerForce names
 | Housecall Pro CSR AI | No | Built in | No | No | Housecall Pro only |
 | Sameday AI | Not named | Named | Certified app | Named | AccuLynx, FieldRoutes, Service Fusion |
 | OnCrew | One record per call by webhook | Connects on Housecall Pro MAX | One record per call by webhook | Not named | Google Calendar sync |
-| LobbyStack (ours) | No | No | No | No | Google Calendar; signed webhooks for 6 events; REST API |
+| LobbyStack (ours) | No | No | No | No | Google Calendar, Cal.com, Calendly; signed webhooks for 6 events; REST API |
 
 "Named" means the vendor lists the tool on its own page. It doesn't tell you whether an agent types the job in by hand or the booking lands on your schedule during the call. Ask each finalist to book a test estimate into your software, then check the customer record, job type, address and notes.
 
-With LobbyStack, someone in your office copies each booking from Google Calendar or the call summary into your software, or you build that step with the webhooks and API.
+With LobbyStack, someone in your office copies each booking from Google Calendar, Cal.com, Calendly or the call summary into your software, or you build that step with the webhooks and API.
 
 ## What happens after hours and during a storm surge?
 
@@ -231,7 +231,7 @@ No live service in this list is free; trials come closest. Smith.ai's AI Free pl
 
 ### Can an answering service book estimates for contractors?
 
-Yes. PATLive, AnswerForce and Smith.ai say their receptionists book estimates, and Smith.ai lists the intake questions it asks. Jobber Receptionist and Housecall Pro CSR AI book inside their own software. OnCrew sends requests to your calendar for your team to confirm, or books open slots if you turn that on. LobbyStack books estimate visits into Google Calendar.
+Yes. PATLive, AnswerForce and Smith.ai say their receptionists book estimates, and Smith.ai lists the intake questions it asks. Jobber Receptionist and Housecall Pro CSR AI book inside their own software. OnCrew sends requests to your calendar for your team to confirm, or books open slots if you turn that on. LobbyStack books estimate visits into Google Calendar, Cal.com or Calendly.
 
 ### Can I use a contractor answering service only after hours?
 
@@ -239,7 +239,7 @@ Yes. Set your carrier to forward calls once you close, and the service answers o
 
 ### Does LobbyStack work with Jobber, ServiceTitan or JobNimbus?
 
-No. LobbyStack has no integration with Jobber, Housecall Pro, ServiceTitan, JobNimbus or any CRM, and Google Calendar is its only calendar. Signed webhooks for 6 events and a REST API can send call data to other tools, but someone has to build that connection. If the job must land in your software during the call, pick another vendor.
+No. LobbyStack has no integration with Jobber, Housecall Pro, ServiceTitan, JobNimbus or any CRM, and it books only into Google Calendar, Cal.com or Calendly. Signed webhooks for 6 events and a REST API can send call data to other tools, but someone has to build that connection. If the job must land in your software during the call, pick another vendor.
 
 ### Can a contractor answering service answer in Spanish?
 
@@ -268,6 +268,6 @@ Sources, all read October 9 or 10, 2026:
 - **Live agents at the lowest per-minute price:** AnswerHero.
 - **Already on Jobber or Housecall Pro:** try the built-in receptionist first.
 - **A roofer on JobNimbus or AccuLynx who wants AI:** Sameday AI.
-- **Google Calendar booking for $30 to $100 a month, with callers in many languages:** LobbyStack.
+- **Booking into Google Calendar, Cal.com or Calendly for $30 to $100 a month, with callers in many languages:** LobbyStack.
 
 Want to hear LobbyStack take an estimate request before you pay? [Create a free account](https://app.lobbystack.com/en/signup) and test it with 30 voice minutes and a free number for 14 days, no card needed. Paid plans have no setup fee. Then see how it covers nights and weekends on the [after-hours answering for contractors](/solutions/after-hours-answering-service-for-contractors/) page.

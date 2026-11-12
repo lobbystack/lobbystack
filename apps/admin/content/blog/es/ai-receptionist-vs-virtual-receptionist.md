@@ -205,7 +205,7 @@ Nuestra guía sobre [cómo elegir una recepcionista con IA](/es/blog/how-to-choo
 
 ## Cómo encaja LobbyStack
 
-LobbyStack es una recepcionista con IA para pequeñas empresas. Reserva citas en Google Calendar según sus horarios, servicios y personal, y luego envía por SMS una confirmación y un recordatorio 24 horas antes de la cita a números de Estados Unidos y Canadá. Transfiere las llamadas a un número según las reglas que usted fije. Si no ha configurado un número de transferencia o una transferencia falla, toma un mensaje y avisa a su equipo por correo electrónico. El panel guarda una grabación, una transcripción y un resumen de una línea de cada llamada.
+LobbyStack es una recepcionista con IA para pequeñas empresas. Reserva citas en Google Calendar, Cal.com o Calendly según sus horarios, servicios y personal, y luego envía por SMS una confirmación y un recordatorio 24 horas antes de la cita a números de Estados Unidos y Canadá. Transfiere las llamadas a un número según las reglas que usted fije. Si no ha configurado un número de transferencia o una transferencia falla, toma un mensaje y avisa a su equipo por correo electrónico. El panel guarda una grabación, una transcripción y un resumen de una línea de cada llamada.
 
 Cada llamada empieza en el idioma predeterminado del negocio: inglés, francés, español, serbio, alemán, portugués de Brasil, italiano o neerlandés. Después, la recepcionista contesta en el idioma de quien llama. Funciona con OpenAI GPT-Live y atiende más de 70 idiomas, entre ellos el español y el serbio.
 
@@ -213,7 +213,7 @@ Cada llamada empieza en el idioma predeterminado del negocio: inglés, francés,
 
 Conozca los límites antes de registrarse:
 
-- Google Calendar es el único calendario con el que se conecta.
+- Se conecta con Google Calendar, Cal.com y Calendly, y con ningún otro calendario.
 - No se sincroniza de forma directa con software de gestión de consultorios ni de servicios de campo. Usted conecta otras herramientas con webhooks y la API REST.
 - La IA no responde mensajes de texto. Su equipo contesta los SMS desde el panel.
 - Las transferencias van a un solo número, y la persona que contesta no recibe antes un resumen hablado.

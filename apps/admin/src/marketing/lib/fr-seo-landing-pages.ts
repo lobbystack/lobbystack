@@ -63,7 +63,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
     eyebrow: "À propos",
     h1: "LobbyStack est un réceptionniste IA open source pour les petites entreprises",
     intro:
-      "Nous avons créé LobbyStack pour les propriétaires qui manquent des appels pendant qu’ils servent un client. Il répond à votre téléphone, prend les rendez-vous dans Google Calendar et passe l’appel à votre équipe quand un client a besoin d’une personne. Le code est public sous licence MIT : utilisez LobbyStack Cloud ou installez-le sur votre propre serveur.",
+      "Nous avons créé LobbyStack pour les propriétaires qui manquent des appels pendant qu’ils servent un client. Il répond à votre téléphone, prend les rendez-vous dans Google Calendar, Cal.com ou Calendly et passe l’appel à votre équipe quand un client a besoin d’une personne. Le code est public sous licence MIT : utilisez LobbyStack Cloud ou installez-le sur votre propre serveur.",
     imageAlt:
       "Le code de LobbyStack sur GitHub, qui fonctionne sur LobbyStack Cloud ou sur votre propre serveur",
     proofPoints: [
@@ -77,7 +77,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
         body: "Le téléphone sonne pendant une coupe, un nettoyage dentaire ou un chantier à l’autre bout de la ville. La boîte vocale ne réserve personne, alors l’appelant essaie l’entreprise suivante. Nous avons créé LobbyStack pour répondre à ces appels, réserver ce qu’il peut et vous transmettre le reste avec les détails par écrit.",
         points: [
           "Répond pendant que vous servez un client, après la fermeture ou sur un chantier",
-          "Réserve dans Google Calendar et confirme par texto aux clients qui acceptent",
+          "Réserve dans Google Calendar, Cal.com ou Calendly et confirme par texto aux clients qui acceptent",
           "Transfère les appels urgents selon vos règles et prend un message pour les autres",
         ],
       },
@@ -127,11 +127,11 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
     {
       title: "Service de réponse téléphonique hors heures par IA | LobbyStack",
       description:
-        "Service de réponse hors heures qui réserve les appels courants dans Google Calendar et transfère les urgences à votre téléphone de garde. Dès 30 $/mois.",
+        "Service de réponse hors heures qui réserve les appels courants dans Google Calendar, Cal.com ou Calendly et transfère les urgences à votre téléphone de garde. Dès 30 $/mois.",
       eyebrow: "Réponse hors heures",
       h1: "Un service de réponse hors heures par IA qui ne vous réveille que pour les urgences",
       intro:
-        "À 1 h du matin, un client sans chauffage appelle la première entreprise qui décroche. LobbyStack répond à votre numéro d’entreprise la nuit, la fin de semaine et les jours fériés. Il fait sonner votre téléphone de garde pour les urgences que vos règles nomment et réserve les appels courants dans Google Calendar.",
+        "À 1 h du matin, un client sans chauffage appelle la première entreprise qui décroche. LobbyStack répond à votre numéro d’entreprise la nuit, la fin de semaine et les jours fériés. Il fait sonner votre téléphone de garde pour les urgences que vos règles nomment et réserve les appels courants dans Google Calendar, Cal.com ou Calendly.",
       imageAlt:
         "LobbyStack répond aux appels hors heures et transfère une urgence au téléphone de garde",
       proofPoints: [
@@ -151,7 +151,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
         {
           title:
             "Les appelants aux demandes courantes réservent eux-mêmes leur rendez-vous",
-          body: "Un appelant qui veut un entretien ou une soumission entend les plages libres de votre Google Calendar et en choisit une. Il reçoit une confirmation par texto, et vous voyez la réservation en ouvrant votre calendrier le matin.",
+          body: "Un appelant qui veut un entretien ou une soumission entend les plages libres de votre agenda (Google Calendar, Cal.com ou Calendly) et en choisit une. Il reçoit une confirmation par texto, et vous voyez la réservation en ouvrant votre calendrier le matin.",
           points: [
             "Déplace ou annule les rendez-vous, si vous activez les modifications de rendez-vous",
             "Répond aux questions sur vos heures, votre zone desservie et vos prix à partir de vos renseignements",
@@ -180,12 +180,12 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
           question:
             "Qu’est-ce qu’un service de réponse téléphonique hors heures ?",
           answer:
-            "Il répond au téléphone de votre entreprise quand vous êtes fermé : la nuit, la fin de semaine et les jours fériés. Avec un service assuré par des personnes, quelqu’un prend un message. LobbyStack est un service de réponse téléphonique hors heures par IA : il répond aussi aux questions à partir de vos renseignements, réserve les rendez-vous dans Google Calendar et transfère les urgences à votre numéro de garde pendant l’appel.",
+            "Il répond au téléphone de votre entreprise quand vous êtes fermé : la nuit, la fin de semaine et les jours fériés. Avec un service assuré par des personnes, quelqu’un prend un message. LobbyStack est un service de réponse téléphonique hors heures par IA : il répond aussi aux questions à partir de vos renseignements, réserve les rendez-vous dans Google Calendar, Cal.com ou Calendly et transfère les urgences à votre numéro de garde pendant l’appel.",
         },
         {
           question: "Peut-il réserver des rendez-vous hors heures ?",
           answer:
-            "Oui. LobbyStack propose les plages libres de votre Google Calendar pendant vos heures d’ouverture, réserve celle que l’appelant choisit et, si la personne accepte, lui envoie une confirmation par texto. Vous voyez la réservation dans votre calendrier le matin.",
+            "Oui. LobbyStack propose les plages libres de votre agenda (Google Calendar, Cal.com ou Calendly) pendant vos heures d’ouverture, réserve celle que l’appelant choisit et, si la personne accepte, lui envoie une confirmation par texto. Vous voyez la réservation dans votre calendrier le matin.",
         },
         {
           question: "Comment décide-t-il de ce qui est une urgence ?",
@@ -259,15 +259,15 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
     {
       title: "Réceptionniste dentaire IA et service de réponse | LobbyStack",
       description:
-        "Réceptionniste dentaire IA qui répond quand votre accueil est occupé ou fermé, réserve dans Google Calendar et transfère les urgences. Dès 30 $ par mois.",
+        "Réceptionniste dentaire IA qui répond quand votre accueil est occupé ou fermé, réserve dans Google Calendar, Cal.com ou Calendly et transfère les urgences. Dès 30 $ par mois.",
       eyebrow: "Cabinets dentaires",
       h1: "Un réceptionniste dentaire IA qui réserve les patients pendant que votre accueil est occupé",
       intro:
-        "Les patients appellent pendant l’accueil, le midi et après la fermeture, et ces appels aboutissent dans la boîte vocale. LobbyStack répond à la ligne de votre cabinet, réserve les nouveaux patients et les nettoyages dans Google Calendar et transfère les urgences dentaires à votre numéro de garde. Les forfaits payants commencent à 30 $ par mois.",
+        "Les patients appellent pendant l’accueil, le midi et après la fermeture, et ces appels aboutissent dans la boîte vocale. LobbyStack répond à la ligne de votre cabinet, réserve les nouveaux patients et les nettoyages dans Google Calendar, Cal.com ou Calendly et transfère les urgences dentaires à votre numéro de garde. Les forfaits payants commencent à 30 $ par mois.",
       imageAlt:
         "LobbyStack réserve l’examen d’un nouveau patient et lui envoie une confirmation par texto",
       proofPoints: [
-        "Réserve dans Google Calendar et envoie un rappel par texto la veille",
+        "Réserve dans Google Calendar, Cal.com ou Calendly et envoie un rappel par texto la veille",
         "Transfère les urgences hors heures à votre numéro de garde",
         "Parle avec les patients dans plus de 70 langues, dont l’espagnol",
       ],
@@ -282,7 +282,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
         },
         {
           title: "Les nouveaux patients réservent dès le premier appel",
-          body: "LobbyStack recueille l’assureur du patient et le motif de la visite, propose des plages libres pendant vos heures d’ouverture et réserve l’examen dans Google Calendar. Si vous préférez confirmer chaque visite vous-même, réglez-le pour qu’il enregistre l’heure souhaitée comme une demande pour votre équipe. Les patients qui acceptent reçoivent une confirmation par texto et un rappel la veille. Sur LobbyStack Cloud, les textos vont aux numéros américains et canadiens.",
+          body: "LobbyStack recueille l’assureur du patient et le motif de la visite, propose des plages libres pendant vos heures d’ouverture et réserve l’examen dans Google Calendar, Cal.com ou Calendly. Si vous préférez confirmer chaque visite vous-même, réglez-le pour qu’il enregistre l’heure souhaitée comme une demande pour votre équipe. Les patients qui acceptent reçoivent une confirmation par texto et un rappel la veille. Sur LobbyStack Cloud, les textos vont aux numéros américains et canadiens.",
           points: [
             "Réserve pour le cabinet, ou pour chaque dentiste et hygiéniste",
             "Les patients peuvent déplacer ou annuler depuis le numéro qui a servi à réserver, si vous activez les modifications de rendez-vous",
@@ -316,7 +316,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
         {
           title:
             "Quand un réceptionniste spécialisé en dentaire convient mieux",
-          body: "LobbyStack réserve seulement dans Google Calendar, donc votre équipe recopie les nouveaux rendez-vous dans Dentrix, Open Dental ou Eaglesoft. Il ne revendique aucune conformité HIPAA, ne vérifie pas l’admissibilité à l’assurance et ne mène aucune campagne de relance. Si vous avez besoin de l’une de ces fonctions, choisissez un fournisseur dentaire. Nous avons lu chaque affirmation ci-dessous sur le site du fournisseur le 27 octobre 2026.",
+          body: "LobbyStack réserve seulement dans Google Calendar, Cal.com ou Calendly, donc votre équipe recopie les nouveaux rendez-vous dans Dentrix, Open Dental ou Eaglesoft. Il ne revendique aucune conformité HIPAA, ne vérifie pas l’admissibilité à l’assurance et ne mène aucune campagne de relance. Si vous avez besoin de l’une de ces fonctions, choisissez un fournisseur dentaire. Nous avons lu chaque affirmation ci-dessous sur le site du fournisseur le 27 octobre 2026.",
           points: [
             "Des rendez-vous inscrits dans votre logiciel de gestion : Dentina cite 11 logiciels dans lesquels il inscrit les rendez-vous",
             "Un réceptionniste relié à votre logiciel de gestion : Peerlogic cite 8 logiciels avec lesquels il s’intègre",
@@ -328,7 +328,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "Qu’est-ce qu’un réceptionniste dentaire IA ?",
           answer:
-            "Un réceptionniste dentaire IA est une IA vocale qui répond au téléphone d’un cabinet. Il réserve des rendez-vous, répond aux questions sur les heures et les assurances acceptées, prend des messages et transfère les urgences à une personne. Les cabinets s’en servent pour le débordement, le midi et les appels hors heures, ou pour tous les appels. LobbyStack réserve dans Google Calendar. Certains produits spécialisés en dentaire inscrivent plutôt les rendez-vous dans le logiciel de gestion du cabinet.",
+            "Un réceptionniste dentaire IA est une IA vocale qui répond au téléphone d’un cabinet. Il réserve des rendez-vous, répond aux questions sur les heures et les assurances acceptées, prend des messages et transfère les urgences à une personne. Les cabinets s’en servent pour le débordement, le midi et les appels hors heures, ou pour tous les appels. LobbyStack réserve dans Google Calendar, Cal.com ou Calendly. Certains produits spécialisés en dentaire inscrivent plutôt les rendez-vous dans le logiciel de gestion du cabinet.",
         },
         {
           question: "Combien coûte un réceptionniste dentaire IA ?",
@@ -344,7 +344,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
           question:
             "Peut-il réserver directement dans Dentrix ou Open Dental ?",
           answer:
-            "Non. LobbyStack réserve dans Google Calendar et ne se connecte pas à Dentrix, Open Dental, Eaglesoft ni à d’autres logiciels de gestion de cabinet, donc votre équipe recopie les nouveaux rendez-vous. Les webhooks signés et l’API REST peuvent envoyer les données de réservation et d’appel vers Zapier ou vos propres outils. Si vous avez besoin que les rendez-vous s’inscrivent dans votre logiciel de gestion, Dentina cite 11 logiciels dans lesquels il les inscrit, et Peerlogic en cite 8 avec lesquels il s’intègre (vérifié le 27 octobre 2026).",
+            "Non. LobbyStack réserve dans Google Calendar, Cal.com ou Calendly et ne se connecte pas à Dentrix, Open Dental, Eaglesoft ni à d’autres logiciels de gestion de cabinet, donc votre équipe recopie les nouveaux rendez-vous. Les webhooks signés et l’API REST peuvent envoyer les données de réservation et d’appel vers Zapier ou vos propres outils. Si vous avez besoin que les rendez-vous s’inscrivent dans votre logiciel de gestion, Dentina cite 11 logiciels dans lesquels il les inscrit, et Peerlogic en cite 8 avec lesquels il s’intègre (vérifié le 27 octobre 2026).",
         },
         {
           question: "Comment traite-t-il un appel pour une urgence dentaire ?",
@@ -359,7 +359,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "Peut-il réserver les rendez-vous des nouveaux patients ?",
           answer:
-            "Oui. Il recueille le nom du nouveau patient, son numéro de téléphone, son assureur, le motif de la visite et l’heure souhaitée, puis réserve une plage libre dans Google Calendar pendant vos heures d’ouverture. Vous pouvez aussi lui demander d’enregistrer l’heure souhaitée comme une demande que votre équipe confirme. Si le patient accepte, il lui envoie par texto une confirmation et un rappel 24 heures avant. Sur LobbyStack Cloud, les textos vont aux numéros américains et canadiens.",
+            "Oui. Il recueille le nom du nouveau patient, son numéro de téléphone, son assureur, le motif de la visite et l’heure souhaitée, puis réserve une plage libre dans Google Calendar, Cal.com ou Calendly pendant vos heures d’ouverture. Vous pouvez aussi lui demander d’enregistrer l’heure souhaitée comme une demande que votre équipe confirme. Si le patient accepte, il lui envoie par texto une confirmation et un rappel 24 heures avant. Sur LobbyStack Cloud, les textos vont aux numéros américains et canadiens.",
         },
         {
           question: "Dans quelles langues les patients peuvent-ils parler ?",
@@ -474,7 +474,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "Que fait un réceptionniste IA pour un salon ?",
           answer:
-            "Il répond au téléphone de votre salon quand personne à l’accueil ne peut le faire. LobbyStack réserve les rendez-vous dans Google Calendar, les déplace et les annule, répond aux questions à partir de votre menu de services et de vos politiques, et transfère l’appel à une personne quand le client le demande ou que vos règles le prévoient. Chaque appel apparaît dans votre tableau de bord avec un résumé et une transcription.",
+            "Il répond au téléphone de votre salon quand personne à l’accueil ne peut le faire. LobbyStack réserve les rendez-vous dans Google Calendar, Cal.com ou Calendly, les déplace et les annule, répond aux questions à partir de votre menu de services et de vos politiques, et transfère l’appel à une personne quand le client le demande ou que vos règles le prévoient. Chaque appel apparaît dans votre tableau de bord avec un résumé et une transcription.",
         },
         {
           question: "Les clients peuvent-ils réserver avec un styliste précis ?",
@@ -484,7 +484,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "Fonctionne-t-il avec mon logiciel de réservation de salon ?",
           answer:
-            "Pas directement. LobbyStack réserve dans Google Calendar et ne se connecte pas aux plateformes de réservation pour salons. Si votre salon réserve dans une autre application, configurez LobbyStack pour qu’il prenne des demandes : il note le service, la personne et l’heure souhaités, et votre équipe confirme le rendez-vous. Les webhooks et l’API de LobbyStack peuvent envoyer chaque demande à vos autres outils.",
+            "Pas directement. LobbyStack réserve dans Google Calendar, Cal.com ou Calendly et ne se connecte pas aux plateformes de réservation pour salons. Si votre salon réserve dans une autre application, configurez LobbyStack pour qu’il prenne des demandes : il note le service, la personne et l’heure souhaités, et votre équipe confirme le rendez-vous. Les webhooks et l’API de LobbyStack peuvent envoyer chaque demande à vos autres outils.",
         },
         {
           question: "Les clients peuvent-ils annuler ou reporter par téléphone ?",
@@ -692,7 +692,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
       sections: [
         {
           title: "Réserve les débouchages pendant que vous êtes sous un évier",
-          body: "LobbyStack propose les plages libres de votre Google Calendar, réserve celle que l’appelant choisit et lui envoie une confirmation par texto s’il accepte. Pour remplacer un chauffe-eau ou refaire la tuyauterie, il réserve une visite d’estimation au lieu de deviner un prix.",
+          body: "LobbyStack propose les plages libres de votre agenda (Google Calendar, Cal.com ou Calendly), réserve celle que l’appelant choisit et lui envoie une confirmation par texto s’il accepte. Pour remplacer un chauffe-eau ou refaire la tuyauterie, il réserve une visite d’estimation au lieu de deviner un prix.",
           points: [
             "Évite les plages déjà prises dans votre calendrier",
             "Envoie un rappel par texto 24 heures avant, si le client a accepté",
@@ -719,7 +719,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "Que fait un réceptionniste IA pour plombiers ?",
           answer:
-            "Il répond aux appels que vous ne pouvez pas prendre et suit vos règles pour la suite. LobbyStack transfère les conduites éclatées et les refoulements d’égout à votre plombier de garde, réserve les débouchages et les visites de chauffe-eau dans Google Calendar, et enregistre le résumé, la transcription et l’enregistrement de chaque appel.",
+            "Il répond aux appels que vous ne pouvez pas prendre et suit vos règles pour la suite. LobbyStack transfère les conduites éclatées et les refoulements d’égout à votre plombier de garde, réserve les débouchages et les visites de chauffe-eau dans Google Calendar, Cal.com ou Calendly, et enregistre le résumé, la transcription et l’enregistrement de chaque appel.",
         },
         {
           question: "Peut-il expliquer à l’appelant comment fermer l’eau ?",
@@ -778,18 +778,18 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
       eyebrow: "Chauffage et climatisation",
       h1: "Un réceptionniste IA en chauffage et climatisation pour la fournaise qui lâche la nuit",
       intro:
-        "Une fournaise qui s’arrête à 2 h ne peut pas attendre votre rappel du matin. LobbyStack transfère les pannes de chauffage et de climatisation à votre technicien de garde selon les règles que vous écrivez, et réserve les entretiens et les estimations dans Google Calendar pendant l’appel.",
+        "Une fournaise qui s’arrête à 2 h ne peut pas attendre votre rappel du matin. LobbyStack transfère les pannes de chauffage et de climatisation à votre technicien de garde selon les règles que vous écrivez, et réserve les entretiens et les estimations dans Google Calendar, Cal.com ou Calendly pendant l’appel.",
       imageAlt:
         "Un appel urgent pour une panne de chauffage acheminé vers le technicien de garde d’une entreprise de chauffage et climatisation",
       proofPoints: [
         "Transfère les pannes de chauffage, de climatisation et les odeurs de gaz à votre technicien de garde",
-        "Réserve les entretiens et les estimations de remplacement dans Google Calendar",
+        "Réserve les entretiens et les estimations de remplacement dans Google Calendar, Cal.com ou Calendly",
         "Passe à la langue de l’appelant, parmi plus de 70 avec GPT-Live",
       ],
       sections: [
         {
           title: "Réserve les entretiens et les estimations de remplacement",
-          body: "Un propriétaire qui magasine un nouveau système appelle aussi vos concurrents. LobbyStack lui demande le type de système, son âge et la superficie de la maison, puis réserve la visite dans Google Calendar pendant qu’il est en ligne. Si vous préférez approuver chaque visite, le mode demande note l’heure souhaitée et votre équipe la confirme.",
+          body: "Un propriétaire qui magasine un nouveau système appelle aussi vos concurrents. LobbyStack lui demande le type de système, son âge et la superficie de la maison, puis réserve la visite dans Google Calendar, Cal.com ou Calendly pendant qu’il est en ligne. Si vous préférez approuver chaque visite, le mode demande note l’heure souhaitée et votre équipe la confirme.",
           points: [
             "Évite les plages déjà prises dans votre calendrier",
             "Envoie par texto une confirmation et un rappel 24 heures avant, si le client accepte",
@@ -817,7 +817,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
           question:
             "Que fait un réceptionniste IA en chauffage et climatisation ?",
           answer:
-            "Il répond aux appels que votre bureau manque et suit vos règles pour la suite. LobbyStack transfère les pannes de chauffage, de climatisation et les odeurs de gaz à votre technicien de garde, réserve les entretiens et les estimations dans Google Calendar, et enregistre le résumé, la transcription et l’enregistrement de chaque appel.",
+            "Il répond aux appels que votre bureau manque et suit vos règles pour la suite. LobbyStack transfère les pannes de chauffage, de climatisation et les odeurs de gaz à votre technicien de garde, réserve les entretiens et les estimations dans Google Calendar, Cal.com ou Calendly, et enregistre le résumé, la transcription et l’enregistrement de chaque appel.",
         },
         {
           question: "Peut-il répondre seulement quand mon bureau est débordé ?",
@@ -851,7 +851,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
           question:
             "Fonctionne-t-il avec ServiceTitan, Housecall Pro ou Jobber ?",
           answer:
-            "Pas directement. Google Calendar est le seul calendrier auquel LobbyStack se connecte. Il envoie des webhooks signés quand un appel se termine, qu’un rendez-vous est réservé, déplacé ou annulé, qu’un message est pris ou qu’un contact est créé, et il offre une API REST avec des clés à accès limité. Zapier se branche sur les deux. Si vous gérez votre entreprise dans Jobber ou Housecall Pro, leurs propres réceptionnistes réservent directement dans ce logiciel, ce que LobbyStack ne peut pas faire.",
+            "Pas directement. LobbyStack se connecte seulement à Google Calendar, Cal.com et Calendly. Il envoie des webhooks signés quand un appel se termine, qu’un rendez-vous est réservé, déplacé ou annulé, qu’un message est pris ou qu’un contact est créé, et il offre une API REST avec des clés à accès limité. Zapier se branche sur les deux. Si vous gérez votre entreprise dans Jobber ou Housecall Pro, leurs propres réceptionnistes réservent directement dans ce logiciel, ce que LobbyStack ne peut pas faire.",
         },
         {
           question: "Fonctionne-t-il avec mon numéro professionnel actuel ?",
@@ -940,7 +940,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
         },
         {
           title: "Réserve les estimations de panneau et de borne de recharge",
-          body: "LobbyStack demande l’ampérage du panneau, l’âge de la maison et la borne ou la génératrice que veut l’appelant, puis réserve la visite d’estimation dans Google Calendar pendant l’appel.",
+          body: "LobbyStack demande l’ampérage du panneau, l’âge de la maison et la borne ou la génératrice que veut l’appelant, puis réserve la visite d’estimation dans Google Calendar, Cal.com ou Calendly pendant l’appel.",
           points: [
             "Demande si l’appelant est propriétaire de la maison",
             "Enregistre les réponses avec l’appel pour l’électricien qui se déplace",
@@ -959,7 +959,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "Que doit gérer un réceptionniste IA pour électriciens ?",
           answer:
-            "Deux sortes d’appels : les risques, qui demandent des consignes de sécurité et un transfert rapide, et les demandes d’estimation, qui demandent les bonnes questions. LobbyStack suit vos règles pour les deux et réserve les estimations dans Google Calendar pendant l’appel.",
+            "Deux sortes d’appels : les risques, qui demandent des consignes de sécurité et un transfert rapide, et les demandes d’estimation, qui demandent les bonnes questions. LobbyStack suit vos règles pour les deux et réserve les estimations dans Google Calendar, Cal.com ou Calendly pendant l’appel.",
         },
         {
           question:
@@ -1028,7 +1028,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
       imageAlt:
         "Un appel pour un ressort cassé réservé par LobbyStack dans le premier créneau libre d’une entreprise de portes de garage",
       proofPoints: [
-        "Réserve les réparations le jour même dans Google Calendar",
+        "Réserve les réparations le jour même dans Google Calendar, Cal.com ou Calendly",
         "Lit vos consignes de sécurité pour les ressorts et les câbles cassés",
         "Transfère les portes restées ouvertes la nuit à votre technicien de garde",
       ],
@@ -1063,7 +1063,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
           question:
             "Que fait un réceptionniste IA pour une entreprise de portes de garage ?",
           answer:
-            "Il répond à vos appels pendant que vous êtes sur un chantier ou après vos heures. LobbyStack demande ce qui est arrivé à la porte, réserve les réparations et les soumissions dans Google Calendar, et transfère à votre technicien de garde les appels que vos règles jugent urgents, comme une porte qui ne ferme plus la nuit.",
+            "Il répond à vos appels pendant que vous êtes sur un chantier ou après vos heures. LobbyStack demande ce qui est arrivé à la porte, réserve les réparations et les soumissions dans Google Calendar, Cal.com ou Calendly, et transfère à votre technicien de garde les appels que vos règles jugent urgents, comme une porte qui ne ferme plus la nuit.",
         },
         {
           question: "Que dit-il à un client qui a un ressort cassé ?",
@@ -1125,12 +1125,12 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
       proofPoints: [
         "Demande l’appareil, la marque, le modèle et les symptômes",
         "Annonce les frais de diagnostic que vous fixez",
-        "Réserve les visites dans Google Calendar pendant l’appel",
+        "Réserve les visites dans Google Calendar, Cal.com ou Calendly pendant l’appel",
       ],
       sections: [
         {
           title: "Réserve la visite avec le numéro de modèle",
-          body: "LobbyStack demande l’appareil, la marque, le modèle et les symptômes, puis réserve un créneau dans Google Calendar. Votre technicien lit les réponses dans le résumé de l’appel avant de partir.",
+          body: "LobbyStack demande l’appareil, la marque, le modèle et les symptômes, puis réserve un créneau dans Google Calendar, Cal.com ou Calendly. Votre technicien lit les réponses dans le résumé de l’appel avant de partir.",
           points: [
             "Ajoutez les codes d’erreur, l’âge, la garantie ou le type d’énergie à vos questions",
             "Évite les plages déjà prises dans votre calendrier",
@@ -1158,7 +1158,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
           question:
             "Que fait un réceptionniste IA pour la réparation d’électroménagers ?",
           answer:
-            "Il répond aux appels de votre atelier pendant que vos techniciens sont en réparation. LobbyStack demande l’appareil, la marque, le modèle et les symptômes, annonce les frais que vous fixez et réserve la visite dans Google Calendar pendant l’appel.",
+            "Il répond aux appels de votre atelier pendant que vos techniciens sont en réparation. LobbyStack demande l’appareil, la marque, le modèle et les symptômes, annonce les frais que vous fixez et réserve la visite dans Google Calendar, Cal.com ou Calendly pendant l’appel.",
         },
         {
           question: "Peut-il vérifier les marques que je répare ?",
@@ -1224,7 +1224,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
       sections: [
         {
           title: "Réserve les inspections de moisissure et d’humidité",
-          body: "Les appels pour une vieille tache ou une odeur de moisi obtiennent un créneau de jour. LobbyStack demande s’il y a eu un dégât d’eau récent et réserve l’inspection dans votre Google Calendar.",
+          body: "Les appels pour une vieille tache ou une odeur de moisi obtiennent un créneau de jour. LobbyStack demande s’il y a eu un dégât d’eau récent et réserve l’inspection dans votre agenda (Google Calendar, Cal.com ou Calendly).",
           points: [
             "Propose vos plages libres pendant l’appel",
             "Envoie une confirmation par texto si le client accepte",
@@ -1252,7 +1252,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
           question:
             "Que fait un réceptionniste IA pour la restauration après sinistre ?",
           answer:
-            "Il répond à vos appels quand votre équipe est sur un chantier ou endormie. LobbyStack transfère les inondations actives, les refoulements d’égout et les dégâts de feu à votre équipe de garde, réserve les inspections de moisissure et les mesures d’humidité dans Google Calendar, et note la source de l’eau et l’assurance avec chaque appel.",
+            "Il répond à vos appels quand votre équipe est sur un chantier ou endormie. LobbyStack transfère les inondations actives, les refoulements d’égout et les dégâts de feu à votre équipe de garde, réserve les inspections de moisissure et les mesures d’humidité dans Google Calendar, Cal.com ou Calendly, et note la source de l’eau et l’assurance avec chaque appel.",
         },
         {
           question:
@@ -1324,7 +1324,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
         },
         {
           title: "Réserve les recodages, les télécommandes et les installations",
-          body: "LobbyStack demande la marque, le modèle et l’année pour une clé d’auto, ou le nombre de portes pour une installation, puis réserve une visite de jour dans votre Google Calendar.",
+          body: "LobbyStack demande la marque, le modèle et l’année pour une clé d’auto, ou le nombre de portes pour une installation, puis réserve une visite de jour dans votre agenda (Google Calendar, Cal.com ou Calendly).",
           points: [
             "Propose vos plages libres et réserve celle que le client choisit",
             "Envoie une confirmation par texto si le client accepte",
@@ -1343,7 +1343,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "Que fait un réceptionniste IA pour serruriers ?",
           answer:
-            "Il répond à vos appels pendant que vous êtes sur une intervention ou après vos heures. LobbyStack annonce vos frais de déverrouillage, note le véhicule ou l’adresse et transfère les urgences à votre serrurier de garde. Il réserve les recodages, les télécommandes et les installations dans Google Calendar.",
+            "Il répond à vos appels pendant que vous êtes sur une intervention ou après vos heures. LobbyStack annonce vos frais de déverrouillage, note le véhicule ou l’adresse et transfère les urgences à votre serrurier de garde. Il réserve les recodages, les télécommandes et les installations dans Google Calendar, Cal.com ou Calendly.",
         },
         {
           question: "Peut-il annoncer mes frais de déverrouillage ?",
@@ -1407,7 +1407,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
       sections: [
         {
           title: "Réserve les consultations pour les nouveaux projets",
-          body: "Un nouveau client qui appelle à 21 h reçoit les questions que vous poseriez. LobbyStack réserve la consultation dans votre Google Calendar avant qu’il appelle l’entrepreneur suivant.",
+          body: "Un nouveau client qui appelle à 21 h reçoit les questions que vous poseriez. LobbyStack réserve la consultation dans votre agenda (Google Calendar, Cal.com ou Calendly) avant qu’il appelle l’entrepreneur suivant.",
           points: [
             "Demande l’étendue des travaux, le budget et l’échéancier",
             "N’annonce que les prix que vous lui donnez",
@@ -1451,7 +1451,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "Peut-il réserver des consultations pour le prochain jour ouvrable ?",
           answer:
-            "Oui. LobbyStack propose les plages libres de votre Google Calendar et réserve la consultation pendant l’appel, alors le nouveau travail est à l’horaire quand votre équipe commence sa journée.",
+            "Oui. LobbyStack propose les plages libres de votre agenda (Google Calendar, Cal.com ou Calendly) et réserve la consultation pendant l’appel, alors le nouveau travail est à l’horaire quand votre équipe commence sa journée.",
         },
         {
           question:
@@ -1621,7 +1621,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
       imageAlt:
         "Un appel pour des dommages de grêle réservé par LobbyStack dans la prochaine plage d’inspection libre d’un couvreur",
       proofPoints: [
-        "Réserve les inspections après tempête dans Google Calendar",
+        "Réserve les inspections après tempête dans Google Calendar, Cal.com ou Calendly",
         "Répond aux questions d’assurance à partir de votre script",
         "Transfère les fuites actives à votre équipe de garde",
       ],
@@ -1835,17 +1835,17 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
     {
       title: "Réceptionniste IA au Québec, en français | LobbyStack",
       description:
-        "Réceptionniste IA pour les PME du Québec : répond en français sur votre numéro, réserve dans Google Calendar et passe à l’anglais si l’appelant le parle.",
+        "Réceptionniste IA pour les PME du Québec : répond en français sur votre numéro, réserve dans Google Calendar, Cal.com ou Calendly et passe à l’anglais si l’appelant le parle.",
       eyebrow: "Québec",
       h1: "Un réceptionniste IA qui répond en français à vos clients du Québec",
       intro:
-        "Vous êtes sur un chantier à Laval ou avec un client, et le téléphone sonne. LobbyStack décroche en français sur votre numéro d’entreprise, répond à partir de vos services et de vos prix, et réserve le rendez-vous dans Google Calendar. Si l’appelant parle anglais, il passe à l’anglais.",
+        "Vous êtes sur un chantier à Laval ou avec un client, et le téléphone sonne. LobbyStack décroche en français sur votre numéro d’entreprise, répond à partir de vos services et de vos prix, et réserve le rendez-vous dans Google Calendar, Cal.com ou Calendly. Si l’appelant parle anglais, il passe à l’anglais.",
       imageAlt:
         "LobbyStack répond en français à l’appel d’une entreprise du Québec et réserve le rendez-vous",
       proofPoints: [
         "Les appels commencent en français quand c’est votre langue par défaut",
         "Numéros canadiens, avec recherche par indicatif régional",
-        "Réserve dans Google Calendar et texte la confirmation",
+        "Réserve dans Google Calendar, Cal.com ou Calendly et texte la confirmation",
         "Forfait gratuit, puis 30 $ US par mois pour 150 minutes",
       ],
       sections: [
@@ -1887,7 +1887,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "Que fait un réceptionniste IA pour une entreprise du Québec ?",
           answer:
-            "Il répond aux appels que votre équipe ne peut pas prendre, en français ou dans la langue de l’appelant. LobbyStack répond aux questions à partir des services, des prix et des heures que vous ajoutez, réserve les rendez-vous dans Google Calendar, transfère les appels urgents à votre cellulaire et prend un message pour le reste.",
+            "Il répond aux appels que votre équipe ne peut pas prendre, en français ou dans la langue de l’appelant. LobbyStack répond aux questions à partir des services, des prix et des heures que vous ajoutez, réserve les rendez-vous dans Google Calendar, Cal.com ou Calendly, transfère les appels urgents à votre cellulaire et prend un message pour le reste.",
         },
         {
           question: "Parle-t-il le français du Québec ?",
@@ -1912,7 +1912,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "Fonctionne-t-il avec mon logiciel de prise de rendez-vous ?",
           answer:
-            "Google Calendar est le seul calendrier auquel LobbyStack se connecte directement. Il envoie aussi des webhooks signés quand un appel se termine ou qu’un rendez-vous est réservé, et Zapier s’y branche pour transmettre les détails à un autre outil.",
+            "Google Calendar, Cal.com et Calendly sont les seuls calendriers auxquels LobbyStack se connecte directement. Il envoie aussi des webhooks signés quand un appel se termine ou qu’un rendez-vous est réservé, et Zapier s’y branche pour transmettre les détails à un autre outil.",
         },
         {
           question: "Combien coûte-t-il ?",
@@ -1951,18 +1951,18 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
       eyebrow: "Entrepreneurs en rénovation",
       h1: "Un réceptionniste IA pour entrepreneurs en rénovation qui réserve les soumissions pendant que vous êtes sur le chantier",
       intro:
-        "Un propriétaire qui magasine la rénovation de sa salle de bain appelle plusieurs entrepreneurs dans la même heure. LobbyStack répond à votre ligne pendant que vous avez les outils dans les mains, demande le type de travaux, l’adresse et l’échéancier, puis réserve la visite de soumission dans Google Calendar avant qu’il raccroche.",
+        "Un propriétaire qui magasine la rénovation de sa salle de bain appelle plusieurs entrepreneurs dans la même heure. LobbyStack répond à votre ligne pendant que vous avez les outils dans les mains, demande le type de travaux, l’adresse et l’échéancier, puis réserve la visite de soumission dans Google Calendar, Cal.com ou Calendly avant qu’il raccroche.",
       imageAlt:
         "Une visite de soumission pour une salle de bain réservée par LobbyStack dans le calendrier d’un entrepreneur en rénovation",
       proofPoints: [
-        "Réserve les visites de soumission dans Google Calendar pendant l’appel",
+        "Réserve les visites de soumission dans Google Calendar, Cal.com ou Calendly pendant l’appel",
         "Vérifie le code postal de l’appelant selon votre territoire",
         "Transfère les urgences de chantier à votre cellulaire",
       ],
       sections: [
         {
           title: "Réserve la visite de soumission pendant que l’appelant est en ligne",
-          body: "LobbyStack pose les questions que vous poseriez : le type de travaux, l’adresse, l’échéancier et, si vous le voulez, le budget. Il propose ensuite les plages libres de votre Google Calendar et réserve la visite. Si vous préférez approuver chaque visite, le mode demande note l’heure souhaitée et votre équipe la confirme.",
+          body: "LobbyStack pose les questions que vous poseriez : le type de travaux, l’adresse, l’échéancier et, si vous le voulez, le budget. Il propose ensuite les plages libres de votre agenda (Google Calendar, Cal.com ou Calendly) et réserve la visite. Si vous préférez approuver chaque visite, le mode demande note l’heure souhaitée et votre équipe la confirme.",
           points: [
             "Évite les plages déjà prises dans votre calendrier",
             "Envoie par texto une confirmation et un rappel aux clients qui acceptent",
@@ -1997,7 +1997,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "Que fait un réceptionniste IA pour un entrepreneur en rénovation ?",
           answer:
-            "Il répond aux appels que vous manquez sur le chantier. LobbyStack demande le type de travaux et l’adresse, réserve les visites de soumission dans Google Calendar, transfère les urgences des clients en cours à votre cellulaire et prend un message pour le reste.",
+            "Il répond aux appels que vous manquez sur le chantier. LobbyStack demande le type de travaux et l’adresse, réserve les visites de soumission dans Google Calendar, Cal.com ou Calendly, transfère les urgences des clients en cours à votre cellulaire et prend un message pour le reste.",
         },
         {
           question: "Peut-il donner un prix au téléphone ?",
@@ -2012,7 +2012,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "Fonctionne-t-il avec Jobber ou Buildertrend ?",
           answer:
-            "Pas directement. Google Calendar est le seul calendrier auquel LobbyStack se connecte. Il envoie des webhooks signés quand un appel se termine ou qu’un rendez-vous est réservé, et offre une API REST. Zapier se branche sur les deux.",
+            "Pas directement. LobbyStack se connecte seulement à Google Calendar, Cal.com et Calendly. Il envoie des webhooks signés quand un appel se termine ou qu’un rendez-vous est réservé, et offre une API REST. Zapier se branche sur les deux.",
         },
         keepNumberFaq,
         {

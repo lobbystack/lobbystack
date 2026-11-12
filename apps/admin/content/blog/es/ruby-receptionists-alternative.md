@@ -95,7 +95,7 @@ Para las tarifas de otros servicios en vivo, vea [cuánto cuesta un servicio de 
 | Probar primero | Garantía de devolución para clientes nuevos: 21 días o 500 minutos | Plan Free: 30 minutos de voz, sin tarjeta, número de EE. UU. o Canadá gratis durante 14 días |
 | Cambios de plan | Subir de plan obliga a por lo menos tres periodos; bajar, después de tres | Subir, bajar o cancelar desde la configuración de facturación, sin cargo por cancelación |
 | Idiomas de quien llama | Inglés y español | Abre la llamada en uno de 8 idiomas a elegir y luego contesta en el idioma de quien llama (más de 70, incluido el español) |
-| Reservas | Las recepcionistas agendan citas | Reserva solo en Google Calendar |
+| Reservas | Las recepcionistas agendan citas | Reserva solo en Google Calendar, Cal.com o Calendly |
 | Transferencias | Al número que usted elija; puede haber cargos fuera de Norteamérica | Transferencia ciega a un solo número por negocio |
 | Mensajes | Correo electrónico, SMS o notificación en la app | Alerta por correo cuando toma un mensaje; alertas por SMS opcionales |
 | Registro de llamadas | Transcripciones con IA de llamadas y buzón de voz | Grabación, transcripción y resumen de cada llamada |
@@ -148,13 +148,13 @@ Ruby pone a una persona capacitada en cada llamada que contesta, y LobbyStack no
 - Servicios conformes con HIPAA, según su página de precios. LobbyStack no afirma cumplir con HIPAA.
 - Más de 20 años al servicio de pequeñas empresas, según la página de inicio de Ruby.
 
-LobbyStack tiene carencias que podrían descartarlo. Ninguna persona contesta. Su IA no responde mensajes de texto, así que su equipo los contesta a mano desde el panel. Reserva solo en Google Calendar, transfiere a un solo número, no ofrece chat web y se conecta con CRM y software del sector a través de webhooks y la API, sin integración nativa.
+LobbyStack tiene carencias que podrían descartarlo. Ninguna persona contesta. Su IA no responde mensajes de texto, así que su equipo los contesta a mano desde el panel. Reserva solo en Google Calendar, Cal.com o Calendly, transfiere a un solo número, no ofrece chat web y se conecta con CRM y software del sector a través de webhooks y la API, sin integración nativa.
 
 ## Cuándo LobbyStack es la mejor opción
 
 LobbyStack cuesta menos en cada volumen que calculamos, y sus minutos extra cuestan de $0.18 a $0.20, contra $3.30 a $5.40 en Ruby. Contesta las llamadas de rutina sobre horarios, precios, zonas de servicio y citas, y pasa las urgentes a su equipo. Vea cómo funciona la [atención telefónica con IA](/es/solutions/ai-phone-answering/).
 
-- **Reservas durante la llamada.** Con Google Calendar conectado y su horario de atención definido, LobbyStack reserva en los espacios libres. Con el permiso de quien llama, envía por SMS una confirmación y un recordatorio 24 horas antes de la cita.
+- **Reservas durante la llamada.** Con Google Calendar, Cal.com o Calendly conectado y su horario de atención definido, LobbyStack reserva en los espacios libres. Con el permiso de quien llama, envía por SMS una confirmación y un recordatorio 24 horas antes de la cita.
 - **Cobro por segundo.** Las llamadas de menos de 10 segundos y las que la recepcionista corta como spam no cuentan.
 - **Sin límite de llamadas simultáneas.** Si usted fija un tope de gasto en excedente y lo alcanza, quien llame oirá tono de ocupado hasta el mes siguiente o hasta que usted suba el tope.
 - **Un registro de cada llamada.** El panel guarda la grabación, la transcripción y el resumen, y su equipo recibe una alerta por correo cuando la recepcionista toma un mensaje.
@@ -166,7 +166,7 @@ LobbyStack cuesta menos en cada volumen que calculamos, y sus minutos extra cues
 
 1. Regístrese en [app.lobbystack.com](https://app.lobbystack.com/es/signup). Free le da 30 minutos de voz al mes y un número de EE. UU. o Canadá gratis durante 14 días, sin tarjeta.
 2. La configuración lo guía por los datos de su negocio, la importación de su sitio web, su información, el saludo y un plan.
-3. Escriba sus reglas de llamada en lenguaje sencillo y elija un modo de reserva: reservar la cita, tomar una solicitud para que su equipo la confirme o tomar un mensaje. Conecte Google Calendar y defina su horario de atención, porque las reservas lo necesitan.
+3. Escriba sus reglas de llamada en lenguaje sencillo y elija un modo de reserva: reservar la cita, tomar una solicitud para que su equipo la confirme o tomar un mensaje. Conecte Google Calendar, Cal.com o Calendly y defina su horario de atención, porque las reservas lo necesitan.
 4. Desde su navegador, haga las cinco llamadas que Ruby más atiende por usted: una pregunta de precio, una reserva, una urgencia, alguien que pide hablar con una persona y un número equivocado. Lea cada transcripción con quien se encarga del seguimiento.
 5. En Starter o Pro, elija un número, o desvíe el número actual de su negocio a LobbyStack cuando esté ocupado, cuando esté cerrado o siempre. Agregue un número de transferencia y elija cuándo transferir.
 6. Mantenga Ruby en su línea hasta que LobbyStack pase sus llamadas de prueba. Una cancelación en Ruby entra en vigor al final del periodo de 30 días en curso. Si Ruby aloja el número de su negocio, pregunte a Ruby cómo sacarlo antes de cancelar, y escriba al equipo de LobbyStack para portarlo.
@@ -209,7 +209,7 @@ Si su operador tiene el número y desvía las llamadas a Ruby, cambie la regla d
 ## Elija LobbyStack si
 
 - La mayoría de sus llamadas son de rutina: horarios, precios, zonas de servicio y citas.
-- Quiere citas reservadas en Google Calendar durante la llamada, con SMS de confirmación.
+- Quiere citas reservadas en Google Calendar, Cal.com o Calendly durante la llamada, con SMS de confirmación.
 - Prefiere pagar $30 por 150 minutos en vez de $250 por 50.
 - Quiere cobro por segundo, sin cargo por llamadas de menos de 10 segundos.
 - Quienes le llaman hablan idiomas además del inglés y el español.
@@ -233,6 +233,6 @@ Revisadas el 10 de octubre de 2026, salvo que se indique otra fecha:
 
 ## Veredicto
 
-Ruby es la mejor opción cuando una persona capacitada tiene que atender la llamada: una admisión que pide criterio, un pago, personal que hable español o un cliente molesto. Usted paga de $3.15 a $5.00 por minuto incluido por esa persona, según el tamaño del plan. LobbyStack es la mejor opción cuando la mayoría de sus llamadas son preguntas de rutina y citas. Contesta 150 minutos por $30, reserva en Google Calendar y transfiere las urgencias a su equipo.
+Ruby es la mejor opción cuando una persona capacitada tiene que atender la llamada: una admisión que pide criterio, un pago, personal que hable español o un cliente molesto. Usted paga de $3.15 a $5.00 por minuto incluido por esa persona, según el tamaño del plan. LobbyStack es la mejor opción cuando la mayoría de sus llamadas son preguntas de rutina y citas. Contesta 150 minutos por $30, reserva en Google Calendar, Cal.com o Calendly y transfiere las urgencias a su equipo.
 
 Para escuchar cómo responde LobbyStack a las preguntas de sus clientes, [empiece en el plan gratuito](https://app.lobbystack.com/es/signup). Tiene 30 minutos de voz al mes, con su propio saludo y sus reglas, y no necesita tarjeta.

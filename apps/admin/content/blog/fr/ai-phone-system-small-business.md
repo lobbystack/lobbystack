@@ -49,7 +49,7 @@ Les offres d'entrée publiées en France vont de 23,99 € par mois pour 250 mi
 | [Callsens](https://callsens.fr/tarifs) Starter | 79 € HT par mois | 200 minutes, 5 appels simultanés | 0,29 € HT | Aucuns frais | 1 numéro inclus, pays non précisé | Google Agenda, Calendly |
 | [Elio](https://eliocall.com/tarifs) | 79 € HT par mois | 150 minutes | 0,39 € HT | 879 € HT, offerts | Vous gardez votre numéro par renvoi d'appel | Non précisé pour l'offre standard |
 | [AirAgent](https://airagent.fr/tarifs/) Starter | 89 € HT par mois | « Jusqu'à 250 appels », 1 appel simultané | « + 0,30 € par min HT » | Configuration par un ingénieur dès 490 € | 1 numéro inclus, pays non précisé | Google Agenda, Cal.com |
-| [LobbyStack](/fr/pricing/) Starter (le nôtre) | 30 $ par mois | 150 minutes, appels simultanés non limités par le forfait | 0,20 $ | Aucuns frais | Numéro aux États-Unis, au Canada, au Royaume-Uni, en Australie ou en Nouvelle-Zélande | Google Agenda |
+| [LobbyStack](/fr/pricing/) Starter (le nôtre) | 30 $ par mois | 150 minutes, appels simultanés non limités par le forfait | 0,20 $ | Aucuns frais | Numéro aux États-Unis, au Canada, au Royaume-Uni, en Australie ou en Nouvelle-Zélande | Google Agenda, Cal.com, Calendly |
 
 - AirAgent affiche « + 0,30 € par min HT » sous chaque prix, sans dire si ce tarif s'applique dès la première minute. Sa FAQ facture 0,30 € la minute une fois les limites du forfait atteintes. Faites-le préciser par écrit.
 - Elio annonce des tarifs « en vigueur au 4 octobre 2026 ». Les autres pages ne datent pas leurs prix.
@@ -102,7 +102,7 @@ Ce qui marche :
 
 - Le forfait Starter à 30 $ pour 150 minutes, puis 0,20 $ la minute ; Pro à 100 $ pour 500 minutes, puis 0,18 $. Aucun frais de mise en service.
 - L'appel s'ouvre en français si vous choisissez le français par défaut, puis le réceptionniste répond dans la langue de l'appelant : plus de 70 langues avec GPT-Live d'OpenAI. Utile si vous recevez une clientèle touristique ou étrangère.
-- La prise de rendez-vous dans Google Agenda, le transfert des urgences vers votre numéro, et un résumé, une transcription et un enregistrement de chaque appel.
+- La prise de rendez-vous dans Google Agenda, Cal.com ou Calendly, le transfert des urgences vers votre numéro, et un résumé, une transcription et un enregistrement de chaque appel.
 - Les appels de moins de 10 secondes et ceux que le réceptionniste raccroche comme spam ne sont pas décomptés.
 - Le code est open source (licence MIT) : une équipe technique peut l'auditer ou l'héberger elle-même, avec ses propres comptes OpenAI et Twilio.
 
@@ -111,7 +111,7 @@ Ce qui coince depuis la France :
 - Pas de numéro français : le renvoi vers un numéro américain, canadien, britannique, australien ou néo-zélandais se paie au tarif de votre opérateur pour ce pays. Le code publié, même auto-hébergé, ne propose que ces cinq pays.
 - Une facture en dollars américains : le montant en euros dépend du taux de change et de votre banque.
 - Les SMS de confirmation et de rappel partent vers les seuls numéros des États-Unis et du Canada. Les alertes de l'équipe par e-mail fonctionnent partout.
-- Google Agenda seulement, et aucune intégration directe avec un CRM ou un logiciel métier : il faut passer par les webhooks signés ou l'API REST.
+- Aucun agenda en dehors de Google Agenda, Cal.com et Calendly, et aucune intégration directe avec un CRM ou un logiciel métier : il faut passer par les webhooks signés ou l'API REST.
 - Le transfert va vers un seul numéro, sans présenter l'appelant à la personne qui décroche.
 
 Choisissez une offre française si vous voulez un numéro français, des SMS vers les portables de vos clients ou une facture en euros. Konten affiche la minute la moins chère des offres d'entrée mais ne prend pas de rendez-vous, Callsens prend cinq appels à la fois dès son offre d'entrée, et Elio offre sa mise en place. LobbyStack convient mieux si vos appelants parlent beaucoup de langues, si votre équipe veut héberger le code elle-même, ou si vous avez aussi une activité aux États-Unis, au Canada, au Royaume-Uni, en Australie ou en Nouvelle-Zélande.

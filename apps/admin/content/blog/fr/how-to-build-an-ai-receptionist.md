@@ -96,7 +96,7 @@ Le code vous appartient et vous évitez les frais de plateforme. Il vous reste �
 Un réceptionniste open source fournit ce que les options 1 à 4 vous laissent à faire. [LobbyStack](/fr/solutions/self-hosted-ai-receptionist/) fait tourner chaque appel, au téléphone comme dans le navigateur, sur `gpt-live-1`, et son agent a déjà des outils pour :
 
 - les horaires, les services et les réponses tirées de votre site, de vos PDF et de vos FAQ
-- trouver des créneaux et réserver dans Google Agenda, ou prendre une demande de rendez-vous pour votre équipe
+- trouver des créneaux et réserver dans Google Agenda, Cal.com ou Calendly, ou prendre une demande de rendez-vous pour votre équipe
 - déplacer ou annuler un rendez-vous après avoir vérifié l'appelant
 - prendre des messages et transférer l'appel à une personne
 
@@ -154,7 +154,7 @@ Pour les appels téléphoniques sur LobbyStack, oui : les appels arrivent à GPT
 
 ### Un réceptionniste construit ainsi peut-il prendre des rendez-vous ?
 
-Seulement si vous lui donnez un outil de réservation. GPT-Live parle ; votre serveur consulte l'agenda et enregistre le rendez-vous. LobbyStack réserve dans Google Agenda, ou prend des demandes que votre équipe confirme.
+Seulement si vous lui donnez un outil de réservation. GPT-Live parle ; votre serveur consulte l'agenda et enregistre le rendez-vous. LobbyStack réserve dans Google Agenda, Cal.com ou Calendly, ou prend des demandes que votre équipe confirme.
 
 ## Écoutez la voix avant de construire
 

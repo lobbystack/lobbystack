@@ -65,7 +65,7 @@ LobbyStack je jedna od alternativa za Rosie AI. Tabela poredi limite koji menjaj
 | Prekoračenje minuta | Prebacuje Vas na sledeći paket po standardnoj ceni dok ne pređete na niži (pogledajte napomenu o uslovima iznad) | $0.20 po minutu na paketu Starter, $0.18 na paketu Pro, uz opcionu gornju granicu potrošnje |
 | Jedinica naplate | Svaki poziv se zaokružuje naviše na sledećih 60 sekundi | Po sekundi, bez zaokruživanja naviše |
 | Besplatna opcija | Besplatan probni period od 7 dana; uslovi traže način plaćanja na nalogu | Besplatan paket: 30 minuta razgovora, bez kartice, broj iz SAD ili Kanade besplatno 14 dana |
-| Kalendari | Google Calendar, Calendly, Acuity, Appointlet (od paketa Scale) | Samo Google Calendar |
+| Kalendari | Google Calendar, Calendly, Acuity, Appointlet (od paketa Scale) | Google Calendar, Cal.com, Calendly (za Calendly treba plaćeni Calendly paket) |
 | Preusmeravanje | Uživo i uz najavu (Scale), kaskadno (Growth) | Preusmeravanje bez najave na jedan broj (Starter i Pro) |
 | SMS pozivaocima | Linkovi za zakazivanje na svakom paketu; SMS tokom poziva od paketa Scale | Potvrda termina i podsetnik 24 sata ranije kada se pozivalac složi, na američke i kanadske brojeve; AI ne odgovara na SMS poruke |
 | Jezici pozivalaca | Engleski i španski na svakom pozivu | Počinje na jednom od 8 jezika po izboru, zatim odgovara na jeziku pozivaoca (70+, uključujući španski) |
@@ -119,20 +119,20 @@ Recimo da salon prima 240 poziva mesečno, svaki traje 2 minuta i 30 sekundi, i 
 - **Rosie:** 720 minuta je preko 250 koje uključuje Professional, a zakazivanje u kalendar ionako traži Scale. Salon plaća $149 mesečno, ili $124 mesečno uz godišnju naplatu.
 - **LobbyStack:** Pro košta $100 za 500 minuta, plus 100 × $0.18 = $18, ukupno $118 mesečno. Starter bi koštao $120 ($30 + 450 × $0.20). Uz godišnju naplatu, Pro košta $80 plus istih $18, odnosno $98 mesečno.
 
-Pre izbora proverite kako svaki proizvod rešava trajanje usluge, rasporede frizera, razmak između termina i otkazivanja. LobbyStack zakazuje samo u Google Calendar, za celu firmu ili za svakog zaposlenog posebno. Rosie Scale povezuje i Calendly, Acuity i Appointlet.
+Pre izbora proverite kako svaki proizvod rešava trajanje usluge, rasporede frizera, razmak između termina i otkazivanja. LobbyStack zakazuje u Google Calendar, Cal.com ili Calendly, a Google Calendar možete da povežete za celu firmu ili za svakog zaposlenog posebno. Rosie Scale povezuje i Acuity i Appointlet, koje LobbyStack nema.
 
 ## Kada je Rosie bolji izbor
 
 Rosie daje više minuta po dolaru kada imate mnogo poziva. Paket Scale sa 1,000 minuta za $149 košta manje od LobbyStack Pro od oko 773 do 1,000 minuta, a Growth sa 2,000 minuta za $299 košta manje od oko 1,606 do 2,000 minuta. Rosie nudi i:
 
 - Preusmeravanje uz najavu, koje prvo obavesti Vaš tim, i kaskadno preusmeravanje, koje redom pokušava nekoliko brojeva. LobbyStack preusmerava bez najave, na jedan broj.
-- Četiri kalendara na paketu Scale: Google Calendar, Calendly, Acuity i Appointlet. LobbyStack se povezuje samo sa Google Calendar.
+- Četiri kalendara na paketu Scale: Google Calendar, Calendly, Acuity i Appointlet. LobbyStack se povezuje sa Google Calendar-om, Cal.com-om i Calendly-jem, ali ne i sa Acuity ili Appointlet.
 - Besplatan chat na sajtu na svakom paketu.
 - Nativne iOS i Android aplikacije i izbor od 10+ glasova.
 - Automatsku obuku iz Vašeg Google Business Profile naloga i sajta.
 - E-poruke sa upozorenjem pre nego što dostignete limit minuta.
 
-LobbyStack ima četiri nedostatka zbog kojih Vam možda ne odgovara. Ne nudi chat na sajtu. Njegov AI ne odgovara na SMS poruke, pa Vaš tim na njih odgovara ručno iz kontrolne table. Preusmerava na jedan broj i ne povezuje se ni sa jednim kalendarom osim Google-ovog. Rosie uključuje chat na sajtu na svakom paketu, a više vrsta preusmeravanja i kalendara na paketima Scale i Growth.
+LobbyStack ima četiri nedostatka zbog kojih Vam možda ne odgovara. Ne nudi chat na sajtu. Njegov AI ne odgovara na SMS poruke, pa Vaš tim na njih odgovara ručno iz kontrolne table. Preusmerava na jedan broj i ne povezuje se ni sa jednim kalendarom osim Google Calendar-a, Cal.com-a i Calendly-ja. Rosie uključuje chat na sajtu na svakom paketu, a više vrsta preusmeravanja i kalendara na paketima Scale i Growth.
 
 ## Na kojim jezicima odgovaraju Rosie i LobbyStack?
 
@@ -175,7 +175,7 @@ Ako razmatrate i recepcionere uživo, uporedite [najbolje usluge odgovaranja na 
 
 1. Registrujte se na [app.lobbystack.com](https://app.lobbystack.com/sr/signup). Besplatni paket daje 30 minuta razgovora mesečno i broj iz SAD ili Kanade besplatno 14 dana, bez kartice.
 2. Podešavanje Vas vodi kroz podatke o firmi, uvoz sajta, Vaše znanje, pozdrav i izbor paketa.
-3. Napišite pravila za pozive običnim jezikom i izaberite način zakazivanja: recepcioner zakazuje termin, prima zahtev koji Vaš tim potvrđuje ili prima poruku. Povežite Google Calendar i podesite radno vreme, jer bez njih zakazivanje ne radi.
+3. Napišite pravila za pozive običnim jezikom i izaberite način zakazivanja: recepcioner zakazuje termin, prima zahtev koji Vaš tim potvrđuje ili prima poruku. Povežite Google Calendar, Cal.com ili Calendly i podesite radno vreme, jer bez njih zakazivanje ne radi.
 4. Obavite test pozive iz kontrolne table u pregledaču.
 5. Na paketu Starter ili Pro izaberite lokalni broj, ili besplatni broj gde postoji, u SAD, Kanadi, Velikoj Britaniji, Australiji ili na Novom Zelandu. Ako želite da zadržite postojeći broj, podesite kod operatera da prosleđuje pozive na LobbyStack kada ste zauzeti ili se ne javljate, kada ne radite, ili uvek. Ako broj želite da prenesete, javite se LobbyStack timu. Zatim dodajte broj za preusmeravanje i izaberite kada recepcioner preusmerava pozive.
 6. Obavite istih pet poziva na Rosie probnom periodu, na paketu koji biste zadržali: pitanje o pravilima firme, zakazivanje koje traži razmak između termina, hitan poziv koji treba preusmeriti, zahtev za SMS potvrdu i otkazivanje. Zabeležite koji zadaci rade na tom paketu, a koji traže Scale ili Growth.
@@ -186,7 +186,7 @@ Rosie podržava isto prosleđivanje za pozive koje tim ne stigne da primi i za p
 
 - Mesečno imate od oko 773 do 1,000 minuta poziva, ili od oko 1,606 do 2,000, a zakazivanje i preusmeravanje Vam ionako trebaju.
 - Želite preusmeravanje uz najavu ili kaskadno preusmeravanje, chat na sajtu, nativne mobilne aplikacije ili izbor glasova.
-- Zakazujete u Calendly, Acuity ili Appointlet.
+- Zakazujete u Acuity ili Appointlet.
 - Vaši pozivaoci govore engleski i španski, a želite da španski bude spreman na svakom pozivu.
 - Radije prelazite na viši paket nego da plaćate prekoračenje po minutu.
 

@@ -78,7 +78,7 @@ Choose live agents when your calls need judgment: an angry customer, an on-call 
 
 Choose an AI receptionist when most of your calls look alike: questions about hours and prices, appointments to book, emergencies to pass on. It answers nights and weekends at the same price, takes several calls at once and books during the call.
 
-LobbyStack, for example, opens the call in French when French is your business's default language, and switches to English or another language when the caller speaks it. It books into Google Calendar, texts a confirmation to customers who agree, and transfers the calls your rules mark as urgent to your cell. Its limits: it bills in US dollars, it connects only to Google Calendar, and it doesn't replace a person on a sensitive call. Our page on the [AI receptionist for Quebec businesses](/solutions/ai-receptionist-quebec/) covers these settings.
+LobbyStack, for example, opens the call in French when French is your business's default language, and switches to English or another language when the caller speaks it. It books into Google Calendar, Cal.com or Calendly, texts a confirmation to customers who agree, and transfers the calls your rules mark as urgent to your cell. Its limits: it bills in US dollars, it connects only to Google Calendar, Cal.com and Calendly, and it doesn't replace a person on a sensitive call. Our page on the [AI receptionist for Quebec businesses](/solutions/ai-receptionist-quebec/) covers these settings.
 
 ## How do you choose a phone answering service in Quebec?
 
@@ -104,7 +104,7 @@ Yes. You turn on call forwarding with your phone provider to the number the serv
 
 ### Can an AI receptionist book appointments?
 
-Yes, if it connects to your calendar. LobbyStack offers the open times in your Google Calendar and books during the call. A call centre can book too, but ask whether that costs extra.
+Yes, if it connects to your calendar. LobbyStack offers the open times in your Google Calendar, Cal.com or Calendly and books during the call. A call centre can book too, but ask whether that costs extra.
 
 ### Does an answering service pick up at night and on weekends?
 

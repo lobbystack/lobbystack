@@ -76,7 +76,7 @@ Prenons LobbyStack comme exemple :
 
 - Vous écrivez l'accueil, le ton et les règles d'appel en langage clair, et il applique les règles dans votre ordre de priorité.
 - Il répond à partir de votre base de connaissances : pages de votre site, fichiers PDF, Word (.docx), texte et Markdown, et FAQ que vous rédigez.
-- Selon le mode de réservation que vous choisissez, il réserve dans Google Calendar, prend une demande que votre équipe confirme ou prend un message. La réservation exige vos heures d'ouverture.
+- Selon le mode de réservation que vous choisissez, il réserve dans Google Calendar, Cal.com ou Calendly, prend une demande que votre équipe confirme ou prend un message. La réservation exige vos heures d'ouverture.
 - Il envoie par SMS une confirmation de réservation et un rappel 24 heures avant le rendez-vous aux numéros américains et canadiens, si l'appelant accepte.
 - Vous décidez quand il transfère (jamais, toujours, sur demande, pour les appels urgents ou seulement pendant les heures d'ouverture), et les transferts vont vers un seul numéro. Si un transfert échoue, il propose de prendre un message, et votre équipe peut recevoir une alerte.
 - Votre équipe reçoit une alerte par e-mail pour chaque message et peut activer les alertes SMS vers un mobile américain ou canadien.
@@ -86,7 +86,7 @@ Prenons LobbyStack comme exemple :
 
 Vérifiez les limites d'un produit avant d'y renvoyer votre ligne. Voici celles de LobbyStack :
 
-- Le seul agenda qu'il prend en charge est Google Calendar.
+- Il prend en charge Google Calendar, Cal.com et Calendly, et aucun autre agenda.
 - L'IA ne répond pas aux SMS. Votre équipe y répond à la main depuis le tableau de bord.
 - Les transferts vont vers un seul numéro par entreprise. Ce sont des transferts à l'aveugle : le réceptionniste ne présente pas l'appel à votre équipe avant de le passer.
 - Il ne passe pas d'appels sortants, par exemple pour rappeler un client ou lui rappeler un rendez-vous.
@@ -209,7 +209,7 @@ Les réceptionnistes IA conviennent aux entreprises de services qui vivent des r
 - [Goodcall](https://www.goodcall.com/pricing) facture par appelant unique : un client qui rappelle ne coûte rien de plus.
 - [RingCentral AIR](https://www.ringcentral.com/pricing/ai-receptionist.html) fonctionne avec n'importe quel système téléphonique et se connecte à Salesforce, HubSpot et Zoho.
 
-LobbyStack (notre produit) convient au propriétaire qui veut la réservation, les transferts et les SMS de confirmation sur un forfait à 30 $ avec 150 minutes. Il convient aussi aux entreprises dont les clients parlent d'autres langues que l'anglais et l'espagnol. Vous pouvez le tester sans frais dans le navigateur, et son code sous licence MIT s'auto-héberge. Choisissez un autre fournisseur s'il vous faut un agenda autre que Google, une synchronisation avec un logiciel de gestion de cabinet, des réponses IA aux SMS ou un menu à touches.
+LobbyStack (notre produit) convient au propriétaire qui veut la réservation, les transferts et les SMS de confirmation sur un forfait à 30 $ avec 150 minutes. Il convient aussi aux entreprises dont les clients parlent d'autres langues que l'anglais et l'espagnol. Vous pouvez le tester sans frais dans le navigateur, et son code sous licence MIT s'auto-héberge. Choisissez un autre fournisseur si vous réservez dans Outlook ou Acuity, ou s'il vous faut une synchronisation avec un logiciel de gestion de cabinet, des réponses IA aux SMS ou un menu à touches.
 
 ### Choisissez une permanence si les appels demandent du jugement
 

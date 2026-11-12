@@ -69,7 +69,7 @@ Ovakvo razdvajanje pomaže klijentima da razumeju ko vodi uslugu. Vaša firma je
 
 Otvoreni kod daje kontrolu agencijama i tehničkim timovima. Mnoge firme žele da neko drugi vodi infrastrukturu, prati provajdere, objavljuje nadogradnje i pruža podršku za proizvod.
 
-[LobbyStack Cloud](https://lobbystack.com/sr/pricing/) ostaje upravljana opcija za te korisnike. Oni mogu da podese recepcionera, znanje o firmi, pravila, brojeve telefona i Google Calendar bez vođenja PostgreSQL, Redis ili glasovnog gateway servisa.
+[LobbyStack Cloud](https://lobbystack.com/sr/pricing/) ostaje upravljana opcija za te korisnike. Oni mogu da podese recepcionera, znanje o firmi, pravila, brojeve telefona i Google Calendar, Cal.com ili Calendly bez vođenja PostgreSQL, Redis ili glasovnog gateway servisa.
 
 Agencije mogu da izaberu model koji odgovara svakom angažmanu. Koristite MIT kod kada klijentu treba proizvod pod njegovim brendom, prilagođena infrastruktura ili obimne integracije. Koristite LobbyStack Cloud kada klijent želi upravljani proizvod, a Vaša vrednost dolazi od podešavanja, osmišljavanja tokova rada i stalne usluge.
 

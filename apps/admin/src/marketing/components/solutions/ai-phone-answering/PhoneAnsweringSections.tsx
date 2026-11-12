@@ -27,7 +27,7 @@ export function PhoneAnsweringSections() {
       <SolutionHero
         eyebrow="AI phone answering"
         title="An AI phone answering service for the calls you can't take"
-        intro="When you're on a job or with a customer, the caller you can't answer dials the next business on their list. LobbyStack picks up on your number, books the visit into Google Calendar and rings your phone when a call is urgent."
+        intro="When you're on a job or with a customer, the caller you can't answer dials the next business on their list. LobbyStack picks up on your number, books the visit into Google Calendar, Cal.com or Calendly and rings your phone when a call is urgent."
         primary={signupLink("Try for free", signup, "phone_answering_hero")}
         secondary={{ label: "View pricing", href: "/pricing/" }}
         footnote="Free plan with 30 voice minutes. No credit card required."
@@ -37,7 +37,7 @@ export function PhoneAnsweringSections() {
       <SolutionFacts
         facts={[
           "Works on the business number you already have",
-          "Books into Google Calendar during the call",
+          "Books into Google Calendar, Cal.com or Calendly during the call",
           "Transfers urgent calls to the number you set",
           "Spam calls and calls under 10 seconds use no minutes",
         ]}
@@ -57,7 +57,7 @@ export function PhoneAnsweringSections() {
           {
             eyebrow: "Booking",
             title: "Books the visit before they hang up",
-            body: "It offers open times from your Google Calendar, books the one the caller picks and, if they agree, texts a confirmation and a reminder the day before.",
+            body: "It offers open times from your Google Calendar, Cal.com or Calendly, books the one the caller picks and, if they agree, texts a confirmation and a reminder the day before.",
             media: <SceneArt scene={{ product: "booking" }} locale={locale} fit="card" />,
           },
         ]}

@@ -31,7 +31,7 @@ Choisissez selon qui doit répondre quand l'eau traverse un plafond, et selon le
 - **Smith.ai, la meilleure IA avec des réceptionnistes humains en renfort :** 25 appels IA gratuits par mois, et les canalisations éclatées ou inondations transmises à des réceptionnistes humains.
 - **Jobber Receptionist et Housecall Pro CSR AI, les meilleurs pour les entreprises déjà sur ces logiciels :** Jobber facture 29 $ par mois pour 30 conversations, et Housecall Pro ne publie pas son prix.
 - **Goodcall, le meilleur pour les clients qui rappellent :** 79 $ par mois pour 100 appelants uniques, et un routage sur des mots-clés comme « burst pipe » (canalisation éclatée) et « sewer backup » (refoulement d'égout).
-- **LobbyStack (le nôtre), le meilleur pour les entreprises sur Google Calendar dont les clients parlent plusieurs langues :** 30 $ par mois pour 150 minutes, sans frais de mise en service, et une réponse dans la langue de l'appelant, parmi plus de 70 langues.
+- **LobbyStack (le nôtre), le meilleur pour les entreprises sur Google Calendar, Cal.com ou Calendly dont les clients parlent plusieurs langues :** 30 $ par mois pour 150 minutes, sans frais de mise en service, et une réponse dans la langue de l'appelant, parmi plus de 70 langues.
 
 ## Comment ces services pour plombiers se comparent-ils ?
 
@@ -133,13 +133,13 @@ La page plomberie mentionne des « ServiceTitan-compatible workflows ». La FA
 
 Le forfait Rosie à 49 $ ne réserve que par lien envoyé par SMS et n'offre aucun transfert. Le forfait à 149 $ ajoute la réservation dans l'agenda et les transferts en direct, et celui à 299 $ ajoute des transferts en cascade qui essaient plusieurs numéros ([page tarifaire](https://heyrosie.com/pricing)). Si vous dépassez vos minutes, Rosie vous fait passer au forfait supérieur. Rosie parle anglais et espagnol. Sa [page plomberie](https://heyrosie.com/industries/plumbing) indique que Rosie « can't dispatch plumbers directly » (ne peut pas envoyer de plombier elle-même), mais elle peut dire aux appelants si un service d'urgence existe, donner des consignes hors horaires et vous prévenir.
 
-### LobbyStack (le nôtre) : le meilleur pour les entreprises sur Google Calendar dont les clients parlent plusieurs langues
+### LobbyStack (le nôtre) : le meilleur pour les entreprises sur Google Calendar, Cal.com ou Calendly dont les clients parlent plusieurs langues
 
 Le forfait Starter de LobbyStack coûte 30 $ par mois pour 150 minutes, puis 0,20 $ la minute. Pro coûte 100 $ pour 500 minutes, puis 0,18 $. En facturation annuelle, ils reviennent à 24 $ et 80 $ par mois, et aucun forfait n'a de frais de mise en service. LobbyStack compte l'usage à la seconde et ne facture ni le spam ni les appels de moins de 10 secondes. Les forfaits ne limitent pas le nombre d'appels simultanés, et ces appels se partagent les mêmes minutes.
 
-Chaque appel commence dans la langue par défaut de l'entreprise : anglais, français, espagnol, serbe, allemand, portugais du Brésil, italien ou néerlandais. Le réceptionniste répond ensuite dans la langue de l'appelant : plus de 70 langues avec OpenAI GPT-Live, dont l'espagnol et le serbe. Vous lui indiquez quels appels sont urgents, par exemple une fuite qu'on n'arrive pas à arrêter ou des eaux usées qui remontent par une évacuation, et il les transfère vers un seul numéro. Si le transfert n'aboutit pas, il le dit à l'appelant, propose de prendre un message, et votre équipe peut recevoir une alerte « Live call transfer failed ». Il réserve dans Google Calendar et, si l'appelant accepte, envoie par SMS une confirmation et un rappel 24 heures avant aux numéros américains et canadiens. Chaque appel laisse un résumé, une transcription et un enregistrement dans le tableau de bord, et vous recevez un e-mail quand il prend un message.
+Chaque appel commence dans la langue par défaut de l'entreprise : anglais, français, espagnol, serbe, allemand, portugais du Brésil, italien ou néerlandais. Le réceptionniste répond ensuite dans la langue de l'appelant : plus de 70 langues avec OpenAI GPT-Live, dont l'espagnol et le serbe. Vous lui indiquez quels appels sont urgents, par exemple une fuite qu'on n'arrive pas à arrêter ou des eaux usées qui remontent par une évacuation, et il les transfère vers un seul numéro. Si le transfert n'aboutit pas, il le dit à l'appelant, propose de prendre un message, et votre équipe peut recevoir une alerte « Live call transfer failed ». Il réserve dans Google Calendar, Cal.com ou Calendly et, si l'appelant accepte, envoie par SMS une confirmation et un rappel 24 heures avant aux numéros américains et canadiens. Chaque appel laisse un résumé, une transcription et un enregistrement dans le tableau de bord, et vous recevez un e-mail quand il prend un message.
 
-Il ne se synchronise ni avec ServiceTitan, ni avec Housecall Pro, ni avec Jobber, et Google Calendar est son seul agenda. Les transferts vont vers un seul numéro, sans briefing, et il n'y a pas de rotation de garde. Aucun agent humain ne prend le relais, et l'IA ne répond pas aux SMS. L'offre gratuite donne 30 minutes vocales et un numéro américain ou canadien gratuit pendant 14 jours, sans carte. Voyez comment il traite les appels urgents sur la page [réceptionniste IA pour plombiers](/fr/solutions/ai-receptionist-for-plumbers/).
+Il ne se synchronise ni avec ServiceTitan, ni avec Housecall Pro, ni avec Jobber, et il ne réserve que dans Google Calendar, Cal.com ou Calendly. Les transferts vont vers un seul numéro, sans briefing, et il n'y a pas de rotation de garde. Aucun agent humain ne prend le relais, et l'IA ne répond pas aux SMS. L'offre gratuite donne 30 minutes vocales et un numéro américain ou canadien gratuit pendant 14 jours, sans carte. Voyez comment il traite les appels urgents sur la page [réceptionniste IA pour plombiers](/fr/solutions/ai-receptionist-for-plumbers/).
 
 ## Combien coûte une permanence téléphonique pour plombier ?
 
@@ -218,9 +218,9 @@ A Message Center, AnswerForce et PATLive citent les trois sur leurs pages plombe
 | Ruby | Non cité | Non cité | Non cité | « Your existing scheduling software » |
 | MAP Communications, SAS | Non cité | Non cité | Non cité | Aucun cité |
 | Rosie | Non cité | Non cité | Non cité | Zapier sur chaque forfait |
-| LobbyStack (le nôtre) | Non | Non | Non | Google Calendar ; webhooks signés pour 6 événements ; API REST |
+| LobbyStack (le nôtre) | Non | Non | Non | Google Calendar, Cal.com, Calendly ; webhooks signés pour 6 événements ; API REST |
 
-Si vos répartiteurs travaillent dans ServiceTitan et que l'intervention doit y être créée pendant l'appel, choisissez Sameday AI, Avoca, Smith.ai ou un service humain qui cite ServiceTitan. Demandez à chacun de créer une intervention test avant de signer. LobbyStack convient aux entreprises qui réservent dans Google Calendar, ou qui recopient les réservations dans leur logiciel à la main ou les y envoient avec ses webhooks et son API.
+Si vos répartiteurs travaillent dans ServiceTitan et que l'intervention doit y être créée pendant l'appel, choisissez Sameday AI, Avoca, Smith.ai ou un service humain qui cite ServiceTitan. Demandez à chacun de créer une intervention test avant de signer. LobbyStack convient aux entreprises qui réservent dans Google Calendar, Cal.com ou Calendly, ou qui recopient les réservations dans leur logiciel à la main ou les y envoient avec ses webhooks et son API.
 
 ## Comment choisir une permanence téléphonique pour une entreprise de plomberie ?
 
@@ -287,6 +287,6 @@ Sources :
 - **Des humains sur chaque appel et un calendrier de garde :** A Message Center, MAP Communications ou Specialty Answering Service.
 - **ServiceTitan, avec l'intervention créée dedans :** AnswerForce ou PATLive pour des agents humains, Sameday AI ou Smith.ai pour l'IA.
 - **Jobber ou Housecall Pro :** essayez d'abord le réceptionniste intégré.
-- **Réservation dans Google Calendar, débordement et appels hors horaires pour 30 $ à 100 $ par mois, et des clients qui parlent d'autres langues :** LobbyStack.
+- **Réservation dans Google Calendar, Cal.com ou Calendly, débordement et appels hors horaires pour 30 $ à 100 $ par mois, et des clients qui parlent d'autres langues :** LobbyStack.
 
 Vous voulez entendre LobbyStack prendre un appel pour une canalisation éclatée avant de payer ? [Créez un compte gratuit](https://app.lobbystack.com/fr/signup) et testez-le avec 30 minutes vocales et un numéro gratuit pendant 14 jours, sans carte. Les forfaits payants n'ont pas de frais de mise en service. Voyez ensuite comment fonctionnent les appels urgents, les réservations et les transferts sur la page [réceptionniste IA pour plombiers](/fr/solutions/ai-receptionist-for-plumbers/).

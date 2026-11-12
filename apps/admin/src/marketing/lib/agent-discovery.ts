@@ -700,7 +700,7 @@ LobbyStack is an open-source AI receptionist for call-heavy small businesses. It
 
 - Call answering for every call, or only when a team is busy, closed, or unavailable.
 - Plain-language workflows that let businesses describe what to ask, say, book, quote, transfer, and notify.
-- Appointment booking on Google Calendar with reschedules, cancellations, a confirmation text, and one reminder text 24 hours before the appointment when the caller agrees (paid plans).
+- Appointment booking on Google Calendar, Cal.com or Calendly with reschedules, cancellations, a confirmation text, and one reminder text 24 hours before the appointment when the caller agrees (paid plans).
 - Business knowledge answers for FAQs, services, pricing, hours, policies, locations, and staff instructions.
 - Quote handling for exact prices, starting prices, price ranges, or a message for the team to quote later.
 - Lead qualification and structured caller detail capture.

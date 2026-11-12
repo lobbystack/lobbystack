@@ -164,10 +164,10 @@ AI recepcioner odgovara pomoću softvera, a zatim zakazuje, preusmerava ili prim
 
 - **Cena (proverena 9. oktobra 2026.):** Starter košta $30 mesečno za 150 minuta, zatim $0.20 po minutu. Pogledajte [LobbyStack cene](/sr/pricing/).
 - **Kako naplaćuje:** po sekundi, bez zaokruživanja, pa poziv od 90 sekundi troši 1.5 minuta. LobbyStack ne računa pozive kraće od 10 sekundi ni pozive koje recepcioner završi kao spam.
-- **Uključeno:** zakazivanje u Google Calendar na osnovu Vašeg radnog vremena, usluga i osoblja, SMS potvrde i podsetnici 24 sata unapred na američke i kanadske brojeve kada pozivalac pristane, i 20 pokušaja preusmeravanja mesečno na jedan broj.
+- **Uključeno:** zakazivanje u Google Calendar, Cal.com ili Calendly na osnovu Vašeg radnog vremena, usluga i osoblja, SMS potvrde i podsetnici 24 sata unapred na američke i kanadske brojeve kada pozivalac pristane, i 20 pokušaja preusmeravanja mesečno na jedan broj.
 - **Jezici:** svaki poziv počinje na podrazumevanom jeziku firme: engleskom, francuskom, španskom, srpskom, nemačkom, brazilskom portugalskom, italijanskom ili holandskom. Recepcioner zatim odgovara na jeziku pozivaoca: na OpenAI GPT-Live modelu to je više od 70 jezika, uključujući španski i srpski.
 - **Brojevi i aktivacija:** brojevi u SAD, Kanadi, Ujedinjenom Kraljevstvu, Australiji i na Novom Zelandu, ili prosledite postojeći broj. Paketi ne ograničavaju broj poziva na koje odgovara istovremeno. Nema naknade za aktivaciju ni na jednom paketu, a pretplatu otkazujete kad god želite, bez naknade za otkazivanje. Paket Free Vam daje 30 minuta razgovora mesečno i broj iz SAD ili Kanade besplatno 14 dana, bez kartice.
-- **Gde zaostaje:** nema osobe na liniji, podržava samo Google Calendar i nema sinhronizaciju sa softverom za ordinacije ili terenski servis. LobbyStack preusmerava pozive bez najave i samo na jedan broj. AI ne odgovara na SMS poruke, a LobbyStack ne tvrdi da ispunjava HIPAA.
+- **Gde zaostaje:** nema osobe na liniji, od kalendara podržava samo Google Calendar, Cal.com i Calendly i nema sinhronizaciju sa softverom za ordinacije ili terenski servis. LobbyStack preusmerava pozive bez najave i samo na jedan broj. AI ne odgovara na SMS poruke, a LobbyStack ne tvrdi da ispunjava HIPAA.
 - **Izaberite ga ako** želite odgovor na svaki poziv i zakazivanje za $30 mesečno, Vaš tim preuzima hitna preusmerenja, a Vaši pozivaoci govore različite jezike.
 
 ### Upfirst
@@ -177,7 +177,7 @@ AI recepcioner odgovara pomoću softvera, a zatim zakazuje, preusmerava ili prim
 - **Ne naplaćuje:** spam, pozive kraće od 15 sekundi i pozivaoce koji ne progovore.
 - **Jezici i proba:** 35+ jezika i proba od 14 dana bez kartice.
 - **Gde je bolji:** povezuje se sa više kalendara od LobbyStack-a, a zakazivanje, preusmeravanje i SMS daje na najjeftinijem paketu.
-- **Izaberite ga ako** zakazujete van Google Calendar-a ili Vam pozivi traju dugo.
+- **Izaberite ga ako** zakazujete u Outlook, Clio, Acuity ili Square, ili Vam pozivi traju dugo.
 
 ### Rosie
 
@@ -256,7 +256,7 @@ Većina ne traži. PATLive, SAS, Smith.ai, Abby Connect, Upfirst i Goodcall rade
 
 ### Može li usluga odgovaranja na pozive da zakazuje termine?
 
-Može, ali cena se razlikuje. Smith.ai recepcioneri uživo naplaćuju $1.50 po zakazanom pozivu, Davinci Virtual zakazuje samo na Premium paketima od $249, a Rosie zakazuje u kalendar od $149. Upfirst, AI-Receptionist.com i LobbyStack zakazuju na najjeftinijim plaćenim paketima. LobbyStack zakazuje u Google Calendar, jedini kalendar sa kojim se povezuje.
+Može, ali cena se razlikuje. Smith.ai recepcioneri uživo naplaćuju $1.50 po zakazanom pozivu, Davinci Virtual zakazuje samo na Premium paketima od $249, a Rosie zakazuje u kalendar od $149. Upfirst, AI-Receptionist.com i LobbyStack zakazuju na najjeftinijim plaćenim paketima. LobbyStack zakazuje u Google Calendar, Cal.com ili Calendly, jedine kalendare sa kojima se povezuje.
 
 ### Da li usluge naplaćuju spam pozive?
 
@@ -272,7 +272,7 @@ Birajte prema tome ko mora da se javi na Vaš telefon.
 
 - **Osoba na svakom pozivu:** PATLive zbog objavljenog cenovnika i probe od 14 dana, Specialty Answering Service zbog naplate po sekundi i niskog prekoračenja, ili Ruby zbog premium osoblja 24/7 sa uključenim španskim. AnswerNet je najjeftinija objavljena opcija ako Vaši pozivaoci govore engleski.
 - **AI uz ljude u pozadini:** Smith.ai ako želite da počnete besplatno, ili Abby Connect ako želite jedan tim za oboje.
-- **Samo AI:** LobbyStack ako želite odgovor na svaki poziv i zakazivanje u Google Calendar za $30 mesečno, Vaš tim preuzima hitna preusmerenja, a pozivaoci govore različite jezike. AI-Receptionist.com ima jeftiniji plaćeni paket ($14), Upfirst se povezuje sa više kalendara, a Goodcall odgovara firmama čiji se klijenti često vraćaju.
+- **Samo AI:** LobbyStack ako želite odgovor na svaki poziv i zakazivanje u Google Calendar, Cal.com ili Calendly za $30 mesečno, Vaš tim preuzima hitna preusmerenja, a pozivaoci govore različite jezike. AI-Receptionist.com ima jeftiniji plaćeni paket ($14), Upfirst se povezuje sa više kalendara, a Goodcall odgovara firmama čiji se klijenti često vraćaju.
 
 Ako Vam treba osoba na svakom pozivu ili sinhronizacija sa softverom za ordinacije ili terenski servis, LobbyStack nije pravi izbor. Izaberite uslugu uživo ili rešenje napravljeno za Vašu delatnost.
 

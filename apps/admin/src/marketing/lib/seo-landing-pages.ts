@@ -66,7 +66,7 @@ export const companyPages: SeoLandingPage[] = [
     eyebrow: "About",
     h1: "LobbyStack is an open-source AI receptionist for small businesses",
     intro:
-      "We built LobbyStack for owners who miss calls while they're with a customer. It answers your phone, books appointments into Google Calendar and passes callers to your team when they need a person. The code is public under the MIT License, so you can use our cloud or run it on your own server.",
+      "We built LobbyStack for owners who miss calls while they're with a customer. It answers your phone, books appointments into Google Calendar, Cal.com or Calendly and passes callers to your team when they need a person. The code is public under the MIT License, so you can use our cloud or run it on your own server.",
     image: "/illustrations/value-network.webp",
     imageAlt: "The LobbyStack code on GitHub, running on LobbyStack Cloud or on your own server",
     proofPoints: [
@@ -80,7 +80,7 @@ export const companyPages: SeoLandingPage[] = [
         body: "The phone rings during a haircut, a cleaning or a job across town. Voicemail books nobody, so the caller tries the next business on the list. We built LobbyStack to answer those calls, book what it can and send you the rest with the details written down.",
         points: [
           "Answers while you're with a customer, closed or out on a job",
-          "Books into Google Calendar and texts a confirmation to clients who agree",
+          "Books into Google Calendar, Cal.com or Calendly and texts a confirmation to clients who agree",
           "Transfers urgent calls by your rules and takes a message on the rest",
         ],
       },
@@ -132,11 +132,11 @@ export const solutionPages: SeoLandingPage[] = [
     path: "/solutions/after-hours-answering-service/",
     title: "AI After-Hours Answering Service | LobbyStack",
     description:
-      "An after-hours answering service that books routine calls into Google Calendar and rings your on-call phone for emergencies. Free plan, then $30 a month.",
+      "An after-hours answering service that books routine calls into Google Calendar, Cal.com or Calendly and rings your on-call phone in emergencies. From $30/month.",
     eyebrow: "After-hours answering",
     h1: "An AI after-hours answering service that only wakes you for emergencies",
     intro:
-      "At 1 a.m., a caller with no heat dials whoever picks up first. LobbyStack answers your business number on nights, weekends and holidays. It rings your on-call phone for the emergencies your rules name and books routine calls into Google Calendar.",
+      "At 1 a.m., a caller with no heat dials whoever picks up first. LobbyStack answers your business number on nights, weekends and holidays. It rings your on-call phone for the emergencies your rules name and books routine calls into Google Calendar, Cal.com or Calendly.",
     image: "/illustrations/calls-need-person.webp",
     imageAlt:
       "LobbyStack answering after-hours calls and transferring an emergency to the on-call phone",
@@ -156,7 +156,7 @@ export const solutionPages: SeoLandingPage[] = [
       },
       {
         title: "Routine callers book their own appointments",
-        body: "A caller who wants a tune-up or a quote hears open times from your Google Calendar and picks one. They get a text confirmation, and you see the booking when you open your calendar in the morning.",
+        body: "A caller who wants a tune-up or a quote hears open times from your Google Calendar, Cal.com or Calendly and picks one. They get a text confirmation, and you see the booking when you open your calendar in the morning.",
         points: [
           "Moves or cancels appointments, if you turn on appointment changes",
           "Answers questions about hours, service area and prices from your details",
@@ -210,16 +210,16 @@ export const solutionPages: SeoLandingPage[] = [
     path: "/solutions/ai-receptionist-for-dental-offices/",
     title: "Dental AI Receptionist and Answering Service | LobbyStack",
     description:
-      "A dental AI receptionist that answers when your front desk is busy or closed, books patients in Google Calendar and transfers emergencies. From $30/month.",
+      "A dental AI receptionist that answers when the front desk can't, books in Google Calendar, Cal.com or Calendly and transfers emergencies. From $30/month.",
     eyebrow: "Dental offices",
     h1: "A dental AI receptionist that books patients while your front desk is busy",
     intro:
-      "Patients call during check-in, at lunch and after you close, and those calls go to voicemail. LobbyStack answers your practice's line, books new patients and cleanings into Google Calendar and transfers dental emergencies to your on-call number. Paid plans start at $30 a month.",
+      "Patients call during check-in, at lunch and after you close, and those calls go to voicemail. LobbyStack answers your practice's line, books new patients and cleanings into Google Calendar, Cal.com or Calendly and transfers dental emergencies to your on-call number. Paid plans start at $30 a month.",
     image: "/illustrations/call-booking-summary.webp",
     imageAlt:
       "LobbyStack booking a new patient's exam and texting a confirmation",
     proofPoints: [
-      "Books into Google Calendar and texts a reminder the day before",
+      "Books into Google Calendar, Cal.com or Calendly and texts a reminder the day before",
       "Transfers after-hours emergencies to your on-call number",
       "Talks with patients in 70+ languages, including Spanish",
     ],
@@ -234,7 +234,7 @@ export const solutionPages: SeoLandingPage[] = [
       },
       {
         title: "New patients book on the first call",
-        body: "LobbyStack collects the patient's insurance carrier and reason for the visit, offers open times inside your opening hours and books the exam in Google Calendar. If you'd rather confirm each visit yourself, set it to save the preferred time as a request for your team. Patients who agree get a confirmation text and a reminder the day before. On LobbyStack Cloud, texts go to US and Canadian numbers.",
+        body: "LobbyStack collects the patient's insurance carrier and reason for the visit, offers open times inside your opening hours and books the exam in Google Calendar, Cal.com or Calendly. If you'd rather confirm each visit yourself, set it to save the preferred time as a request for your team. Patients who agree get a confirmation text and a reminder the day before. On LobbyStack Cloud, texts go to US and Canadian numbers.",
         points: [
           "Books for the practice, or for each dentist and hygienist",
           "Patients can move or cancel from the number they booked with, if you turn on appointment changes",
@@ -267,7 +267,7 @@ export const solutionPages: SeoLandingPage[] = [
       },
       {
         title: "When a dental-specific receptionist fits better",
-        body: "LobbyStack books into Google Calendar only, so your team copies new bookings into Dentrix, Open Dental or Eaglesoft. It makes no HIPAA claim, doesn't verify insurance eligibility and runs no recall campaigns. If you need any of those, pick a dental vendor. We read each claim below on the vendor's own website on October 27, 2026.",
+        body: "LobbyStack books only into Google Calendar, Cal.com or Calendly, so your team copies new bookings into Dentrix, Open Dental or Eaglesoft. It makes no HIPAA claim, doesn't verify insurance eligibility and runs no recall campaigns. If you need any of those, pick a dental vendor. We read each claim below on the vendor's own website on October 27, 2026.",
         points: [
           "Bookings written into your practice software: Dentina names 11 systems it writes bookings back to",
           "A receptionist tied to your practice software: Peerlogic names 8 systems it integrates with",
@@ -454,7 +454,7 @@ export const solutionPages: SeoLandingPage[] = [
     eyebrow: "Plumbers",
     h1: "Plumbing answering service that wakes you only for the burst pipe",
     intro:
-      "A caller with water coming through the ceiling won't wait until morning for a callback. LobbyStack reads them your shutoff steps and rings your on-call plumber, and it books drain and water heater jobs into Google Calendar.",
+      "A caller with water coming through the ceiling won't wait until morning for a callback. LobbyStack reads them your shutoff steps and rings your on-call plumber, and it books drain and water heater jobs into Google Calendar, Cal.com or Calendly.",
     image: "/illustrations/missed-calls-v3.webp",
     imageAlt:
       "A burst-pipe call transferred by LobbyStack to a plumbing company's on-call plumber",
@@ -466,7 +466,7 @@ export const solutionPages: SeoLandingPage[] = [
     sections: [
       {
         title: "Books drain jobs while you're under a sink",
-        body: "LobbyStack offers the open slots in your Google Calendar, books the one the caller picks, and texts a confirmation if they agree. For water heater replacements and repipes, it books an estimate visit instead of guessing a price.",
+        body: "LobbyStack offers the open slots in your Google Calendar, Cal.com or Calendly, books the one the caller picks, and texts a confirmation if they agree. For water heater replacements and repipes, it books an estimate visit instead of guessing a price.",
         points: [],
       },
       {
@@ -509,19 +509,19 @@ export const solutionPages: SeoLandingPage[] = [
     eyebrow: "HVAC",
     h1: "HVAC answering service that puts no-heat calls through to your on-call tech",
     intro:
-      "In a cold snap, a family with no heat calls the next company when your line is busy. LobbyStack sends urgent no-heat and no-AC calls to your on-call tech under rules you write, and books tune-ups and estimates into Google Calendar during the call.",
+      "In a cold snap, a family with no heat calls the next company when your line is busy. LobbyStack sends urgent no-heat and no-AC calls to your on-call tech under rules you write, and books tune-ups and estimates into Google Calendar, Cal.com or Calendly during the call.",
     image: "/illustrations/human-handoff.webp",
     imageAlt:
       "A no-heat call transferred by LobbyStack to an HVAC company's on-call tech",
     proofPoints: [
       "Transfers no-heat, no-AC, and gas-smell calls to your on-call tech",
-      "Books tune-ups and replacement estimates into Google Calendar",
+      "Books tune-ups and replacement estimates into Google Calendar, Cal.com or Calendly",
       "Switches to the caller's language, including Spanish",
     ],
     sections: [
       {
         title: "Asks the system questions, then books the visit",
-        body: "LobbyStack asks for the system type, its age, and the home's size, then books the visit into Google Calendar while the caller is on the phone. If you'd rather approve each visit, request mode saves the caller's preferred time for your team to confirm.",
+        body: "LobbyStack asks for the system type, its age, and the home's size, then books the visit into Google Calendar, Cal.com or Calendly while the caller is on the phone. If you'd rather approve each visit, request mode saves the caller's preferred time for your team to confirm.",
         points: [],
       },
       {
@@ -580,7 +580,7 @@ export const solutionPages: SeoLandingPage[] = [
     sections: [
       {
         title: "Books estimates with the panel amperage on file",
-        body: "LobbyStack asks for the panel amperage, the home's age, and the charger or generator the caller wants, then books the estimate visit into Google Calendar during the call.",
+        body: "LobbyStack asks for the panel amperage, the home's age, and the charger or generator the caller wants, then books the estimate visit into Google Calendar, Cal.com or Calendly during the call.",
         points: [],
       },
       {
@@ -624,7 +624,7 @@ export const solutionPages: SeoLandingPage[] = [
     imageAlt:
       "A broken-spring call booked by LobbyStack into a garage door company's first open slot",
     proofPoints: [
-      "Books same-day repairs into your Google Calendar",
+      "Books same-day repairs into Google Calendar, Cal.com or Calendly",
       "Reads your safety guidance for broken springs and cables",
       "Transfers doors stuck open at night to your on-call tech",
     ],
@@ -677,12 +677,12 @@ export const solutionPages: SeoLandingPage[] = [
     proofPoints: [
       "Asks for the appliance, brand, model, and symptoms",
       "Quotes the diagnostic fee you set",
-      "Books visits into your Google Calendar during the call",
+      "Books visits into Google Calendar, Cal.com or Calendly during the call",
     ],
     sections: [
       {
         title: "Books the repair while the caller is on the phone",
-        body: "LobbyStack asks for the appliance, brand, model, and symptoms, then books a slot in Google Calendar. Your tech can read the answers in the call summary before the visit.",
+        body: "LobbyStack asks for the appliance, brand, model, and symptoms, then books a slot in Google Calendar, Cal.com or Calendly. Your tech can read the answers in the call summary before the visit.",
         points: [],
       },
       {
@@ -733,7 +733,7 @@ export const solutionPages: SeoLandingPage[] = [
     sections: [
       {
         title: "Books mold checks for business hours",
-        body: "A caller with an old stain or a musty smell can wait for business hours. LobbyStack asks about recent water events and books the inspection into your Google Calendar.",
+        body: "A caller with an old stain or a musty smell can wait for business hours. LobbyStack asks about recent water events and books the inspection into your Google Calendar, Cal.com or Calendly.",
         points: [],
       },
       {
@@ -784,7 +784,7 @@ export const solutionPages: SeoLandingPage[] = [
     sections: [
       {
         title: "Books the jobs that can wait until morning",
-        body: "LobbyStack asks for the make, model, and year for car keys, or the number of doors for an install, then books a daytime visit into your Google Calendar.",
+        body: "LobbyStack asks for the make, model, and year for car keys, or the number of doors for an install, then books a daytime visit into your Google Calendar, Cal.com or Calendly.",
         points: [],
       },
       {
@@ -837,7 +837,7 @@ export const solutionPages: SeoLandingPage[] = [
     sections: [
       {
         title: "Asks new leads about scope and budget, then books",
-        body: "A new lead calling at 9 p.m. gets the questions you'd ask about scope, budget, and timeline. LobbyStack books the consultation into your Google Calendar before they call the next contractor.",
+        body: "A new lead calling at 9 p.m. gets the questions you'd ask about scope, budget, and timeline. LobbyStack books the consultation into your Google Calendar, Cal.com or Calendly before they call the next contractor.",
         points: [],
       },
       {
@@ -943,12 +943,12 @@ export const solutionPages: SeoLandingPage[] = [
     eyebrow: "Roofing",
     h1: "Roofing answering service that books storm inspections before the adjuster comes",
     intro:
-      "The morning after a hailstorm, your phone rings faster than your crew can climb ladders. LobbyStack checks each caller for a leak, asks for the roof's age and claim status, and books the inspection into Google Calendar. Active leaks ring your on-call crew.",
+      "The morning after a hailstorm, your phone rings faster than your crew can climb ladders. LobbyStack checks each caller for a leak, asks for the roof's age and claim status, and books the inspection into Google Calendar, Cal.com or Calendly. Active leaks ring your on-call crew.",
     image: "/illustrations/call-capture.webp",
     imageAlt:
       "A hail damage call booked by LobbyStack into a roofer's next open inspection slot",
     proofPoints: [
-      "Books storm inspections into your Google Calendar",
+      "Books storm inspections into Google Calendar, Cal.com or Calendly",
       "Answers insurance and adjuster questions from your script",
       "Transfers active leaks to your on-call crew",
     ],
@@ -1069,17 +1069,17 @@ export const solutionPages: SeoLandingPage[] = [
     path: "/solutions/ai-receptionist-quebec/",
     title: "AI Receptionist for Quebec Businesses, in French | LobbyStack",
     description:
-      "An AI receptionist for Quebec small businesses that answers in French on your number, books into Google Calendar and switches to English when the caller does.",
+      "A Quebec AI receptionist that answers in French on your number, books into Google Calendar, Cal.com or Calendly and switches to English when the caller does.",
     eyebrow: "Quebec",
     h1: "An AI receptionist that answers your Quebec customers in French",
     intro:
-      "You're on a job site in Laval or with a client, and the phone rings. LobbyStack picks up in French on your business number, answers from your services and prices, and books the appointment into Google Calendar. When the caller speaks English, it switches to English.",
+      "You're on a job site in Laval or with a client, and the phone rings. LobbyStack picks up in French on your business number, answers from your services and prices, and books the appointment into Google Calendar, Cal.com or Calendly. When the caller speaks English, it switches to English.",
     image: "/illustrations/call-capture.webp",
     imageAlt: "LobbyStack answering a Quebec business's call in French and booking the appointment",
     proofPoints: [
       "Calls open in French when you make it your default language",
       "Canadian numbers, with a search by area code",
-      "Books into Google Calendar and texts a confirmation",
+      "Books into Google Calendar, Cal.com or Calendly and texts a confirmation",
       "Free plan, then US$30 a month for 150 minutes",
     ],
     sections: [
@@ -1121,7 +1121,7 @@ export const solutionPages: SeoLandingPage[] = [
       {
         question: "What does an AI receptionist do for a Quebec business?",
         answer:
-          "It answers the calls your team can't take, in French or in the caller's language. LobbyStack answers questions from the services, prices and hours you add, books appointments into Google Calendar, transfers urgent calls to your cell and takes a message for everything else.",
+          "It answers the calls your team can't take, in French or in the caller's language. LobbyStack answers questions from the services, prices and hours you add, books appointments into Google Calendar, Cal.com or Calendly, transfers urgent calls to your cell and takes a message for everything else.",
       },
       {
         question: "Does it speak Quebec French?",
@@ -1146,7 +1146,7 @@ export const solutionPages: SeoLandingPage[] = [
       {
         question: "Does it work with my scheduling software?",
         answer:
-          "Google Calendar is the only calendar LobbyStack connects to directly. It also sends signed webhooks when a call ends or an appointment is booked, and Zapier connects to them, so you can send the details to another tool.",
+          "LobbyStack connects directly to Google Calendar, Cal.com and Calendly, and no other scheduling software. It also sends signed webhooks when a call ends or an appointment is booked, and Zapier connects to them, so you can send the details to another tool.",
       },
       {
         question: "How much does it cost?",
@@ -1178,18 +1178,18 @@ export const solutionPages: SeoLandingPage[] = [
     eyebrow: "Renovation contractors",
     h1: "An AI receptionist for renovation contractors that books estimates while you're on site",
     intro:
-      "A homeowner pricing out a bathroom remodel calls several contractors in the same hour. LobbyStack answers your line while you're on the tools, asks about the job, the address and the timeline, and books the estimate visit into Google Calendar before they hang up.",
+      "A homeowner pricing out a bathroom remodel calls several contractors in the same hour. LobbyStack answers your line while you're on the tools, asks about the job, the address and the timeline, and books the estimate visit into Google Calendar, Cal.com or Calendly before they hang up.",
     image: "/illustrations/industry-bookings.webp",
     imageAlt: "An estimate visit for a bathroom remodel booked by LobbyStack into a renovation contractor's calendar",
     proofPoints: [
-      "Books estimate visits into Google Calendar during the call",
+      "Books estimate visits into Google Calendar, Cal.com or Calendly during the call",
       "Checks the caller's postal code against your service area",
       "Transfers job-site emergencies to your cell",
     ],
     sections: [
       {
         title: "Books the estimate visit while the caller is still on the line",
-        body: "LobbyStack asks the questions you'd ask: the type of work, the address, the timeline and, if you want it, the budget. Then it offers the open times in your Google Calendar and books the visit. If you'd rather approve each visit, request mode saves the time the caller wants and your team confirms it.",
+        body: "LobbyStack asks the questions you'd ask: the type of work, the address, the timeline and, if you want it, the budget. Then it offers the open times in your Google Calendar, Cal.com or Calendly and books the visit. If you'd rather approve each visit, request mode saves the time the caller wants and your team confirms it.",
         points: [
           "Skips the times already taken in your calendar",
           "Texts a confirmation and a reminder to clients who agree",
@@ -1224,7 +1224,7 @@ export const solutionPages: SeoLandingPage[] = [
       {
         question: "What does an AI receptionist do for a renovation contractor?",
         answer:
-          "It answers the calls you miss on site. LobbyStack asks about the job and the address, books estimate visits into Google Calendar, transfers emergencies from current clients to your cell and takes a message for everything else.",
+          "It answers the calls you miss on site. LobbyStack asks about the job and the address, books estimate visits into Google Calendar, Cal.com or Calendly, transfers emergencies from current clients to your cell and takes a message for everything else.",
       },
       {
         question: "Can it give a price over the phone?",
@@ -1239,7 +1239,7 @@ export const solutionPages: SeoLandingPage[] = [
       {
         question: "Does it work with Jobber or Buildertrend?",
         answer:
-          "Not directly. Google Calendar is the only calendar LobbyStack connects to. It sends signed webhooks when a call ends or an appointment is booked, and offers a REST API, and Zapier connects to both.",
+          "Not directly. LobbyStack connects only to Google Calendar, Cal.com and Calendly. It sends signed webhooks when a call ends or an appointment is booked, and offers a REST API, and Zapier connects to both.",
       },
       {
         question: "Can I keep my business number?",

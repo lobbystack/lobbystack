@@ -34,7 +34,7 @@ También intentamos incluir CallFluent. Su sitio no nos cargó el 27 de octubre 
 
 ## LobbyStack: una recepcionista con IA de marca blanca con bolsa compartida
 
-[LobbyStack White Label](/es/white-label/) vende un solo producto: una recepcionista con IA que atiende llamadas y chats del sitio web, reserva en Google Calendar, envía confirmaciones por SMS y transfiere las llamadas urgentes. Usted no construye agentes desde cero. Configura la recepcionista de cada cliente o parte de una plantilla.
+[LobbyStack White Label](/es/white-label/) vende un solo producto: una recepcionista con IA que atiende llamadas y chats del sitio web, reserva en Google Calendar, Cal.com o Calendly, envía confirmaciones por SMS y transfiere las llamadas urgentes. Usted no construye agentes desde cero. Configura la recepcionista de cada cliente o parte de una plantilla.
 
 **Precio de socio.** El nivel Free cuesta $0 e incluye 30 minutos de voz, 50 chats y un número de prueba de 14 días. Starter cuesta $49 al mes por 250 minutos y 1,000 chats, Growth $199 por 1,300 minutos y 5,000 chats, y Scale $499 por 4,000 minutos y 10,000 chats. Todos los clientes usan esa misma bolsa, sin cuota por negocio. Al agotarla, el minuto cuesta $0.20, $0.15 o $0.12 según el nivel.
 
@@ -46,7 +46,7 @@ También intentamos incluir CallFluent. Su sitio no nos cargó el 27 de octubre 
 
 **Código.** El [código tiene licencia MIT](https://github.com/lobbystack/lobbystack), y cada función de socio funciona en sus propios servidores. La [historia de cómo lo creamos](/es/blog/white-label-ai-receptionist/) explica cómo funciona el programa por dentro.
 
-**Límites.** LobbyStack es una recepcionista, así que no hace campañas salientes ni le deja diseñar flujos de llamada para otras tareas. Las reservas solo funcionan con Google Calendar.
+**Límites.** LobbyStack es una recepcionista, así que no hace campañas salientes ni le deja diseñar flujos de llamada para otras tareas. Las reservas solo funcionan con Google Calendar, Cal.com y Calendly.
 
 ## Frontdesk (antes My AI Front Desk)
 

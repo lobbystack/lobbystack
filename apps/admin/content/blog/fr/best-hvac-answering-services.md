@@ -30,7 +30,7 @@ Choisissez selon qui doit prendre l'appel pour une panne de chauffage à 2 h du 
 - **Jobber Receptionist, le meilleur pour les entreprises sur Jobber :** une option à 29 $ avec 30 conversations par mois.
 - **Smith.ai, la meilleure IA avec des réceptionnistes humains en renfort :** 25 appels IA gratuits par mois, et des guides de configuration pour ServiceTitan, Housecall Pro et Jobber.
 - **Sameday AI, le meilleur pour les entreprises sur ServiceTitan qui ont le budget :** une application ServiceTitan certifiée dès 449 $ par mois.
-- **LobbyStack (le nôtre), le meilleur pour les entreprises sur Google Calendar dont les clients parlent plusieurs langues :** 30 $ par mois pour 150 minutes, sans frais de mise en service, et une réponse dans la langue de l'appelant, parmi plus de 70 langues.
+- **LobbyStack (le nôtre), le meilleur pour les entreprises sur Google Calendar, Cal.com ou Calendly dont les clients parlent plusieurs langues :** 30 $ par mois pour 150 minutes, sans frais de mise en service, et une réponse dans la langue de l'appelant, parmi plus de 70 langues.
 
 ## Comment ces services de réponse téléphonique se comparent-ils ?
 
@@ -120,13 +120,13 @@ Goodcall facture à l'appelant unique et ne compte pas les minutes : 79 $ par mo
 
 Le forfait à 49 $ de Rosie ne réserve que par un lien envoyé par SMS et n'offre aucun transfert. Le forfait à 149 $ ajoute la réservation dans l'agenda et les transferts en direct, et celui à 299 $ ajoute les transferts en cascade, qui essaient plusieurs numéros ([page tarifaire](https://heyrosie.com/pricing)). Si vous dépassez vos minutes, Rosie vous fait passer au forfait supérieur. Rosie parle anglais et espagnol, et sa [page sectorielle](https://heyrosie.com/industries/hvac) précise qu'elle ne peut pas envoyer elle-même un technicien en intervention. Voyez [comment se comparent les forfaits de Rosie](/fr/blog/rosie-ai-alternative/).
 
-### LobbyStack (le nôtre) : le meilleur pour les entreprises sur Google Calendar dont les clients parlent plusieurs langues
+### LobbyStack (le nôtre) : le meilleur pour les entreprises sur Google Calendar, Cal.com ou Calendly dont les clients parlent plusieurs langues
 
 Le forfait Starter de LobbyStack coûte 30 $ par mois pour 150 minutes, puis 0,20 $ la minute. Pro coûte 100 $ pour 500 minutes, puis 0,18 $. En facturation annuelle, ils reviennent à 24 $ et 80 $ par mois, et aucun forfait n'a de frais de mise en service. LobbyStack compte l'utilisation à la seconde, et les appels de moins de 10 secondes ou ceux qu'il termine comme spam ne comptent pas. Les forfaits ne limitent pas le nombre d'appels auxquels il répond en même temps, et les appels simultanés puisent dans les mêmes minutes.
 
-Chaque appel commence dans la langue par défaut de l'entreprise : anglais, français, espagnol, serbe, allemand, portugais du Brésil, italien ou néerlandais. Le réceptionniste répond ensuite dans la langue de l'appelant : plus de 70 langues avec GPT-Live d'OpenAI, dont l'espagnol et le serbe. Vous décidez en langage courant quels appels sont urgents, et il peut les transférer vers un numéro. Si le transfert échoue, il propose de prendre un message, et votre équipe peut recevoir une alerte « Transfert d'appel échoué ». Il réserve dans Google Calendar et, si l'appelant accepte, envoie par SMS une confirmation et un rappel 24 heures avant aux numéros américains et canadiens.
+Chaque appel commence dans la langue par défaut de l'entreprise : anglais, français, espagnol, serbe, allemand, portugais du Brésil, italien ou néerlandais. Le réceptionniste répond ensuite dans la langue de l'appelant : plus de 70 langues avec GPT-Live d'OpenAI, dont l'espagnol et le serbe. Vous décidez en langage courant quels appels sont urgents, et il peut les transférer vers un numéro. Si le transfert échoue, il propose de prendre un message, et votre équipe peut recevoir une alerte « Transfert d'appel échoué ». Il réserve dans Google Calendar, Cal.com ou Calendly et, si l'appelant accepte, envoie par SMS une confirmation et un rappel 24 heures avant aux numéros américains et canadiens.
 
-LobbyStack ne se synchronise ni avec ServiceTitan, ni avec Housecall Pro, ni avec Jobber, et Google Calendar reste son seul agenda. Les transferts vont vers un seul numéro, sans présenter l'appelant au technicien, et vous n'avez pas de rotation de garde. Aucun agent humain ne prend le relais, et l'IA ne répond pas aux SMS. Le forfait Gratuit vous donne 30 minutes vocales et un numéro américain ou canadien gratuit pendant 14 jours, sans carte. Voyez comment il traite les appels urgents sur la page [réceptionniste IA en chauffage et climatisation](/fr/solutions/ai-receptionist-for-hvac/).
+LobbyStack ne se synchronise ni avec ServiceTitan, ni avec Housecall Pro, ni avec Jobber, et il ne réserve que dans Google Calendar, Cal.com ou Calendly. Les transferts vont vers un seul numéro, sans présenter l'appelant au technicien, et vous n'avez pas de rotation de garde. Aucun agent humain ne prend le relais, et l'IA ne répond pas aux SMS. Le forfait Gratuit vous donne 30 minutes vocales et un numéro américain ou canadien gratuit pendant 14 jours, sans carte. Voyez comment il traite les appels urgents sur la page [réceptionniste IA en chauffage et climatisation](/fr/solutions/ai-receptionist-for-hvac/).
 
 ## Combien coûte une permanence téléphonique en chauffage et climatisation ?
 
@@ -206,9 +206,9 @@ A Message Center, AnswerForce et PATLive citent les trois sur leur page sectorie
 | Ruby | Non cité | Non cité | Non cité | Zapier |
 | Nexa | Non cité | Non cité | Non cité | Intégration CRM sur Nexa 500 |
 | MAP Communications, SAS | Non cité | Non cité | Non cité | Aucune intégration citée |
-| LobbyStack (le nôtre) | Non | Non | Non | Google Calendar ; webhooks signés ; API REST ; Zapier par les webhooks et l'API ; un serveur MCP |
+| LobbyStack (le nôtre) | Non | Non | Non | Google Calendar, Cal.com, Calendly ; webhooks signés ; API REST ; Zapier par les webhooks et l'API ; un serveur MCP |
 
-Si vos répartiteurs travaillent dans ServiceTitan et que l'intervention doit y figurer dès l'appel, choisissez Sameday AI, Avoca, Smith.ai ou un service humain qui cite ServiceTitan, et demandez à chacun de créer une intervention test dans ServiceTitan avant de signer. LobbyStack convient aux entreprises qui réservent dans Google Calendar, ou qui recopient les rendez-vous à la main dans leur logiciel ou les y envoient avec les webhooks de LobbyStack.
+Si vos répartiteurs travaillent dans ServiceTitan et que l'intervention doit y figurer dès l'appel, choisissez Sameday AI, Avoca, Smith.ai ou un service humain qui cite ServiceTitan, et demandez à chacun de créer une intervention test dans ServiceTitan avant de signer. LobbyStack convient aux entreprises qui réservent dans Google Calendar, Cal.com ou Calendly, ou qui recopient les rendez-vous à la main dans leur logiciel ou les y envoient avec les webhooks de LobbyStack.
 
 ## Un service de réponse téléphonique en chauffage et climatisation est-il rentable ?
 
@@ -280,6 +280,6 @@ Sources, toutes consultées le 9 octobre 2026 :
 - **Des personnes à chaque appel et un calendrier de garde :** A Message Center, MAP Communications ou Specialty Answering Service.
 - **ServiceTitan, avec l'intervention créée dans le logiciel :** AnswerForce ou PATLive pour des agents humains, Sameday AI ou Smith.ai pour l'IA.
 - **Jobber ou Housecall Pro :** essayez d'abord le réceptionniste intégré.
-- **La réservation dans Google Calendar, le débordement et les appels hors horaires pour 30 $ à 100 $ par mois, avec des appelants qui parlent d'autres langues :** LobbyStack.
+- **La réservation dans Google Calendar, Cal.com ou Calendly, le débordement et les appels hors horaires pour 30 $ à 100 $ par mois, avec des appelants qui parlent d'autres langues :** LobbyStack.
 
 Vous voulez entendre LobbyStack prendre un appel pour une panne de chauffage avant de payer ? [Créez un compte gratuit](https://app.lobbystack.com/fr/signup) et testez-le avec 30 minutes vocales et un numéro gratuit pendant 14 jours, sans carte. Les forfaits payants n'ont aucuns frais de mise en service, et vous pouvez résilier depuis les réglages de facturation, sans frais de résiliation. Voyez ensuite comment fonctionnent les appels urgents, les réservations et les transferts sur la page [réceptionniste IA en chauffage et climatisation](/fr/solutions/ai-receptionist-for-hvac/).

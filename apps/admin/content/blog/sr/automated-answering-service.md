@@ -74,7 +74,7 @@ Na primeru LobbyStack-a:
 
 - Pozdrav, ton i pravila za pozive pišete običnim jezikom, a recepcioner ih primenjuje redom prioriteta koji odredite.
 - Odgovara na osnovu baze znanja: stranica sajta, PDF, Word (.docx), tekstualnih i Markdown fajlova i čestih pitanja koja sami napišete.
-- Zavisno od režima zakazivanja koji izaberete, upisuje termin u Google Calendar, prima zahtev koji Vaš tim potvrđuje ili uzima poruku. Za zakazivanje mu treba Vaše radno vreme.
+- Zavisno od režima zakazivanja koji izaberete, upisuje termin u Google Calendar, Cal.com ili Calendly, prima zahtev koji Vaš tim potvrđuje ili uzima poruku. Za zakazivanje mu treba Vaše radno vreme.
 - Šalje SMS potvrdu termina i podsetnik 24 sata pre termina na američke i kanadske brojeve, ako pozivalac pristane.
 - Vi određujete kada preusmerava poziv (nikad, uvek, na zahtev, kod hitnih poziva ili samo tokom radnog vremena), a preusmerenja idu na jedan broj. Ako preusmeravanje ne uspe, recepcioner nudi da primi poruku, a Vaš tim može da dobije obaveštenje.
 - Vaš tim dobija imejl obaveštenje za svaku poruku i može da uključi SMS obaveštenja na američki ili kanadski mobilni broj.
@@ -84,7 +84,7 @@ Na primeru LobbyStack-a:
 
 Upoznajte ograničenja proizvoda pre nego što prosledite liniju. Kod LobbyStack-a to su:
 
-- Od kalendara podržava samo Google Calendar.
+- Od kalendara podržava samo Google Calendar, Cal.com i Calendly.
 - AI ne odgovara na SMS poruke. Vaš tim odgovara ručno iz kontrolne table.
 - Preusmerenja idu na jedan broj po firmi. To su slepa preusmerenja, pa recepcioner ne najavljuje pozivaoca Vašem osoblju pre nego što ga prebaci.
 - Ne upućuje odlazne pozive, kao što su povratni pozivi ili pozivi sa podsetnikom.
@@ -207,7 +207,7 @@ AI recepcioner odgovara uslužnim firmama koje žive od zakazanih termina i koji
 - [Goodcall](https://www.goodcall.com/pricing) naplaćuje po jedinstvenom pozivaocu, pa Vas ponovni pozivi iste osobe ne koštaju ništa dodatno.
 - [RingCentral AIR](https://www.ringcentral.com/pricing/ai-receptionist.html) radi sa svakim telefonskim sistemom i povezuje se sa Salesforce, HubSpot i Zoho sistemima.
 
-LobbyStack (naš) je za vlasnike koji žele zakazivanje, preusmeravanje i SMS potvrde na paketu od $30 sa 150 minuta. Pogodan je i za firme čiji pozivaoci govore jezike osim engleskog i španskog, a nudi besplatan test u pregledaču i kod pod MIT licencom koji možete sami da hostujete. Izaberite drugog dobavljača ako Vam treba kalendar osim Google-a, sinhronizacija sa softverom za ordinacije, AI odgovori na SMS poruke ili meni sa tasterima.
+LobbyStack (naš) je za vlasnike koji žele zakazivanje, preusmeravanje i SMS potvrde na paketu od $30 sa 150 minuta. Pogodan je i za firme čiji pozivaoci govore jezike osim engleskog i španskog, a nudi besplatan test u pregledaču i kod pod MIT licencom koji možete sami da hostujete. Izaberite drugog dobavljača ako zakazujete u Outlook ili Acuity, ili Vam treba sinhronizacija sa softverom za ordinacije, AI odgovori na SMS poruke ili meni sa tasterima.
 
 ### Izaberite uslugu uživo ako pozivi traže procenu
 

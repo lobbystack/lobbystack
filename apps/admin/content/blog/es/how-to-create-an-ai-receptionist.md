@@ -137,7 +137,7 @@ No. Cada paso de esta guía ocurre en un sitio web o en un chat. Si quiere que u
 
 ### ¿Puede reservar citas?
 
-Sí. Añada sus servicios, conecte Google Calendar o Cal.com y ponga **Citas** en **Reserva citas**. Su asistente también puede reservar y mover citas.
+Sí. Añada sus servicios, conecte Google Calendar, Cal.com o Calendly y ponga **Citas** en **Reserva citas**. Su asistente también puede reservar y mover citas.
 
 ### ¿Puede responder SMS?
 

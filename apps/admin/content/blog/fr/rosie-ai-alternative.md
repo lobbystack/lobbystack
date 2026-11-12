@@ -65,7 +65,7 @@ LobbyStack est une des alternatives à Rosie AI. Le tableau aligne les limites q
 | Dépassement de vos minutes | Vous fait passer au forfait suivant, à son prix standard, jusqu'à ce que vous repassiez au forfait inférieur (voir la note sur les conditions plus haut) | 0,20 $ la minute sur Starter, 0,18 $ sur Pro, avec un plafond de dépenses facultatif |
 | Unité de facturation | Chaque appel arrondi aux 60 secondes supérieures | À la seconde, sans arrondi |
 | Option gratuite | Essai gratuit de 7 jours ; les conditions exigent un moyen de paiement enregistré | Forfait gratuit : 30 minutes vocales, sans carte, numéro américain ou canadien gratuit pendant 14 jours |
-| Calendriers | Google Calendar, Calendly, Acuity, Appointlet (Scale et plus) | Google Calendar seul |
+| Calendriers | Google Calendar, Calendly, Acuity, Appointlet (Scale et plus) | Google Calendar, Cal.com, Calendly (Calendly exige un forfait Calendly payant) |
 | Transferts | En direct et assistés (Scale), en cascade (Growth) | Transfert à l'aveugle vers un numéro (Starter et Pro) |
 | SMS aux appelants | Liens de réservation sur chaque forfait ; SMS pendant l'appel à partir de Scale | Confirmation de rendez-vous et rappel 24 heures avant, si l'appelant accepte, vers les numéros américains et canadiens ; l'IA ne répond pas aux SMS |
 | Langues des appelants | Anglais et espagnol à chaque appel | Commence dans l'une des 8 langues au choix, puis répond dans la langue de l'appelant (plus de 70, dont l'espagnol) |
@@ -119,20 +119,20 @@ Prenons un salon qui reçoit 240 appels par mois, de 2 minutes 30 secondes chacu
 - **Rosie :** 720 minutes dépassent les 250 de Professional, et la réservation dans le calendrier exige Scale de toute façon. Le salon paie 149 $ par mois, ou 124 $ par mois en facturation annuelle.
 - **LobbyStack :** Pro coûte 100 $ pour 500 minutes, plus 100 × 0,18 $ = 18 $, soit 118 $ par mois. Starter coûterait 120 $ (30 $ + 450 × 0,20 $). En facturation annuelle, Pro coûte 80 $ plus les mêmes 18 $, soit 98 $ par mois.
 
-Avant de choisir, testez comment chaque produit gère la durée des prestations, l'horaire de chaque coiffeuse ou coiffeur, les temps de battement et les annulations. LobbyStack ne réserve que dans Google Calendar, pour toute l'entreprise ou pour chaque membre du personnel. Rosie Scale connecte aussi Calendly, Acuity et Appointlet.
+Avant de choisir, testez comment chaque produit gère la durée des prestations, l'horaire de chaque coiffeuse ou coiffeur, les temps de battement et les annulations. LobbyStack réserve dans Google Calendar, Cal.com ou Calendly, et vous pouvez connecter un Google Calendar pour toute l'entreprise ou pour chaque membre du personnel. Rosie Scale connecte Acuity et Appointlet, ce que LobbyStack ne fait pas.
 
 ## Quand Rosie est le meilleur choix
 
 Rosie vous donne plus de minutes par dollar à gros volume. Les 1 000 minutes de Scale à 149 $ coûtent moins cher que LobbyStack Pro d'environ 773 à 1 000 minutes, et les 2 000 minutes de Growth à 299 $ coûtent moins cher d'environ 1 606 à 2 000 minutes. Rosie propose aussi :
 
 - Des transferts assistés qui préviennent d'abord votre équipe, et des transferts en cascade qui essaient plusieurs numéros. LobbyStack fait un transfert à l'aveugle vers un seul numéro.
-- Quatre calendriers sur Scale : Google Calendar, Calendly, Acuity et Appointlet. LobbyStack ne se connecte qu'à Google Calendar.
+- Quatre calendriers sur Scale : Google Calendar, Calendly, Acuity et Appointlet. LobbyStack se connecte à Google Calendar, Cal.com et Calendly, mais pas à Acuity ni à Appointlet.
 - Le chat gratuit sur votre site, sur chaque forfait.
 - Des applis natives iOS et Android et le choix entre plus de 10 voix.
 - Une formation automatique à partir de votre fiche Google Business Profile et de votre site.
 - Des e-mails d'avertissement avant que vous atteigniez votre limite de minutes.
 
-Quatre lacunes pourraient vous faire écarter LobbyStack. Il ne propose pas de chat sur votre site. Son IA ne répond pas aux SMS, donc votre équipe y répond à la main depuis le tableau de bord. Il transfère vers un seul numéro et ne se connecte à aucun calendrier autre que Google. Rosie inclut le chat sur votre site dans chaque forfait, et ajoute d'autres types de transfert et de calendriers sur Scale et Growth.
+Quatre lacunes pourraient vous faire écarter LobbyStack. Il ne propose pas de chat sur votre site. Son IA ne répond pas aux SMS, donc votre équipe y répond à la main depuis le tableau de bord. Il transfère vers un seul numéro et ne se connecte ni à Acuity ni à Appointlet. Rosie inclut le chat sur votre site dans chaque forfait, et ajoute d'autres types de transfert et de calendriers sur Scale et Growth.
 
 ## Dans quelles langues Rosie et LobbyStack répondent-ils ?
 
@@ -175,7 +175,7 @@ Si vous envisagez aussi une permanence téléphonique humaine, comparez [les mei
 
 1. Inscrivez-vous sur [app.lobbystack.com](https://app.lobbystack.com/fr/signup). Le forfait gratuit vous donne 30 minutes vocales par mois et un numéro américain ou canadien gratuit pendant 14 jours, sans carte.
 2. La configuration vous guide à travers les informations de votre entreprise, l'import de votre site, vos connaissances, le message d'accueil et le choix d'un forfait.
-3. Écrivez vos règles d'appel en langage courant et choisissez un mode de réservation : réserver le rendez-vous, prendre une demande que votre équipe confirmera, ou prendre un message. Connectez Google Calendar et indiquez vos heures d'ouverture. Sans eux, la réservation ne fonctionne pas.
+3. Écrivez vos règles d'appel en langage courant et choisissez un mode de réservation : réserver le rendez-vous, prendre une demande que votre équipe confirmera, ou prendre un message. Connectez Google Calendar, Cal.com ou Calendly et indiquez vos heures d'ouverture. Sans eux, la réservation ne fonctionne pas.
 4. Passez des appels de test depuis le tableau de bord, dans votre navigateur.
 5. Sur Starter ou Pro, choisissez un numéro local, ou un numéro gratuit là où il en existe, aux États-Unis, au Canada, au Royaume-Uni, en Australie ou en Nouvelle-Zélande. Pour garder votre numéro actuel, demandez à votre opérateur de renvoyer les appels vers LobbyStack quand vous êtes occupé ou ne répondez pas, quand vous êtes fermé, ou en permanence. Pour transférer le numéro chez nous, contactez l'équipe LobbyStack. Ajoutez ensuite un numéro de transfert et choisissez quand les transferts ont lieu.
 6. Passez les cinq mêmes appels pendant l'essai de Rosie, sur le forfait que vous garderiez : une question sur vos politiques, une réservation qui demande un temps de battement, un appelant urgent à transférer, une demande de SMS de confirmation et une annulation. Notez quelles tâches fonctionnent sur ce forfait et lesquelles exigent Scale ou Growth.
@@ -186,7 +186,7 @@ Rosie prend en charge le même renvoi d'appel pour les débordements et les appe
 
 - Vos appels représentent d'environ 773 à 1 000 minutes par mois, ou d'environ 1 606 à 2 000, et vous avez besoin de la réservation et des transferts de toute façon.
 - Vous voulez des transferts assistés ou en cascade, le chat sur votre site, des applis mobiles natives ou le choix de la voix.
-- Vous réservez dans Calendly, Acuity ou Appointlet.
+- Vous réservez dans Acuity ou Appointlet.
 - Vos appelants parlent anglais et espagnol, et vous voulez l'espagnol prêt à chaque appel.
 - Vous préférez monter d'un forfait plutôt que payer un dépassement à la minute.
 
