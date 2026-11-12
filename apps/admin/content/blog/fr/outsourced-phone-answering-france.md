@@ -83,7 +83,7 @@ Le soir, le dimanche et les jours fériés sortent de ces plages horaires. Si vo
 
 Pour les appels courants, oui : une IA décroche à toute heure, donne vos horaires, prend un message ou un rendez-vous, et coûte moins cher à la minute. Elle ne remplace pas un opérateur face à un appelant en colère ou à une demande délicate. Pour une entreprise en France, LobbyStack ajoute aussi des contraintes de numéro et de facturation, détaillées ci-dessous.
 
-Le forfait Starter de LobbyStack coûte 30 $ par mois pour 150 minutes, puis 0,20 $ la minute. Le forfait Pro coûte 100 $ pour 500 minutes, puis 0,18 $ la minute. Aucun forfait n'a de frais de mise en service. Le réceptionniste ouvre l'appel en français si vous choisissez le français comme langue par défaut, puis répond dans la langue de l'appelant : plus de 70 langues, avec GPT-Live d'OpenAI. Il prend rendez-vous dans Google Agenda, transfère les appels urgents vers votre numéro et enregistre un résumé, la transcription et l'enregistrement de chaque appel.
+Le forfait Starter de LobbyStack coûte 30 $ par mois pour 150 minutes, puis 0,20 $ la minute. Le forfait Pro coûte 100 $ pour 500 minutes, puis 0,18 $ la minute. Aucun forfait n'a de frais de mise en service. Le réceptionniste ouvre l'appel en français si vous choisissez le français comme langue par défaut, puis répond dans la langue de l'appelant : plus de 70 langues, avec GPT-Live d'OpenAI. Il prend rendez-vous dans Google Agenda, Cal.com ou Calendly, transfère les appels urgents vers votre numéro et enregistre un résumé, la transcription et l'enregistrement de chaque appel.
 
 ### Ce qu'il faut savoir avant de l'utiliser depuis la France
 

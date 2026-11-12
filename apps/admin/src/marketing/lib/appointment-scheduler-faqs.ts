@@ -4,7 +4,7 @@ export const appointmentSchedulerFaqs: FaqItem[] = [
   {
     question: "What is an AI appointment setter?",
     answer:
-      "An AI appointment setter is a voice AI that books appointments over the phone. LobbyStack answers your inbound calls, asks what the caller needs, offers open times from your Google Calendar and books the one they choose. It doesn't make outbound sales calls.",
+      "An AI appointment setter is a voice AI that books appointments over the phone. LobbyStack answers your inbound calls, asks what the caller needs, offers open times from your Google Calendar, Cal.com or Calendly and books the one they choose. It doesn't make outbound sales calls.",
   },
   {
     question: "What's the difference between an AI appointment setter and an AI appointment scheduler?",
@@ -14,7 +14,7 @@ export const appointmentSchedulerFaqs: FaqItem[] = [
   {
     question: "Which calendar does it book into?",
     answer:
-      "Google Calendar. You connect a Google account and pick the calendar that receives bookings. LobbyStack reads busy time from it, so it won't offer a slot that's already taken.",
+      "Google Calendar, Cal.com or Calendly. You connect your account and pick the calendar or event type that receives bookings. LobbyStack reads busy time from it, so it won't offer a slot that's already taken. Calendly needs a paid Calendly plan.",
   },
   {
     question: "Can I choose which questions it asks before booking?",

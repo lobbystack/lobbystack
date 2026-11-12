@@ -164,13 +164,13 @@ Les forfaits d'entrée payants des réceptionnistes IA intégrés aux logiciels 
 
 Pour une entreprise déjà sur Jobber, 40 conversations par mois avec Jobber Receptionist coûtent 36,90 $ (29 $ + 10 à 0,79 $), plus le forfait Jobber. Jobber Plus inclut un usage illimité à partir de 399 $ par mois, facturé à l'année. Sameday AI réserve dans ServiceTitan pendant l'appel. Notre [comparatif des permanences pour le chauffage et la climatisation](/fr/blog/best-hvac-answering-services/) couvre la répartition des techniciens et les services qui se synchronisent avec ServiceTitan, Housecall Pro ou Jobber.
 
-LobbyStack réserve dans Google Calendar et ne se connecte à d'autres logiciels que par les webhooks et l'API REST. Si vous devez inscrire vos travaux dans Jobber, Housecall Pro ou ServiceTitan, commencez par les outils ci-dessus.
+LobbyStack réserve dans Google Calendar, Cal.com ou Calendly et ne se connecte à d'autres logiciels que par les webhooks et l'API REST. Si vous devez inscrire vos travaux dans Jobber, Housecall Pro ou ServiceTitan, commencez par les outils ci-dessus.
 
 ### Cabinets dentaires : Dentina, Viva et Peerlogic
 
 Dentina nomme 11 logiciels de cabinet dans lesquels il réserve et ne facture pas de frais de mise en service ; Premium coûte 399 $ par établissement et par mois, facturé à l'année. Les 4 000 crédits Gold de Viva couvrent environ 400 minutes d'appel IA si vous ne les dépensez qu'en appels. Le forfait Premium de Peerlogic à 699 $ réunit le réceptionniste IA et un système téléphonique dentaire.
 
-LobbyStack ne revendique pas la conformité HIPAA et ne réserve que dans Google Calendar. Un cabinet qui veut réserver directement dans Dentrix devrait commencer par Dentina ou Peerlogic. Notre page sur le [réceptionniste IA pour cabinet dentaire](/fr/solutions/ai-receptionist-for-dental-offices/) montre où LobbyStack trouve sa place.
+LobbyStack ne revendique pas la conformité HIPAA et ne réserve que dans Google Calendar, Cal.com ou Calendly. Un cabinet qui veut réserver directement dans Dentrix devrait commencer par Dentina ou Peerlogic. Notre page sur le [réceptionniste IA pour cabinet dentaire](/fr/solutions/ai-receptionist-for-dental-offices/) montre où LobbyStack trouve sa place.
 
 ## Un réceptionniste IA facture-t-il des frais de mise en service ou cachés ?
 
@@ -281,7 +281,7 @@ Chaque appel commence dans la langue par défaut de l'entreprise : anglais, fran
 Les limites de LobbyStack :
 
 - Le numéro du forfait Gratuit répond pendant 14 jours, et ses transferts vont uniquement vers le numéro mobile que vous avez vérifié. Pour garder un numéro, choisissez Starter ou Pro.
-- Il ne réserve que dans Google Calendar. Les CRM et les logiciels de gestion des interventions ou de cabinet dentaire ne s'y connectent que par les webhooks et l'API REST.
+- Il ne réserve que dans Google Calendar, Cal.com ou Calendly. Les CRM et les logiciels de gestion des interventions ou de cabinet dentaire ne s'y connectent que par les webhooks et l'API REST.
 - L'IA ne répond pas aux SMS. Votre équipe y répond depuis le tableau de bord.
 - Les transferts vont vers un seul numéro par entreprise, et un appel téléphonique se termine au bout de 30 minutes.
 - Les SMS de confirmation et de rappel de rendez-vous n'atteignent que les numéros américains et canadiens.

@@ -15,7 +15,7 @@ export const afterHoursRouting: Pick<TradeDetails, "noun" | "routing"> = {
     {
       call: "A new customer who wants an appointment",
       action: "Books",
-      detail: "Offers open times from your Google Calendar and texts the caller a confirmation",
+      detail: "Offers open times from your Google Calendar, Cal.com or Calendly and texts the caller a confirmation",
     },
     {
       call: "A customer who needs to reschedule",

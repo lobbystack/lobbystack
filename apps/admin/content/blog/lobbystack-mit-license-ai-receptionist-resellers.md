@@ -69,7 +69,7 @@ This separation helps customers understand who operates the service. Your compan
 
 Open source gives agencies and technical teams control. Many businesses want someone else to run the infrastructure, monitor providers, ship updates, and support the product.
 
-[LobbyStack Cloud](https://lobbystack.com/pricing/) remains the managed option for those customers. They can configure the receptionist, business knowledge, rules, phone numbers, and Google Calendar without operating PostgreSQL, Redis, or the voice gateway.
+[LobbyStack Cloud](https://lobbystack.com/pricing/) remains the managed option for those customers. They can configure the receptionist, business knowledge, rules, phone numbers, and Google Calendar, Cal.com, or Calendly without operating PostgreSQL, Redis, or the voice gateway.
 
 Agencies can choose the model that fits each engagement. Use the MIT code when the client needs a branded product, custom infrastructure, or deep integration work. Use LobbyStack Cloud when the client wants the product managed and your value comes from setup, workflow design, and ongoing service.
 

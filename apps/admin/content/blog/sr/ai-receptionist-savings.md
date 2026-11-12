@@ -164,13 +164,13 @@ Plaćeni ulazni paketi AI recepcionera ugrađenih u softver za terenske usluge i
 
 Ako već koristite Jobber, 40 razgovora mesečno na Jobber Receptionist košta $36.90 ($29 + 10 po $0.79), plus Jobber paket. Jobber Plus uključuje neograničeno korišćenje od $399 mesečno uz godišnju naplatu. Sameday AI zakazuje u ServiceTitan tokom samog poziva. Naše [poređenje usluga odgovaranja na pozive za HVAC firme](/sr/blog/best-hvac-answering-services/) pokriva raspoređivanje tehničara i usluge koje se sinhronizuju sa ServiceTitan, Housecall Pro ili Jobber sistemom.
 
-LobbyStack zakazuje u Google Calendar, a do drugog softvera stiže samo preko webhookova i REST API-ja. Ako Vam poslovi moraju da se upisuju u Jobber, Housecall Pro ili ServiceTitan, počnite od alata iznad.
+LobbyStack zakazuje u Google Calendar, Cal.com ili Calendly, a do drugog softvera stiže samo preko webhookova i REST API-ja. Ako Vam poslovi moraju da se upisuju u Jobber, Housecall Pro ili ServiceTitan, počnite od alata iznad.
 
 ### Stomatologija: Dentina, Viva i Peerlogic
 
 Dentina imenuje 11 sistema za ordinacije u koje zakazuje i ne naplaćuje aktivaciju. Njen Premium paket košta $399 po lokaciji mesečno uz godišnju naplatu. Vivinih 4,000 Gold kredita pokriva oko 400 minuta AI poziva ako ih trošite samo na pozive. Peerlogic Premium paket od $699 spaja AI recepcionera sa stomatološkim telefonskim sistemom.
 
-LobbyStack ne tvrdi da je usklađen sa HIPAA i zakazuje samo u Google Calendar. Ordinacija kojoj treba zakazivanje pravo u Dentrix neka počne od Dentine ili Peerlogica. Naša stranica o [AI recepcioneru za stomatološke ordinacije](/sr/solutions/ai-receptionist-for-dental-offices/) objašnjava gde se LobbyStack uklapa.
+LobbyStack ne tvrdi da je usklađen sa HIPAA i zakazuje samo u Google Calendar, Cal.com ili Calendly. Ordinacija kojoj treba zakazivanje pravo u Dentrix neka počne od Dentine ili Peerlogica. Naša stranica o [AI recepcioneru za stomatološke ordinacije](/sr/solutions/ai-receptionist-for-dental-offices/) objašnjava gde se LobbyStack uklapa.
 
 ## Da li AI recepcioner naplaćuje aktivaciju ili skrivene naknade?
 
@@ -281,7 +281,7 @@ Svaki poziv počinje na podrazumevanom jeziku firme: engleskom, francuskom, špa
 Ograničenja LobbyStack-a:
 
 - Free 14 dana odgovara na prave pozive na broju iz SAD ili Kanade. Da biste zadržali broj, izaberite Starter ili Pro.
-- Zakazuje samo u Google Calendar. CRM sistemi i softver za terenske usluge i ordinacije povezuju se samo preko webhookova i REST API-ja.
+- Zakazuje samo u Google Calendar, Cal.com ili Calendly. CRM sistemi i softver za terenske usluge i ordinacije povezuju se samo preko webhookova i REST API-ja.
 - AI ne odgovara na SMS poruke. Na njih odgovara Vaš tim iz kontrolne table.
 - Preusmeravanje ide na jedan broj po firmi, a telefonski poziv se prekida posle 30 minuta.
 - SMS potvrde i podsetnici za termine stižu samo na brojeve u SAD i Kanadi.

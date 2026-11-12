@@ -96,7 +96,7 @@ Kod je Vaš i nema naknada platforme. I dalje pišete recepcionera povrh toga: a
 AI recepcioner otvorenog koda donosi delove koje Vam opcije od 1 do 4 ostavljaju. [LobbyStack](/sr/solutions/self-hosted-ai-receptionist/) vodi svaki poziv, telefonom ili u pregledaču, na `gpt-live-1` modelu, a njegov agent već ima alate za:
 
 - radno vreme, usluge i odgovore iz Vašeg sajta, PDF fajlova i čestih pitanja
-- pronalaženje slobodnih termina i zakazivanje u Google kalendaru, ili prijem zahteva za termin koji Vaš tim potvrđuje
+- pronalaženje slobodnih termina i zakazivanje u Google kalendaru, Cal.com-u ili Calendly-ju, ili prijem zahteva za termin koji Vaš tim potvrđuje
 - pomeranje ili otkazivanje termina posle provere pozivaoca
 - primanje poruka i prebacivanje poziva na osobu
 
@@ -154,7 +154,7 @@ Za telefonske pozive na LobbyStack-u, da: pozivi stižu do GPT-Live modela preko
 
 ### Može li ovako napravljen recepcioner da zakazuje termine?
 
-Samo ako mu date alat za zakazivanje. GPT-Live razgovara; Vaš server proverava kalendar i upisuje termin. LobbyStack zakazuje u Google kalendaru ili prima zahteve koje Vaš tim potvrđuje.
+Samo ako mu date alat za zakazivanje. GPT-Live razgovara; Vaš server proverava kalendar i upisuje termin. LobbyStack zakazuje u Google kalendaru, Cal.com-u ili Calendly-ju, ili prima zahteve koje Vaš tim potvrđuje.
 
 ## Čujte glas pre nego što počnete
 

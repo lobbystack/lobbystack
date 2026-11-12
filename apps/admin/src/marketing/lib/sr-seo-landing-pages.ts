@@ -107,17 +107,17 @@ const bespokeSolutionPagesSr: Record<string, SeoLandingPage> = {
     path: "/solutions/ai-phone-answering/",
     title: "AI služba za odgovaranje na pozive za male firme | LobbyStack",
     description:
-      "LobbyStack, AI služba za odgovaranje na pozive, javlja se umesto Vas, zakazuje termine u Google Calendar i preusmerava hitne pozive. Isprobajte besplatno.",
+      "LobbyStack, AI služba za odgovaranje na pozive, javlja se umesto Vas, zakazuje termine u Google Calendar, Cal.com ili Calendly i preusmerava hitne pozive. Isprobajte besplatno.",
     eyebrow: "AI odgovaranje na pozive",
     h1: "AI služba za odgovaranje na pozive na koje Vi ne stižete da se javite",
     intro:
-      "Kada ste na poslu ili sa klijentom, pozivalac kome se niko ne javi zove sledeću firmu sa svog spiska. LobbyStack se javlja na Vaš broj, zakazuje posetu u Google Calendar i zvoni na Vaš telefon kada je poziv hitan.",
+      "Kada ste na poslu ili sa klijentom, pozivalac kome se niko ne javi zove sledeću firmu sa svog spiska. LobbyStack se javlja na Vaš broj, zakazuje posetu u Google Calendar, Cal.com ili Calendly i zvoni na Vaš telefon kada je poziv hitan.",
     image: "/illustrations/call-capture.webp",
     imageAlt:
       "AI služba za odgovaranje na pozive LobbyStack se javlja na poziv dok je tim zauzet",
     proofPoints: [
       "Radi na poslovnom broju koji već imate",
-      "Zakazuje u Google Calendar tokom poziva",
+      "Zakazuje u Google Calendar, Cal.com ili Calendly tokom poziva",
       "Hitne pozive preusmerava na broj koji podesite",
       "Neželjeni pozivi i pozivi kraći od 10 sekundi ne troše minute",
     ],
@@ -127,7 +127,7 @@ const bespokeSolutionPagesSr: Record<string, SeoLandingPage> = {
         body: "Pozivaoci razgovaraju kao što bi razgovarali sa Vašom recepcijom. LobbyStack odgovara na pitanja na osnovu usluga, cena, radnog vremena i pravila koje dodate i zakazuje posetu pre nego što pozivalac spusti slušalicu.",
         points: [
           "Odgovara na osnovu teksta, PDF dokumenata ili stranica sa Vašeg sajta",
-          "Nudi slobodne termine iz Vašeg Google Calendar-a i, ako pozivalac pristane, šalje potvrdu i podsetnik SMS-om",
+          "Nudi slobodne termine iz Vašeg Google Calendar-a, Cal.com-a ili Calendly-ja i, ako pozivalac pristane, šalje potvrdu i podsetnik SMS-om",
         ],
       },
       {
@@ -169,7 +169,7 @@ const bespokeSolutionPagesSr: Record<string, SeoLandingPage> = {
       {
         question: "Šta je AI služba za odgovaranje na pozive?",
         answer:
-          "AI služba za odgovaranje na pozive se javlja na Vaše poslovne pozive glasovnom veštačkom inteligencijom umesto osobom. LobbyStack razgovara sa pozivaocem, odgovara na pitanja na osnovu podataka koje dodate, zakazuje termine u Google Calendar, prima poruke i hitne pozive preusmerava Vašem timu, prema pravilima koja napišete.",
+          "AI služba za odgovaranje na pozive se javlja na Vaše poslovne pozive glasovnom veštačkom inteligencijom umesto osobom. LobbyStack razgovara sa pozivaocem, odgovara na pitanja na osnovu podataka koje dodate, zakazuje termine u Google Calendar, Cal.com ili Calendly, prima poruke i hitne pozive preusmerava Vašem timu, prema pravilima koja napišete.",
       },
       {
         question: "Da li je to dobra AI služba za odgovaranje na pozive za malu firmu?",
@@ -194,7 +194,7 @@ const bespokeSolutionPagesSr: Record<string, SeoLandingPage> = {
       {
         question: "Može li da zakazuje termine tokom poziva?",
         answer:
-          "Da. Povežite Google Calendar i dodajte svoje usluge. LobbyStack nudi slobodne termine u okviru radnog vremena, zakazuje onaj koji pozivalac izabere i, ako pozivalac pristane, šalje potvrdu i podsetnik SMS-om 24 sata ranije. Na LobbyStack Cloud-u SMS poruke stižu na američke i kanadske brojeve.",
+          "Da. Povežite Google Calendar, Cal.com ili Calendly i dodajte svoje usluge. LobbyStack nudi slobodne termine u okviru radnog vremena, zakazuje onaj koji pozivalac izabere i, ako pozivalac pristane, šalje potvrdu i podsetnik SMS-om 24 sata ranije. Na LobbyStack Cloud-u SMS poruke stižu na američke i kanadske brojeve.",
       },
       {
         question: "Šta se dešava kada pozivaocu treba prava osoba?",
@@ -254,16 +254,16 @@ const bespokeSolutionPagesSr: Record<string, SeoLandingPage> = {
     path: "/solutions/ai-appointment-scheduler/",
     title: "AI zakazivanje termina za dolazne pozive | LobbyStack",
     description:
-      "LobbyStack nudi AI zakazivanje termina za pozive koje primate. Nudi slobodne termine iz Google Calendar-a, zakazuje posetu i šalje potvrdu SMS-om.",
+      "LobbyStack nudi AI zakazivanje termina za pozive koje primate. Nudi slobodne termine iz Google Calendar-a, Cal.com-a ili Calendly-ja, zakazuje posetu i šalje potvrdu SMS-om.",
     eyebrow: "AI zakazivanje termina",
     h1: "AI zakazivanje termina koje zakaže pozivaoca pre nego što spusti slušalicu",
     intro:
-      "Kada pozivalac dobije govornu poštu, sledeća firma koju pozove može da ga zakaže pre nego što mu uzvratite poziv. LobbyStack se javlja, nudi slobodne termine iz Vašeg Google Calendar-a, zakazuje onaj koji pozivalac izabere i šalje mu potvrdu SMS-om.",
+      "Kada pozivalac dobije govornu poštu, sledeća firma koju pozove može da ga zakaže pre nego što mu uzvratite poziv. LobbyStack se javlja, nudi slobodne termine iz Vašeg Google Calendar-a, Cal.com-a ili Calendly-ja, zakazuje onaj koji pozivalac izabere i šalje mu potvrdu SMS-om.",
     image: "/illustrations/booking-flow.webp",
     imageAlt:
       "LobbyStack AI zakazivanje termina upisuje pozivaoca u slobodan termin",
     proofPoints: [
-      "Zakazuje u Google Calendar tokom poziva",
+      "Zakazuje u Google Calendar, Cal.com ili Calendly tokom poziva",
       "Nudi samo termine u okviru Vašeg radnog vremena",
       "Šalje potvrdu i podsetnik SMS-om",
       "Pomera ili otkazuje termine ako to dozvolite",
@@ -271,7 +271,7 @@ const bespokeSolutionPagesSr: Record<string, SeoLandingPage> = {
     sections: [
       {
         title: "Kako AI zakazivanje termina radi tokom poziva",
-        body: "Saznaje koja usluga treba pozivaocu, pronalazi termine dovoljno duge za taj posao i daje mu da bira. Pozivalac izabere jedan, a termin se pojavljuje u Vašem Google Calendar-u.",
+        body: "Saznaje koja usluga treba pozivaocu, pronalazi termine dovoljno duge za taj posao i daje mu da bira. Pozivalac izabere jedan, a termin se pojavljuje u Vašem Google Calendar-u, Cal.com-u ili Calendly-ju.",
         points: [
           "Ako pozivalac pristane, odmah mu šalje potvrdu SMS-om, a podsetnik 24 sata ranije",
           "Na LobbyStack Cloud-u SMS poruke stižu na američke i kanadske brojeve",
@@ -299,7 +299,7 @@ const bespokeSolutionPagesSr: Record<string, SeoLandingPage> = {
         points: [
           "Usluga i njeno trajanje",
           "Vaše radno vreme i radno vreme svakog zaposlenog",
-          "Zauzeto vreme u Vašem Google Calendar-u",
+          "Zauzeto vreme u Vašem Google Calendar-u, Cal.com-u ili Calendly-ju",
           "Odsustvo koje unesete za zaposlenog",
         ],
       },
@@ -317,7 +317,7 @@ const bespokeSolutionPagesSr: Record<string, SeoLandingPage> = {
       {
         question: "Šta je AI zakazivanje termina?",
         answer:
-          "AI zakazivanje termina znači da glasovna veštačka inteligencija zakazuje termine telefonom. LobbyStack se javlja na Vaše dolazne pozive, pita šta pozivaocu treba, nudi slobodne termine iz Vašeg Google Calendar-a i zakazuje onaj koji izabere. Ne upućuje odlazne prodajne pozive.",
+          "AI zakazivanje termina znači da glasovna veštačka inteligencija zakazuje termine telefonom. LobbyStack se javlja na Vaše dolazne pozive, pita šta pozivaocu treba, nudi slobodne termine iz Vašeg Google Calendar-a, Cal.com-a ili Calendly-ja i zakazuje onaj koji izabere. Ne upućuje odlazne prodajne pozive.",
       },
       {
         question:
@@ -328,7 +328,7 @@ const bespokeSolutionPagesSr: Record<string, SeoLandingPage> = {
       {
         question: "U koji kalendar zakazuje?",
         answer:
-          "U Google Calendar. Povežete Google nalog i izaberete kalendar u koji stižu termini. LobbyStack iz njega čita zauzeto vreme, pa ne nudi termin koji je već zauzet.",
+          "U Google Calendar, Cal.com ili Calendly. Povežete nalog i izaberete kalendar ili tip događaja u koji stižu termini. LobbyStack iz njega čita zauzeto vreme, pa ne nudi termin koji je već zauzet.",
       },
       {
         question: "Mogu li da izaberem koja pitanja postavlja pre zakazivanja?",
@@ -388,7 +388,7 @@ const bespokeSolutionPagesSr: Record<string, SeoLandingPage> = {
     ],
     ctaHeading: "Zakažite sledećeg pozivaoca dok je još na vezi",
     ctaBody:
-      "Dodajte svoje usluge, povežite Google Calendar i pozovite svoj broj da zakažete probni termin. Besplatan paket uključuje 30 minuta razgovora.",
+      "Dodajte svoje usluge, povežite Google Calendar, Cal.com ili Calendly i pozovite svoj broj da zakažete probni termin. Besplatan paket uključuje 30 minuta razgovora.",
     ctaPrimaryLabel: "Isprobajte besplatno",
     ctaSecondaryLabel: "Pogledajte cene",
   },
@@ -398,11 +398,11 @@ const bespokeSolutionPagesSr: Record<string, SeoLandingPage> = {
     path: "/solutions/ai-receptionist-for-home-services/",
     title: "AI recepcioner za kućne usluge i majstore | LobbyStack",
     description:
-      "AI recepcioner za kućne usluge koji se javlja dok Vaša ekipa radi, zakazuje poslove u Google Calendar i hitne slučajeve preusmerava dežurnom majstoru.",
+      "AI recepcioner za kućne usluge koji se javlja dok Vaša ekipa radi, zakazuje poslove u Google Calendar, Cal.com ili Calendly i hitne slučajeve preusmerava dežurnom majstoru.",
     eyebrow: "Kućne usluge",
     h1: "AI recepcioner za kućne usluge koji zakazuje poslove dok Vi radite",
     intro:
-      "Ne možete da se javite ispod sudopere ili sa krova. LobbyStack se javlja, beleži adresu i problem, zakazuje posetu u Google Calendar i hitne slučajeve koje ste definisali preusmerava na Vaš dežurni telefon.",
+      "Ne možete da se javite ispod sudopere ili sa krova. LobbyStack se javlja, beleži adresu i problem, zakazuje posetu u Google Calendar, Cal.com ili Calendly i hitne slučajeve koje ste definisali preusmerava na Vaš dežurni telefon.",
     image: "/illustrations/industry-bookings.webp",
     imageAlt:
       "LobbyStack AI recepcioner za kućne usluge zakazuje posao iz telefonskog poziva",
@@ -419,7 +419,7 @@ const bespokeSolutionPagesSr: Record<string, SeoLandingPage> = {
         body: "Vi odlučujete koji pozivi su hitni. Sve ostalo LobbyStack zakazuje ili zapisuje za Vas.",
         points: [
           "Hitni slučajevi, kao što su pukla cev ili kvar grejanja zimi, idu Vašem dežurnom majstoru, sa adresom i opisom problema u transkriptu",
-          "Za poslove koji mogu da sačekaju nudi slobodan termin iz Vašeg Google Calendar-a i zapisuje poziv",
+          "Za poslove koji mogu da sačekaju nudi slobodan termin iz Vašeg Google Calendar-a, Cal.com-a ili Calendly-ja i zapisuje poziv",
         ],
       },
       {
@@ -453,7 +453,7 @@ const bespokeSolutionPagesSr: Record<string, SeoLandingPage> = {
       {
         question: "Šta je AI recepcioner za kućne usluge?",
         answer:
-          "To je glasovna veštačka inteligencija koja se javlja na telefon firme za vodoinstalaterske radove, grejanje i klimatizaciju, električne instalacije, krovove ili drugi zanat. LobbyStack se javlja kada Vaša ekipa ne može, beleži adresu i problem, zakazuje posete u Google Calendar, odgovara na pitanja na osnovu Vaših podataka i hitne slučajeve preusmerava na Vaš dežurni broj.",
+          "To je glasovna veštačka inteligencija koja se javlja na telefon firme za vodoinstalaterske radove, grejanje i klimatizaciju, električne instalacije, krovove ili drugi zanat. LobbyStack se javlja kada Vaša ekipa ne može, beleži adresu i problem, zakazuje posete u Google Calendar, Cal.com ili Calendly, odgovara na pitanja na osnovu Vaših podataka i hitne slučajeve preusmerava na Vaš dežurni broj.",
       },
       {
         question:
@@ -469,7 +469,7 @@ const bespokeSolutionPagesSr: Record<string, SeoLandingPage> = {
       {
         question: "Hoće li zakazivati poslove dok sam na terenu?",
         answer:
-          "Da. Nudi slobodne termine iz Vašeg Google Calendar-a u okviru radnog vremena, zakazuje onaj koji pozivalac izabere i, ako pristane, šalje mu potvrdu SMS-om i podsetnik dan ranije.",
+          "Da. Nudi slobodne termine iz Vašeg Google Calendar-a, Cal.com-a ili Calendly-ja u okviru radnog vremena, zakazuje onaj koji pozivalac izabere i, ako pristane, šalje mu potvrdu SMS-om i podsetnik dan ranije.",
       },
       {
         question: "Šta kaže kada pozivalac pita za cenu?",
@@ -489,7 +489,7 @@ const bespokeSolutionPagesSr: Record<string, SeoLandingPage> = {
       {
         question: "Da li će moj tim videti šta je zakazano?",
         answer:
-          "Da. Termini se pojavljuju u Vašem Google Calendar-u i na kontrolnoj tabli, pored rezimea, transkripta i snimka svakog poziva. Kada recepcioner primi poruku, Vaš tim dobija obaveštenje e-poštom, ili SMS-om ako ga uključite.",
+          "Da. Termini se pojavljuju u Vašem Google Calendar-u, Cal.com-u ili Calendly-ju i na kontrolnoj tabli, pored rezimea, transkripta i snimka svakog poziva. Kada recepcioner primi poruku, Vaš tim dobija obaveštenje e-poštom, ili SMS-om ako ga uključite.",
       },
       {
         question: "Koliko košta za firmu za kućne usluge?",
@@ -533,7 +533,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
     eyebrow: "O nama",
     h1: "LobbyStack je AI recepcioner otvorenog koda za male firme",
     intro:
-      "Napravili smo LobbyStack za vlasnike koji propuštaju pozive dok rade sa klijentom. Javlja se na Vaš telefon, zakazuje termine u Google Calendar i prosleđuje poziv Vašem timu kada pozivaocu treba čovek. Kod je javan pod MIT licencom, pa možete da koristite LobbyStack Cloud ili da ga pokrenete na svom serveru.",
+      "Napravili smo LobbyStack za vlasnike koji propuštaju pozive dok rade sa klijentom. Javlja se na Vaš telefon, zakazuje termine u Google Calendar, Cal.com ili Calendly i prosleđuje poziv Vašem timu kada pozivaocu treba čovek. Kod je javan pod MIT licencom, pa možete da koristite LobbyStack Cloud ili da ga pokrenete na svom serveru.",
     imageAlt:
       "LobbyStack kod na GitHub-u, pokrenut na LobbyStack Cloud-u ili na Vašem serveru",
     proofPoints: [
@@ -547,7 +547,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         body: "Telefon zazvoni usred šišanja, čišćenja zuba ili posla na drugom kraju grada. Govorna pošta ne zakazuje nikoga, pa pozivalac zove sledeću firmu. Napravili smo LobbyStack da se javi na te pozive, zakaže šta može i ostatak Vam pošalje sa zapisanim detaljima.",
         points: [
           "Javlja se dok radite sa klijentom, posle zatvaranja ili dok ste na terenu",
-          "Zakazuje u Google Calendar i šalje SMS potvrdu klijentima koji pristanu",
+          "Zakazuje u Google Calendar, Cal.com ili Calendly i šalje SMS potvrdu klijentima koji pristanu",
           "Prosleđuje hitne pozive po Vašim pravilima, a za ostale prima poruku",
         ],
       },
@@ -597,11 +597,11 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
     {
       title: "AI služba za odgovaranje na pozive van radnog vremena | LobbyStack",
       description:
-        "Služba za odgovaranje na pozive van radnog vremena: redovne pozive zakazuje u Google Calendar, a hitne preusmerava na dežurni telefon. Od $30 mesečno.",
+        "Služba za odgovaranje na pozive van radnog vremena: redovne pozive zakazuje u Google Calendar, Cal.com ili Calendly, a hitne preusmerava na dežurni telefon. Od $30 mesečno.",
       eyebrow: "Javljanje van radnog vremena",
       h1: "AI služba za odgovaranje na pozive van radnog vremena koja Vas budi samo zbog hitnih slučajeva",
       intro:
-        "U jedan posle ponoći, pozivalac bez grejanja zove onoga ko se prvi javi. LobbyStack se javlja na Vaš poslovni broj noću, vikendom i praznicima. Za hitne slučajeve koje određuju Vaša pravila zvoni na Vaš dežurni telefon, a redovne pozive zakazuje u Google Calendar.",
+        "U jedan posle ponoći, pozivalac bez grejanja zove onoga ko se prvi javi. LobbyStack se javlja na Vaš poslovni broj noću, vikendom i praznicima. Za hitne slučajeve koje određuju Vaša pravila zvoni na Vaš dežurni telefon, a redovne pozive zakazuje u Google Calendar, Cal.com ili Calendly.",
       imageAlt:
         "LobbyStack se javlja na pozive van radnog vremena i hitan slučaj preusmerava na dežurni telefon",
       proofPoints: [
@@ -620,7 +620,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         },
         {
           title: "Redovni pozivaoci sami zakazuju termine",
-          body: "Pozivalac koji želi redovan servis ili ponudu čuje slobodne termine iz Vašeg Google Calendar-a i bira jedan. Dobija potvrdu SMS-om, a Vi vidite termin kada ujutru otvorite kalendar.",
+          body: "Pozivalac koji želi redovan servis ili ponudu čuje slobodne termine iz Vašeg Google Calendar-a, Cal.com-a ili Calendly-ja i bira jedan. Dobija potvrdu SMS-om, a Vi vidite termin kada ujutru otvorite kalendar.",
           points: [
             "Pomera ili otkazuje termine, ako uključite izmene termina",
             "Odgovara na pitanja o radnom vremenu, području rada i cenama na osnovu Vaših podataka",
@@ -648,12 +648,12 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "Šta je služba za odgovaranje na pozive van radnog vremena?",
           answer:
-            "Ona se javlja na Vaš poslovni telefon kada ne radite: noću, vikendom i praznicima. Kod službe sa živim operaterima osoba prima poruku. LobbyStack je AI služba za odgovaranje na pozive van radnog vremena, pa tokom poziva i odgovara na pitanja na osnovu Vaših podataka, zakazuje termine u Google Calendar i hitne slučajeve preusmerava na Vaš dežurni broj.",
+            "Ona se javlja na Vaš poslovni telefon kada ne radite: noću, vikendom i praznicima. Kod službe sa živim operaterima osoba prima poruku. LobbyStack je AI služba za odgovaranje na pozive van radnog vremena, pa tokom poziva i odgovara na pitanja na osnovu Vaših podataka, zakazuje termine u Google Calendar, Cal.com ili Calendly i hitne slučajeve preusmerava na Vaš dežurni broj.",
         },
         {
           question: "Može li da zakazuje termine van radnog vremena?",
           answer:
-            "Da. LobbyStack nudi slobodne termine iz Vašeg Google Calendar-a u okviru radnog vremena, zakazuje onaj koji pozivalac izabere i, ako pristane, šalje mu potvrdu SMS-om. Termin vidite u kalendaru ujutru.",
+            "Da. LobbyStack nudi slobodne termine iz Vašeg Google Calendar-a, Cal.com-a ili Calendly-ja u okviru radnog vremena, zakazuje onaj koji pozivalac izabere i, ako pristane, šalje mu potvrdu SMS-om. Termin vidite u kalendaru ujutru.",
         },
         {
           question: "Kako odlučuje šta je hitno?",
@@ -726,15 +726,15 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
       title:
         "AI recepcioner za stomatološke ordinacije i služba za pozive | LobbyStack",
       description:
-        "AI recepcioner za stomatološke ordinacije: javlja se kada je recepcija zauzeta ili zatvorena, zakazuje u Google Calendar i preusmerava hitne slučajeve.",
+        "AI recepcioner za stomatološke ordinacije: javlja se kada je recepcija zauzeta ili zatvorena, zakazuje u Google Calendar, Cal.com ili Calendly i preusmerava hitne slučajeve.",
       eyebrow: "Stomatološke ordinacije",
       h1: "AI recepcioner za stomatološke ordinacije koji zakazuje pacijente dok je recepcija zauzeta",
       intro:
-        "Pacijenti zovu tokom prijema, za vreme pauze za ručak i posle zatvaranja, a ti pozivi završavaju u govornoj pošti. LobbyStack se javlja na liniju Vaše ordinacije, nove pacijente i uklanjanje kamenca zakazuje u Google Calendar, a hitne stomatološke slučajeve preusmerava na Vaš dežurni broj. Plaćeni paketi počinju od $30 mesečno.",
+        "Pacijenti zovu tokom prijema, za vreme pauze za ručak i posle zatvaranja, a ti pozivi završavaju u govornoj pošti. LobbyStack se javlja na liniju Vaše ordinacije, nove pacijente i uklanjanje kamenca zakazuje u Google Calendar, Cal.com ili Calendly, a hitne stomatološke slučajeve preusmerava na Vaš dežurni broj. Plaćeni paketi počinju od $30 mesečno.",
       imageAlt:
         "LobbyStack zakazuje pregled za novog pacijenta i šalje potvrdu SMS-om",
       proofPoints: [
-        "Zakazuje u Google Calendar i dan ranije šalje podsetnik SMS-om",
+        "Zakazuje u Google Calendar, Cal.com ili Calendly i dan ranije šalje podsetnik SMS-om",
         "Hitne slučajeve van radnog vremena preusmerava na Vaš dežurni broj",
         "Razgovara sa pacijentima na više od 70 jezika, uključujući španski",
       ],
@@ -749,7 +749,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         },
         {
           title: "Novi pacijenti zakazuju već u prvom pozivu",
-          body: "LobbyStack beleži osiguravajuću kuću pacijenta i razlog posete, nudi slobodne termine u okviru radnog vremena i zakazuje pregled u Google Calendar. Ako više volite da svaku posetu sami potvrdite, podesite ga da željeno vreme sačuva kao zahtev za Vaš tim. Pacijenti koji pristanu dobijaju SMS potvrdu i podsetnik dan ranije. Na LobbyStack Cloud-u SMS poruke stižu na američke i kanadske brojeve.",
+          body: "LobbyStack beleži osiguravajuću kuću pacijenta i razlog posete, nudi slobodne termine u okviru radnog vremena i zakazuje pregled u Google Calendar, Cal.com ili Calendly. Ako više volite da svaku posetu sami potvrdite, podesite ga da željeno vreme sačuva kao zahtev za Vaš tim. Pacijenti koji pristanu dobijaju SMS potvrdu i podsetnik dan ranije. Na LobbyStack Cloud-u SMS poruke stižu na američke i kanadske brojeve.",
           points: [
             "Zakazuje za ordinaciju ili posebno za svakog stomatologa i dentalnog higijeničara",
             "Ako uključite izmene termina, pacijenti mogu da pomere ili otkažu termin sa broja sa kog su zakazali",
@@ -782,7 +782,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         },
         {
           title: "Kada je bolji recepcioner specijalizovan za stomatologiju",
-          body: "LobbyStack zakazuje samo u Google Calendar, pa Vaš tim nove termine prepisuje u Dentrix, Open Dental ili Eaglesoft. LobbyStack ne tvrdi da je usklađen sa HIPAA, ne proverava pravo na pokriće kod osiguravača i ne vodi kampanje za pozivanje pacijenata na kontrolu. Ako Vam treba nešto od toga, izaberite stomatološkog dobavljača. Svaku tvrdnju ispod pročitali smo na sajtu dobavljača 27. oktobra 2026.",
+          body: "LobbyStack zakazuje samo u Google Calendar, Cal.com ili Calendly, pa Vaš tim nove termine prepisuje u Dentrix, Open Dental ili Eaglesoft. LobbyStack ne tvrdi da je usklađen sa HIPAA, ne proverava pravo na pokriće kod osiguravača i ne vodi kampanje za pozivanje pacijenata na kontrolu. Ako Vam treba nešto od toga, izaberite stomatološkog dobavljača. Svaku tvrdnju ispod pročitali smo na sajtu dobavljača 27. oktobra 2026.",
           points: [
             "Upis termina u softver ordinacije: Dentina navodi 11 sistema u koje upisuje termine",
             "Recepcioner povezan sa softverom ordinacije: Peerlogic navodi 8 sistema sa kojima se povezuje",
@@ -794,7 +794,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "Šta je AI recepcioner za stomatološke ordinacije?",
           answer:
-            "AI recepcioner za stomatološke ordinacije je glasovna veštačka inteligencija koja se javlja na telefon ordinacije. Zakazuje termine, odgovara na pitanja o radnom vremenu i prihvaćenim osiguranjima, prima poruke i hitne slučajeve preusmerava na osobu. Ordinacije ga koriste za višak poziva, pauzu za ručak i pozive van radnog vremena, ili za sve pozive. LobbyStack zakazuje u Google Calendar. Neki proizvodi specijalizovani za stomatologiju umesto toga upisuju termine u softver za vođenje ordinacije.",
+            "AI recepcioner za stomatološke ordinacije je glasovna veštačka inteligencija koja se javlja na telefon ordinacije. Zakazuje termine, odgovara na pitanja o radnom vremenu i prihvaćenim osiguranjima, prima poruke i hitne slučajeve preusmerava na osobu. Ordinacije ga koriste za višak poziva, pauzu za ručak i pozive van radnog vremena, ili za sve pozive. LobbyStack zakazuje u Google Calendar, Cal.com ili Calendly. Neki proizvodi specijalizovani za stomatologiju umesto toga upisuju termine u softver za vođenje ordinacije.",
         },
         {
           question: "Koliko košta AI recepcioner za stomatološke ordinacije?",
@@ -809,7 +809,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "Može li da zakazuje direktno u Dentrix ili Open Dental?",
           answer:
-            "Ne. LobbyStack zakazuje u Google Calendar i ne povezuje se sa Dentrix-om, Open Dental-om, Eaglesoft-om ni drugim softverom za vođenje ordinacije, pa Vaš tim nove termine prepisuje. Potpisani webhook-ovi i REST API mogu da šalju podatke o terminima i pozivima u Zapier ili Vaše alate. Ako Vam treba upis termina u softver ordinacije, Dentina navodi 11 sistema u koje upisuje termine, a Peerlogic navodi 8 sa kojima se povezuje (provereno 27. oktobra 2026.).",
+            "Ne. LobbyStack zakazuje u Google Calendar, Cal.com ili Calendly i ne povezuje se sa Dentrix-om, Open Dental-om, Eaglesoft-om ni drugim softverom za vođenje ordinacije, pa Vaš tim nove termine prepisuje. Potpisani webhook-ovi i REST API mogu da šalju podatke o terminima i pozivima u Zapier ili Vaše alate. Ako Vam treba upis termina u softver ordinacije, Dentina navodi 11 sistema u koje upisuje termine, a Peerlogic navodi 8 sa kojima se povezuje (provereno 27. oktobra 2026.).",
         },
         {
           question: "Kako postupa sa hitnim stomatološkim pozivom?",
@@ -824,7 +824,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "Može li da zakaže termin za novog pacijenta?",
           answer:
-            "Da. Beleži ime novog pacijenta, broj telefona, osiguravajuću kuću, razlog posete i željeno vreme, a zatim zakazuje slobodan termin u Google Calendar u okviru Vašeg radnog vremena. Možete ga podesiti i da željeno vreme sačuva kao zahtev koji Vaš tim potvrđuje. Ako pacijent pristane, šalje mu SMS potvrdu i podsetnik 24 sata ranije. Na LobbyStack Cloud-u SMS poruke stižu na američke i kanadske brojeve.",
+            "Da. Beleži ime novog pacijenta, broj telefona, osiguravajuću kuću, razlog posete i željeno vreme, a zatim zakazuje slobodan termin u Google Calendar, Cal.com ili Calendly u okviru Vašeg radnog vremena. Možete ga podesiti i da željeno vreme sačuva kao zahtev koji Vaš tim potvrđuje. Ako pacijent pristane, šalje mu SMS potvrdu i podsetnik 24 sata ranije. Na LobbyStack Cloud-u SMS poruke stižu na američke i kanadske brojeve.",
         },
         {
           question: "Na kojim jezicima pacijenti mogu da govore?",
@@ -936,7 +936,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "Šta radi AI recepcioner za salon?",
           answer:
-            "Javlja se na telefon Vašeg salona kada niko na recepciji ne može. LobbyStack zakazuje termine u Google Calendar, pomera ih i otkazuje, odgovara na pitanja iz Vašeg cenovnika i pravila i prebacuje poziv na osobu kada klijent to zatraži ili kada to nalažu Vaša pravila. Svaki poziv se pojavljuje na kontrolnoj tabli sa rezimeom i transkriptom.",
+            "Javlja se na telefon Vašeg salona kada niko na recepciji ne može. LobbyStack zakazuje termine u Google Calendar, Cal.com ili Calendly, pomera ih i otkazuje, odgovara na pitanja iz Vašeg cenovnika i pravila i prebacuje poziv na osobu kada klijent to zatraži ili kada to nalažu Vaša pravila. Svaki poziv se pojavljuje na kontrolnoj tabli sa rezimeom i transkriptom.",
         },
         {
           question: "Mogu li klijenti da zakažu kod određenog frizera?",
@@ -946,7 +946,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "Da li radi sa mojim softverom za zakazivanje u salonu?",
           answer:
-            "Ne direktno. LobbyStack zakazuje u Google Calendar i ne povezuje se sa platformama za zakazivanje u salonima. Ako Vaš salon zakazuje u drugoj aplikaciji, podesite LobbyStack da prima zahteve: beleži uslugu, osobu i vreme koje klijent želi, a Vaš tim potvrđuje termin. Webhookovi i LobbyStack API mogu da proslede svaki zahtev Vašim drugim alatima.",
+            "Ne direktno. LobbyStack zakazuje u Google Calendar, Cal.com ili Calendly i ne povezuje se sa platformama za zakazivanje u salonima. Ako Vaš salon zakazuje u drugoj aplikaciji, podesite LobbyStack da prima zahteve: beleži uslugu, osobu i vreme koje klijent želi, a Vaš tim potvrđuje termin. Webhookovi i LobbyStack API mogu da proslede svaki zahtev Vašim drugim alatima.",
         },
         {
           question: "Mogu li klijenti da otkažu ili pomere termin telefonom?",
@@ -1160,9 +1160,9 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         },
         {
           title: "Zakazuje odgušenja dok ste ispod sudopere",
-          body: "LobbyStack nudi slobodne termine iz Vašeg Google Calendar-a, zakazuje onaj koji pozivalac izabere i šalje mu SMS potvrdu ako pristane. Za zamenu bojlera ili instalacija zakazuje izlazak na procenu umesto da nagađa cenu.",
+          body: "LobbyStack nudi slobodne termine iz Vašeg Google Calendar-a, Cal.com-a ili Calendly-ja, zakazuje onaj koji pozivalac izabere i šalje mu SMS potvrdu ako pristane. Za zamenu bojlera ili instalacija zakazuje izlazak na procenu umesto da nagađa cenu.",
           points: [
-            "Zakazuje u Google Calendar dok je pozivalac na vezi",
+            "Zakazuje u Google Calendar, Cal.com ili Calendly dok je pozivalac na vezi",
             "Ako želite sami da odobrite posao, beleži željeni termin kao zahtev",
           ],
         },
@@ -1180,7 +1180,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "Šta radi telefonska služba za vodoinstalatere?",
           answer:
-            "Javlja se na pozive koje ne stignete da primite i po Vašim pravilima odlučuje šta dalje. LobbyStack pukle cevi i izlivanje kanalizacije preusmerava dežurnom vodoinstalateru, odgušenja i bojlere zakazuje u Google Calendar, a za svaki poziv čuva rezime, transkript i snimak.",
+            "Javlja se na pozive koje ne stignete da primite i po Vašim pravilima odlučuje šta dalje. LobbyStack pukle cevi i izlivanje kanalizacije preusmerava dežurnom vodoinstalateru, odgušenja i bojlere zakazuje u Google Calendar, Cal.com ili Calendly, a za svaki poziv čuva rezime, transkript i snimak.",
         },
         {
           question: "Može li pozivaocu da objasni kako da zatvori vodu?",
@@ -1250,12 +1250,12 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
       eyebrow: "Grejanje i klimatizacija",
       h1: "AI recepcioner za grejanje i klimatizaciju za kotao koji stane noću",
       intro:
-        "Kada kotao stane u ponoć, a niko se ne javi, porodica zove sledeću firmu sa spiska. LobbyStack takav poziv preusmerava Vašem dežurnom tehničaru po pravilima koja napišete, a redovne servise i procene za zamenu sistema zakazuje u Google Calendar dok je pozivalac na vezi.",
+        "Kada kotao stane u ponoć, a niko se ne javi, porodica zove sledeću firmu sa spiska. LobbyStack takav poziv preusmerava Vašem dežurnom tehničaru po pravilima koja napišete, a redovne servise i procene za zamenu sistema zakazuje u Google Calendar, Cal.com ili Calendly dok je pozivalac na vezi.",
       imageAlt:
         "Hitan poziv zbog kvara grejanja preusmeren dežurnom tehničaru firme za grejanje i klimatizaciju",
       proofPoints: [
         "Kvarove grejanja i klime i miris gasa preusmerava dežurnom tehničaru",
-        "Zakazuje servise i procene za zamenu sistema u Google Calendar",
+        "Zakazuje servise i procene za zamenu sistema u Google Calendar, Cal.com ili Calendly",
         "Prelazi na jezik pozivaoca, a GPT-Live podržava više od 70 jezika",
       ],
       sections: [
@@ -1278,7 +1278,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         },
         {
           title: "Zakazuje procenu za novi sistem dok kupac još zove",
-          body: "Vlasnik kuće koji traži cenu novog sistema neće dugo čekati povratni poziv. LobbyStack pita za veličinu kuće, starost sistema i vrstu energenta, pa zakazuje izlazak na procenu u Google Calendar dok je pozivalac na vezi. Ako želite sami da odobrite svaku posetu, režim zahteva beleži termin koji pozivalac želi, a Vaš tim ga potvrđuje.",
+          body: "Vlasnik kuće koji traži cenu novog sistema neće dugo čekati povratni poziv. LobbyStack pita za veličinu kuće, starost sistema i vrstu energenta, pa zakazuje izlazak na procenu u Google Calendar, Cal.com ili Calendly dok je pozivalac na vezi. Ako želite sami da odobrite svaku posetu, režim zahteva beleži termin koji pozivalac želi, a Vaš tim ga potvrđuje.",
           points: [
             "Izbegava termine koji su već zauzeti u Vašem kalendaru",
             "Pozivaocu koji pristane šalje SMS potvrdu i podsetnik 24 sata pre posete, na brojeve iz SAD i Kanade",
@@ -1297,7 +1297,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "Šta radi AI recepcioner za grejanje i klimatizaciju?",
           answer:
-            "Javlja se na pozive koje Vaša kancelarija propusti i po Vašim pravilima odlučuje šta dalje. LobbyStack pozive zbog kvara grejanja, klime ili mirisa gasa preusmerava dežurnom tehničaru, servise i procene zakazuje u Google Calendar, a za svaki poziv čuva rezime, transkript i snimak.",
+            "Javlja se na pozive koje Vaša kancelarija propusti i po Vašim pravilima odlučuje šta dalje. LobbyStack pozive zbog kvara grejanja, klime ili mirisa gasa preusmerava dežurnom tehničaru, servise i procene zakazuje u Google Calendar, Cal.com ili Calendly, a za svaki poziv čuva rezime, transkript i snimak.",
         },
         {
           question:
@@ -1330,7 +1330,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
           question:
             "Da li radi sa ServiceTitan-om, Housecall Pro-om ili Jobber-om?",
           answer:
-            "Ne direktno. Google Calendar je jedini kalendar sa kojim se LobbyStack povezuje. Šalje potpisane webhook-ove kada se poziv završi, kada se termin zakaže, pomeri ili otkaže, kada primi poruku ili napravi kontakt, a ima i REST API sa ključevima ograničenih ovlašćenja. Zapier se povezuje preko oba. Ako firmu vodite u Jobber-u ili Housecall Pro-u, njihovi recepcioneri zakazuju poslove direktno u tom softveru, a LobbyStack to ne može.",
+            "Ne direktno. LobbyStack se od kalendara povezuje samo sa Google Calendar-om, Cal.com-om i Calendly-jem. Šalje potpisane webhook-ove kada se poziv završi, kada se termin zakaže, pomeri ili otkaže, kada primi poruku ili napravi kontakt, a ima i REST API sa ključevima ograničenih ovlašćenja. Zapier se povezuje preko oba. Ako firmu vodite u Jobber-u ili Housecall Pro-u, njihovi recepcioneri zakazuju poslove direktno u tom softveru, a LobbyStack to ne može.",
         },
         {
           question: "Da li radi sa mojim postojećim poslovnim brojem?",
@@ -1419,7 +1419,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         {
           title:
             "Telefonska služba za električare koja zakazuje procene za table i punjače",
-          body: "Nove razvodne table, punjači za električna vozila i rezervni agregati su veći poslovi, a pozivaoci skupljaju više ponuda. LobbyStack beleži jačinu priključka, starost kuće, opremu koju pozivalac želi i da li je vlasnik kuće, pa zakazuje izlazak na procenu u Google Calendar.",
+          body: "Nove razvodne table, punjači za električna vozila i rezervni agregati su veći poslovi, a pozivaoci skupljaju više ponuda. LobbyStack beleži jačinu priključka, starost kuće, opremu koju pozivalac želi i da li je vlasnik kuće, pa zakazuje izlazak na procenu u Google Calendar, Cal.com ili Calendly.",
           points: [
             "Odgovori ostaju uz poziv, pa ih vidite pre izlaska",
             "Pozivaocu koji pristane šalje SMS potvrdu",
@@ -1430,7 +1430,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "Šta telefonska služba za električare treba da obradi?",
           answer:
-            "Dve vrste poziva: opasne situacije kojima trebaju bezbednosna uputstva i brzo preusmeravanje, i zahteve za procenu kojima trebaju prava pitanja. LobbyStack obe vrste obrađuje po pravilima koja napišete i zakazuje procene u Google Calendar tokom poziva.",
+            "Dve vrste poziva: opasne situacije kojima trebaju bezbednosna uputstva i brzo preusmeravanje, i zahteve za procenu kojima trebaju prava pitanja. LobbyStack obe vrste obrađuje po pravilima koja napišete i zakazuje procene u Google Calendar, Cal.com ili Calendly tokom poziva.",
         },
         {
           question: "Šta kaže nekome ko prijavi varnice ili dim?",
@@ -1500,7 +1500,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
     imageAlt:
       "Poziv zbog puknute opruge koji LobbyStack zakazuje u prvi slobodan termin",
     proofPoints: [
-      "Zakazuje popravke za isti dan u Google Calendar",
+      "Zakazuje popravke za isti dan u Google Calendar, Cal.com ili Calendly",
       "Čita Vaša bezbednosna uputstva za puknute opruge i sajle",
       "Vrata koja noću ostanu otvorena preusmerava dežurnom tehničaru",
     ],
@@ -1534,7 +1534,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
       {
         question: "Šta je AI recepcioner za popravku garažnih vrata?",
         answer:
-          "To je recepcioner koji se javlja na Vaše pozive dok ste na poslu ili ne radite. LobbyStack pita šta se desilo sa vratima, zakazuje popravke i procene u Google Calendar, a pozive koje Vaša pravila označe kao hitne, na primer vrata koja noću ne mogu da se zatvore, preusmerava dežurnom tehničaru.",
+          "To je recepcioner koji se javlja na Vaše pozive dok ste na poslu ili ne radite. LobbyStack pita šta se desilo sa vratima, zakazuje popravke i procene u Google Calendar, Cal.com ili Calendly, a pozive koje Vaša pravila označe kao hitne, na primer vrata koja noću ne mogu da se zatvore, preusmerava dežurnom tehničaru.",
       },
       {
         question: "Šta kaže pozivaocu sa puknutom oprugom?",
@@ -1582,12 +1582,12 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
     proofPoints: [
       "Pita za aparat, marku, model i simptome",
       "Navodi cenu dijagnostike koju unesete",
-      "Zakazuje izlazak u Google Calendar tokom poziva",
+      "Zakazuje izlazak u Google Calendar, Cal.com ili Calendly tokom poziva",
     ],
     sections: [
       {
         title: "Zakazuje servisni izlazak dok ste na drugoj popravci",
-        body: "LobbyStack pita za aparat, marku, model i simptome, pa zakazuje termin u Vaš Google Calendar. Serviser čita odgovore u rezimeu poziva pre izlaska.",
+        body: "LobbyStack pita za aparat, marku, model i simptome, pa zakazuje termin u Vaš Google Calendar, Cal.com ili Calendly. Serviser čita odgovore u rezimeu poziva pre izlaska.",
         points: [
           "Može da pita i za šifru greške, starost aparata i garanciju",
           "Pozivaocu koji pristane šalje SMS potvrdu",
@@ -1614,7 +1614,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
       {
         question: "Šta je AI recepcioner za popravku kućnih aparata?",
         answer:
-          "To je recepcioner koji se javlja na pozive Vaše radnje dok su serviseri na popravkama. LobbyStack pita za aparat, marku, model i simptome, navodi cene koje unesete i zakazuje izlazak u Google Calendar tokom poziva.",
+          "To je recepcioner koji se javlja na pozive Vaše radnje dok su serviseri na popravkama. LobbyStack pita za aparat, marku, model i simptome, navodi cene koje unesete i zakazuje izlazak u Google Calendar, Cal.com ili Calendly tokom poziva.",
       },
       {
         question: "Može li da proveri koje marke servisiram?",
@@ -1667,7 +1667,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
     sections: [
       {
         title: "Zakazuje provere buđi i merenja vlage",
-        body: "Pozivi zbog starih mrlja i mirisa buđi dobijaju dnevni termin. LobbyStack pita da li je skoro bilo curenja ili poplave i zakazuje proveru u Vaš Google Calendar.",
+        body: "Pozivi zbog starih mrlja i mirisa buđi dobijaju dnevni termin. LobbyStack pita da li je skoro bilo curenja ili poplave i zakazuje proveru u Vaš Google Calendar, Cal.com ili Calendly.",
         points: [
           "Nudi slobodne termine i zakazuje onaj koji pozivalac izabere",
           "Pozivaocu koji pristane šalje SMS potvrdu",
@@ -1694,7 +1694,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
       {
         question: "Šta je AI recepcioner za firme za sanaciju šteta?",
         answer:
-          "To je recepcioner koji se javlja na Vaše pozive dok je ekipa na terenu ili spava. LobbyStack poplavu, izlivanje kanalizacije i štetu od požara preusmerava dežurnoj ekipi, preglede na buđ i merenja vlage zakazuje u Google Calendar, a uz svaki poziv čuva izvor vode i podatke o osiguranju.",
+          "To je recepcioner koji se javlja na Vaše pozive dok je ekipa na terenu ili spava. LobbyStack poplavu, izlivanje kanalizacije i štetu od požara preusmerava dežurnoj ekipi, preglede na buđ i merenja vlage zakazuje u Google Calendar, Cal.com ili Calendly, a uz svaki poziv čuva izvor vode i podatke o osiguranju.",
       },
       {
         question: "Može li noću da prima pozive zbog štete od vode?",
@@ -1755,7 +1755,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
       },
       {
         title: "Zakazuje zamenu uložaka, daljinske ključeve i ugradnju brava",
-        body: "Za ključeve automobila LobbyStack pita za marku, model i godište, a za ugradnju broj vrata. Zatim zakazuje dnevni izlazak u Vaš Google Calendar.",
+        body: "Za ključeve automobila LobbyStack pita za marku, model i godište, a za ugradnju broj vrata. Zatim zakazuje dnevni izlazak u Vaš Google Calendar, Cal.com ili Calendly.",
         points: [
           "Nudi slobodne termine i zakazuje onaj koji pozivalac izabere",
           "Pozivaocu koji pristane šalje SMS potvrdu",
@@ -1774,7 +1774,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
       {
         question: "Šta radi AI recepcioner za bravare?",
         answer:
-          "Javlja se na Vaše pozive dok ste na poslu ili ne radite. LobbyStack navodi Vašu cenu otvaranja, uzima podatke o automobilu ili adresu i preusmerava zaključavanja dežurnom bravaru. Zamenu uložaka, daljinske ključeve i ugradnje zakazuje u Google Calendar.",
+          "Javlja se na Vaše pozive dok ste na poslu ili ne radite. LobbyStack navodi Vašu cenu otvaranja, uzima podatke o automobilu ili adresu i preusmerava zaključavanja dežurnom bravaru. Zamenu uložaka, daljinske ključeve i ugradnje zakazuje u Google Calendar, Cal.com ili Calendly.",
       },
       {
         question: "Može li da navede moju cenu otvaranja?",
@@ -1828,7 +1828,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
       sections: [
         {
           title: "Zakazuje konsultacije za nove projekte",
-          body: "Novi klijent koji zove u 9 uveče čuje pitanja koja biste i Vi postavili, o obimu posla, budžetu i rokovima. LobbyStack zakazuje konsultacije u Vaš Google Calendar pre nego što pozove sledećeg izvođača.",
+          body: "Novi klijent koji zove u 9 uveče čuje pitanja koja biste i Vi postavili, o obimu posla, budžetu i rokovima. LobbyStack zakazuje konsultacije u Vaš Google Calendar, Cal.com ili Calendly pre nego što pozove sledećeg izvođača.",
           points: [
             "Za ponudu beleži obim posla, lokaciju i kontakt",
             "Navodi samo cene koje mu date",
@@ -1870,7 +1870,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "Može li da zakaže konsultacije za sledeći radni dan?",
           answer:
-            "Da. LobbyStack nudi slobodne termine iz Vašeg Google Calendar-a i zakazuje konsultacije tokom poziva, pa su novi poslovi u rasporedu kada tim počne dan.",
+            "Da. LobbyStack nudi slobodne termine iz Vašeg Google Calendar-a, Cal.com-a ili Calendly-ja i zakazuje konsultacije tokom poziva, pa su novi poslovi u rasporedu kada tim počne dan.",
         },
         {
           question: "Šta se dešava kada pozivalac van radnog vremena traži ponudu?",
@@ -2037,7 +2037,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
       imageAlt:
         "Poziv zbog štete od grada koji LobbyStack zakazuje u prvi slobodan termin za pregled krova",
       proofPoints: [
-        "Zakazuje preglede posle oluje u Google Calendar",
+        "Zakazuje preglede posle oluje u Google Calendar, Cal.com ili Calendly",
         "Odgovara na pitanja o osiguranju i proceniteljima po Vašem scenariju",
         "Aktivna curenja preusmerava dežurnoj ekipi",
       ],
@@ -2250,17 +2250,17 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
     {
       title: "AI recepcioner za firme u Kvebeku, na francuskom | LobbyStack",
       description:
-        "AI recepcioner za male firme u Kvebeku: javlja se na francuskom na Vašem broju, zakazuje u Google Calendar i prelazi na engleski kada ga pozivalac govori.",
+        "AI recepcioner za male firme u Kvebeku: javlja se na francuskom na Vašem broju, zakazuje u Google Calendar, Cal.com ili Calendly i prelazi na engleski kada ga pozivalac govori.",
       eyebrow: "Kvebek",
       h1: "AI recepcioner koji Vašim klijentima u Kvebeku odgovara na francuskom",
       intro:
-        "Na gradilištu ste u Lavalu ili sa klijentom, a telefon zvoni. LobbyStack se javlja na francuskom na Vašem poslovnom broju, odgovara na osnovu Vaših usluga i cena i zakazuje termin u Google Calendar. Kada pozivalac govori engleski, prelazi na engleski.",
+        "Na gradilištu ste u Lavalu ili sa klijentom, a telefon zvoni. LobbyStack se javlja na francuskom na Vašem poslovnom broju, odgovara na osnovu Vaših usluga i cena i zakazuje termin u Google Calendar, Cal.com ili Calendly. Kada pozivalac govori engleski, prelazi na engleski.",
       imageAlt:
         "LobbyStack se na francuskom javlja na poziv firme iz Kvebeka i zakazuje termin",
       proofPoints: [
         "Pozivi počinju na francuskom kada je to Vaš podrazumevani jezik",
         "Kanadski brojevi, sa pretragom po pozivnom broju",
-        "Zakazuje u Google Calendar i šalje SMS potvrdu",
+        "Zakazuje u Google Calendar, Cal.com ili Calendly i šalje SMS potvrdu",
         "Besplatan paket, zatim US$30 mesečno za 150 minuta",
       ],
       sections: [
@@ -2302,7 +2302,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "Šta AI recepcioner radi za firmu u Kvebeku?",
           answer:
-            "Javlja se na pozive koje Vaš tim ne može da primi, na francuskom ili na jeziku pozivaoca. LobbyStack odgovara na pitanja na osnovu usluga, cena i radnog vremena koje dodate, zakazuje termine u Google Calendar, prebacuje hitne pozive na Vaš mobilni i za sve ostalo prima poruku.",
+            "Javlja se na pozive koje Vaš tim ne može da primi, na francuskom ili na jeziku pozivaoca. LobbyStack odgovara na pitanja na osnovu usluga, cena i radnog vremena koje dodate, zakazuje termine u Google Calendar, Cal.com ili Calendly, prebacuje hitne pozive na Vaš mobilni i za sve ostalo prima poruku.",
         },
         {
           question: "Da li govori kvebečki francuski?",
@@ -2327,7 +2327,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "Da li radi sa mojim softverom za zakazivanje?",
           answer:
-            "Google Calendar je jedini kalendar sa kojim se LobbyStack direktno povezuje. Šalje i potpisane webhookove kada se poziv završi ili kada zakaže termin, a Zapier se povezuje na njih, pa podatke možete da pošaljete u drugi alat.",
+            "LobbyStack se od kalendara direktno povezuje samo sa Google Calendar-om, Cal.com-om i Calendly-jem. Šalje i potpisane webhookove kada se poziv završi ili kada zakaže termin, a Zapier se povezuje na njih, pa podatke možete da pošaljete u drugi alat.",
         },
         {
           question: "Koliko košta?",
@@ -2368,18 +2368,18 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
       eyebrow: "Izvođači renoviranja",
       h1: "AI recepcioner za izvođače renoviranja koji zakazuje procene dok ste na gradilištu",
       intro:
-        "Vlasnik kuće koji traži cenu za renoviranje kupatila zove nekoliko izvođača u istom satu. LobbyStack se javlja na Vašu liniju dok Vi radite, pita za vrstu radova, adresu i rokove i zakazuje izlazak na procenu u Google Calendar pre nego što pozivalac spusti slušalicu.",
+        "Vlasnik kuće koji traži cenu za renoviranje kupatila zove nekoliko izvođača u istom satu. LobbyStack se javlja na Vašu liniju dok Vi radite, pita za vrstu radova, adresu i rokove i zakazuje izlazak na procenu u Google Calendar, Cal.com ili Calendly pre nego što pozivalac spusti slušalicu.",
       imageAlt:
         "Izlazak na procenu za renoviranje kupatila koji je LobbyStack zakazao u kalendar izvođača",
       proofPoints: [
-        "Zakazuje izlaske na procenu u Google Calendar tokom poziva",
+        "Zakazuje izlaske na procenu u Google Calendar, Cal.com ili Calendly tokom poziva",
         "Proverava poštanski broj pozivaoca prema Vašem području rada",
         "Prebacuje hitne slučajeve sa gradilišta na Vaš mobilni",
       ],
       sections: [
         {
           title: "Zakazuje izlazak na procenu dok je pozivalac na vezi",
-          body: "LobbyStack postavlja pitanja koja biste i Vi postavili: vrsta radova, adresa, rokovi i, ako želite, budžet. Zatim nudi slobodne termine iz Vašeg Google Calendar-a i zakazuje izlazak. Ako želite da odobrite svaki izlazak, režim zahteva beleži vreme koje pozivalac želi, a Vaš tim ga potvrđuje.",
+          body: "LobbyStack postavlja pitanja koja biste i Vi postavili: vrsta radova, adresa, rokovi i, ako želite, budžet. Zatim nudi slobodne termine iz Vašeg Google Calendar-a, Cal.com-a ili Calendly-ja i zakazuje izlazak. Ako želite da odobrite svaki izlazak, režim zahteva beleži vreme koje pozivalac želi, a Vaš tim ga potvrđuje.",
           points: [
             "Preskače termine koji su već zauzeti u Vašem kalendaru",
             "Klijentima koji pristanu šalje SMS potvrdu i podsetnik",
@@ -2414,7 +2414,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "Šta AI recepcioner radi za izvođača renoviranja?",
           answer:
-            "Javlja se na pozive koje propustite na gradilištu. LobbyStack pita za vrstu radova i adresu, zakazuje izlaske na procenu u Google Calendar, prebacuje hitne slučajeve postojećih klijenata na Vaš mobilni i za sve ostalo prima poruku.",
+            "Javlja se na pozive koje propustite na gradilištu. LobbyStack pita za vrstu radova i adresu, zakazuje izlaske na procenu u Google Calendar, Cal.com ili Calendly, prebacuje hitne slučajeve postojećih klijenata na Vaš mobilni i za sve ostalo prima poruku.",
         },
         {
           question: "Može li da navede cenu preko telefona?",
@@ -2429,7 +2429,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "Da li radi sa Jobberom ili Buildertrendom?",
           answer:
-            "Ne direktno. Google Calendar je jedini kalendar sa kojim se LobbyStack povezuje. Šalje potpisane webhookove kada se poziv završi ili kada zakaže termin i nudi REST API, a Zapier se povezuje na oba.",
+            "Ne direktno. LobbyStack se od kalendara povezuje samo sa Google Calendar-om, Cal.com-om i Calendly-jem. Šalje potpisane webhookove kada se poziv završi ili kada zakaže termin i nudi REST API, a Zapier se povezuje na oba.",
         },
         {
           question: "Mogu li da zadržim svoj poslovni broj?",

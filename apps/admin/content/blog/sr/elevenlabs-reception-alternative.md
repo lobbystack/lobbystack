@@ -30,7 +30,7 @@ Reception zvuči odlično i govori više od 70 jezika. LobbyStack Vam daje dvost
 | Istovremeni pozivi u početnom paketu | 1 | Bez ograničenja paketa na Starter i Pro bez limita potrošnje |
 | Jezici | 70+ uz automatsko prepoznavanje | Odgovara na jeziku pozivaoca |
 | Osoblje se javlja prvo | Ugrađen režim u kom se osoblje javlja prvo | Preko preusmeravanja poziva kod Vašeg operatera |
-| Integracije | Google Calendar, Zapier, webhookovi, MCP | Google Calendar |
+| Integracije | Google Calendar, Zapier, webhookovi, MCP | Google Calendar, Cal.com, Calendly |
 | HIPAA | Nije podržan | Samostalno hostovanje za punu kontrolu nad podacima o pozivima |
 | Kod | Zatvoren, samo hostovana verzija | MIT licenca, upravljani oblak ili samostalno hostovanje |
 

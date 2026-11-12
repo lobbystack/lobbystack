@@ -26,7 +26,7 @@ LobbyStack uključuje zakazivanje, preusmeravanje poziva, SMS obaveštenja, tran
 | Godišnja cena | $25.00 mesečno za 100 minuta | $24 mesečno za 150 minuta |
 | Dodatni minuti | Cena nije objavljena | $0.20 na Starter paketu, $0.18 na Pro paketu |
 | Postojeći telefonski sistem | Radi sa bilo kojim sistemom, bez Zoom Phone | Prosleđivanje poziva sa Vašeg postojećeg broja |
-| Zakazivanje | Zoom Scheduler, Google, Microsoft i Calendly | Zakazivanje u Google Calendar uz poslovna pravila |
+| Zakazivanje | Zoom Scheduler, Google, Microsoft i Calendly | Zakazivanje u Google Calendar, Cal.com ili Calendly uz poslovna pravila |
 | Preusmeravanje | Asistirano preusmeravanje i preusmeravanje po imenu | Direktno preusmeravanje na jedan broj, bez najave |
 | Jezici | 23 u Zoom tabeli cena | Počinje na jednom od 8 jezika po izboru, zatim odgovara na jeziku pozivaoca (više od 70) |
 | Izvorni kod | Nije naveden | Javni repozitorijum pod MIT licencom |

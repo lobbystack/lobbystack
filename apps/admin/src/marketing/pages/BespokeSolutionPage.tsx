@@ -38,7 +38,7 @@ export const bespokeSolutionVariants = {
       en: {
         title: "AI Phone Answering Service for Small Businesses | LobbyStack",
         description:
-          "LobbyStack's AI phone answering service picks up your business calls, books appointments into Google Calendar and transfers urgent calls. Try it free.",
+          "LobbyStack's AI phone answering service picks up your calls, books into Google Calendar, Cal.com or Calendly and transfers urgent calls. Try it free.",
       },
       fr: {
         title: "Réponse téléphonique IA pour petites entreprises",
@@ -72,7 +72,7 @@ export const bespokeSolutionVariants = {
       en: {
         title: "AI Appointment Setter for Inbound Calls | LobbyStack",
         description:
-          "An AI appointment setter and scheduler for inbound calls. LobbyStack offers open times from Google Calendar, books the visit and texts a confirmation.",
+          "An AI appointment setter for inbound calls. LobbyStack offers open times from Google Calendar, Cal.com or Calendly, books the visit and texts a confirmation.",
       },
       fr: {
         title: "Planificateur de rendez‑vous IA pour petites entreprises",
@@ -106,7 +106,7 @@ export const bespokeSolutionVariants = {
       en: {
         title: "AI Receptionist for Home Services Businesses | LobbyStack",
         description:
-          "An AI receptionist for home services that answers while your crew works, books jobs into Google Calendar and transfers emergencies to your on-call tech.",
+          "An AI receptionist for home services that answers while your crew works, books jobs into Google Calendar, Cal.com or Calendly and transfers emergencies.",
       },
       fr: {
         title: "Réceptionniste IA pour services à domicile | LobbyStack",

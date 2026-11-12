@@ -52,7 +52,7 @@ Neka bude kratak: ime firme i jedno pitanje. Na primer: „Plomberie Gagnon, bon
 
 ### 4. Povežite kalendar
 
-Povežite Google Calendar u integracijama i izaberite kalendar za rezervacije. Asistent tada tokom poziva nudi slobodne termine i zakazuje. Ako želite da odobrite svaki termin, režim zahteva beleži vreme koje pozivalac želi, a Vaš tim ga potvrđuje. Klijenti koji pristanu dobijaju SMS potvrdu.
+Povežite Google Calendar, Cal.com ili Calendly u integracijama i izaberite gde idu rezervacije. Asistent tada tokom poziva nudi slobodne termine i zakazuje. Ako želite da odobrite svaki termin, režim zahteva beleži vreme koje pozivalac želi, a Vaš tim ga potvrđuje. Klijenti koji pristanu dobijaju SMS potvrdu.
 
 ### 5. Napišite pravila običnim rečima
 

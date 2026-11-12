@@ -30,7 +30,7 @@ Empiece por la llamada que más le cuesta cuando cae en el buzón de voz. Para u
 - **Jobber Receptionist, la mejor para empresas en Jobber:** un complemento de $29 con 30 conversaciones al mes.
 - **Sameday AI, la mejor para techadores en JobNimbus o AccuLynx con presupuesto amplio:** un sistema telefónico con IA desde $449 al mes por 500 minutos.
 - **OnCrew, la factura de IA más baja en nuestro mes de tormenta:** $49 por 100 llamadas, luego $0.99 por llamada.
-- **LobbyStack (la nuestra), la mejor para empresas que usan Google Calendar con poco presupuesto:** $30 al mes por 150 minutos, sin cargo de alta. Responde a cada persona en su idioma, entre más de 70.
+- **LobbyStack (la nuestra), la mejor para empresas que usan Google Calendar, Cal.com o Calendly con poco presupuesto:** $30 al mes por 150 minutos, sin cargo de alta. Responde a cada persona en su idioma, entre más de 70.
 
 ## ¿Cómo se comparan estos servicios para contratistas?
 
@@ -90,7 +90,7 @@ Posh factura por mes calendario y no cada 28 días, no exige contrato largo y di
 
 ## ¿Qué servicios de IA existen para contratistas?
 
-Jobber y Housecall Pro venden recepcionistas con IA dentro de su propio software. Sameday AI nombra ServiceTitan, JobNimbus y AccuLynx entre sus conexiones. OnCrew está hecho para oficios y cobra por llamada. Smith.ai pone recepcionistas en vivo detrás de su IA. LobbyStack agenda en Google Calendar y transfiere las llamadas urgentes a un número. Elija el servicio de IA que agenda donde ya viven sus trabajos.
+Jobber y Housecall Pro venden recepcionistas con IA dentro de su propio software. Sameday AI nombra ServiceTitan, JobNimbus y AccuLynx entre sus conexiones. OnCrew está hecho para oficios y cobra por llamada. Smith.ai pone recepcionistas en vivo detrás de su IA. LobbyStack agenda en Google Calendar, Cal.com o Calendly y transfiere las llamadas urgentes a un número. Elija el servicio de IA que agenda donde ya viven sus trabajos.
 
 ### Jobber Receptionist: la mejor para empresas en Jobber
 
@@ -118,13 +118,13 @@ El español se activa gratis, y su [página de atención con IA](https://oncrew.
 
 La [AI Receptionist](https://smith.ai/pricing/ai-receptionist) de Smith.ai tiene un plan gratuito con 25 llamadas al mes, luego $3.00 por llamada. Pro cobra $2.00 por llamada por 75 llamadas ($150), $1.80 por 150 y $1.67 por 300, con llamadas extra de $2.17 a $2.50. Las llamadas pueden pasar a una recepcionista en vivo en Norteamérica, y la página de precios no indica cargo por ello. Los planes son mes a mes con 30 días de aviso para cancelar, y puede quitar de la factura hasta 10% de las llamadas de cada ciclo como spam.
 
-### LobbyStack (la nuestra): la mejor para empresas que usan Google Calendar con poco presupuesto
+### LobbyStack (la nuestra): la mejor para empresas que usan Google Calendar, Cal.com o Calendly con poco presupuesto
 
 El plan Starter de LobbyStack cuesta $30 al mes por 150 minutos, luego $0.20 por minuto. Pro cuesta $100 por 500 minutos, luego $0.18. Con facturación anual quedan en $24 y $80 al mes, y ningún plan tiene cargo de alta. LobbyStack cuenta el uso por segundos y no cobra el spam ni las llamadas de menos de 10 segundos. Los planes no limitan cuántas llamadas atiende a la vez.
 
-Usted obtiene un número en Estados Unidos, Canadá, el Reino Unido, Australia o Nueva Zelanda y puede desviar a él su número actual. Contesta todas las llamadas o solo las de desborde o fuera de horario. Agenda visitas de presupuesto en Google Calendar y, si quien llama lo acepta, envía por SMS una confirmación y un recordatorio 24 horas antes a números de Estados Unidos y Canadá. El resumen, la transcripción y la grabación de cada llamada quedan en el panel, y usted recibe un correo cuando toma un mensaje, con alertas por SMS opcionales. Cada llamada empieza en el idioma predeterminado del negocio (inglés, francés, español, serbio, alemán, portugués de Brasil, italiano o neerlandés), y luego la recepcionista responde en el idioma de quien llama: más de 70 idiomas con GPT-Live de OpenAI, incluido el español. El código es abierto con licencia MIT, y puede alojarlo usted mismo.
+Usted obtiene un número en Estados Unidos, Canadá, el Reino Unido, Australia o Nueva Zelanda y puede desviar a él su número actual. Contesta todas las llamadas o solo las de desborde o fuera de horario. Agenda visitas de presupuesto en Google Calendar, Cal.com o Calendly y, si quien llama lo acepta, envía por SMS una confirmación y un recordatorio 24 horas antes a números de Estados Unidos y Canadá. El resumen, la transcripción y la grabación de cada llamada quedan en el panel, y usted recibe un correo cuando toma un mensaje, con alertas por SMS opcionales. Cada llamada empieza en el idioma predeterminado del negocio (inglés, francés, español, serbio, alemán, portugués de Brasil, italiano o neerlandés), y luego la recepcionista responde en el idioma de quien llama: más de 70 idiomas con GPT-Live de OpenAI, incluido el español. El código es abierto con licencia MIT, y puede alojarlo usted mismo.
 
-No tiene integración con Jobber, Housecall Pro, ServiceTitan, JobNimbus ni ningún CRM, y Google Calendar es su único calendario. Los webhooks firmados para 6 eventos y una API REST pueden enviar los datos de llamadas a otras herramientas, pero esa conexión la construye usted. Las transferencias son directas, sin presentar a quien llama, y van a un solo número. Si una transferencia no se completa, se lo dice a quien llama, ofrece tomar un mensaje y su equipo puede recibir una alerta de transferencia fallida. Ninguna persona la respalda, y la IA no contesta mensajes de texto. El plan gratuito le da 30 minutos de voz y un número de EE. UU. o Canadá gratis durante 14 días, sin tarjeta. Durante la prueba, las transferencias solo van al celular que usted verificó. Vea cómo atiende las llamadas tras una tormenta en la página de [atención telefónica para techadores](/es/solutions/roofing-answering-service/).
+No tiene integración con Jobber, Housecall Pro, ServiceTitan, JobNimbus ni ningún CRM, y solo agenda en Google Calendar, Cal.com o Calendly. Los webhooks firmados para 6 eventos y una API REST pueden enviar los datos de llamadas a otras herramientas, pero esa conexión la construye usted. Las transferencias son directas, sin presentar a quien llama, y van a un solo número. Si una transferencia no se completa, se lo dice a quien llama, ofrece tomar un mensaje y su equipo puede recibir una alerta de transferencia fallida. Ninguna persona la respalda, y la IA no contesta mensajes de texto. El plan gratuito le da 30 minutos de voz y un número de EE. UU. o Canadá gratis durante 14 días, sin tarjeta. Durante la prueba, las transferencias solo van al celular que usted verificó. Vea cómo atiende las llamadas tras una tormenta en la página de [atención telefónica para techadores](/es/solutions/roofing-answering-service/).
 
 ## ¿Cuánto cuesta un servicio de atención telefónica para contratistas?
 
@@ -156,7 +156,7 @@ LobbyStack no tiene cargo de alta en ningún plan. Si fija un tope mensual de ga
 
 ## ¿Qué servicios agendan presupuestos en Jobber, Housecall Pro, ServiceTitan o JobNimbus?
 
-PATLive nombra los cuatro entre sus páginas de construcción y de climatización. AnswerForce nombra Jobber, Housecall Pro y ServiceTitan. Sameday AI nombra ServiceTitan, Housecall Pro y JobNimbus. Jobber y Housecall Pro tienen su propia recepcionista. LobbyStack no se conecta con ninguno y agenda en Google Calendar.
+PATLive nombra los cuatro entre sus páginas de construcción y de climatización. AnswerForce nombra Jobber, Housecall Pro y ServiceTitan. Sameday AI nombra ServiceTitan, Housecall Pro y JobNimbus. Jobber y Housecall Pro tienen su propia recepcionista. LobbyStack no se conecta con ninguno y agenda en Google Calendar, Cal.com o Calendly.
 
 | Servicio | Jobber | Housecall Pro | ServiceTitan | JobNimbus | Otras herramientas para contratistas |
 |---|---|---|---|---|---|
@@ -169,11 +169,11 @@ PATLive nombra los cuatro entre sus páginas de construcción y de climatizació
 | Housecall Pro CSR AI | No | Integrada | No | No | Solo Housecall Pro |
 | Sameday AI | No nombrado | Nombrado | App certificada | Nombrado | AccuLynx, FieldRoutes, Service Fusion |
 | OnCrew | Un registro por llamada vía webhook | Se conecta con el plan MAX de Housecall Pro | Un registro por llamada vía webhook | No nombrado | Sincronización con Google Calendar |
-| LobbyStack (la nuestra) | No | No | No | No | Google Calendar; webhooks firmados para 6 eventos; API REST |
+| LobbyStack (la nuestra) | No | No | No | No | Google Calendar, Cal.com, Calendly; webhooks firmados para 6 eventos; API REST |
 
 "Nombrado" significa que el proveedor menciona la herramienta en su propia página. No dice si un agente captura el trabajo a mano o si la cita llega a su calendario durante la llamada. Pida a cada finalista que agende un presupuesto de prueba en su software y revise la ficha del cliente, el tipo de trabajo, la dirección y las notas.
 
-Con LobbyStack, alguien de su oficina copia cada cita de Google Calendar o del resumen de la llamada a su software, o usted automatiza ese paso con los webhooks y la API.
+Con LobbyStack, alguien de su oficina copia cada cita de Google Calendar, Cal.com, Calendly o del resumen de la llamada a su software, o usted automatiza ese paso con los webhooks y la API.
 
 ## ¿Qué pasa fuera de horario y durante un pico por tormenta?
 
@@ -231,7 +231,7 @@ Ningún servicio en vivo de esta lista es gratis, pero varios ofrecen prueba. La
 
 ### ¿Un servicio de atención telefónica puede agendar presupuestos?
 
-Sí. PATLive, AnswerForce y Smith.ai dicen que sus recepcionistas agendan presupuestos, y Smith.ai lista las preguntas que hace. Jobber Receptionist y Housecall Pro CSR AI agendan dentro de su propio software. OnCrew manda las solicitudes a su calendario para que su equipo las confirme, o agenda espacios libres si lo activa. LobbyStack agenda visitas de presupuesto en Google Calendar.
+Sí. PATLive, AnswerForce y Smith.ai dicen que sus recepcionistas agendan presupuestos, y Smith.ai lista las preguntas que hace. Jobber Receptionist y Housecall Pro CSR AI agendan dentro de su propio software. OnCrew manda las solicitudes a su calendario para que su equipo las confirme, o agenda espacios libres si lo activa. LobbyStack agenda visitas de presupuesto en Google Calendar, Cal.com o Calendly.
 
 ### ¿Puedo usar el servicio solo fuera de horario?
 
@@ -239,7 +239,7 @@ Sí. Configure su operador para desviar las llamadas cuando cierre, y el servici
 
 ### ¿LobbyStack funciona con Jobber, ServiceTitan o JobNimbus?
 
-No. LobbyStack no tiene integración con Jobber, Housecall Pro, ServiceTitan, JobNimbus ni ningún CRM, y Google Calendar es su único calendario. Los webhooks firmados para 6 eventos y una API REST pueden enviar los datos a otras herramientas, pero alguien debe construir esa conexión. Si el trabajo debe llegar a su software durante la llamada, elija otro proveedor.
+No. LobbyStack no tiene integración con Jobber, Housecall Pro, ServiceTitan, JobNimbus ni ningún CRM, y solo agenda en Google Calendar, Cal.com o Calendly. Los webhooks firmados para 6 eventos y una API REST pueden enviar los datos a otras herramientas, pero alguien debe construir esa conexión. Si el trabajo debe llegar a su software durante la llamada, elija otro proveedor.
 
 ### ¿Un servicio para contratistas puede contestar en español?
 
@@ -268,6 +268,6 @@ Fuentes, todas consultadas el 9 o el 10 de octubre de 2026:
 - **Agentes en vivo al precio por minuto más bajo:** AnswerHero.
 - **Ya trabaja con Jobber o Housecall Pro:** pruebe primero la recepcionista integrada.
 - **Un techador en JobNimbus o AccuLynx que quiere IA:** Sameday AI.
-- **Citas en Google Calendar por $30 a $100 al mes, con clientes que hablan varios idiomas:** LobbyStack.
+- **Citas en Google Calendar, Cal.com o Calendly por $30 a $100 al mes, con clientes que hablan varios idiomas:** LobbyStack.
 
 ¿Quiere oír a LobbyStack atender una solicitud de presupuesto antes de pagar? [Cree una cuenta gratis](https://app.lobbystack.com/es/signup) y pruébela con 30 minutos de voz y un número gratis durante 14 días, sin tarjeta. Los planes de pago no tienen cargo de alta. Después vea cómo cubre noches y fines de semana en la página de [atención fuera de horario para contratistas](/es/solutions/after-hours-answering-service-for-contractors/).

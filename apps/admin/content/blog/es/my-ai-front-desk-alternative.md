@@ -27,7 +27,7 @@ Frontdesk, antes My AI Front Desk, vende ahora un amplio espacio de ventas con I
 | Minutos adicionales | 25 créditos ($0.25) cada uno; la reserva mensual de 1,000 créditos cubre unos 40 | $0.20 en Starter, $0.18 en Pro |
 | Alcance del producto | Fuerza laboral de IA omnicanal y CRM | Recepcionista telefónica con IA y operaciones de llamadas |
 | Canales | Voz, SMS bidireccionales, chat, correo electrónico, formularios | Voz, alertas al propietario por correo electrónico o SMS, panel |
-| Reservas | Google Calendar, Outlook o Calendly | Google Calendar |
+| Reservas | Google Calendar, Outlook o Calendly | Google Calendar, Cal.com o Calendly |
 | Transferencias | Transferencias asistidas según sus reglas | Transferencia ciega a un solo número |
 | Idiomas | Más de 20 idiomas, con detección del idioma de quien llama | Empieza en uno de 8 idiomas a elegir y luego contesta en el idioma de quien llama (más de 70) |
 | CRM | CRM integrado y secuencias, con sincronización con HubSpot y Salesforce | Registros de llamadas, webhooks y API REST, sin sincronización nativa con CRM |
@@ -50,7 +50,7 @@ Frontdesk ya no es solo una recepcionista telefónica. Sus páginas de producto 
 
 Ese alcance ayuda a un equipo pequeño que no tiene CRM y quiere un solo producto para captar un cliente potencial desde la web, enviarle un mensaje, llamarle y hacer seguimiento del intercambio. Frontdesk también vende planes de socio de marca blanca para agencias, que según sus preguntas frecuentes de precios empiezan en $500 al mes.
 
-LobbyStack evita cobrar a sus clientes de recepción por herramientas de ventas que quizá no necesiten. Guarda personas que llaman, citas, mensajes, transcripciones, resúmenes y reglas del negocio, y reserva citas en Google Calendar. Los webhooks y la API REST envían los eventos de llamadas y reservas a las herramientas que ya usa.
+LobbyStack evita cobrar a sus clientes de recepción por herramientas de ventas que quizá no necesiten. Guarda personas que llaman, citas, mensajes, transcripciones, resúmenes y reglas del negocio, y reserva citas en Google Calendar, Cal.com o Calendly. Los webhooks y la API REST envían los eventos de llamadas y reservas a las herramientas que ya usa.
 
 ## Frontdesk vende ahora un solo plan de $99
 

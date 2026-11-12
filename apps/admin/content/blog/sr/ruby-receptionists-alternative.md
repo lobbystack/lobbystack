@@ -95,7 +95,7 @@ Za cene drugih usluga sa živim recepcionerima, pogledajte [koliko košta usluga
 | Isprobavanje | Garancija povraćaja novca za nove korisnike: 21 dan ili 500 minuta | Besplatan paket: 30 minuta razgovora, bez kartice, broj iz SAD ili Kanade besplatno 14 dana |
 | Promena paketa | Viši paket važi najmanje tri perioda; niži posle tri | Prelazak na viši ili niži paket ili otkaz u podešavanjima naplate, bez naknade za otkazivanje |
 | Jezici pozivalaca | Engleski i španski | Počinje na jednom od 8 jezika po izboru, zatim odgovara na jeziku pozivaoca (70+, uključujući španski) |
-| Zakazivanje | Recepcioneri zakazuju termine | Samo u Google Calendar |
+| Zakazivanje | Recepcioneri zakazuju termine | Samo u Google Calendar, Cal.com ili Calendly |
 | Preusmeravanje | Na broj koji izaberete; van Severne Amerike moguće su dodatne naknade | Preusmeravanje bez najave na jedan broj po firmi |
 | Poruke | E-pošta, SMS ili obaveštenje u aplikaciji | Obaveštenje e-poštom kada primi poruku; SMS obaveštenja opciono |
 | Evidencija poziva | AI transkripti poziva i govorne pošte | Snimak, transkript i rezime svakog poziva |
@@ -148,13 +148,13 @@ Ruby stavlja obučenu osobu na svaki poziv koji primi, a to LobbyStack ne može 
 - Usluge u skladu sa HIPAA, prema stranici sa cenama. LobbyStack ne tvrdi da je u skladu sa HIPAA.
 - Više od 20 godina rada sa malim firmama, prema Ruby početnoj stranici.
 
-LobbyStack ima nedostatke koji mogu da ga isključe. Nijedna osoba se ne javlja. Njegov AI ne odgovara na SMS poruke, pa Vaš tim na njih odgovara ručno sa kontrolne table. Zakazuje samo u Google Calendar, preusmerava na jedan broj, ne nudi chat na sajtu i sa CRM sistemima i poslovnim softverom se povezuje preko webhookova i API-ja, bez nativne integracije.
+LobbyStack ima nedostatke koji mogu da ga isključe. Nijedna osoba se ne javlja. Njegov AI ne odgovara na SMS poruke, pa Vaš tim na njih odgovara ručno sa kontrolne table. Zakazuje samo u Google Calendar, Cal.com ili Calendly, preusmerava na jedan broj, ne nudi chat na sajtu i sa CRM sistemima i poslovnim softverom se povezuje preko webhookova i API-ja, bez nativne integracije.
 
 ## Kada je LobbyStack bolji izbor
 
 LobbyStack je jeftiniji na svakom obimu koji smo izračunali, a njegovi dodatni minuti koštaju $0.18 do $0.20, naspram $3.30 do $5.40 kod servisa Ruby. Odgovara na rutinske pozive o radnom vremenu, cenama, području rada i terminima, a hitne pozive prosleđuje Vašem timu. Pogledajte kako radi [AI javljanje na telefon](/sr/solutions/ai-phone-answering/).
 
-- **Zakazivanje tokom poziva.** Kada povežete Google Calendar i podesite radno vreme, LobbyStack zakazuje u slobodne termine. Kada se pozivalac složi, šalje SMS potvrdu i podsetnik 24 sata pre termina.
+- **Zakazivanje tokom poziva.** Kada povežete Google Calendar, Cal.com ili Calendly i podesite radno vreme, LobbyStack zakazuje u slobodne termine. Kada se pozivalac složi, šalje SMS potvrdu i podsetnik 24 sata pre termina.
 - **Naplata po sekundi.** Pozivi kraći od 10 sekundi i pozivi koje recepcioner prekine kao spam se ne računaju.
 - **Bez ograničenja istovremenih poziva.** Ako postavite gornju granicu potrošnje za prekoračenje i dostignete je, novi pozivaoci čuju signal zauzeća do sledećeg meseca ili dok ne povećate granicu.
 - **Evidencija svakog poziva.** Kontrolna tabla čuva snimak, transkript i rezime, a Vaš tim dobija obaveštenje e-poštom kada recepcioner primi poruku.
@@ -166,7 +166,7 @@ LobbyStack je jeftiniji na svakom obimu koji smo izračunali, a njegovi dodatni 
 
 1. Registrujte se na [app.lobbystack.com](https://app.lobbystack.com/sr/signup). Besplatni paket daje 30 minuta razgovora mesečno i broj iz SAD ili Kanade besplatno 14 dana, bez kartice.
 2. Podešavanje Vas vodi kroz podatke o firmi, uvoz sajta, Vaše znanje, pozdrav i izbor paketa.
-3. Napišite pravila za pozive običnim jezikom i izaberite način zakazivanja: recepcioner zakazuje termin, prima zahtev koji Vaš tim potvrđuje ili prima poruku. Povežite Google Calendar i podesite radno vreme, jer bez njih zakazivanje ne radi.
+3. Napišite pravila za pozive običnim jezikom i izaberite način zakazivanja: recepcioner zakazuje termin, prima zahtev koji Vaš tim potvrđuje ili prima poruku. Povežite Google Calendar, Cal.com ili Calendly i podesite radno vreme, jer bez njih zakazivanje ne radi.
 4. Iz pregledača isprobajte pet poziva koje Ruby najčešće prima za Vas: pitanje o ceni, zakazivanje, hitan zahtev, pozivaoca koji traži živu osobu i pogrešan broj. Pročitajte svaki transkript sa osobom koja radi na daljem praćenju.
 5. Na paketu Starter ili Pro izaberite broj, ili prosledite postojeći broj firme na LobbyStack kada ste zauzeti, kada ne radite ili stalno. Dodajte broj za preusmeravanje i izaberite kada se pozivi preusmeravaju.
 6. Zadržite Ruby na liniji dok LobbyStack ne prođe Vaše probne pozive. Otkaz kod servisa Ruby važi od kraja tekućeg perioda od 30 dana. Ako Ruby hostuje broj Vaše firme, pitajte Ruby kako da ga prenesete pre otkaza i javite se LobbyStack timu za prenos broja.
@@ -209,7 +209,7 @@ Ako Vaš operater drži broj i prosleđuje pozive na Ruby, promenite pravilo pro
 ## Izaberite LobbyStack ako
 
 - Većina Vaših poziva je rutinska: radno vreme, cene, područje rada i termini.
-- Želite termine zakazane u Google Calendar tokom poziva, sa SMS potvrdom.
+- Želite termine zakazane u Google Calendar, Cal.com ili Calendly tokom poziva, sa SMS potvrdom.
 - Radije biste platili $30 za 150 minuta nego $250 za 50.
 - Želite naplatu po sekundi, bez naplate poziva kraćih od 10 sekundi.
 - Vaši pozivaoci govore i druge jezike osim engleskog i španskog.
@@ -233,6 +233,6 @@ Provereno 10. oktobra 2026, osim gde je drugačije navedeno:
 
 ## Zaključak
 
-Ruby je bolji izbor kada poziv mora da vodi obučena osoba: prijem koji traži procenu, naplata, osoblje koje govori španski ili nezadovoljan pozivalac. Za tu osobu plaćate od $3.15 do $5.00 po uključenom minutu, zavisno od veličine paketa. LobbyStack je bolji izbor kada su Vaši pozivi uglavnom rutinska pitanja i termini. Odgovara 150 minuta za $30, zakazuje u Google Calendar i preusmerava hitne pozive Vašem timu.
+Ruby je bolji izbor kada poziv mora da vodi obučena osoba: prijem koji traži procenu, naplata, osoblje koje govori španski ili nezadovoljan pozivalac. Za tu osobu plaćate od $3.15 do $5.00 po uključenom minutu, zavisno od veličine paketa. LobbyStack je bolji izbor kada su Vaši pozivi uglavnom rutinska pitanja i termini. Odgovara 150 minuta za $30, zakazuje u Google Calendar, Cal.com ili Calendly i preusmerava hitne pozive Vašem timu.
 
 Da biste čuli kako LobbyStack odgovara na pitanja Vaših pozivalaca, [počnite na besplatnom paketu](https://app.lobbystack.com/sr/signup). Dobijate 30 minuta razgovora mesečno i broj iz SAD ili Kanade na 14 dana, sa svojim pozdravom i pravilima, bez kartice.

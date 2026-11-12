@@ -25,7 +25,7 @@ Puede probar LobbyStack en el plan Free con 30 minutos de voz y un número de EE
 | Entrada con IA | $99 por 200 minutos | $30 por 150 minutos |
 | Nivel de 500 minutos | $199 | $100 |
 | Plataforma base | Requiere suscripción de usuario de CloudTalk | No requiere suscripción a un centro de contacto |
-| Integraciones | Más de 100 anunciadas | Google Calendar, más código abierto |
+| Integraciones | Más de 100 anunciadas | Google Calendar, Cal.com y Calendly, más código abierto |
 | Función principal | Preguntas, mensajes, enrutamiento, transferencia | Respuesta, recogida de datos, reservas, traspaso |
 | Código fuente | No se anuncia | Repositorio público con licencia MIT |
 | Despliegue | Gestionado por CloudTalk | Nube gestionada o autoalojado |
@@ -46,7 +46,7 @@ La plataforma de CloudTalk incluye números, flujos de llamadas, equipos, analí
 
 Eso hace atractivo a CloudTalk cuando un negocio necesita sustituir su sistema telefónico o montar una operación de ventas y soporte. Los administradores pueden mantener agentes humanos y flujos de IA en una sola plataforma.
 
-LobbyStack no intenta ofrecer un centro de contacto completo. Se ocupa del trabajo de recepción en torno a las llamadas entrantes, el conocimiento del negocio, las citas, las transcripciones, los resúmenes, las alertas y las transferencias. Reserva en Google Calendar y no se sincroniza con un CRM.
+LobbyStack no intenta ofrecer un centro de contacto completo. Se ocupa del trabajo de recepción en torno a las llamadas entrantes, el conocimiento del negocio, las citas, las transcripciones, los resúmenes, las alertas y las transferencias. Reserva en Google Calendar, Cal.com o Calendly y no se sincroniza con un CRM.
 
 ## Calcule el precio del agente de IA y de las licencias de usuario
 
@@ -67,7 +67,7 @@ CloudTalk describe su AI Receptionist como un agente generalista para preguntas 
 
 Esa separación de productos puede ayudar a elegir el agente adecuado. También significa que un equipo debería ver una demostración del flujo de trabajo en lugar de suponer que el nivel de recepcionista puede completarlo.
 
-LobbyStack integra en el producto de recepción las reservas, los cambios de cita, la captación de clientes potenciales, el conocimiento y el traspaso. Aparte de Google Calendar, no se conecta con sistemas de terceros.
+LobbyStack integra en el producto de recepción las reservas, los cambios de cita, la captación de clientes potenciales, el conocimiento y el traspaso. Aparte de Google Calendar, Cal.com y Calendly, no se conecta con sistemas de terceros.
 
 ## Un equipo de ventas salientes no es el mismo comprador
 

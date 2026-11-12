@@ -49,7 +49,7 @@ Početni paketi objavljeni u Francuskoj idu od €23.99 mesečno za 250 minuta k
 | [Callsens](https://callsens.fr/tarifs) Starter | €79 mesečno bez PDV-a | 200 minuta, 5 istovremenih poziva | €0.29 | Bez troška | 1 broj uključen, zemlja nije navedena | Google kalendar, Calendly |
 | [Elio](https://eliocall.com/tarifs) | €79 mesečno bez PDV-a | 150 minuta | €0.39 | €879 bez PDV-a, besplatno | Zadržavate svoj broj preko preusmeravanja | Nije navedeno za standardni paket |
 | [AirAgent](https://airagent.fr/tarifs/) Starter | €89 mesečno bez PDV-a | „Jusqu'à 250 appels” (do 250 poziva), 1 istovremeni poziv | „+ 0,30 € par min HT” (€0.30 po minutu) | Podešavanje od strane inženjera od €490 | 1 broj uključen, zemlja nije navedena | Google kalendar, Cal.com |
-| [LobbyStack](/sr/pricing/) Starter (naš) | $30 mesečno | 150 minuta, paket ne ograničava istovremene pozive | $0.20 | Bez troška | Broj u SAD, Kanadi, Velikoj Britaniji, Australiji ili na Novom Zelandu | Google kalendar |
+| [LobbyStack](/sr/pricing/) Starter (naš) | $30 mesečno | 150 minuta, paket ne ograničava istovremene pozive | $0.20 | Bez troška | Broj u SAD, Kanadi, Velikoj Britaniji, Australiji ili na Novom Zelandu | Google kalendar, Cal.com, Calendly |
 
 - AirAgent ispod svake cene prikazuje „+ 0,30 € par min HT”, bez navoda da li se naplaćuje od prvog minuta. Njegova sekcija čestih pitanja naplaćuje €0.30 po minutu kada se dostignu ograničenja paketa. Tražite pojašnjenje u pisanom obliku.
 - Elio navodi cene „en vigueur au 4 octobre 2026” (važe od 4. oktobra 2026). Ostale stranice ne navode datum cena.
@@ -102,7 +102,7 @@ LobbyStack naplaćuje $0.20 po dodatnom minutu, u donjem delu raspona francuskih
 
 - Starter za $30 za 150 minuta, zatim $0.20 po minutu; Pro za $100 za 500 minuta, zatim $0.18. Bez troška uključenja.
 - Poziv počinje na francuskom ako izaberete francuski kao podrazumevani jezik, a zatim recepcioner odgovara na jeziku pozivaoca: više od 70 jezika na OpenAI modelu GPT-Live. Korisno ako radite sa turistima ili stranim klijentima.
-- Zakazivanje u Google kalendaru, prebacivanje hitnih poziva na Vaš broj, i rezime, transkript i snimak svakog poziva.
+- Zakazivanje u Google kalendaru, Cal.com-u ili Calendly-ju, prebacivanje hitnih poziva na Vaš broj, i rezime, transkript i snimak svakog poziva.
 - Pozivi kraći od 10 sekundi i pozivi koje recepcioner prekine kao spam ne računaju se u potrošnju.
 - Kod je otvoren (MIT licenca): tehnički tim može da ga pregleda ili da ga sam hostuje, sa sopstvenim OpenAI i Twilio nalozima.
 
@@ -111,7 +111,7 @@ LobbyStack naplaćuje $0.20 po dodatnom minutu, u donjem delu raspona francuskih
 - Nema francuskog broja: preusmeravanje na broj u SAD, Kanadi, Velikoj Britaniji, Australiji ili na Novom Zelandu košta koliko Vaš operater naplaćuje za tu zemlju. Objavljeni kod, čak i kada ga sami hostujete, nudi samo tih pet zemalja.
 - Naplata u američkim dolarima: iznos u evrima zavisi od kursa i Vaše banke.
 - Potvrde i podsetnici za termine stižu SMS-om samo na brojeve iz SAD i Kanade. Obaveštenja timu imejlom rade u svakoj zemlji.
-- Samo Google kalendar, bez direktne integracije sa CRM-om ili poslovnim softverom: druge alate povezujete preko potpisanih webhookova ili REST API-ja.
+- Samo Google kalendar, Cal.com i Calendly, bez direktne integracije sa CRM-om ili poslovnim softverom: druge alate povezujete preko potpisanih webhookova ili REST API-ja.
 - Prebacivanje ide na jedan broj, bez predstavljanja pozivaoca osobi koja se javi.
 
 Izaberite francuskog dobavljača ako želite francuski broj, SMS poruke na mobilne telefone klijenata ili račun u evrima. Konten ima najjeftiniji minut među početnim paketima, ali ne zakazuje termine, Callsens prima pet poziva odjednom već na početnom paketu, a Elio poklanja podešavanje. LobbyStack više odgovara ako Vaši pozivaoci govore mnogo jezika, ako Vaš tim želi sam da hostuje kod ili ako poslujete i u SAD, Kanadi, Velikoj Britaniji, Australiji ili na Novom Zelandu.

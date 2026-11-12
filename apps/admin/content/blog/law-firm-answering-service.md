@@ -44,7 +44,7 @@ The best answering service for attorneys depends on who should take a new client
 - **Lexidesk, best AI built only for law firms:** AI phone and chat intake with native Clio and Lawmatics links. Price on request.
 - **Smith.ai AI Receptionist, best free AI start:** 25 real calls a month at no cost, with a Clio integration.
 - **Upfirst, best low per-call AI price:** $24.95 a month for 30 calls, with Clio scheduling.
-- **LobbyStack (ours), best low-cost AI for overflow and after-hours calls:** $30 a month for 150 minutes, consultation booking in Google Calendar and answers in 70+ languages, with no practice-software sync.
+- **LobbyStack (ours), best low-cost AI for overflow and after-hours calls:** $30 a month for 150 minutes, consultation booking in Google Calendar, Cal.com or Calendly and answers in 70+ languages, with no practice-software sync.
 
 ## How do law firm answering services compare?
 
@@ -125,7 +125,7 @@ Upfirst bills per call: $24.95 a month for 30 calls, $59.95 for 90, $159.95 for 
 
 LobbyStack's Starter plan costs $30 a month for 150 minutes, then $0.20 a minute. Pro costs $100 for 500 minutes, then $0.18. Billed annually, they cost $24 and $80 a month, and no plan has a setup fee. LobbyStack counts usage in seconds and doesn't bill spam or calls under 10 seconds.
 
-It answers every call or only overflow and after-hours calls, on a number in the US, Canada, the UK, Australia or New Zealand, or on your existing number through call forwarding. It asks the intake questions you write, takes messages and books consultations into Google Calendar. When the caller agrees, it texts a confirmation and a 24-hour reminder to US and Canadian numbers. It transfers urgent calls, such as an arrest or a hearing tomorrow, to one number. Each call opens in your choice of eight languages, and the receptionist then answers in the caller's language, across 70+ languages on OpenAI GPT-Live, Spanish included. The dashboard keeps a summary, transcript and recording of every call, and you get an email alert when it takes a message.
+It answers every call or only overflow and after-hours calls, on a number in the US, Canada, the UK, Australia or New Zealand, or on your existing number through call forwarding. It asks the intake questions you write, takes messages and books consultations into Google Calendar, Cal.com or Calendly. When the caller agrees, it texts a confirmation and a 24-hour reminder to US and Canadian numbers. It transfers urgent calls, such as an arrest or a hearing tomorrow, to one number. Each call opens in your choice of eight languages, and the receptionist then answers in the caller's language, across 70+ languages on OpenAI GPT-Live, Spanish included. The dashboard keeps a summary, transcript and recording of every call, and you get an email alert when it takes a message.
 
 These limits matter for a law firm. It has no Clio, MyCase or Lawmatics integration, and it connects to other tools through signed webhooks for 6 events and a REST API. It doesn't run conflict checks, score intake or give legal advice. Transfers are blind and go to one number, with no briefing for the attorney. If a transfer can't go through, it tells the caller, offers to take a message, and your team can get a "Live call transfer failed" alert. No human receptionist backs it up, and the AI doesn't reply to texts. Free gives you 30 voice minutes and a US or Canadian number free for 14 days, with no card. After 14 days, answering your firm's line takes Starter or Pro.
 
@@ -261,6 +261,6 @@ Sources, all read October 9 or 10, 2026:
 - **People on every call, trained only on legal calls:** Answering Legal, LEX Reception or Veza Reception.
 - **Conflict screening against your CRM:** Smith.ai's live receptionists.
 - **Intake written into Clio, MyCase or Lawmatics:** PATLive, Abby Connect, Smith.ai or Answering Legal, or Lexidesk for AI.
-- **Overflow and after-hours calls with consultations booked in Google Calendar, for $30 to $100 a month:** LobbyStack.
+- **Overflow and after-hours calls with consultations booked in Google Calendar, Cal.com or Calendly, for $30 to $100 a month:** LobbyStack.
 
 Want to hear LobbyStack take a new-client call before you pay? [Create a free account](https://app.lobbystack.com/en/signup) and test it with 30 voice minutes and a free number for 14 days, no card needed. To keep the number, Starter costs $30 a month with no setup fee.

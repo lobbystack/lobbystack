@@ -128,13 +128,13 @@ You set the rule with your carrier: forward when busy or unanswered for overflow
 With LobbyStack as the example:
 
 - You get a LobbyStack number (available in the US, Canada, the UK, Australia and New Zealand) and forward your business number to it. It can answer every call or only overflow or after-hours calls.
-- It books into Google Calendar. With the caller's consent, it texts a confirmation and a reminder 24 hours before the appointment to US and Canadian numbers.
+- It books into Google Calendar, Cal.com or Calendly. With the caller's consent, it texts a confirmation and a reminder 24 hours before the appointment to US and Canadian numbers.
 - It transfers urgent calls to one number per business. Transfers are blind, so it doesn't brief the person who picks up. If a transfer can't go through, it tells the caller, offers to take a message, and your team can get a "Live call transfer failed" alert.
 - Each call gets a summary, transcript and recording. You get an email alert when it takes a message, and text alerts are optional.
 - Calls open in your default language (English, French, Spanish, Serbian, German, Brazilian Portuguese, Italian or Dutch), and the receptionist then answers in the caller's language: 70+ languages, including Spanish.
 - LobbyStack doesn't bill spam calls or calls under 10 seconds.
 
-Know the limits before you forward a line: Google Calendar is the only calendar, the AI doesn't reply to texts, and there's no CRM or field-service software sync. For a full after-hours setup, see [after-hours answering](/solutions/after-hours-answering-service/).
+Know the limits before you forward a line: it books only into Google Calendar, Cal.com or Calendly, the AI doesn't reply to texts, and there's no CRM or field-service software sync. For a full after-hours setup, see [after-hours answering](/solutions/after-hours-answering-service/).
 
 ### 4. Test it from your own profile
 
@@ -170,7 +170,7 @@ Yes. Google shows Performance data only for verified Business Profiles, and you 
 
 ### Can an AI receptionist answer calls from my Google Business Profile?
 
-Yes. Keep your number on the profile and forward it to the AI receptionist for missed calls, after-hours calls or every call. LobbyStack answers forwarded calls, books into Google Calendar, transfers urgent calls to one number, and saves a summary, transcript and recording of each call. Paid plans start at $30 a month, or $24 billed annually.
+Yes. Keep your number on the profile and forward it to the AI receptionist for missed calls, after-hours calls or every call. LobbyStack answers forwarded calls, books into Google Calendar, Cal.com or Calendly, transfers urgent calls to one number, and saves a summary, transcript and recording of each call. Paid plans start at $30 a month, or $24 billed annually.
 
 ## Answer the calls your profile already sends you
 

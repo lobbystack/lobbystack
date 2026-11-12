@@ -25,7 +25,7 @@ LobbyStack možete da testirate na paketu Free sa 30 minuta razgovora i brojem i
 | Ulazni AI paket | $99 za 200 minuta | $30 za 150 minuta |
 | Nivo od 500 minuta | $199 | $100 |
 | Osnovna platforma | Potrebna CloudTalk pretplata po korisniku | Nije potrebna pretplata na kontakt centar |
-| Integracije | Navedeno više od 100 | Google Calendar, plus otvoreni kod |
+| Integracije | Navedeno više od 100 | Google Calendar, Cal.com i Calendly, plus otvoreni kod |
 | Glavna uloga | Pitanja, poruke, usmeravanje, preusmeravanje | Javljanje, prijem podataka, zakazivanje, prebacivanje na zaposlenog |
 | Izvorni kod | Nije naveden | Javni repozitorijum pod MIT licencom |
 | Primena | Upravlja CloudTalk | Upravljani cloud ili samostalno hostovanje |
@@ -46,7 +46,7 @@ CloudTalk platforma uključuje brojeve, tokove poziva, timove, analitiku i alate
 
 Zbog toga je CloudTalk privlačan kada firma treba da zameni telefonski sistem ili izgradi prodajni tim i službu podrške. Administratori mogu da drže ljudske agente i AI tokove na jednoj platformi.
 
-LobbyStack ne pokušava da bude potpun kontakt centar. On obavlja posao recepcionera za dolazne pozive, znanje o firmi, termine, transkripte, rezimee, obaveštenja i preusmeravanja. Zakazuje u Google Calendar i ne sinhronizuje se sa CRM sistemom.
+LobbyStack ne pokušava da bude potpun kontakt centar. On obavlja posao recepcionera za dolazne pozive, znanje o firmi, termine, transkripte, rezimee, obaveštenja i preusmeravanja. Zakazuje u Google Calendar, Cal.com ili Calendly i ne sinhronizuje se sa CRM sistemom.
 
 ## Izračunajte cenu AI agenta i licenci po korisniku
 
@@ -67,7 +67,7 @@ CloudTalk opisuje svoj AI Receptionist kao opšteg pomoćnika za česta pitanja 
 
 Takva podela proizvoda može da pomogne kupcu da izabere pravog agenta. Ali znači i da tim treba da vidi demonstraciju toka rada, a ne da pretpostavi da nivo recepcionera može da ga završi.
 
-LobbyStack ugrađuje zakazivanje, izmene termina, prikupljanje potencijalnih klijenata, znanje i prebacivanje na zaposlenog u sam proizvod za recepciju. Osim Google Calendar, ne povezuje se sa sistemima trećih strana.
+LobbyStack ugrađuje zakazivanje, izmene termina, prikupljanje potencijalnih klijenata, znanje i prebacivanje na zaposlenog u sam proizvod za recepciju. Osim Google Calendar-a, Cal.com-a i Calendly-ja, ne povezuje se sa sistemima trećih strana.
 
 ## Prodajni tim za odlazne pozive nije isti kupac
 

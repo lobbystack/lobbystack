@@ -78,7 +78,7 @@ Pour le client suivant dans le même créneau :
 2. Choisissez la formule, ou marquez l'entreprise comme facturée hors de LobbyStack.
 3. Choisissez **Accès complet**, pour que le propriétaire puisse modifier la réceptionniste, ou **Activité seulement**, pour qu'il voie les appels pendant que vous gérez la configuration.
 4. Saisissez le courriel du propriétaire. LobbyStack envoie votre invitation sous votre marque.
-5. Ajoutez le site du client dans la page **Connaissances**, connectez Google Agenda et définissez un numéro de transfert.
+5. Ajoutez le site du client dans la page **Connaissances**, connectez Google Agenda, Cal.com ou Calendly et définissez un numéro de transfert.
 6. Appelez le numéro et testez chaque règle avant de remettre la réceptionniste.
 
 Si vous intégrez beaucoup de clients, créez une clé de plateforme dans la page **Clés API** et utilisez la commande `lobbystack onboard`. Elle construit une entreprise à partir d'un fichier YAML et ne change que ce qui diffère quand vous la relancez. Le [guide des clés API](https://docs.lobbystack.com/fr/white-label/api-keys) donne un exemple de fichier.

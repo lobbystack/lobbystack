@@ -139,7 +139,7 @@ Non. Chaque étape de ce guide se passe sur un site ou dans une conversation. Si
 
 ### Peut-elle prendre des rendez-vous ?
 
-Oui. Ajoutez vos services, connectez Google Agenda ou Cal.com, et réglez **Prise de rendez-vous** sur **Réserve les rendez-vous**. Votre assistant peut aussi réserver et déplacer des rendez-vous.
+Oui. Ajoutez vos services, connectez Google Agenda, Cal.com ou Calendly, et réglez **Prise de rendez-vous** sur **Réserve les rendez-vous**. Votre assistant peut aussi réserver et déplacer des rendez-vous.
 
 ### Peut-elle répondre aux textos ?
 

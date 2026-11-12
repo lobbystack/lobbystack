@@ -27,7 +27,7 @@ Frontdesk, ranije My AI Front Desk, sada prodaje širok AI radni prostor za prod
 | Dodatni minuti | 25 kredita ($0.25) po minutu; mesečna rezerva od 1,000 kredita pokriva oko 40 | $0.20 na Starter paketu, $0.18 na Pro paketu |
 | Obim proizvoda | Višekanalna AI radna snaga i CRM | AI telefonski recepcioner i upravljanje pozivima |
 | Kanali | Glas, dvosmerni SMS, čet, imejl, formulari | Glas, obaveštenja vlasniku putem imejla ili SMS-a, kontrolna tabla |
-| Zakazivanje | Google Calendar, Outlook ili Calendly | Google Calendar |
+| Zakazivanje | Google Calendar, Outlook ili Calendly | Google Calendar, Cal.com ili Calendly |
 | Preusmeravanje | Asistirano preusmeravanje po Vašim pravilima | Direktno preusmeravanje na jedan broj, bez najave |
 | Jezici | Više od 20 jezika, uz prepoznavanje jezika pozivaoca | Počinje na jednom od 8 jezika po izboru, zatim odgovara na jeziku pozivaoca (više od 70) |
 | CRM | Ugrađeni CRM i sekvence, uz sinhronizaciju sa HubSpot i Salesforce | Evidencija poziva, webhookovi i REST API, bez ugrađene CRM sinhronizacije |
@@ -50,7 +50,7 @@ Frontdesk je otišao dalje od recepcionera samo za telefon. Njegove stranice pro
 
 Taj obim pomaže malom timu koji nema CRM i želi jedan proizvod koji će uhvatiti potencijalnog klijenta sa sajta, poslati mu poruku, pozvati ga i pratiti razgovor. Frontdesk prodaje i white-label partnerske pakete za agencije, koji prema čestim pitanjima o cenama počinju od $500 mesečno.
 
-LobbyStack ne naplaćuje klijentima koji traže recepcionera prodajne alate koji im možda ne trebaju. Čuva pozivaoce, termine, poruke, transkripte, rezimee i poslovna pravila, a termine zakazuje u Google Calendar. Webhookovi i REST API šalju događaje o pozivima i zakazivanjima u alate koje već koristite.
+LobbyStack ne naplaćuje klijentima koji traže recepcionera prodajne alate koji im možda ne trebaju. Čuva pozivaoce, termine, poruke, transkripte, rezimee i poslovna pravila, a termine zakazuje u Google Calendar, Cal.com ili Calendly. Webhookovi i REST API šalju događaje o pozivima i zakazivanjima u alate koje već koristite.
 
 ## Frontdesk sada prodaje jedan paket od $99
 

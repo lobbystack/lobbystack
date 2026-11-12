@@ -30,7 +30,7 @@ Birajte prema tri stvari: ko treba da primi poziv zbog curenja vode u 2 ujutru, 
 - **Continental Message Solution, najbolji za korisnike Rent Manager sistema koji žele ljude:** Rent Manager ga navodi kao partnera za integraciju. Paketi se naplaćuju na svakih 28 dana, od $50.
 - **Buildium Maintenance Contact Center, najbolji za korisnike Buildium sistema:** $0.70 ili $1.10 po stanu mesečno, uz minimum od $140 mesečno i $300 za aktivaciju.
 - **Smith.ai, najbolji AI sa recepcionerima uživo u pozadini:** 25 besplatnih AI poziva mesečno, a njegova stranica za upravljanje nekretninama navodi AppFolio, Buildium i Yardi.
-- **LobbyStack (naš), najbolji jeftin AI za razgledanja u Google Calendar i stanare koji govore mnogo jezika:** $30 mesečno za 150 minuta, bez naknade za aktivaciju i bez veze sa softverom za upravljanje nekretninama.
+- **LobbyStack (naš), najbolji jeftin AI za razgledanja u Google Calendar, Cal.com ili Calendly i stanare koji govore mnogo jezika:** $30 mesečno za 150 minuta, bez naknade za aktivaciju i bez veze sa softverom za upravljanje nekretninama.
 
 ## Kako se ove usluge porede?
 
@@ -130,11 +130,11 @@ Goodcall naplaćuje po jedinstvenom pozivaocu i ne meri minute: $79 mesečno pok
 
 Rosie paket od $49 pokriva 250 minuta, bez preusmeravanja poziva, i zakazuje samo linkom poslatim SMS-om. Paket od $149 dodaje zakazivanje u kalendar i preusmeravanje uživo, a paket od $299 dodaje kaskadno preusmeravanje koje proba više brojeva ([stranica sa cenama](https://heyrosie.com/pricing)). Ako potrošite minute, Rosie Vas prebacuje u viši paket. Njena [stranica za upravljanje nekretninama](https://heyrosie.com/industries/property-management) kaže da Vas odmah obaveštava o hitnim slučajevima van radnog vremena i nudi termine za razgledanje. Govori engleski i španski i ne navodi nijedan softver za upravljanje nekretninama.
 
-### LobbyStack (naš): najbolji jeftin AI za razgledanja u Google Calendar i stanare koji govore mnogo jezika
+### LobbyStack (naš): najbolji jeftin AI za razgledanja u Google Calendar, Cal.com ili Calendly i stanare koji govore mnogo jezika
 
 LobbyStack Starter paket košta $30 mesečno za 150 minuta, zatim $0.20 po minutu. Pro košta $100 za 500 minuta, zatim $0.18. Uz godišnju naplatu koštaju $24 i $80 mesečno, i nijedan paket nema naknadu za aktivaciju. LobbyStack meri potrošnju u sekundama, a neželjeni pozivi i pozivi kraći od 10 sekundi se ne naplaćuju. Paketi ne ograničavaju broj istovremenih poziva, što je važno kada kvar u celoj zgradi natera mnogo stanara da zovu u isto vreme.
 
-Svaki poziv počinje na podrazumevanom jeziku firme: engleskom, francuskom, španskom, srpskom, nemačkom, brazilskom portugalskom, italijanskom ili holandskom. Recepcioner zatim odgovara na jeziku pozivaoca: više od 70 jezika uz OpenAI GPT-Live, uključujući španski i srpski. Listu hitnih slučajeva pišete običnim jezikom, a on poklapajuće pozive preusmerava na jedan broj. Ako preusmeravanje ne uspe, kaže to pozivaocu, ponudi da primi poruku, a Vaš tim može da dobije upozorenje „Live call transfer failed“. Razgledanja zakazuje u Google Calendar i, uz pristanak pozivaoca, šalje SMS potvrdu i podsetnik 24 sata ranije na brojeve u SAD i Kanadi. Za svaki poziv ostaju rezime, transkript i snimak u kontrolnoj tabli, a svaka poruka šalje upozorenje mejlom.
+Svaki poziv počinje na podrazumevanom jeziku firme: engleskom, francuskom, španskom, srpskom, nemačkom, brazilskom portugalskom, italijanskom ili holandskom. Recepcioner zatim odgovara na jeziku pozivaoca: više od 70 jezika uz OpenAI GPT-Live, uključujući španski i srpski. Listu hitnih slučajeva pišete običnim jezikom, a on poklapajuće pozive preusmerava na jedan broj. Ako preusmeravanje ne uspe, kaže to pozivaocu, ponudi da primi poruku, a Vaš tim može da dobije upozorenje „Live call transfer failed“. Razgledanja zakazuje u Google Calendar, Cal.com ili Calendly i, uz pristanak pozivaoca, šalje SMS potvrdu i podsetnik 24 sata ranije na brojeve u SAD i Kanadi. Za svaki poziv ostaju rezime, transkript i snimak u kontrolnoj tabli, a svaka poruka šalje upozorenje mejlom.
 
 LobbyStack se ne povezuje sa AppFolio, Buildium, Yardi ni Rent Manager sistemom, pa u njima ne otvara radne naloge. Potpisani webhookovi za 6 događaja i REST API mogu da pošalju podatke o pozivu u druge alate ako to neko iz Vašeg tima podesi. Preusmeravanje ide na jedan broj, bez najave osobi koja prima poziv, pa nema rotacije dežurstava, a vlasnik ne može uživo da dobije drugu osobu od one koja prima hitne slučajeve. Iza AI-ja ne stoje ljudi, a AI ne odgovara na SMS poruke. Besplatni paket daje 30 minuta razgovora i broj iz SAD ili Kanade besplatno 14 dana, bez kartice. Pogledajte kako razvrstava pozive stanara na [stranici za upravljanje nekretninama](/sr/solutions/property-management-answering-service/).
 
@@ -218,7 +218,7 @@ Linije samih proizvođača softvera rade: Buildium linija je povezana sa Buildiu
 | Goodcall | Nije naveden | Nije naveden | Nije naveden | Stranica o API-ju | Česta pitanja: izvorne veze sa Google Calendar, Google Sheets i HighLevel |
 | Ambs Call Center | Nije naveden | Nije naveden | Nije naveden | Nije naveden | LeadSimple, PropertyBase, Salesforce, Zapier |
 | MAP, SAS, Rosie | Nije naveden | Nije naveden | Nije naveden | Nije naveden | Kalendari; Rosie koristi Zapier |
-| LobbyStack (naš) | Ne | Ne | Ne | Ne | Google Calendar; potpisani webhookovi; REST API |
+| LobbyStack (naš) | Ne | Ne | Ne | Ne | Google Calendar, Cal.com, Calendly; potpisani webhookovi; REST API |
 
 Pre potpisivanja tražite od dobavljača da primi probni poziv i pokaže Vam rezultat u Vašem softveru: radni nalog ili servisni zahtev, pravi stan i beleške o pozivu. Logotip na sajtu ne govori da li agent može da pročita Vašu listu stanara ili samo šalje mejl.
 
@@ -290,6 +290,6 @@ Izvori:
 - **Ljudi na svakom hitnom pozivu i potvrda prijema:** MAP Communications, Specialty Answering Service ili Ambs Call Center.
 - **Radni nalozi koje agenti uživo upisuju u Vaš softver:** PATLive ili Continental Message Solution, ili linija proizvođača Vašeg softvera ako koristite Buildium, AppFolio ili Rent Manager.
 - **AI sa recepcionerima uživo kao rezervom:** Smith.ai.
-- **Razgledanja u Google Calendar, trijaža hitnih slučajeva van radnog vremena na jedan dežurni broj za $30 do $100 mesečno, i stanari koji govore mnogo jezika:** LobbyStack.
+- **Razgledanja u Google Calendar, Cal.com ili Calendly, trijaža hitnih slučajeva van radnog vremena na jedan dežurni broj za $30 do $100 mesečno, i stanari koji govore mnogo jezika:** LobbyStack.
 
 Želite da čujete kako LobbyStack razlikuje curenje vode u 2 ujutru od slavine koja kaplje pre nego što platite? [Napravite besplatan nalog](https://app.lobbystack.com/sr/signup), napišite listu hitnih slučajeva i testirajte ga sa 30 minuta razgovora i besplatnim brojem na 14 dana, bez kartice. Ako želite da zadržite broj, plaćeni paketi počinju od $30 mesečno, bez naknade za aktivaciju. Pogledajte kako rade trijaža i razgledanja na [stranici za upravljanje nekretninama](/sr/solutions/property-management-answering-service/).

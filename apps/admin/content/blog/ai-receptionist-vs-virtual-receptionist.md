@@ -205,7 +205,7 @@ Our guide on [how to choose an AI receptionist](/blog/how-to-choose-an-ai-recept
 
 ## How LobbyStack fits
 
-LobbyStack is an AI receptionist for small businesses. It books appointments from your hours, services and staff into Google Calendar, then texts a confirmation and a reminder 24 hours before the appointment to US and Canadian numbers. It transfers calls to one number by the rules you set. It takes a message and emails your team an alert if you haven't set a transfer number or a transfer fails. The dashboard keeps a recording, a transcript and a one-line summary of each call.
+LobbyStack is an AI receptionist for small businesses. It books appointments from your hours, services and staff into Google Calendar, Cal.com or Calendly, then texts a confirmation and a reminder 24 hours before the appointment to US and Canadian numbers. It transfers calls to one number by the rules you set. It takes a message and emails your team an alert if you haven't set a transfer number or a transfer fails. The dashboard keeps a recording, a transcript and a one-line summary of each call.
 
 Each call opens in the business's default language: English, French, Spanish, Serbian, German, Brazilian Portuguese, Italian or Dutch. The receptionist then answers in the caller's language. It runs on OpenAI GPT-Live and handles 70+ languages, including Spanish and Serbian.
 
@@ -213,7 +213,7 @@ Each call opens in the business's default language: English, French, Spanish, Se
 
 Know the limits before you sign up:
 
-- Google Calendar is the only calendar it connects to.
+- It connects to Google Calendar, Cal.com and Calendly, and no other calendar.
 - It has no direct sync with practice-management or field-service software. You connect other tools through webhooks and the REST API.
 - The AI doesn't reply to text messages. Your team answers texts from the dashboard.
 - Transfers go to one number, and the person who picks up doesn't get a spoken briefing first.

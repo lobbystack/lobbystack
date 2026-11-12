@@ -86,7 +86,7 @@ Oba proizvoda, stanje od 9. oktobra 2026. godine:
 | Broj telefona | Nov broj uključen, ili prenosite svoj | Jedan broj na paketima Starter i Pro, u SAD, Kanadi, Velikoj Britaniji, Australiji ili na Novom Zelandu |
 | Radi sa postojećim brojem | Da, preko prosleđivanja ili SIP-a | Da, preko prosleđivanja kod operatera |
 | Jezici pozivalaca | Engleski, španski, francuski, italijanski, nemački i portugalski, prema njegovim čestim pitanjima, a još jezika stiže "uskoro"; menja jezik tokom poziva | Počinje na jednom od 8 jezika po izboru, zatim odgovara na jeziku pozivaoca: 70+ jezika na OpenAI GPT-Live |
-| Kalendari | Google i Outlook | Google Calendar |
+| Kalendari | Google i Outlook | Google Calendar, Cal.com i Calendly |
 | CRM | Ugrađeni Salesforce, HubSpot i Zoho | Webhookovi i REST API; Zapier se povezuje preko njih |
 | AI odgovori na SMS poruke | Da, preko AI SMS agenta (RingCentral napominje da mogu nastati dodatni troškovi) | Ne; Vaš tim odgovara ručno |
 | Preusmeravanje i usmeravanje | Po imenu, lokaciji i ključnoj reči, uz predaju poziva zaposlenom uživo | Jedan broj za preusmeravanje i poruka ako preusmeravanje ne uspe |
@@ -179,7 +179,7 @@ LobbyStack Vam odgovara ako želite nižu cenu po minutu i besplatan test pre ku
 - Besplatni paket daje 30 minuta razgovora mesečno i broj iz SAD ili Kanade besplatno 14 dana, bez kartice.
 - Starter košta $30 za 150 minuta, zatim $0.20 po minutu, obračunato po sekundi. Pozivi kraći od 10 sekundi i pozivi koje recepcioner prekine kao spam ne ulaze u potrošnju.
 - Svaki poziv počinje na podrazumevanom jeziku firme: engleskom, francuskom, španskom, srpskom, nemačkom, brazilskom portugalskom, italijanskom ili holandskom. Recepcioner zatim odgovara na jeziku pozivaoca: 70+ jezika na OpenAI GPT-Live, uključujući španski i srpski.
-- Zakazuje u Google Calendar i, kada se pozivalac složi, šalje SMS potvrdu i podsetnik 24 sata pre termina na američke i kanadske brojeve.
+- Zakazuje u Google Calendar, Cal.com ili Calendly i, kada se pozivalac složi, šalje SMS potvrdu i podsetnik 24 sata pre termina na američke i kanadske brojeve.
 - Starter uključuje 20 pokušaja preusmeravanja mesečno na Vaš broj za preusmeravanje, a recepcioner nudi da primi poruku ako preusmeravanje ne uspe.
 - Nijedan paket nema naknadu za podešavanje, a pretplatu otkazujete u podešavanjima naplate, bez naknade za otkazivanje.
 - Kod je pod MIT licencom. Možete sami da ga hostujete sa svojim OpenAI i Twilio nalozima i da čuvate snimke i transkripte na serverima koje kontrolišete. Twilio i OpenAI i dalje obrađuju zvuk poziva uživo.
