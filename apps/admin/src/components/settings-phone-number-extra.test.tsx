@@ -17,7 +17,7 @@ const clients: QueryClient[] = [];
 beforeEach(() => { vi.stubGlobal("localStorage", { getItem: () => null, setItem: vi.fn() }); });
 afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals(); vi.clearAllMocks(); });
 
-function setup(input: { plan: string; extraNumbers: { available: boolean; priced: boolean; refusal: string | null }; numbers?: Array<Record<string, unknown>> }) {
+function setup(input: { plan: string; extraNumbers: { available: boolean; priced: boolean; subscribed?: boolean; checkoutAvailable?: boolean; refusal: string | null }; numbers?: Array<Record<string, unknown>> }) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
   clients.push(client);
   client.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true, role: "business_owner" }] });
@@ -27,7 +27,9 @@ function setup(input: { plan: string; extraNumbers: { available: boolean; priced
     if (input.includes("/extra/claim/claim?")) return Response.json({ claim: { status: "claimed", phoneNumberId: "extra-phone", requestedE164: "+14165550200" } });
     if (input.includes("/extra/claim?")) return Response.json({ claimId: "claim" }, { status: 202 });
     if (input.includes("/extra/search?")) return Response.json({ market: { countryCode: "CA" }, price: { countryCode: "CA", monthlyCents: 115, currency: "USD" }, numbers: [0, 1, 2].map((index) => ({ phoneE164: `+141655502${String(index).padStart(2, "0")}`, countryCode: "CA", claimToken: `offer-${index}`, capabilities: { voice: true, sms: true } })) });
-    if (input.includes("/api/phone-numbers?")) return Response.json({ phoneNumbers: [], replacement: { usedAt: null }, extraNumbers: { available: true, priced: true, refusal: null } });
+    if (input.startsWith("/api/billing/extra-numbers/checkout?")) return Response.json({ id: "checkout", status: "ready", checkoutUrl: "https://polar.test/checkout", error: null, subscribed: false });
+    if (input.startsWith("/api/billing/extra-numbers/checkout")) return Response.json({ requestId: "checkout" }, { status: 202 });
+    if (input.includes("/api/phone-numbers?")) return Response.json({ phoneNumbers: [], replacement: { usedAt: null }, extraNumbers: { available: true, priced: true, subscribed: true, refusal: null } });
     throw new Error(`Unexpected request: ${input}`);
   });
   vi.stubGlobal("fetch", fetchMock);
@@ -37,7 +39,7 @@ function setup(input: { plan: string; extraNumbers: { available: boolean; priced
 
 describe("buying an extra number for an agent", () => {
   it("shows the country's price, asks before buying, and buys the number for this agent", async () => {
-    const { fetchMock } = setup({ plan: "starter", extraNumbers: { available: true, priced: true, refusal: null } });
+    const { fetchMock } = setup({ plan: "starter", extraNumbers: { available: true, priced: true, subscribed: true, refusal: null } });
     await userEvent.click(screen.getByRole("button", { name: "phoneNumber.extra.buy" }));
     expect(await screen.findByText("phoneNumber.extra.monthly:$1.15")).toBeTruthy();
     const buy = await screen.findAllByRole("button", { name: "phoneNumber.extra.select" });
@@ -51,13 +53,31 @@ describe("buying an extra number for an agent", () => {
   });
 
   it("buys nothing when the operator cancels", async () => {
-    const { fetchMock } = setup({ plan: "pro", extraNumbers: { available: true, priced: true, refusal: null } });
+    const { fetchMock } = setup({ plan: "pro", extraNumbers: { available: true, priced: true, subscribed: true, refusal: null } });
     await userEvent.click(screen.getByRole("button", { name: "phoneNumber.extra.buy" }));
     const buy = await screen.findAllByRole("button", { name: "phoneNumber.extra.select" });
     await userEvent.click(buy[0]!);
     await userEvent.click(await screen.findByRole("button", { name: "phoneNumber.extra.cancel" }));
     await waitFor(() => expect(screen.queryByText("phoneNumber.extra.confirmDescription:$1.15")).toBeNull());
     expect(fetchMock.mock.calls.some(([url]) => url.includes("/extra/claim?"))).toBe(false);
+  });
+
+  it("sends the operator through the add-on's checkout before the first extra number", async () => {
+    const { fetchMock } = setup({ plan: "starter", extraNumbers: { available: true, priced: true, subscribed: false, checkoutAvailable: true, refusal: null } });
+    const assign = vi.fn();
+    vi.stubGlobal("location", { ...window.location, assign, search: "" });
+    expect(screen.getByText("phoneNumber.extra.billingDescription")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "phoneNumber.extra.buy" })).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "phoneNumber.extra.subscribe" }));
+    await waitFor(() => expect(assign).toHaveBeenCalledWith("https://polar.test/checkout"));
+    const start = fetchMock.mock.calls.find(([url, init]) => url.startsWith("/api/billing/extra-numbers/checkout") && init?.method === "POST");
+    expect(JSON.parse(String(start?.[1]?.body))).toMatchObject({ businessId: "business", agentId: SECOND_AGENT });
+  });
+
+  it("says the workspace can't buy more numbers when the deployment doesn't sell the add-on", () => {
+    setup({ plan: "pro", extraNumbers: { available: true, priced: true, subscribed: false, checkoutAvailable: false, refusal: null } });
+    expect(screen.getByText("phoneNumber.extra.unavailable")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "phoneNumber.extra.subscribe" })).toBeNull();
   });
 
   it("offers the plans on Free", async () => {
@@ -67,7 +87,7 @@ describe("buying an extra number for an agent", () => {
   });
 
   it("shows an extra number's monthly price", () => {
-    setup({ plan: "starter", extraNumbers: { available: true, priced: true, refusal: null }, numbers: [
+    setup({ plan: "starter", extraNumbers: { available: true, priced: true, subscribed: true, refusal: null }, numbers: [
       { id: "included", e164: "+14165550100", agentId: DEFAULT_AGENT, status: "active", reclaimScheduledAt: null, monthlyPriceCents: null },
       { id: "extra", e164: "+14165550101", agentId: SECOND_AGENT, status: "active", reclaimScheduledAt: null, monthlyPriceCents: 115 },
     ] });
