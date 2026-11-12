@@ -31,7 +31,7 @@ Birajte prema tome ko treba da se javi kada voda probija kroz plafon i gde zakaz
 - **Smith.ai, najbolji AI iza koga stoje recepcioneri uživo:** 25 besplatnih AI poziva mesečno, a pukle cevi i poplave idu recepcionerima uživo.
 - **Jobber Receptionist i Housecall Pro CSR AI, najbolji za firme koje već koriste taj softver:** Jobber naplaćuje $29 mesečno za 30 razgovora, a Housecall Pro ne objavljuje cenu.
 - **Goodcall, najbolji za mušterije koje zovu više puta:** $79 mesečno za 100 jedinstvenih pozivalaca, i usmeravanje po ključnim rečima kao što su "burst pipe" (pukla cev) i "sewer backup" (izlivanje kanalizacije).
-- **LobbyStack (naš), najbolji za firme koje zakazuju u Google Calendar i imaju pozivaoce na raznim jezicima:** $30 mesečno za 150 minuta bez naknade za aktivaciju, a odgovara na jeziku pozivaoca, na više od 70 jezika.
+- **LobbyStack (naš), najbolji za firme koje zakazuju u Google Calendar, Cal.com ili Calendly i imaju pozivaoce na raznim jezicima:** $30 mesečno za 150 minuta bez naknade za aktivaciju, a odgovara na jeziku pozivaoca, na više od 70 jezika.
 
 ## Kako se ove usluge za vodoinstalatere porede?
 
@@ -133,13 +133,13 @@ Stranica za vodoinstalatere navodi "ServiceTitan-compatible workflows". Česta p
 
 Rosie paket od $49 zakazuje samo preko linka u SMS poruci i nema preusmeravanje. Paket od $149 dodaje zakazivanje u kalendar i preusmeravanje uživo, a paket od $299 dodaje kaskadno preusmeravanje koje pokušava više brojeva ([stranica sa cenama](https://heyrosie.com/pricing)). Kada potrošite minute, Rosie Vas prebacuje na viši paket. Rosie govori engleski i španski. Njena [stranica za vodoinstalatere](https://heyrosie.com/industries/plumbing) kaže da Rosie "can't dispatch plumbers directly" (ne može sama da pošalje vodoinstalatera), ali može da kaže pozivaocima da li postoji hitna služba, da da uputstva van radnog vremena i da Vas obavesti.
 
-### LobbyStack (naš): najbolji za firme koje zakazuju u Google Calendar i imaju pozivaoce na raznim jezicima
+### LobbyStack (naš): najbolji za firme koje zakazuju u Google Calendar, Cal.com ili Calendly i imaju pozivaoce na raznim jezicima
 
 LobbyStack paket Starter košta $30 mesečno za 150 minuta, a zatim $0.20 po minutu. Pro košta $100 za 500 minuta, a zatim $0.18. Uz godišnje plaćanje koštaju $24 i $80 mesečno, a nijedan paket nema naknadu za aktivaciju. LobbyStack meri potrošnju u sekundama i ne naplaćuje spam ni pozive kraće od 10 sekundi. Paketi ne ograničavaju broj istovremenih poziva, a istovremeni pozivi troše iste minute.
 
-Svaki poziv počinje na podrazumevanom jeziku firme: engleskom, francuskom, španskom, srpskom, nemačkom, brazilskom portugalskom, italijanskom ili holandskom. Recepcioner zatim odgovara na jeziku pozivaoca: više od 70 jezika preko OpenAI GPT-Live, uključujući španski i srpski. Vi mu kažete koji su pozivi hitni, na primer voda koja ne prestaje da teče ili kanalizacija koja se vraća kroz odvod, a on ih prebacuje na jedan broj. Ako prebacivanje ne uspe, kaže to pozivaocu, ponudi da primi poruku, a Vaš tim može da dobije upozorenje "Live call transfer failed". Zakazuje u Google Calendar i, kada pozivalac pristane, šalje SMS potvrdu i podsetnik 24 sata ranije na brojeve iz SAD i Kanade. Svaki poziv ostavlja rezime, transkript i snimak na kontrolnoj tabli, a Vi dobijate imejl kada recepcioner primi poruku.
+Svaki poziv počinje na podrazumevanom jeziku firme: engleskom, francuskom, španskom, srpskom, nemačkom, brazilskom portugalskom, italijanskom ili holandskom. Recepcioner zatim odgovara na jeziku pozivaoca: više od 70 jezika preko OpenAI GPT-Live, uključujući španski i srpski. Vi mu kažete koji su pozivi hitni, na primer voda koja ne prestaje da teče ili kanalizacija koja se vraća kroz odvod, a on ih prebacuje na jedan broj. Ako prebacivanje ne uspe, kaže to pozivaocu, ponudi da primi poruku, a Vaš tim može da dobije upozorenje "Live call transfer failed". Zakazuje u Google Calendar, Cal.com ili Calendly i, kada pozivalac pristane, šalje SMS potvrdu i podsetnik 24 sata ranije na brojeve iz SAD i Kanade. Svaki poziv ostavlja rezime, transkript i snimak na kontrolnoj tabli, a Vi dobijate imejl kada recepcioner primi poruku.
 
-Ne sinhronizuje se sa ServiceTitan-om, Housecall Pro-om ni Jobber-om, a Google Calendar mu je jedini kalendar. Prebacivanje ide na jedan broj, bez kratkog izveštaja, i nema rotacije dežurstava. Iza njega ne stoje ljudski agenti, a AI ne odgovara na SMS poruke. Besplatni paket daje 30 minuta razgovora i broj iz SAD ili Kanade besplatno 14 dana, bez kartice. Pogledajte kako radi sa hitnim pozivima na stranici [AI recepcioner za vodoinstalatere](/sr/solutions/ai-receptionist-for-plumbers/).
+Ne sinhronizuje se sa ServiceTitan-om, Housecall Pro-om ni Jobber-om, a od kalendara radi samo sa Google Calendar-om, Cal.com-om i Calendly-jem. Prebacivanje ide na jedan broj, bez kratkog izveštaja, i nema rotacije dežurstava. Iza njega ne stoje ljudski agenti, a AI ne odgovara na SMS poruke. Besplatni paket daje 30 minuta razgovora i broj iz SAD ili Kanade besplatno 14 dana, bez kartice. Pogledajte kako radi sa hitnim pozivima na stranici [AI recepcioner za vodoinstalatere](/sr/solutions/ai-receptionist-for-plumbers/).
 
 ## Koliko košta usluga odgovaranja na pozive za vodoinstalatere?
 
@@ -218,9 +218,9 @@ A Message Center, AnswerForce i PATLive navode sva tri na svojim stranicama za v
 | Ruby | Nije naveden | Nije naveden | Nije naveden | "Your existing scheduling software" |
 | MAP Communications, SAS | Nije naveden | Nije naveden | Nije naveden | Nijedan nije naveden |
 | Rosie | Nije naveden | Nije naveden | Nije naveden | Zapier na svakom paketu |
-| LobbyStack (naš) | Ne | Ne | Ne | Google Calendar; potpisani webhook-ovi za 6 događaja; REST API |
+| LobbyStack (naš) | Ne | Ne | Ne | Google Calendar, Cal.com, Calendly; potpisani webhook-ovi za 6 događaja; REST API |
 
-Ako Vaši dispečeri rade u ServiceTitan-u i posao mora tamo da se upiše tokom poziva, izaberite Sameday AI, Avoca, Smith.ai ili uslugu uživo koja navodi ServiceTitan. Zamolite svaku da napravi probni posao pre nego što potpišete. LobbyStack odgovara firmama koje zakazuju u Google Calendar ili koje rezervacije ručno prepisuju u svoj softver ili ih tamo šalju preko njegovih webhook-ova i API-ja.
+Ako Vaši dispečeri rade u ServiceTitan-u i posao mora tamo da se upiše tokom poziva, izaberite Sameday AI, Avoca, Smith.ai ili uslugu uživo koja navodi ServiceTitan. Zamolite svaku da napravi probni posao pre nego što potpišete. LobbyStack odgovara firmama koje zakazuju u Google Calendar, Cal.com ili Calendly, ili koje rezervacije ručno prepisuju u svoj softver ili ih tamo šalju preko njegovih webhook-ova i API-ja.
 
 ## Kako da izaberete uslugu odgovaranja na pozive za vodoinstalatersku firmu?
 
@@ -287,6 +287,6 @@ Izvori:
 - **Ljudi na svakom pozivu i raspored dežurstava:** A Message Center, MAP Communications ili Specialty Answering Service.
 - **ServiceTitan, sa poslom upisanim tamo:** AnswerForce ili PATLive za agente uživo, Sameday AI ili Smith.ai za AI.
 - **Jobber ili Housecall Pro:** prvo probajte ugrađenog recepcionera.
-- **Zakazivanje u Google Calendar, višak poziva i pozivi van radnog vremena za $30 do $100 mesečno, uz pozivaoce na drugim jezicima:** LobbyStack.
+- **Zakazivanje u Google Calendar, Cal.com ili Calendly, višak poziva i pozivi van radnog vremena za $30 do $100 mesečno, uz pozivaoce na drugim jezicima:** LobbyStack.
 
 Želite da čujete kako LobbyStack prima poziv zbog pukle cevi pre nego što platite? [Napravite besplatan nalog](https://app.lobbystack.com/sr/signup) i testirajte ga sa 30 minuta razgovora i besplatnim brojem na 14 dana, bez kartice. Plaćeni paketi nemaju naknadu za aktivaciju. Zatim pogledajte kako rade hitni pozivi, zakazivanje i prebacivanje na stranici [AI recepcioner za vodoinstalatere](/sr/solutions/ai-receptionist-for-plumbers/).

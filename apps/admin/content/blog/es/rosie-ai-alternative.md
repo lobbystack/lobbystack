@@ -65,7 +65,7 @@ LobbyStack es una alternativa a Rosie AI. La tabla reúne los límites que cambi
 | Si se pasa de sus minutos | Lo cambia al plan siguiente a su precio normal hasta que baje de plan (vea la nota sobre las condiciones más arriba) | $0.20 el minuto en Starter, $0.18 en Pro, con un tope de gasto opcional |
 | Unidad de facturación | Redondea cada llamada a los 60 segundos siguientes | Por segundo, sin redondeo |
 | Opción gratuita | Prueba gratuita de 7 días; las condiciones exigen un método de pago registrado | Plan Free: 30 minutos de voz, sin tarjeta, número de EE. UU. o Canadá gratis durante 14 días |
-| Calendarios | Google Calendar, Calendly, Acuity, Appointlet (desde Scale) | Solo Google Calendar |
+| Calendarios | Google Calendar, Calendly, Acuity, Appointlet (desde Scale) | Google Calendar, Cal.com, Calendly (Calendly exige un plan de pago de Calendly) |
 | Transferencias | En vivo y asistidas (Scale), en cascada (Growth) | Transferencia directa, sin aviso previo, a un número (Starter y Pro) |
 | SMS a quien llama | Enlaces para reservar en todos los planes; SMS durante la llamada desde Scale | Confirmación de la reserva y recordatorio 24 horas antes si quien llama acepta, a números de Estados Unidos y Canadá; la IA no responde mensajes de texto |
 | Idiomas de quien llama | Inglés y español en cada llamada | Empieza en uno de 8 idiomas a elegir y luego responde en el idioma de quien llama (más de 70, incluido el español) |
@@ -119,20 +119,20 @@ Suponga que un salón recibe 240 llamadas al mes, de 2 minutos y 30 segundos cad
 - **Rosie:** 720 minutos superan los 250 de Professional, y la reserva en calendario exige Scale de todos modos. El salón paga $149 al mes, o $124 al mes con facturación anual.
 - **LobbyStack:** Pro cuesta $100 por 500 minutos, más 100 × $0.18 = $18, en total $118 al mes. Starter costaría $120 ($30 + 450 × $0.20). Con facturación anual, Pro cuesta $80 más los mismos $18, o $98 al mes.
 
-Antes de elegir, pruebe cómo maneja cada producto la duración de cada servicio, los horarios de cada estilista, los márgenes entre citas y las cancelaciones. LobbyStack reserva solo en Google Calendar, para todo el negocio o para cada miembro del equipo. Rosie Scale también conecta Calendly, Acuity y Appointlet.
+Antes de elegir, pruebe cómo maneja cada producto la duración de cada servicio, los horarios de cada estilista, los márgenes entre citas y las cancelaciones. LobbyStack reserva en Google Calendar, Cal.com o Calendly, y puede conectar un Google Calendar para todo el negocio o para cada miembro del equipo. Rosie Scale conecta Acuity y Appointlet, que LobbyStack no conecta.
 
 ## Cuándo Rosie es la mejor opción
 
 Con volúmenes altos, Rosie le da más minutos por dólar. Los 1,000 minutos de Scale por $149 cuestan menos que LobbyStack Pro entre unos 773 y 1,000 minutos, y los 2,000 minutos de Growth por $299 cuestan menos entre unos 1,606 y 2,000 minutos. Rosie también ofrece:
 
 - Transferencias asistidas que avisan antes a su equipo, y transferencias en cascada que prueban varios números. LobbyStack hace una transferencia directa a un solo número.
-- Cuatro calendarios en Scale: Google Calendar, Calendly, Acuity y Appointlet. LobbyStack solo se conecta con Google Calendar.
+- Cuatro calendarios en Scale: Google Calendar, Calendly, Acuity y Appointlet. LobbyStack se conecta con Google Calendar, Cal.com y Calendly, pero no con Acuity ni Appointlet.
 - Chat web gratuito en todos los planes.
 - Apps nativas para iOS y Android y más de 10 voces para elegir.
 - Entrenamiento automático con su perfil de Google Business Profile y su sitio web.
 - Correos de aviso antes de que llegue a su límite de minutos.
 
-LobbyStack tiene cuatro carencias que podrían descartarlo. No ofrece chat web. Su IA no responde mensajes de texto, así que su equipo los contesta a mano desde el panel. Transfiere a un solo número, y no se conecta con ningún calendario aparte de Google. Rosie incluye chat web en todos los planes, y más tipos de transferencia y de calendario en Scale y Growth.
+LobbyStack tiene cuatro carencias que podrían descartarlo. No ofrece chat web. Su IA no responde mensajes de texto, así que su equipo los contesta a mano desde el panel. Transfiere a un solo número, y no se conecta con calendarios aparte de Google Calendar, Cal.com y Calendly. Rosie incluye chat web en todos los planes, y más tipos de transferencia y de calendario en Scale y Growth.
 
 ## ¿En qué idiomas contestan Rosie y LobbyStack?
 
@@ -175,7 +175,7 @@ Si también está valorando una recepcionista humana, compare las [mejores recep
 
 1. Regístrese en [app.lobbystack.com](https://app.lobbystack.com/es/signup). Free le da 30 minutos de voz al mes y un número de EE. UU. o Canadá gratis durante 14 días, sin tarjeta.
 2. La configuración lo guía por los datos de su negocio, la importación de su sitio web, sus conocimientos, el saludo y un plan.
-3. Escriba sus reglas de llamada en lenguaje sencillo y elija un modo de reserva: reservar la cita, tomar una solicitud para que su equipo la confirme o tomar un mensaje. Conecte Google Calendar y defina su horario de atención. Sin esos dos pasos, las reservas no funcionan.
+3. Escriba sus reglas de llamada en lenguaje sencillo y elija un modo de reserva: reservar la cita, tomar una solicitud para que su equipo la confirme o tomar un mensaje. Conecte Google Calendar, Cal.com o Calendly y defina su horario de atención. Sin esos dos pasos, las reservas no funcionan.
 4. Haga llamadas de prueba desde el panel, en su navegador.
 5. En Starter o Pro, elija un número local, o uno gratuito donde haya disponibilidad, en Estados Unidos, Canadá, el Reino Unido, Australia o Nueva Zelanda. Para conservar su número actual, configure con su operador el desvío de llamadas a LobbyStack cuando esté ocupado o no conteste, cuando esté cerrado o siempre. Si prefiere portar el número, escriba al equipo de LobbyStack. Después añada un número de transferencia y elija cuándo transferir.
 6. Haga las mismas cinco llamadas en la prueba de Rosie, en el plan que conservaría: una pregunta sobre sus políticas, una reserva que necesita un margen entre citas, alguien con una urgencia que necesita una transferencia, una petición de SMS de confirmación y una cancelación. Anote qué tareas funcionan en ese plan y cuáles necesitan Scale o Growth.
@@ -186,7 +186,7 @@ Rosie admite el mismo desvío para el exceso de llamadas y las llamadas fuera de
 
 - Sus llamadas suman entre unos 773 y 1,000 minutos al mes, o entre unos 1,606 y 2,000, y de todos modos necesita reservas y transferencias.
 - Quiere transferencias asistidas o en cascada, chat web, apps móviles nativas o elegir la voz.
-- Reserva en Calendly, Acuity o Appointlet.
+- Reserva en Acuity o Appointlet.
 - Sus clientes hablan inglés y español, y quiere el español listo en cada llamada.
 - Prefiere subir de plan antes que pagar excedente por minuto.
 

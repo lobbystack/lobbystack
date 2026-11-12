@@ -95,7 +95,7 @@ For other live services' rates, see [what an answering service costs](/blog/how-
 | Try it first | Money-back guarantee for first-time users: 21 days or 500 minutes | Free plan: 30 voice minutes, no card, US or Canadian number free for 14 days |
 | Plan changes | Upgrades hold for at least three billing periods; downgrades after three | Upgrade, downgrade or cancel from billing settings, with no cancellation fee |
 | Caller languages | English and Spanish | Opens in your choice of 8 languages, then answers in the caller's language (70+, including Spanish) |
-| Booking | Receptionists schedule appointments | Books into Google Calendar only |
+| Booking | Receptionists schedule appointments | Books into Google Calendar, Cal.com or Calendly only |
 | Transfers | To any number you choose; fees may apply outside North America | Blind transfer to one number per business |
 | Messages | Email, text or app notification | Email alert when it takes a message; text alerts optional |
 | Call records | AI transcripts of calls and voicemails | Recording, transcript and summary of every call |
@@ -148,13 +148,13 @@ Ruby puts a trained person on every call it answers, and LobbyStack can't match 
 - HIPAA-compliant services, per its pricing page. LobbyStack makes no HIPAA claim.
 - More than 20 years of serving small businesses, per Ruby's homepage.
 
-LobbyStack has gaps that might rule it out. No person ever picks up. Its AI doesn't reply to texts, so your team answers them by hand from the dashboard. It books into Google Calendar alone, transfers to one number, offers no website chat, and reaches CRMs and practice software through webhooks and the API, with no native integration.
+LobbyStack has gaps that might rule it out. No person ever picks up. Its AI doesn't reply to texts, so your team answers them by hand from the dashboard. It books only into Google Calendar, Cal.com or Calendly, transfers to one number, offers no website chat, and reaches CRMs and practice software through webhooks and the API, with no native integration.
 
 ## Where LobbyStack is the better choice
 
 LobbyStack costs less at every volume we priced, and its extra minutes cost $0.18 to $0.20 against Ruby's $3.30 to $5.40. It answers routine calls about hours, prices, service areas and bookings, and it hands urgent calls to your team. See how [AI phone answering](/solutions/ai-phone-answering/) works.
 
-- **Booking on the call.** With Google Calendar connected and opening hours set, LobbyStack books into open slots. With the caller's consent, it texts a confirmation and a reminder 24 hours before the appointment.
+- **Booking on the call.** With Google Calendar, Cal.com or Calendly connected and opening hours set, LobbyStack books into open slots. With the caller's consent, it texts a confirmation and a reminder 24 hours before the appointment.
 - **Billing by the second.** Calls under 10 seconds and calls the receptionist ends as spam don't count toward your minutes.
 - **No limit on simultaneous calls.** If you set an overage spending cap and reach it, new callers get a busy signal until the next month or until you raise the cap.
 - **A record of every call.** The dashboard keeps a recording, transcript and summary, and your team gets an email alert when the receptionist takes a message.
@@ -166,7 +166,7 @@ LobbyStack costs less at every volume we priced, and its extra minutes cost $0.1
 
 1. Sign up at [app.lobbystack.com](https://app.lobbystack.com/en/signup). Free gives you 30 voice minutes a month and a US or Canadian number free for 14 days, without a card.
 2. Setup walks you through your business details, a website import, your knowledge, the greeting and a plan.
-3. Write your call rules in plain language and pick a booking mode: book the appointment, take a request for your team to confirm, or take a message. Connect Google Calendar and set your opening hours, because booking needs them.
+3. Write your call rules in plain language and pick a booking mode: book the appointment, take a request for your team to confirm, or take a message. Connect Google Calendar, Cal.com or Calendly and set your opening hours, because booking needs them.
 4. From your browser, run the five calls Ruby handles most for you: a price question, a booking, an urgent request, a caller who asks for a person and a wrong number. Read each transcript with whoever handles the follow-up.
 5. On Starter or Pro, pick a number, or forward your existing business number to LobbyStack when you're busy, when you're closed or all the time. Add a transfer number and choose when transfers happen.
 6. Keep Ruby on your line until LobbyStack passes your test calls. A Ruby cancellation takes effect at the end of the current 30-day period. If Ruby hosts your business number, ask Ruby how to move it out before you cancel, and contact the LobbyStack team to port it.
@@ -209,7 +209,7 @@ If your carrier holds the number and forwards calls to Ruby, change the forwardi
 ## Choose LobbyStack when
 
 - Most of your calls are routine: hours, prices, service areas and bookings.
-- You want appointments booked into Google Calendar during the call, with confirmation texts.
+- You want appointments booked into Google Calendar, Cal.com or Calendly during the call, with confirmation texts.
 - You'd rather pay $30 for 150 minutes than $250 for 50.
 - You want billing by the second, with no charge for calls under 10 seconds.
 - Your callers speak languages beyond English and Spanish.
@@ -233,6 +233,6 @@ Checked October 10, 2026, unless noted:
 
 ## Verdict
 
-Ruby is the stronger choice when a trained person has to handle the call: intake that needs judgment, payments, Spanish-speaking staff or upset callers. You pay $3.15 to $5.00 per included minute for that person, depending on plan size. LobbyStack is the stronger choice when most of your calls are routine questions and bookings. It answers 150 minutes for $30, books into Google Calendar and transfers urgent calls to your team.
+Ruby is the stronger choice when a trained person has to handle the call: intake that needs judgment, payments, Spanish-speaking staff or upset callers. You pay $3.15 to $5.00 per included minute for that person, depending on plan size. LobbyStack is the stronger choice when most of your calls are routine questions and bookings. It answers 150 minutes for $30, books into Google Calendar, Cal.com or Calendly and transfers urgent calls to your team.
 
 To hear how LobbyStack handles your callers' questions, [start on the free plan](https://app.lobbystack.com/en/signup). You get 30 voice minutes a month and a US or Canadian number for 14 days, with your own greeting and rules, and you don't need a card.

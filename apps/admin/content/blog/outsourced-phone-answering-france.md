@@ -83,7 +83,7 @@ Evenings, Sundays and public holidays fall outside those hours. If your customer
 
 For routine calls, yes: an AI answers at any hour, gives your hours, takes a message or books an appointment, and costs less per minute. It doesn't replace an operator for an angry caller or a sensitive request. For a business in France, LobbyStack also comes with number and billing constraints, listed below.
 
-LobbyStack's Starter plan costs $30 a month for 150 minutes, then $0.20 a minute. Pro costs $100 for 500 minutes, then $0.18 a minute. No plan has a setup fee. The receptionist opens each call in French if you set French as the default language, then answers in the caller's language: 70+ languages on OpenAI's GPT-Live. It books into Google Calendar, transfers urgent calls to your number, and saves a summary, transcript and recording of every call.
+LobbyStack's Starter plan costs $30 a month for 150 minutes, then $0.20 a minute. Pro costs $100 for 500 minutes, then $0.18 a minute. No plan has a setup fee. The receptionist opens each call in French if you set French as the default language, then answers in the caller's language: 70+ languages on OpenAI's GPT-Live. It books into Google Calendar, Cal.com or Calendly, transfers urgent calls to your number, and saves a summary, transcript and recording of every call.
 
 ### What to know before you use it from France
 

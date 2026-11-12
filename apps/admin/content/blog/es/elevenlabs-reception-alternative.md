@@ -30,7 +30,7 @@ Reception suena excelente y habla más de 70 idiomas. LobbyStack le da el doble 
 | Llamadas simultáneas en el plan de entrada | 1 | Sin límite del plan en Starter y Pro sin límite de gasto |
 | Idiomas | Más de 70 con detección automática | Responde en el idioma de quien llama |
 | El equipo contesta primero | Modo integrado que da prioridad al equipo | Mediante el desvío de llamadas de su operador |
-| Integraciones | Google Calendar, Zapier, webhooks, MCP | Google Calendar |
+| Integraciones | Google Calendar, Zapier, webhooks, MCP | Google Calendar, Cal.com, Calendly |
 | HIPAA | No compatible | Autoalojamiento para controlar por completo los datos de las llamadas |
 | Código | Cerrado, solo alojado | Licencia MIT, nube gestionada o autoalojado |
 

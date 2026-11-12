@@ -27,7 +27,7 @@ Frontdesk, formerly My AI Front Desk, now sells a broad AI sales workspace. Lobb
 | Extra voice minutes | 25 credits ($0.25) each; the monthly 1,000-credit pool covers about 40 | $0.20 on Starter, $0.18 on Pro |
 | Product scope | Omnichannel AI workforce and CRM | AI phone receptionist and call operations |
 | Channels | Voice, two-way SMS, chat, email, forms | Voice, owner alerts by email or SMS, dashboard |
-| Booking | Google Calendar, Outlook, or Calendly | Google Calendar |
+| Booking | Google Calendar, Outlook, or Calendly | Google Calendar, Cal.com, or Calendly |
 | Transfers | Warm transfers under rules you set | Blind transfer to one number |
 | Languages | 20+ languages, with caller-language detection | Opens in your choice of 8 languages, then answers in the caller's language (70+) |
 | CRM | Built-in CRM and sequences, plus HubSpot and Salesforce sync | Call records, webhooks, and REST API, no native CRM sync |
@@ -50,7 +50,7 @@ Frontdesk has moved beyond a phone-only receptionist. Its product pages advertis
 
 That scope helps a small team that has no CRM and wants one product to capture a web lead, text them, call them, and track the exchange. Frontdesk also sells white-label partner plans for agencies, which its pricing FAQ says start at $500 a month.
 
-LobbyStack avoids charging receptionist customers for sales tools they may not need. It stores callers, appointments, messages, transcripts, summaries, and business rules, and books appointments into Google Calendar. Webhooks and the REST API send call and booking events to the tools you already use.
+LobbyStack avoids charging receptionist customers for sales tools they may not need. It stores callers, appointments, messages, transcripts, summaries, and business rules, and books appointments into Google Calendar, Cal.com, or Calendly. Webhooks and the REST API send call and booking events to the tools you already use.
 
 ## Frontdesk now sells one $99 plan
 

@@ -26,7 +26,7 @@ LobbyStack incluye reservas, transferencia de llamadas, alertas por SMS, transcr
 | Precio anual | $25.00 al mes por 100 minutos | $24 al mes por 150 minutos |
 | Minutos adicionales | Precio no publicado | $0.20 en Starter, $0.18 en Pro |
 | Sistema telefónico existente | Funciona con cualquier sistema, sin Zoom Phone | Desvío de llamadas desde su número actual |
-| Reservas | Zoom Scheduler, Google, Microsoft y Calendly | Reservas en Google Calendar con reglas del negocio |
+| Reservas | Zoom Scheduler, Google, Microsoft y Calendly | Reservas en Google Calendar, Cal.com o Calendly con reglas del negocio |
 | Transferencias | Transferencia asistida y transferencia por nombre | Transferencia ciega a un solo número |
 | Idiomas | 23 en la tabla de precios de Zoom | Empieza en uno de 8 idiomas a elegir y luego contesta en el idioma de quien llama (más de 70) |
 | Código fuente | No se anuncia | Repositorio público con licencia MIT |

@@ -86,7 +86,7 @@ Both products as of October 9, 2026:
 | Phone number | New number included, or port yours | One number on Starter and Pro, in the US, Canada, the UK, Australia or New Zealand |
 | Works with your existing number | Yes, through forwarding or SIP | Yes, through carrier forwarding |
 | Caller languages | English, Spanish, French, Italian, German and Portuguese, per its FAQ, with more "coming soon"; switches language mid-call | Opens in your choice of 8 languages, then answers in the caller's language: 70+ languages on OpenAI GPT-Live |
-| Calendars | Google and Outlook | Google Calendar |
+| Calendars | Google and Outlook | Google Calendar, Cal.com and Calendly |
 | CRM | Salesforce, HubSpot and Zoho built in | Webhooks and a REST API; Zapier connects through them |
 | AI replies to texts | Yes, through its AI SMS agent (RingCentral notes extra charges may apply) | No; your team replies by hand |
 | Transfers and routing | By name, location and keyword, with live handoff | One transfer number, and a message if the transfer fails |
@@ -179,7 +179,7 @@ LobbyStack fits if you want a lower cost per minute and a free way to test first
 - Free gives you 30 voice minutes a month and a US or Canadian number free for 14 days, with no card.
 - Starter costs $30 for 150 minutes, then $0.20 a minute, counted by the second. Calls under 10 seconds and calls the receptionist ends as spam don't count.
 - Each call opens in the business's default language: English, French, Spanish, Serbian, German, Brazilian Portuguese, Italian or Dutch. The receptionist then answers in the caller's language: 70+ languages on OpenAI GPT-Live, including Spanish and Serbian.
-- It books into Google Calendar and, when the caller agrees, texts a confirmation and a reminder 24 hours before the appointment to US and Canadian numbers.
+- It books into Google Calendar, Cal.com or Calendly and, when the caller agrees, texts a confirmation and a reminder 24 hours before the appointment to US and Canadian numbers.
 - Starter includes 20 transfer attempts a month to your transfer number, and the receptionist offers to take a message if a transfer doesn't go through.
 - There's no setup fee on any plan, and you can cancel from billing settings with no cancellation fees.
 - The code is MIT-licensed. You can self-host it with your own OpenAI and Twilio accounts and keep stored recordings and transcripts on servers you control. Twilio and OpenAI still process the live call audio.

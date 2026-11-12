@@ -4,7 +4,7 @@ export const dentalOfficesFaqs: FaqItem[] = [
   {
     question: "What is a dental AI receptionist?",
     answer:
-      "A dental AI receptionist is a voice AI that answers a practice's phone. It books appointments, answers questions about hours and accepted insurance, takes messages and transfers emergencies to a person. Practices use one for overflow, lunch and after-hours calls, or for every call. LobbyStack books into Google Calendar. Some dental-specific products write bookings into practice management software instead.",
+      "A dental AI receptionist is a voice AI that answers a practice's phone. It books appointments, answers questions about hours and accepted insurance, takes messages and transfers emergencies to a person. Practices use one for overflow, lunch and after-hours calls, or for every call. LobbyStack books into Google Calendar, Cal.com or Calendly. Some dental-specific products write bookings into practice management software instead.",
   },
   {
     question: "How much does an AI dental receptionist cost?",
@@ -19,7 +19,7 @@ export const dentalOfficesFaqs: FaqItem[] = [
   {
     question: "Can it book directly into Dentrix or Open Dental?",
     answer:
-      "No. LobbyStack books into Google Calendar and doesn't connect to Dentrix, Open Dental, Eaglesoft or other practice management software, so your team copies new bookings over. Signed webhooks and the REST API can send booking and call data to Zapier or your own tools. If you need bookings written into your PMS, Dentina names 11 systems it writes bookings back to, and Peerlogic names 8 it integrates with (checked October 27, 2026).",
+      "No. LobbyStack books into Google Calendar, Cal.com or Calendly and doesn't connect to Dentrix, Open Dental, Eaglesoft or other practice management software, so your team copies new bookings over. Signed webhooks and the REST API can send booking and call data to Zapier or your own tools. If you need bookings written into your PMS, Dentina names 11 systems it writes bookings back to, and Peerlogic names 8 it integrates with (checked October 27, 2026).",
   },
   {
     question: "How does it handle a dental emergency call?",
@@ -34,7 +34,7 @@ export const dentalOfficesFaqs: FaqItem[] = [
   {
     question: "Can it book new patient appointments?",
     answer:
-      "Yes. It collects the new patient's name, phone number, insurance carrier, reason for the visit and preferred time, then books an open slot in Google Calendar within your opening hours. You can also have it save the preferred time as a request for your team to confirm. If the patient agrees, it texts a confirmation and a reminder 24 hours before. On LobbyStack Cloud, texts reach US and Canadian numbers.",
+      "Yes. It collects the new patient's name, phone number, insurance carrier, reason for the visit and preferred time, then books an open slot in Google Calendar, Cal.com or Calendly within your opening hours. You can also have it save the preferred time as a request for your team to confirm. If the patient agrees, it texts a confirmation and a reminder 24 hours before. On LobbyStack Cloud, texts reach US and Canadian numbers.",
   },
   {
     question: "Which languages can patients speak?",

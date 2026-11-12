@@ -135,7 +135,7 @@ No. Every step in this guide happens in a website or a chat. If you want a codin
 
 ### Can it book appointments?
 
-Yes. Add your services, connect Google Calendar or Cal.com, and set **Appointments** to **Books appointments**. Your assistant can book and move appointments too.
+Yes. Add your services, connect Google Calendar, Cal.com or Calendly, and set **Appointments** to **Books appointments**. Your assistant can book and move appointments too.
 
 ### Can it reply to text messages?
 

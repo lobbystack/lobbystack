@@ -70,10 +70,10 @@ With LobbyStack, for example:
 
 - the call opens in French when French is your default language, and switches to English if the caller speaks it;
 - it answers from your website, your documents and the prices you give it;
-- it books into Google Calendar and texts a confirmation to customers who agree;
+- it books into Google Calendar, Cal.com or Calendly and texts a confirmation to customers who agree;
 - it transfers urgent calls to your cell and takes a message for everything else, with an email or text alert.
 
-Starter costs US$30 a month for 150 minutes, then US$0.20 a minute. For 40 three-minute calls, the bill stays at US$30. It also answers at 9 p.m. and on weekends for the same price. Its limits: it bills in US dollars, connects only to Google Calendar, and doesn't replace a person on a sensitive call or an admin task.
+Starter costs US$30 a month for 150 minutes, then US$0.20 a minute. For 40 three-minute calls, the bill stays at US$30. It also answers at 9 p.m. and on weekends for the same price. Its limits: it bills in US dollars, connects only to Google Calendar, Cal.com and Calendly, and doesn't replace a person on a sensitive call or an admin task.
 
 ## How do you choose between a virtual secretary and an AI receptionist?
 
@@ -95,7 +95,7 @@ Only if you buy those hours. Most work days. For evening and weekend calls, add 
 
 ### Can a virtual secretary book my appointments?
 
-Yes, if you give them access to your calendar. An AI receptionist like LobbyStack also books during the call, into Google Calendar, and texts a confirmation to customers who agree.
+Yes, if you give them access to your calendar. An AI receptionist like LobbyStack also books during the call, into Google Calendar, Cal.com or Calendly, and texts a confirmation to customers who agree.
 
 ### Can an AI receptionist replace a virtual secretary?
 

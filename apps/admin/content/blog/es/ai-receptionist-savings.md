@@ -164,13 +164,13 @@ Los planes de entrada de pago de las recepcionistas con IA integradas en softwar
 
 Para un negocio que ya usa Jobber, 40 conversaciones al mes en Jobber Receptionist cuestan $36.90 ($29 + 10 a $0.79), más el plan de Jobber. Jobber Plus incluye uso ilimitado desde $399 al mes con facturación anual. Sameday AI reserva en ServiceTitan durante la llamada. Nuestra [comparativa de servicios de atención telefónica para empresas de climatización (HVAC)](/es/blog/best-hvac-answering-services/) cubre el despacho de técnicos y qué servicios se sincronizan con ServiceTitan, Housecall Pro o Jobber.
 
-LobbyStack reserva en Google Calendar y solo llega a otro software mediante webhooks y la API REST. Si su negocio necesita registrar los trabajos en Jobber, Housecall Pro o ServiceTitan, empiece por las herramientas de arriba.
+LobbyStack reserva en Google Calendar, Cal.com o Calendly y solo llega a otro software mediante webhooks y la API REST. Si su negocio necesita registrar los trabajos en Jobber, Housecall Pro o ServiceTitan, empiece por las herramientas de arriba.
 
 ### Clínicas dentales: Dentina, Viva y Peerlogic
 
 Dentina nombra 11 sistemas clínicos en los que reserva y no cobra tarifa de configuración; su plan Premium cuesta $399 por sede al mes con facturación anual. Los 4,000 créditos Gold de Viva cubren unos 400 minutos de llamada con IA si los gasta solo en llamadas. El plan Premium de $699 de Peerlogic combina la recepcionista con IA con un sistema telefónico para clínicas dentales.
 
-LobbyStack no afirma cumplir con HIPAA y solo reserva en Google Calendar. Si su consultorio necesita reservar directo en Dentrix, empiece por Dentina o Peerlogic. Nuestra página sobre la [recepcionista con IA para consultorios dentales](/es/solutions/ai-receptionist-for-dental-offices/) explica dónde encaja LobbyStack.
+LobbyStack no afirma cumplir con HIPAA y solo reserva en Google Calendar, Cal.com o Calendly. Si su consultorio necesita reservar directo en Dentrix, empiece por Dentina o Peerlogic. Nuestra página sobre la [recepcionista con IA para consultorios dentales](/es/solutions/ai-receptionist-for-dental-offices/) explica dónde encaja LobbyStack.
 
 ## ¿Una recepcionista con IA cobra tarifa de configuración o cargos ocultos?
 
@@ -281,7 +281,7 @@ Cada llamada empieza en el idioma predeterminado del negocio: inglés, francés,
 Los límites de LobbyStack:
 
 - En Free, el número de EE. UU. o Canadá contesta llamadas reales durante 14 días, y las transferencias solo van al celular que usted verificó. Después, el número deja de contestar si no elige Starter o Pro.
-- Solo reserva en Google Calendar. Los CRM y el software para servicios de campo o clínicas dentales necesitan webhooks o la API REST para conectarse.
+- Solo reserva en Google Calendar, Cal.com o Calendly. Los CRM y el software para servicios de campo o clínicas dentales necesitan webhooks o la API REST para conectarse.
 - La IA no responde mensajes de texto. Su equipo los responde desde el panel.
 - Las transferencias van a un solo número por negocio, y una llamada telefónica termina a los 30 minutos.
 - Los SMS de confirmación y recordatorio de reservas solo llegan a números de Estados Unidos y Canadá.

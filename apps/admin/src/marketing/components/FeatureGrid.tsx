@@ -28,7 +28,7 @@ const featureGridCopy = {
       {
         title: "Books appointments",
         description:
-          "Connect Google Calendar, and LobbyStack checks availability, offers open times, books the appointment, and texts the caller a confirmation.",
+          "Connect Google Calendar, Cal.com or Calendly, and LobbyStack checks availability, offers open times, books the appointment, and texts the caller a confirmation.",
         icon: CalendarCheck,
       },
       {
@@ -62,7 +62,7 @@ const featureGridCopy = {
       {
         title: "Planifie les rendez‑vous",
         description:
-          "Connectez Google Calendar : LobbyStack vérifie les disponibilités, propose des créneaux, planifie le rendez‑vous et envoie la confirmation.",
+          "Connectez Google Calendar, Cal.com ou Calendly : LobbyStack vérifie les disponibilités, propose des créneaux, planifie le rendez‑vous et envoie la confirmation.",
         icon: CalendarCheck,
       },
       {
@@ -96,7 +96,7 @@ const featureGridCopy = {
       {
         title: "Reserva citas",
         description:
-          "Conecte Google Calendar y LobbyStack revisa la disponibilidad, ofrece horarios libres, reserva la cita y envía un SMS de confirmación a quien llama.",
+          "Conecte Google Calendar, Cal.com o Calendly y LobbyStack revisa la disponibilidad, ofrece horarios libres, reserva la cita y envía un SMS de confirmación a quien llama.",
         icon: CalendarCheck,
       },
       {
@@ -130,7 +130,7 @@ const featureGridCopy = {
       {
         title: "Zakazuje termine",
         description:
-          "Povežite Google Calendar i LobbyStack proverava dostupnost, nudi slobodne termine, zakazuje termin i šalje pozivaocu potvrdu SMS-om.",
+          "Povežite Google Calendar, Cal.com ili Calendly i LobbyStack proverava dostupnost, nudi slobodne termine, zakazuje termin i šalje pozivaocu potvrdu SMS-om.",
         icon: CalendarCheck,
       },
       {

@@ -70,10 +70,10 @@ Avec LobbyStack, par exemple :
 
 - l'appel commence en français quand le français est votre langue par défaut, et passe à l'anglais si l'appelant le parle ;
 - il répond à partir de votre site web, de vos documents et des prix que vous lui donnez ;
-- il réserve dans Google Calendar et texte la confirmation aux clients qui acceptent ;
+- il réserve dans Google Calendar, Cal.com ou Calendly et texte la confirmation aux clients qui acceptent ;
 - il transfère les appels urgents à votre cellulaire et prend un message pour le reste, avec une alerte par courriel ou par texto.
 
-Starter coûte 30 $ US par mois pour 150 minutes, puis 0,20 $ US la minute. Pour 40 appels de 3 minutes, la facture reste à 30 $ US. Il répond aussi à 21 h et la fin de semaine, au même prix. Ses limites : il facture en dollars américains, se connecte seulement à Google Calendar, et ne remplace pas une personne pour un appel délicat ou une tâche administrative.
+Starter coûte 30 $ US par mois pour 150 minutes, puis 0,20 $ US la minute. Pour 40 appels de 3 minutes, la facture reste à 30 $ US. Il répond aussi à 21 h et la fin de semaine, au même prix. Ses limites : il facture en dollars américains, se connecte seulement à Google Calendar, Cal.com et Calendly, et ne remplace pas une personne pour un appel délicat ou une tâche administrative.
 
 ## Comment choisir entre une secrétaire virtuelle et un réceptionniste IA ?
 
@@ -95,7 +95,7 @@ Seulement si vous achetez ces heures. La plupart travaillent de jour. Pour les a
 
 ### Une secrétaire virtuelle peut-elle prendre mes rendez-vous ?
 
-Oui, si vous lui donnez accès à votre agenda. Un réceptionniste IA comme LobbyStack réserve aussi pendant l'appel, dans Google Calendar, et texte la confirmation au client qui accepte.
+Oui, si vous lui donnez accès à votre agenda. Un réceptionniste IA comme LobbyStack réserve aussi pendant l'appel, dans Google Calendar, Cal.com ou Calendly, et texte la confirmation au client qui accepte.
 
 ### Un réceptionniste IA peut-il remplacer une secrétaire virtuelle ?
 

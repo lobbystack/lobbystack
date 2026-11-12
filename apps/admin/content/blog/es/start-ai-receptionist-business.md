@@ -78,7 +78,7 @@ Para el siguiente cliente del mismo nicho:
 2. Elija el paquete o marque el negocio como facturado fuera de LobbyStack.
 3. Elija **Acceso completo**, para que el propietario pueda editar la recepcionista, o **Solo actividad**, para que vea las llamadas mientras usted gestiona la configuración.
 4. Escriba el correo del propietario. LobbyStack envía su invitación con su marca.
-5. Añada el sitio web del cliente en la página **Conocimiento**, conecte Google Calendar y defina un número de transferencia.
+5. Añada el sitio web del cliente en la página **Conocimiento**, conecte Google Calendar, Cal.com o Calendly y defina un número de transferencia.
 6. Llame al número y pruebe cada regla antes de entregarlo.
 
 Si incorpora a muchos clientes, cree una clave de plataforma en la página **Claves de API** y use el comando `lobbystack onboard`. Crea un negocio a partir de un archivo YAML y, si lo vuelve a ejecutar, solo cambia lo que difiere. La [guía de claves de API](https://docs.lobbystack.com/es/white-label/api-keys) incluye un archivo de ejemplo.

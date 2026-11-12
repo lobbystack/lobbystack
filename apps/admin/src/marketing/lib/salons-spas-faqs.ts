@@ -4,7 +4,7 @@ export const salonsSpasFaqs: FaqItem[] = [
   {
     question: "What does an AI receptionist for a salon do?",
     answer:
-      "It answers your salon's phone when nobody at the desk can. LobbyStack books appointments into Google Calendar, moves and cancels them, answers questions from your service menu and policies, and transfers callers to a person when they ask or your rules say so. Each call shows up in your dashboard with a summary and a transcript.",
+      "It answers your salon's phone when nobody at the desk can. LobbyStack books appointments into Google Calendar, Cal.com or Calendly, moves and cancels them, answers questions from your service menu and policies, and transfers callers to a person when they ask or your rules say so. Each call shows up in your dashboard with a summary and a transcript.",
   },
   {
     question: "Can clients book a specific stylist?",
@@ -14,7 +14,7 @@ export const salonsSpasFaqs: FaqItem[] = [
   {
     question: "Does it work with my salon booking software?",
     answer:
-      "Not directly. LobbyStack books into Google Calendar and doesn't connect to salon booking platforms. If your salon books in another app, set LobbyStack to take booking requests: it collects the service, stylist and time the client wants, and your team confirms the appointment. Webhooks and the LobbyStack API can send each request on to your other tools.",
+      "Not directly. LobbyStack books into Google Calendar, Cal.com or Calendly and doesn't connect to salon booking platforms. If your salon books in another app, set LobbyStack to take booking requests: it collects the service, stylist and time the client wants, and your team confirms the appointment. Webhooks and the LobbyStack API can send each request on to your other tools.",
   },
   {
     question: "Can clients cancel or reschedule by phone?",

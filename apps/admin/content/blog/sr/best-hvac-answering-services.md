@@ -30,7 +30,7 @@ Birajte prema tome ko treba da se javi kada nekome u 2 ujutru ne radi grejanje i
 - **Jobber Receptionist, najbolji za firme u Jobber-u:** dodatak od $29 sa 30 razgovora mesečno.
 - **Smith.ai, najbolji AI iza koga stoje recepcioneri uživo:** 25 besplatnih AI poziva mesečno, plus uputstva za podešavanje za ServiceTitan, Housecall Pro i Jobber.
 - **Sameday AI, najbolji za ServiceTitan firme sa većim budžetom:** sertifikovana ServiceTitan aplikacija od $449 mesečno.
-- **LobbyStack (naš), najbolji za firme koje zakazuju u Google Calendar i imaju pozivaoce na raznim jezicima:** $30 mesečno za 150 minuta bez naknade za aktivaciju, a odgovara na jeziku pozivaoca, na više od 70 jezika.
+- **LobbyStack (naš), najbolji za firme koje zakazuju u Google Calendar, Cal.com ili Calendly i imaju pozivaoce na raznim jezicima:** $30 mesečno za 150 minuta bez naknade za aktivaciju, a odgovara na jeziku pozivaoca, na više od 70 jezika.
 
 ## Kako se ove usluge za HVAC firme porede?
 
@@ -120,13 +120,13 @@ Goodcall naplaćuje po jedinstvenom pozivaocu i ne meri minute: $79 mesečno pok
 
 Rosie paket od $49 zakazuje samo preko linka u SMS poruci i nema preusmeravanje. Paket od $149 dodaje zakazivanje u kalendar i preusmeravanje uživo, a paket od $299 dodaje kaskadno preusmeravanje koje proba nekoliko brojeva ([stranica sa cenama](https://heyrosie.com/pricing)). Kada pređete limit, prelazite na viši paket. Rosie govori engleski i španski, a njena [stranica za HVAC firme](https://heyrosie.com/industries/hvac) kaže da ne može sama da šalje tehničare na teren. Pogledajte [kako se Rosie paketi porede](/sr/blog/rosie-ai-alternative/).
 
-### LobbyStack (naš): najbolji za firme koje zakazuju u Google Calendar i imaju pozivaoce na raznim jezicima
+### LobbyStack (naš): najbolji za firme koje zakazuju u Google Calendar, Cal.com ili Calendly i imaju pozivaoce na raznim jezicima
 
 LobbyStack Starter košta $30 mesečno za 150 minuta, zatim $0.20 po minutu. Pro košta $100 za 500 minuta, zatim $0.18. Uz godišnju naplatu izlaze $24 i $80 mesečno, a nijedan paket nema naknadu za aktivaciju. LobbyStack računa potrošnju u sekundama i ne računa pozive kraće od 10 sekundi ni pozive koje završi kao spam. Paketi ne ograničavaju broj poziva na koje odgovara istovremeno, a istovremeni pozivi troše iste minute.
 
-Svaki poziv počinje na podrazumevanom jeziku firme: engleskom, francuskom, španskom, srpskom, nemačkom, brazilskom portugalskom, italijanskom ili holandskom. Recepcioner zatim odgovara na jeziku pozivaoca: na OpenAI GPT-Live modelu to je više od 70 jezika, uključujući španski i srpski. Vaša pravila napisana običnim jezikom određuju koji pozivi su hitni, a recepcioner te pozive može da preusmeri na jedan broj. Ako preusmeravanje ne uspe, nudi da primi poruku, a Vaš tim može da dobije obaveštenje „Preusmeravanje poziva nije uspelo“. Zakazuje u Google Calendar i, kada pozivalac pristane, šalje SMS potvrdu i podsetnik 24 sata unapred na američke i kanadske brojeve.
+Svaki poziv počinje na podrazumevanom jeziku firme: engleskom, francuskom, španskom, srpskom, nemačkom, brazilskom portugalskom, italijanskom ili holandskom. Recepcioner zatim odgovara na jeziku pozivaoca: na OpenAI GPT-Live modelu to je više od 70 jezika, uključujući španski i srpski. Vaša pravila napisana običnim jezikom određuju koji pozivi su hitni, a recepcioner te pozive može da preusmeri na jedan broj. Ako preusmeravanje ne uspe, nudi da primi poruku, a Vaš tim može da dobije obaveštenje „Preusmeravanje poziva nije uspelo“. Zakazuje u Google Calendar, Cal.com ili Calendly i, kada pozivalac pristane, šalje SMS potvrdu i podsetnik 24 sata unapred na američke i kanadske brojeve.
 
-Ne sinhronizuje se sa ServiceTitan, Housecall Pro ni Jobber, a Google Calendar je jedini kalendar sa kojim radi. Preusmerenja idu na jedan broj, bez najave, i nemate rotaciju dežurstava. Iza njega ne stoje ljudski agenti, a AI ne odgovara na SMS poruke. Paket Free Vam daje 30 minuta razgovora i broj iz SAD ili Kanade besplatno 14 dana, bez kartice. Rad sa hitnim pozivima opisuje stranica [AI recepcioner za grejanje i klimatizaciju](/sr/solutions/ai-receptionist-for-hvac/).
+Ne sinhronizuje se sa ServiceTitan, Housecall Pro ni Jobber, a od kalendara radi samo sa Google Calendar-om, Cal.com-om i Calendly-jem. Preusmerenja idu na jedan broj, bez najave, i nemate rotaciju dežurstava. Iza njega ne stoje ljudski agenti, a AI ne odgovara na SMS poruke. Paket Free Vam daje 30 minuta razgovora i broj iz SAD ili Kanade besplatno 14 dana, bez kartice. Rad sa hitnim pozivima opisuje stranica [AI recepcioner za grejanje i klimatizaciju](/sr/solutions/ai-receptionist-for-hvac/).
 
 ## Koliko košta usluga odgovaranja na pozive za HVAC firme?
 
@@ -206,9 +206,9 @@ A Message Center, AnswerForce i PATLive navode sva tri na svojim stranicama za H
 | Ruby | Nije naveden | Nije naveden | Nije naveden | Zapier |
 | Nexa | Nije naveden | Nije naveden | Nije naveden | CRM integracija na paketu Nexa 500 |
 | MAP Communications, SAS | Nije naveden | Nije naveden | Nije naveden | Ne navode nijednu |
-| LobbyStack (naš) | Ne | Ne | Ne | Google Calendar; potpisani webhookovi; REST API; Zapier preko webhookova i API-ja; MCP server |
+| LobbyStack (naš) | Ne | Ne | Ne | Google Calendar, Cal.com, Calendly; potpisani webhookovi; REST API; Zapier preko webhookova i API-ja; MCP server |
 
-Ako Vaši dispečeri rade u ServiceTitan-u i treba Vam da se posao upiše tamo tokom poziva, izaberite Sameday AI, Avoca, Smith.ai ili uslugu uživo koja navodi ServiceTitan, i od svakog tražite da pre potpisivanja upiše probni posao. LobbyStack odgovara firmama koje zakazuju u Google Calendar, kao i firmama koje termine ručno prepisuju u svoj softver ili ih tamo šalju preko LobbyStack webhookova.
+Ako Vaši dispečeri rade u ServiceTitan-u i treba Vam da se posao upiše tamo tokom poziva, izaberite Sameday AI, Avoca, Smith.ai ili uslugu uživo koja navodi ServiceTitan, i od svakog tražite da pre potpisivanja upiše probni posao. LobbyStack odgovara firmama koje zakazuju u Google Calendar, Cal.com ili Calendly, kao i firmama koje termine ručno prepisuju u svoj softver ili ih tamo šalju preko LobbyStack webhookova.
 
 ## Da li se usluga odgovaranja na pozive za HVAC firme isplati?
 
@@ -280,6 +280,6 @@ Izvori, svi pročitani 9. oktobra 2026:
 - **Ljudi na svakom pozivu i raspored dežurstava:** A Message Center, MAP Communications ili Specialty Answering Service.
 - **ServiceTitan, sa poslom upisanim u njega:** AnswerForce ili PATLive za agente uživo, Sameday AI ili Smith.ai za AI.
 - **Jobber ili Housecall Pro:** prvo probajte ugrađenog recepcionera.
-- **Zakazivanje u Google Calendar, višak poziva i pozivi van radnog vremena za $30 do $100 mesečno, uz pozivaoce na drugim jezicima:** LobbyStack.
+- **Zakazivanje u Google Calendar, Cal.com ili Calendly, višak poziva i pozivi van radnog vremena za $30 do $100 mesečno, uz pozivaoce na drugim jezicima:** LobbyStack.
 
 Poslušajte kako LobbyStack prima poziv zbog pokvarenog grejanja pre nego što platite: [napravite besplatan nalog](https://app.lobbystack.com/sr/signup) i testirajte ga sa 30 minuta razgovora i besplatnim brojem na 14 dana, bez kartice. Plaćeni paketi nemaju naknadu za aktivaciju, a pretplatu otkazujete u podešavanjima naplate, bez naknade za otkazivanje. Zatim na stranici [AI recepcioner za grejanje i klimatizaciju](/sr/solutions/ai-receptionist-for-hvac/) pogledajte kako rade hitni pozivi, zakazivanje i preusmeravanje.

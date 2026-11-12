@@ -73,7 +73,7 @@ export function HomeServicesSections() {
       <SolutionHero
         eyebrow="Home services"
         title="An AI receptionist for home services that books jobs while you work"
-        intro="You can't answer from under a sink or on a roof. LobbyStack picks up, collects the address and the problem, books the visit into Google Calendar and transfers the emergencies you define to your on-call phone."
+        intro="You can't answer from under a sink or on a roof. LobbyStack picks up, collects the address and the problem, books the visit into Google Calendar, Cal.com or Calendly and transfers the emergencies you define to your on-call phone."
         primary={signupLink("Try for free", signup, "home_services_hero")}
         secondary={{ label: "View pricing", href: "/pricing/" }}
         footnote="Free plan with 30 voice minutes. Works with your existing business number."
@@ -103,7 +103,7 @@ export function HomeServicesSections() {
           {
             eyebrow: "Routine work",
             title: "The tune-up lands on the calendar",
-            body: "For jobs that can wait, it offers open times from your Google Calendar, books the visit and writes up the call so you know what to bring.",
+            body: "For jobs that can wait, it offers open times from your Google Calendar, Cal.com or Calendly, books the visit and writes up the call so you know what to bring.",
             media: <SceneArt scene={{ product: "summary" }} locale={locale} fit="card" />,
           },
         ]}

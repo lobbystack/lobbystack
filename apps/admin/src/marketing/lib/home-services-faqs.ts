@@ -4,7 +4,7 @@ export const homeServicesFaqs: FaqItem[] = [
   {
     question: "What is an AI receptionist for home services?",
     answer:
-      "It's a voice AI that answers the phone for a plumbing, HVAC, electrical, roofing or other trade business. LobbyStack picks up when your crew can't, collects the address and the problem, books visits into Google Calendar, answers questions from your details and transfers emergencies to your on-call number.",
+      "It's a voice AI that answers the phone for a plumbing, HVAC, electrical, roofing or other trade business. LobbyStack picks up when your crew can't, collects the address and the problem, books visits into Google Calendar, Cal.com or Calendly, answers questions from your details and transfers emergencies to your on-call number.",
   },
   {
     question: "How is it different from a home services answering service?",
@@ -19,7 +19,7 @@ export const homeServicesFaqs: FaqItem[] = [
   {
     question: "Will it book jobs while I'm on a job site?",
     answer:
-      "Yes. It offers open times from your Google Calendar inside your opening hours, books the one the caller picks and, if they agree, texts a confirmation and a reminder the day before.",
+      "Yes. It offers open times from your Google Calendar, Cal.com or Calendly inside your opening hours, books the one the caller picks and, if they agree, texts a confirmation and a reminder the day before.",
   },
   {
     question: "What does it say when a caller asks for a price?",
@@ -39,7 +39,7 @@ export const homeServicesFaqs: FaqItem[] = [
   {
     question: "Will my team see what was booked?",
     answer:
-      "Yes. Bookings appear in your Google Calendar and in the dashboard, next to each call's summary, transcript and recording. When the receptionist takes a message, your team gets an email alert, or a text alert if you turn those on.",
+      "Yes. Bookings appear in your Google Calendar, Cal.com or Calendly and in the dashboard, next to each call's summary, transcript and recording. When the receptionist takes a message, your team gets an email alert, or a text alert if you turn those on.",
   },
   {
     question: "How much does it cost for a home services business?",

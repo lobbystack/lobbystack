@@ -52,7 +52,7 @@ Gardez-le court : le nom de l'entreprise et une question. Par exemple : « Plomb
 
 ### 4. Connectez votre calendrier
 
-Connectez Google Calendar dans les intégrations et choisissez le calendrier des réservations. L'assistant propose alors les plages libres pendant l'appel et réserve. Si vous préférez approuver chaque rendez-vous, le mode demande note l'heure souhaitée et votre équipe la confirme. Les clients qui acceptent reçoivent un texto de confirmation.
+Connectez Google Calendar, Cal.com ou Calendly dans les intégrations et choisissez où vont les réservations. L'assistant propose alors les plages libres pendant l'appel et réserve. Si vous préférez approuver chaque rendez-vous, le mode demande note l'heure souhaitée et votre équipe la confirme. Les clients qui acceptent reçoivent un texto de confirmation.
 
 ### 5. Écrivez vos règles en mots simples
 

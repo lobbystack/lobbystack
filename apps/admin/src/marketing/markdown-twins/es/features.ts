@@ -18,7 +18,7 @@ LobbyStack es una recepcionista con IA de código abierto para pequeñas empresa
 
 - Atención de todas las llamadas, o solo cuando su equipo está ocupado, cerrado o no disponible.
 - Flujos de trabajo en lenguaje natural para describir qué preguntar, decir, reservar, cotizar, transferir y notificar.
-- Reserva de citas en Google Calendar con cambios, cancelaciones, un SMS de confirmación y un SMS de recordatorio 24 horas antes de la cita si quien llama lo acepta (planes de pago).
+- Reserva de citas en Google Calendar, Cal.com o Calendly con cambios, cancelaciones, un SMS de confirmación y un SMS de recordatorio 24 horas antes de la cita si quien llama lo acepta (planes de pago).
 - Respuestas basadas en el conocimiento del negocio: preguntas frecuentes, servicios, precios, horarios, políticas, ubicaciones e instrucciones del personal.
 - Gestión de presupuestos con precios exactos, precios desde, rangos de precios o un mensaje para que el equipo cotice después.
 - Calificación de clientes potenciales y registro estructurado de los datos de quien llama.

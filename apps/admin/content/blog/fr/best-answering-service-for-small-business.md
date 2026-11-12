@@ -164,10 +164,10 @@ Un réceptionniste IA répond avec un logiciel, puis réserve, transfère ou pre
 
 - **Prix (vérifié le 9 octobre 2026) :** Starter coûte 30 $ par mois pour 150 minutes, puis 0,20 $ la minute. Voir les [tarifs de LobbyStack](/fr/pricing/).
 - **Facturation :** à la seconde, sans arrondi, donc un appel de 90 secondes consomme 1,5 minute. Les appels de moins de 10 secondes et ceux que le réceptionniste termine comme indésirables ne comptent pas.
-- **Inclus :** réservation dans Google Calendar selon vos horaires, vos services et vos employés, SMS de confirmation et de rappel 24 heures avant vers les numéros américains et canadiens quand l'appelant accepte, et 20 tentatives de transfert par mois vers un numéro.
+- **Inclus :** réservation dans Google Calendar, Cal.com ou Calendly selon vos horaires, vos services et vos employés, SMS de confirmation et de rappel 24 heures avant vers les numéros américains et canadiens quand l'appelant accepte, et 20 tentatives de transfert par mois vers un numéro.
 - **Langues :** chaque appel commence dans la langue par défaut de l'entreprise : anglais, français, espagnol, serbe, allemand, portugais du Brésil, italien ou néerlandais. Le réceptionniste répond ensuite dans la langue de l'appelant : plus de 70 langues avec OpenAI GPT-Live, dont l'espagnol et le serbe.
 - **Numéros et mise en service :** numéros aux États-Unis, au Canada, au Royaume-Uni, en Australie et en Nouvelle-Zélande, ou renvoi de votre numéro actuel. Les forfaits ne limitent pas le nombre d'appels simultanés. Aucun forfait ne comporte de frais de mise en service, et vous pouvez résilier à tout moment, sans frais de résiliation. Le forfait Gratuit vous donne 30 minutes vocales par mois et un numéro américain ou canadien gratuit pendant 14 jours, sans carte.
-- **Limites :** aucune personne au bout du fil, Google Calendar comme seul agenda, et aucune synchronisation avec un logiciel de gestion de cabinet ou d'interventions terrain. LobbyStack transfère sans annoncer l'appel, vers un seul numéro. L'IA ne répond pas aux SMS, et LobbyStack ne revendique aucune conformité HIPAA.
+- **Limites :** aucune personne au bout du fil, aucun agenda en dehors de Google Calendar, Cal.com et Calendly, et aucune synchronisation avec un logiciel de gestion de cabinet ou d'interventions terrain. LobbyStack transfère sans annoncer l'appel, vers un seul numéro. L'IA ne répond pas aux SMS, et LobbyStack ne revendique aucune conformité HIPAA.
 - **Choisissez-le si** vous voulez une réponse et une réservation à chaque appel pour 30 $ par mois, si votre équipe prend les transferts urgents et si vos appelants parlent de nombreuses langues.
 
 ### Upfirst
@@ -177,7 +177,7 @@ Un réceptionniste IA répond avec un logiciel, puis réserve, transfère ou pre
 - **Non facturés :** les appels indésirables, les appels de moins de 15 secondes et les appelants qui ne disent rien.
 - **Langues et essai :** plus de 35 langues et un essai de 14 jours sans carte.
 - **Points forts :** Upfirst se connecte à plus d'agendas que LobbyStack et met réservation, transferts et SMS dans son forfait le moins cher.
-- **Choisissez-le si** vous réservez ailleurs que dans Google Calendar ou si vos appels durent longtemps.
+- **Choisissez-le si** vous réservez dans Outlook, Clio, Acuity ou Square, ou si vos appels durent longtemps.
 
 ### Rosie
 
@@ -256,7 +256,7 @@ La plupart n'en exigent pas. PATLive, SAS, Smith.ai, Abby Connect, Upfirst et Go
 
 ### Une permanence peut-elle prendre des rendez-vous ?
 
-Oui, mais le prix varie. Les réceptionnistes humains de Smith.ai facturent 1,50 $ par appel avec rendez-vous, Davinci Virtual ne réserve que sur les forfaits Premium dès 249 $, et Rosie réserve dans un agenda à partir de 149 $. Upfirst, AI-Receptionist.com et LobbyStack réservent dès leur forfait payant le moins cher. LobbyStack réserve dans Google Calendar, le seul agenda qu'il connecte.
+Oui, mais le prix varie. Les réceptionnistes humains de Smith.ai facturent 1,50 $ par appel avec rendez-vous, Davinci Virtual ne réserve que sur les forfaits Premium dès 249 $, et Rosie réserve dans un agenda à partir de 149 $. Upfirst, AI-Receptionist.com et LobbyStack réservent dès leur forfait payant le moins cher. LobbyStack réserve dans Google Calendar, Cal.com ou Calendly, les seuls agendas qu'il connecte.
 
 ### Les permanences facturent-elles les appels indésirables ?
 
@@ -272,7 +272,7 @@ Choisissez selon la personne qui doit répondre à votre téléphone.
 
 - **Une personne à chaque appel :** PATLive pour une grille publiée et un essai de 14 jours, Specialty Answering Service pour la facturation à la seconde et des dépassements bas, ou Ruby pour un personnel haut de gamme 24 h/24, espagnol inclus. AnswerNet reste l'option publiée la moins chère si vos appelants parlent anglais.
 - **L'IA avec des personnes derrière :** Smith.ai si vous voulez commencer sans payer, ou Abby Connect si vous voulez une seule équipe pour les deux.
-- **L'IA seule :** LobbyStack si vous voulez une réponse à chaque appel et une réservation dans Google Calendar pour 30 $ par mois, si votre équipe prend les transferts urgents et si vos appelants parlent de nombreuses langues. AI-Receptionist.com propose un forfait payant moins cher (14 $), Upfirst connecte plus d'agendas, et Goodcall convient aux clients qui rappellent.
+- **L'IA seule :** LobbyStack si vous voulez une réponse à chaque appel et une réservation dans Google Calendar, Cal.com ou Calendly pour 30 $ par mois, si votre équipe prend les transferts urgents et si vos appelants parlent de nombreuses langues. AI-Receptionist.com propose un forfait payant moins cher (14 $), Upfirst connecte plus d'agendas, et Goodcall convient aux clients qui rappellent.
 
 Si vous avez besoin d'une personne à chaque appel ou d'une synchronisation avec un logiciel de gestion de cabinet ou d'interventions terrain, LobbyStack ne vous conviendra pas. Choisissez un service humain ou un outil conçu pour votre secteur.
 

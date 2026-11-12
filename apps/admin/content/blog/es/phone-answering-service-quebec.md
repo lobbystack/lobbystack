@@ -78,7 +78,7 @@ Elija operadores si sus llamadas exigen criterio: un cliente enojado, una lista 
 
 Elija una recepcionista con IA si la mayoría de sus llamadas se parecen: preguntas sobre su horario y sus precios, citas por reservar, urgencias por transferir. Contesta de noche y el fin de semana al mismo precio, toma varias llamadas a la vez y reserva durante la llamada.
 
-LobbyStack, por ejemplo, empieza la llamada en francés cuando el francés es el idioma predeterminado de su empresa, y pasa al inglés o a otro idioma cuando quien llama lo habla. Reserva en Google Calendar, envía la confirmación por SMS a los clientes que la aceptan y transfiere a su celular las llamadas que sus reglas marcan como urgentes. Sus límites: cobra en dólares estadounidenses, solo se conecta a Google Calendar y no reemplaza a una persona en una llamada delicada. Nuestra página de [recepcionista con IA en Quebec](/es/solutions/ai-receptionist-quebec/) detalla esta configuración.
+LobbyStack, por ejemplo, empieza la llamada en francés cuando el francés es el idioma predeterminado de su empresa, y pasa al inglés o a otro idioma cuando quien llama lo habla. Reserva en Google Calendar, Cal.com o Calendly, envía la confirmación por SMS a los clientes que la aceptan y transfiere a su celular las llamadas que sus reglas marcan como urgentes. Sus límites: cobra en dólares estadounidenses, solo se conecta a Google Calendar, Cal.com y Calendly, y no reemplaza a una persona en una llamada delicada. Nuestra página de [recepcionista con IA en Quebec](/es/solutions/ai-receptionist-quebec/) detalla esta configuración.
 
 ## ¿Cómo elegir un servicio de atención telefónica en Quebec?
 
@@ -104,7 +104,7 @@ Sí. Usted activa con su compañía telefónica un desvío de llamadas al númer
 
 ### ¿Una recepcionista con IA puede reservar citas?
 
-Sí, si se conecta a su calendario. LobbyStack ofrece los horarios libres de su Google Calendar y reserva durante la llamada. Un centro de llamadas también puede reservar, pero pregunte si ese servicio cuesta más.
+Sí, si se conecta a su calendario. LobbyStack ofrece los horarios libres de su Google Calendar, Cal.com o Calendly y reserva durante la llamada. Un centro de llamadas también puede reservar, pero pregunte si ese servicio cuesta más.
 
 ### ¿Un servicio de atención contesta de noche y el fin de semana?
 

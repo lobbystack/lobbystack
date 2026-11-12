@@ -78,7 +78,7 @@ No puede importar un agente de Voice AI. Plantéelo como una reconstrucción cor
 
 1. Copie el prompt del agente en las reglas de LobbyStack, y sus datos en entradas de conocimiento.
 2. Añada el sitio web del cliente, para que la recepcionista lea los servicios y horarios.
-3. Añada los servicios que reserva el cliente y conecte Google Calendar o Cal.com.
+3. Añada los servicios que reserva el cliente y conecte Google Calendar, Cal.com o Calendly.
 4. Guarde el resultado como [plantilla](https://docs.lobbystack.com/es/white-label/templates) para el siguiente cliente de ese sector.
 5. Desvíe la línea del cliente al número nuevo y mantenga el agente anterior hasta que haya escuchado llamadas reales.
 

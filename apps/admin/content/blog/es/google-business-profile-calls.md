@@ -128,13 +128,13 @@ La regla se configura con su operador: desvío si está ocupado o no contesta pa
 Con LobbyStack como ejemplo:
 
 - Usted obtiene un número de LobbyStack (disponible en Estados Unidos, Canadá, Reino Unido, Australia y Nueva Zelanda) y desvía a él el número de su negocio. Puede contestar todas las llamadas o solo las de exceso o fuera de horario.
-- Agenda citas en Google Calendar. Con el consentimiento de quien llama, envía por SMS una confirmación y un recordatorio 24 horas antes de la cita a números de Estados Unidos y Canadá.
+- Agenda citas en Google Calendar, Cal.com o Calendly. Con el consentimiento de quien llama, envía por SMS una confirmación y un recordatorio 24 horas antes de la cita a números de Estados Unidos y Canadá.
 - Transfiere las llamadas urgentes a un solo número por negocio. Las transferencias son directas, sin aviso previo a la persona que contesta. Si una transferencia no se completa, se lo dice a quien llama, ofrece tomar un mensaje y su equipo puede recibir una alerta de transferencia fallida.
 - Cada llamada queda con un resumen, una transcripción y una grabación. Usted recibe una alerta por correo cuando toma un mensaje, y las alertas por SMS son opcionales.
 - Las llamadas empiezan en el idioma predeterminado del negocio (inglés, francés, español, serbio, alemán, portugués de Brasil, italiano o neerlandés), y luego la recepcionista responde en el idioma de quien llama: más de 70 idiomas, incluido el español.
 - LobbyStack no cobra las llamadas de spam ni las de menos de 10 segundos.
 
-Conozca los límites antes de desviar una línea: Google Calendar es el único calendario, la IA no responde mensajes de texto y no se sincroniza con un CRM ni con software de servicio en campo. Para una cobertura completa fuera de horario, vea [contestación fuera de horario](/es/solutions/after-hours-answering-service/).
+Conozca los límites antes de desviar una línea: solo agenda en Google Calendar, Cal.com o Calendly, la IA no responde mensajes de texto y no se sincroniza con un CRM ni con software de servicio en campo. Para una cobertura completa fuera de horario, vea [contestación fuera de horario](/es/solutions/after-hours-answering-service/).
 
 ### 4. Pruébelo desde su propio perfil
 
@@ -170,7 +170,7 @@ Sí. Google muestra datos de rendimiento solo para perfiles de negocio verificad
 
 ### ¿Una recepcionista con IA puede contestar las llamadas de mi Perfil de Negocio de Google?
 
-Sí. Deje su número en el perfil y desvíelo a la recepcionista con IA para llamadas perdidas, fuera de horario o todas. LobbyStack contesta las llamadas desviadas, agenda en Google Calendar, transfiere urgencias a un número y guarda resumen, transcripción y grabación de cada llamada. Los planes de pago cuestan desde $30 al mes, o $24 con pago anual.
+Sí. Deje su número en el perfil y desvíelo a la recepcionista con IA para llamadas perdidas, fuera de horario o todas. LobbyStack contesta las llamadas desviadas, agenda en Google Calendar, Cal.com o Calendly, transfiere urgencias a un número y guarda resumen, transcripción y grabación de cada llamada. Los planes de pago cuestan desde $30 al mes, o $24 con pago anual.
 
 ## Conteste las llamadas que su perfil ya le envía
 

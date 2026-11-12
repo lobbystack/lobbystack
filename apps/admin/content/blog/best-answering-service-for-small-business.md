@@ -164,10 +164,10 @@ An AI receptionist answers with software, then books, transfers or takes a messa
 
 - **Price (checked October 9, 2026):** Starter is $30 a month for 150 minutes, then $0.20 a minute. See [LobbyStack pricing](/pricing/).
 - **How it bills:** by the second, with no round-up, so a 90-second call uses 1.5 minutes. Calls under 10 seconds and calls the receptionist ends as spam don't count.
-- **Included:** booking from your hours, services and staff into Google Calendar, confirmation and 24-hour reminder texts to US and Canadian numbers when the caller agrees, and 20 transfer attempts a month to one number.
+- **Included:** booking from your hours, services and staff into Google Calendar, Cal.com or Calendly, confirmation and 24-hour reminder texts to US and Canadian numbers when the caller agrees, and 20 transfer attempts a month to one number.
 - **Languages:** each call opens in the business's default language: English, French, Spanish, Serbian, German, Brazilian Portuguese, Italian or Dutch. The receptionist then answers in the caller's language: 70+ languages on OpenAI GPT-Live, including Spanish and Serbian.
 - **Numbers and setup:** numbers in the US, Canada, the UK, Australia and New Zealand, or forward your current number. Plans don't limit how many calls it answers at once. There's no setup fee on any plan, and you can cancel anytime with no cancellation fees. The Free plan gives you 30 voice minutes a month and a US or Canadian number free for 14 days, with no card.
-- **Where it falls short:** no person on the line, Google Calendar only, and no practice-management or field-service software sync. Transfers are blind and go to one number. The AI doesn't reply to texts, and LobbyStack makes no HIPAA claim.
+- **Where it falls short:** no person on the line, no calendar beyond Google Calendar, Cal.com and Calendly, and no practice-management or field-service software sync. Transfers are blind and go to one number. The AI doesn't reply to texts, and LobbyStack makes no HIPAA claim.
 - **Pick it if** you want every call answered and booked for $30 a month, your own team takes the urgent transfers, and your callers speak many languages.
 
 ### Upfirst
@@ -177,7 +177,7 @@ An AI receptionist answers with software, then books, transfers or takes a messa
 - **Not billed:** spam, calls under 15 seconds and callers who never speak.
 - **Languages and trial:** 35+ languages and a 14-day trial with no card.
 - **Where it wins:** it connects more calendars than LobbyStack and puts booking, transfers and texting on its cheapest plan.
-- **Pick it if** you book outside Google Calendar or your calls run long.
+- **Pick it if** you book in Outlook, Clio, Acuity or Square, or your calls run long.
 
 ### Rosie
 
@@ -256,7 +256,7 @@ Most don't. PATLive, SAS, Smith.ai, Abby Connect, Upfirst and Goodcall run month
 
 ### Can an answering service book appointments?
 
-Yes, though the price varies. Smith.ai's human receptionists charge $1.50 per booked call, Davinci Virtual books only on Premium plans from $249, and Rosie books into a calendar from $149. Upfirst, AI-Receptionist.com and LobbyStack book on their cheapest paid plans. LobbyStack books into Google Calendar, the only calendar it connects to.
+Yes, though the price varies. Smith.ai's human receptionists charge $1.50 per booked call, Davinci Virtual books only on Premium plans from $249, and Rosie books into a calendar from $149. Upfirst, AI-Receptionist.com and LobbyStack book on their cheapest paid plans. LobbyStack books into Google Calendar, Cal.com or Calendly, the only calendars it connects to.
 
 ### Do answering services charge for spam calls?
 
@@ -272,7 +272,7 @@ Pick by who must answer your phone.
 
 - **A person on every call:** PATLive for a published rate card and a 14-day trial, Specialty Answering Service for per-second billing and low overage, or Ruby for premium 24/7 staff with Spanish included. AnswerNet is the cheapest published option if your callers speak English.
 - **AI with people behind it:** Smith.ai if you want to start free, or Abby Connect if you want one team running both.
-- **AI only:** LobbyStack if you want every call answered and booked into Google Calendar for $30 a month, your own team takes the urgent transfers, and your callers speak many languages. AI-Receptionist.com has a cheaper paid plan ($14), Upfirst connects more calendars, and Goodcall suits repeat callers.
+- **AI only:** LobbyStack if you want every call answered and booked into Google Calendar, Cal.com or Calendly for $30 a month, your own team takes the urgent transfers, and your callers speak many languages. AI-Receptionist.com has a cheaper paid plan ($14), Upfirst connects more calendars, and Goodcall suits repeat callers.
 
 If you need a person on every call or sync with practice-management or field-service software, LobbyStack isn't the right fit. Pick a live service or one built for your industry.
 

@@ -18,7 +18,7 @@ LobbyStack je AI recepcioner otvorenog koda za male firme koje primaju mnogo poz
 
 - Odgovaranje na sve pozive ili samo kada je tim zauzet, zatvoren ili nedostupan.
 - Tokovi rada opisani običnim jezikom: šta da pita, kaže, zakaže, koju cenu da navede, kome da preusmeri poziv i koga da obavesti.
-- Zakazivanje termina uz Google Calendar, sa pomeranjem, otkazivanjem, SMS potvrdom i jednim SMS podsetnikom 24 sata pre termina ako pozivalac pristane (plaćeni paketi).
+- Zakazivanje termina uz Google Calendar, Cal.com ili Calendly, sa pomeranjem, otkazivanjem, SMS potvrdom i jednim SMS podsetnikom 24 sata pre termina ako pozivalac pristane (plaćeni paketi).
 - Odgovori iz znanja o firmi: česta pitanja, usluge, cene, radno vreme, pravila, lokacije i uputstva za osoblje.
 - Odgovori o cenama: tačne cene, početne cene, raspon cena ili poruka timu da kasnije pošalje ponudu.
 - Kvalifikacija potencijalnih klijenata i strukturisano beleženje podataka o pozivaocu.

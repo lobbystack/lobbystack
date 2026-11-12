@@ -74,7 +74,7 @@ With LobbyStack as the example:
 
 - You write the greeting, tone and call rules in plain language, and it follows the rules in your priority order.
 - It answers from your knowledge base: website pages, PDF, Word (.docx), text and Markdown files, and FAQs you write.
-- Depending on the booking mode you pick, it books into Google Calendar, takes a request for your team to confirm, or takes a message. Booking needs your opening hours.
+- Depending on the booking mode you pick, it books into Google Calendar, Cal.com or Calendly, takes a request for your team to confirm, or takes a message. Booking needs your opening hours.
 - It texts a booking confirmation and a reminder 24 hours before the appointment to US and Canadian numbers, if the caller agrees.
 - You set when it transfers (never, always, on request, for urgent calls or only during business hours), and transfers go to one number. If a transfer fails, it offers to take a message and your team can get an alert.
 - Your team gets an email alert for each message, and can turn on SMS alerts to a US or Canadian mobile.
@@ -84,7 +84,7 @@ With LobbyStack as the example:
 
 Learn a product's limits before you forward a line. LobbyStack's are:
 
-- Google Calendar is the only calendar it connects to.
+- It connects to Google Calendar, Cal.com and Calendly, and no other calendar.
 - The AI doesn't reply to texts. Your team replies by hand from the dashboard.
 - Transfers go to one number per business. They're blind transfers, so the receptionist doesn't brief your staff before it puts the caller through.
 - It doesn't place outbound calls, such as callbacks or reminder calls.
@@ -207,7 +207,7 @@ AI receptionists fit service businesses that run on bookings and need after-hour
 - [Goodcall](https://www.goodcall.com/pricing) bills per unique caller, so repeat callers cost nothing extra.
 - [RingCentral AIR](https://www.ringcentral.com/pricing/ai-receptionist.html) works with any phone system and connects to Salesforce, HubSpot and Zoho.
 
-LobbyStack (ours) fits owners who want booking, transfers and confirmation texts on a $30 plan with 150 minutes. It also suits businesses whose callers speak languages other than English and Spanish, and it offers a free browser test and MIT-licensed code you can self-host. Pick another vendor if you need a calendar other than Google, a practice-management sync, AI replies to texts or a keypad menu.
+LobbyStack (ours) fits owners who want booking, transfers and confirmation texts on a $30 plan with 150 minutes. It also suits businesses whose callers speak languages other than English and Spanish, and it offers a free browser test and MIT-licensed code you can self-host. Pick another vendor if you book in Outlook or Acuity, or need a practice-management sync, AI replies to texts or a keypad menu.
 
 ### Choose a live service if calls need judgment
 

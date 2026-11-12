@@ -59,7 +59,7 @@ export function SchedulerSections() {
       <SolutionHero
         eyebrow="AI appointment setter"
         title="An AI appointment setter that books callers before they hang up"
-        intro="When a caller gets voicemail, the next business they try can book them before you call back. LobbyStack answers, offers open times from your Google Calendar, books the one the caller picks and texts a confirmation."
+        intro="When a caller gets voicemail, the next business they try can book them before you call back. LobbyStack answers, offers open times from your Google Calendar, Cal.com or Calendly, books the one the caller picks and texts a confirmation."
         primary={signupLink("Try for free", signup, "scheduler_hero")}
         secondary={{ label: "View pricing", href: "/pricing/" }}
         footnote="Free plan with 30 voice minutes. No credit card required."
@@ -68,7 +68,7 @@ export function SchedulerSections() {
 
       <SolutionFacts
         facts={[
-          "Books into Google Calendar during the call",
+          "Books into Google Calendar, Cal.com or Calendly during the call",
           "Offers only times inside your hours",
           "Texts a confirmation and a reminder",
           "Moves or cancels bookings if you allow it",
@@ -83,7 +83,7 @@ export function SchedulerSections() {
           {
             eyebrow: "On the call",
             title: "Two open times, then a booking",
-            body: "It works out which service the caller needs, finds open times long enough for that job and offers a choice. The caller picks one, and the booking appears in your Google Calendar.",
+            body: "It works out which service the caller needs, finds open times long enough for that job and offers a choice. The caller picks one, and the booking appears in your Google Calendar, Cal.com or Calendly.",
             media: (
               <div className={`absolute inset-0 ${sceneFit("card")}`}>
                 <TranscriptScene lines={sceneLines} tilt="left" width={500} />
@@ -150,7 +150,7 @@ export function SchedulerSections() {
           },
           {
             icon: CalendarDays,
-            title: "Busy time in Google Calendar",
+            title: "Busy time in your calendar",
             body: "It reads busy time from the calendar you connect, so a dentist's lunch or a crew's existing job blocks the slot.",
           },
           {
@@ -204,7 +204,7 @@ export function SchedulerSections() {
 
       <SolutionClosing
         title="Book your next caller while they're still on the line"
-        body="Add your services, connect Google Calendar and call your number to book a test appointment. The free plan includes 30 voice minutes."
+        body="Add your services, connect Google Calendar or Cal.com and call your number to book a test appointment. The free plan includes 30 voice minutes."
         primary={signupLink("Try for free", signup, "scheduler_closing")}
         secondary={{ label: "View pricing", href: "/pricing/" }}
         footnote="No credit card required. Cancel anytime."

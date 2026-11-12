@@ -78,7 +78,7 @@ Za sledećeg klijenta iz iste niše:
 2. Izaberite ponudu, ili označite da se firma naplaćuje van LobbyStack-a.
 3. Izaberite **Full access**, da vlasnik može da menja recepcionera, ili **Activity only**, da vidi pozive dok vi upravljate podešavanjem.
 4. Unesite imejl vlasnika. LobbyStack šalje vašu pozivnicu pod vašim brendom.
-5. Dodajte sajt klijenta na stranici **Knowledge**, povežite Google Calendar i podesite broj za prebacivanje.
+5. Dodajte sajt klijenta na stranici **Knowledge**, povežite Google Calendar, Cal.com ili Calendly i podesite broj za prebacivanje.
 6. Pozovite broj i testirajte svako pravilo pre nego što predate recepcionera.
 
 Ako uvodite mnogo klijenata, napravite platformski ključ na stranici **API keys** i koristite komandu `lobbystack onboard`. Ona pravi firmu iz jednog YAML fajla i pri ponovnom pokretanju menja samo ono što se razlikuje. [Vodič za API ključeve](https://docs.lobbystack.com/white-label/api-keys) ima primer fajla.

@@ -135,7 +135,7 @@ const pageCopy = {
     nextItems: [
       "Answers every call instantly",
       "Captures caller details automatically",
-      "Books appointments directly in Google Calendar",
+      "Books appointments directly in Google Calendar, Cal.com or Calendly",
       "Takes detailed job notes and summaries",
       "Transfers emergencies to your personal cell",
       "Costs a fraction of a human answering service",
@@ -222,7 +222,7 @@ const pageCopy = {
     nextItems: [
       "Répond instantanément à chaque appel",
       "Collecte automatiquement les coordonnées de l’appelant",
-      "Réserve directement dans Google Calendar",
+      "Réserve directement dans Google Calendar, Cal.com ou Calendly",
       "Prend des notes et résumés détaillés",
       "Transfère les urgences vers votre téléphone",
       "Coûte une fraction d’un service de réponse humaine",
@@ -309,7 +309,7 @@ const pageCopy = {
     nextItems: [
       "Contesta cada llamada al instante",
       "Recoge los datos de quien llama automáticamente",
-      "Reserva citas directamente en Google Calendar",
+      "Reserva citas directamente en Google Calendar, Cal.com o Calendly",
       "Toma notas y resúmenes detallados del trabajo",
       "Transfiere las urgencias a su celular",
       "Cuesta una fracción de un servicio de contestador humano",
@@ -396,7 +396,7 @@ const pageCopy = {
     nextItems: [
       "Odmah odgovara na svaki poziv",
       "Automatski beleži podatke pozivaoca",
-      "Zakazuje termine direktno u Google Calendar",
+      "Zakazuje termine direktno u Google Calendar, Cal.com ili Calendly",
       "Pravi detaljne beleške i rezimee poslova",
       "Preusmerava hitne pozive na Vaš mobilni",
       "Košta delić cene ljudskog call centra",

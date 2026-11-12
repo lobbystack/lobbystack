@@ -164,13 +164,13 @@ Paid entry plans for AI receptionists built into field-service or dental softwar
 
 For a shop already on Jobber, 40 conversations a month on Jobber Receptionist cost $36.90 ($29 + 10 at $0.79) plus the Jobber plan. Jobber Plus includes unlimited use from $399 a month billed annually. Sameday AI books into ServiceTitan during the call. Our [comparison of HVAC answering services](/blog/best-hvac-answering-services/) covers dispatch and which services sync with ServiceTitan, Housecall Pro or Jobber.
 
-LobbyStack books into Google Calendar and reaches other software only through webhooks and the REST API. A shop that needs jobs written into Jobber, Housecall Pro or ServiceTitan should start with the tools above.
+LobbyStack books into Google Calendar, Cal.com or Calendly and reaches other software only through webhooks and the REST API. A shop that needs jobs written into Jobber, Housecall Pro or ServiceTitan should start with the tools above.
 
 ### Dental: Dentina, Viva and Peerlogic
 
 Dentina names 11 practice systems it books into and charges no setup fee; Premium costs $399 per location a month billed annually. Viva's 4,000 Gold credits cover about 400 AI call minutes if you spend them only on calls. Peerlogic's $699 Premium plan bundles the AI receptionist with a dental phone system.
 
-LobbyStack makes no HIPAA claim and books into Google Calendar only. A practice that needs booking straight into Dentrix should start with Dentina or Peerlogic. Our page on the [AI receptionist for dental offices](/solutions/ai-receptionist-for-dental-offices/) covers where LobbyStack fits.
+LobbyStack makes no HIPAA claim and books only into Google Calendar, Cal.com or Calendly. A practice that needs booking straight into Dentrix should start with Dentina or Peerlogic. Our page on the [AI receptionist for dental offices](/solutions/ai-receptionist-for-dental-offices/) covers where LobbyStack fits.
 
 ## Does an AI receptionist charge setup or hidden fees?
 
@@ -281,7 +281,7 @@ Each call opens in the business's default language: English, French, Spanish, Se
 LobbyStack's limits:
 
 - Free answers real calls on a US or Canadian number for 14 days. To keep the number, choose Starter or Pro.
-- It books into Google Calendar only. CRMs, field-service and dental software connect only through webhooks and the REST API.
+- It books only into Google Calendar, Cal.com or Calendly. CRMs, field-service and dental software connect only through webhooks and the REST API.
 - The AI doesn't reply to texts. Your team replies from the dashboard.
 - Transfers go to one number per business, and a phone call ends at 30 minutes.
 - Booking confirmation and reminder texts reach US and Canadian numbers only.

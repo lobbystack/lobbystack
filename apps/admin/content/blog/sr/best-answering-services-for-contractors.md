@@ -30,7 +30,7 @@ Krenite od poziva koji Vas najviše košta kada završi u govornoj pošti. Za fi
 - **Jobber Receptionist, najbolji za firme u Jobber-u:** dodatak od $29 sa 30 razgovora mesečno.
 - **Sameday AI, najbolji za krovopokrivače u JobNimbus ili AccuLynx sa većim budžetom:** AI telefonski sistem od $449 mesečno za 500 minuta.
 - **OnCrew, najniži AI račun u našem mesecu oluje:** $49 za 100 poziva, zatim $0.99 po pozivu.
-- **LobbyStack (naš), najbolji za firme koje zakazuju u Google Calendar i imaju mali budžet:** $30 mesečno za 150 minuta bez naknade za aktivaciju. Svakom pozivaocu odgovara na njegovom jeziku, na više od 70 jezika.
+- **LobbyStack (naš), najbolji za firme koje zakazuju u Google Calendar, Cal.com ili Calendly i imaju mali budžet:** $30 mesečno za 150 minuta bez naknade za aktivaciju. Svakom pozivaocu odgovara na njegovom jeziku, na više od 70 jezika.
 
 ## Kako se ove usluge za izvođače radova porede?
 
@@ -90,7 +90,7 @@ Posh naplaćuje po kalendarskom mesecu, a ne na svakih 28 dana, nema dugoročni 
 
 ## Koje AI usluge postoje za izvođače radova?
 
-Jobber i Housecall Pro prodaju AI recepcionere unutar svog softvera. Sameday AI među svojim vezama navodi ServiceTitan, JobNimbus i AccuLynx. OnCrew je napravljen za zanatlije i naplaćuje po pozivu. Smith.ai iza svog AI-a drži recepcionere uživo. LobbyStack zakazuje u Google Calendar i preusmerava hitne pozive na jedan broj. Izaberite AI uslugu koja zakazuje tamo gde Vaši poslovi već žive.
+Jobber i Housecall Pro prodaju AI recepcionere unutar svog softvera. Sameday AI među svojim vezama navodi ServiceTitan, JobNimbus i AccuLynx. OnCrew je napravljen za zanatlije i naplaćuje po pozivu. Smith.ai iza svog AI-a drži recepcionere uživo. LobbyStack zakazuje u Google Calendar, Cal.com ili Calendly i preusmerava hitne pozive na jedan broj. Izaberite AI uslugu koja zakazuje tamo gde Vaši poslovi već žive.
 
 ### Jobber Receptionist: najbolji za firme u Jobber-u
 
@@ -118,13 +118,13 @@ OnCrew se javlja za firme za grejanje i klimatizaciju, vodoinstalatere, elektri�
 
 Smith.ai [AI Receptionist](https://smith.ai/pricing/ai-receptionist) ima besplatan paket sa 25 poziva mesečno, zatim $3.00 po pozivu. Pro naplaćuje $2.00 po pozivu za 75 poziva ($150), $1.80 za 150 i $1.67 za 300, a dodatni pozivi koštaju od $2.17 do $2.50. Pozivi mogu da pređu na recepcionera uživo u Severnoj Americi, a stranica sa cenama za to ne navodi naknadu. Paketi idu od meseca do meseca uz najavu otkaza 30 dana unapred, a do 10% poziva u svakom ciklusu možete da uklonite sa računa kao spam.
 
-### LobbyStack (naš): najbolji za firme koje zakazuju u Google Calendar i imaju mali budžet
+### LobbyStack (naš): najbolji za firme koje zakazuju u Google Calendar, Cal.com ili Calendly i imaju mali budžet
 
 LobbyStack Starter košta $30 mesečno za 150 minuta, zatim $0.20 po minutu. Pro košta $100 za 500 minuta, zatim $0.18. Uz godišnju naplatu izlaze $24 i $80 mesečno, a nijedan paket nema naknadu za aktivaciju. LobbyStack računa potrošnju u sekundama i ne naplaćuje spam ni pozive kraće od 10 sekundi. Paketi ne ograničavaju broj poziva na koje odgovara istovremeno.
 
-Dobijate broj u SAD, Kanadi, Ujedinjenom Kraljevstvu, Australiji ili na Novom Zelandu i na njega možete da preusmerite svoj postojeći poslovni broj. Odgovara na sve pozive ili samo na pozive kada je linija zauzeta ili van radnog vremena. Izlaske za predračun zakazuje u Google Calendar i, kada pozivalac pristane, šalje SMS potvrdu i podsetnik 24 sata unapred na američke i kanadske brojeve. Rezime, transkript i snimak svakog poziva stižu u kontrolnu tablu, a imejl dobijate kada primi poruku, uz opcione SMS obaveštenja. Svaki poziv počinje na podrazumevanom jeziku firme (engleskom, francuskom, španskom, srpskom, nemačkom, brazilskom portugalskom, italijanskom ili holandskom), a recepcioner zatim odgovara na jeziku pozivaoca: na OpenAI GPT-Live modelu to je više od 70 jezika, uključujući španski i srpski. Kod je otvoren pod MIT licencom i možete sami da ga hostujete.
+Dobijate broj u SAD, Kanadi, Ujedinjenom Kraljevstvu, Australiji ili na Novom Zelandu i na njega možete da preusmerite svoj postojeći poslovni broj. Odgovara na sve pozive ili samo na pozive kada je linija zauzeta ili van radnog vremena. Izlaske za predračun zakazuje u Google Calendar, Cal.com ili Calendly i, kada pozivalac pristane, šalje SMS potvrdu i podsetnik 24 sata unapred na američke i kanadske brojeve. Rezime, transkript i snimak svakog poziva stižu u kontrolnu tablu, a imejl dobijate kada primi poruku, uz opcione SMS obaveštenja. Svaki poziv počinje na podrazumevanom jeziku firme (engleskom, francuskom, španskom, srpskom, nemačkom, brazilskom portugalskom, italijanskom ili holandskom), a recepcioner zatim odgovara na jeziku pozivaoca: na OpenAI GPT-Live modelu to je više od 70 jezika, uključujući španski i srpski. Kod je otvoren pod MIT licencom i možete sami da ga hostujete.
 
-Nema integraciju sa Jobber, Housecall Pro, ServiceTitan, JobNimbus ni sa bilo kojim CRM-om, a Google Calendar je jedini kalendar sa kojim radi. Potpisani webhook-ovi za 6 događaja i REST API mogu da šalju podatke o pozivima drugim alatima, ali tu vezu pravite Vi. Preusmerenja su direktna, bez najave pozivaoca, i idu na jedan broj. Ako preusmeravanje ne uspe, kaže to pozivaocu, nudi da primi poruku, a Vaš tim može da dobije obaveštenje o neuspelom preusmeravanju. Iza njega ne stoje ljudski agenti, a AI ne odgovara na SMS poruke. Besplatan paket Vam daje 30 minuta razgovora i broj iz SAD ili Kanade besplatno 14 dana, bez kartice. Tokom probnog perioda preusmeravanja idu samo na mobilni broj koji ste potvrdili. Kako radi sa pozivima posle oluje, pogledajte na stranici [usluga odgovaranja na pozive za krovopokrivače](/sr/solutions/roofing-answering-service/).
+Nema integraciju sa Jobber, Housecall Pro, ServiceTitan, JobNimbus ni sa bilo kojim CRM-om, a od kalendara radi samo sa Google Calendar-om, Cal.com-om i Calendly-jem. Potpisani webhook-ovi za 6 događaja i REST API mogu da šalju podatke o pozivima drugim alatima, ali tu vezu pravite Vi. Preusmerenja su direktna, bez najave pozivaoca, i idu na jedan broj. Ako preusmeravanje ne uspe, kaže to pozivaocu, nudi da primi poruku, a Vaš tim može da dobije obaveštenje o neuspelom preusmeravanju. Iza njega ne stoje ljudski agenti, a AI ne odgovara na SMS poruke. Besplatan paket Vam daje 30 minuta razgovora i broj iz SAD ili Kanade besplatno 14 dana, bez kartice. Tokom probnog perioda preusmeravanja idu samo na mobilni broj koji ste potvrdili. Kako radi sa pozivima posle oluje, pogledajte na stranici [usluga odgovaranja na pozive za krovopokrivače](/sr/solutions/roofing-answering-service/).
 
 ## Koliko košta usluga odgovaranja na pozive za izvođače radova?
 
@@ -156,7 +156,7 @@ LobbyStack nema naknadu za aktivaciju ni na jednom paketu. Ako postavite mesečn
 
 ## Koje usluge zakazuju predračune u Jobber, Housecall Pro, ServiceTitan ili JobNimbus?
 
-PATLive navodi sva četiri na svojim stranicama za građevinu i za grejanje i klimatizaciju. AnswerForce navodi Jobber, Housecall Pro i ServiceTitan. Sameday AI navodi ServiceTitan, Housecall Pro i JobNimbus. Jobber i Housecall Pro imaju sopstvene recepcionere. LobbyStack se ne povezuje ni sa jednim od njih i zakazuje u Google Calendar.
+PATLive navodi sva četiri na svojim stranicama za građevinu i za grejanje i klimatizaciju. AnswerForce navodi Jobber, Housecall Pro i ServiceTitan. Sameday AI navodi ServiceTitan, Housecall Pro i JobNimbus. Jobber i Housecall Pro imaju sopstvene recepcionere. LobbyStack se ne povezuje ni sa jednim od njih i zakazuje u Google Calendar, Cal.com ili Calendly.
 
 | Usluga | Jobber | Housecall Pro | ServiceTitan | JobNimbus | Drugi navedeni alati za izvođače |
 |---|---|---|---|---|---|
@@ -169,11 +169,11 @@ PATLive navodi sva četiri na svojim stranicama za građevinu i za grejanje i kl
 | Housecall Pro CSR AI | Ne | Ugrađen | Ne | Ne | Samo Housecall Pro |
 | Sameday AI | Nije naveden | Naveden | Sertifikovana aplikacija | Naveden | AccuLynx, FieldRoutes, Service Fusion |
 | OnCrew | Jedan zapis po pozivu preko webhook-a | Povezuje se uz Housecall Pro MAX | Jedan zapis po pozivu preko webhook-a | Nije naveden | Sinhronizacija sa Google Calendar |
-| LobbyStack (naš) | Ne | Ne | Ne | Ne | Google Calendar; potpisani webhook-ovi za 6 događaja; REST API |
+| LobbyStack (naš) | Ne | Ne | Ne | Ne | Google Calendar, Cal.com, Calendly; potpisani webhook-ovi za 6 događaja; REST API |
 
 "Naveden" znači da dobavljač pominje alat na svojoj stranici. To ne govori da li agent ručno unosi posao ili termin stiže u Vaš raspored tokom poziva. Tražite od svakog finaliste da zakaže probni predračun u Vašem softveru, pa proverite karticu klijenta, vrstu posla, adresu i beleške.
 
-Uz LobbyStack, neko iz Vaše kancelarije prepisuje svaki termin iz Google Calendar-a ili iz rezimea poziva u Vaš softver, ili taj korak automatizujete pomoću webhook-ova i API-ja.
+Uz LobbyStack, neko iz Vaše kancelarije prepisuje svaki termin iz Google Calendar-a, Cal.com-a, Calendly-ja ili iz rezimea poziva u Vaš softver, ili taj korak automatizujete pomoću webhook-ova i API-ja.
 
 ## Šta se dešava van radnog vremena i posle oluje?
 
@@ -231,7 +231,7 @@ Nijedna usluga uživo na ovom spisku nije besplatna, ali nekoliko nudi probu. Sm
 
 ### Može li usluga odgovaranja na pozive da zakazuje predračune?
 
-Može. PATLive, AnswerForce i Smith.ai kažu da njihovi recepcioneri zakazuju predračune, a Smith.ai navodi pitanja koja postavlja. Jobber Receptionist i Housecall Pro CSR AI zakazuju u svom softveru. OnCrew šalje zahteve u Vaš kalendar da ih tim potvrdi, ili zakazuje slobodne termine ako to uključite. LobbyStack zakazuje izlaske za predračun u Google Calendar.
+Može. PATLive, AnswerForce i Smith.ai kažu da njihovi recepcioneri zakazuju predračune, a Smith.ai navodi pitanja koja postavlja. Jobber Receptionist i Housecall Pro CSR AI zakazuju u svom softveru. OnCrew šalje zahteve u Vaš kalendar da ih tim potvrdi, ili zakazuje slobodne termine ako to uključite. LobbyStack zakazuje izlaske za predračun u Google Calendar, Cal.com ili Calendly.
 
 ### Mogu li da koristim uslugu samo van radnog vremena?
 
@@ -239,7 +239,7 @@ Možete. Podesite operatera da preusmerava pozive kada zatvorite, i usluga odgov
 
 ### Da li LobbyStack radi sa Jobber, ServiceTitan ili JobNimbus?
 
-Ne radi. LobbyStack nema integraciju sa Jobber, Housecall Pro, ServiceTitan, JobNimbus ni sa bilo kojim CRM-om, a Google Calendar je jedini kalendar sa kojim radi. Potpisani webhook-ovi za 6 događaja i REST API mogu da šalju podatke drugim alatima, ali neko mora da napravi tu vezu. Ako posao mora da stigne u Vaš softver tokom poziva, izaberite drugog dobavljača.
+Ne radi. LobbyStack nema integraciju sa Jobber, Housecall Pro, ServiceTitan, JobNimbus ni sa bilo kojim CRM-om, a od kalendara radi samo sa Google Calendar-om, Cal.com-om i Calendly-jem. Potpisani webhook-ovi za 6 događaja i REST API mogu da šalju podatke drugim alatima, ali neko mora da napravi tu vezu. Ako posao mora da stigne u Vaš softver tokom poziva, izaberite drugog dobavljača.
 
 ### Može li usluga za izvođače da odgovara na španskom?
 
@@ -268,6 +268,6 @@ Izvori, svi pročitani 9. ili 10. oktobra 2026:
 - **Agenti uživo po najnižoj ceni po minutu:** AnswerHero.
 - **Već radite u Jobber-u ili Housecall Pro-u:** prvo probajte ugrađenog recepcionera.
 - **Krovopokrivač u JobNimbus ili AccuLynx koji želi AI:** Sameday AI.
-- **Termini u Google Calendar za $30 do $100 mesečno, sa pozivaocima koji govore različite jezike:** LobbyStack.
+- **Termini u Google Calendar, Cal.com ili Calendly za $30 do $100 mesečno, sa pozivaocima koji govore različite jezike:** LobbyStack.
 
 Želite da čujete kako LobbyStack prima zahtev za predračun pre nego što platite? [Napravite besplatan nalog](https://app.lobbystack.com/sr/signup) i isprobajte ga uz 30 minuta razgovora i besplatan broj na 14 dana, bez kartice. Plaćeni paketi nemaju naknadu za aktivaciju. Zatim pogledajte kako pokriva noći i vikende na stranici [odgovaranje na pozive van radnog vremena za izvođače](/sr/solutions/after-hours-answering-service-for-contractors/).

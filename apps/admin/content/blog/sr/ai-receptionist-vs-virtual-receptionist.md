@@ -205,7 +205,7 @@ Više o testiranju piše u našem vodiču [kako da izaberete AI recepcionera](/s
 
 ## Gde se LobbyStack uklapa
 
-LobbyStack je AI recepcioner za male firme. Zakazuje termine u Google Calendar na osnovu Vašeg radnog vremena, usluga i osoblja, a zatim na američke i kanadske brojeve šalje SMS potvrdu i podsetnik 24 sata pre termina. Pozive preusmerava na jedan broj, po pravilima koja odredite. Ako niste uneli broj za preusmeravanje ili preusmeravanje ne uspe, prima poruku i Vašem timu šalje obaveštenje imejlom. Kontrolna tabla čuva snimak, transkript i rezime od jednog reda za svaki poziv.
+LobbyStack je AI recepcioner za male firme. Zakazuje termine u Google Calendar, Cal.com ili Calendly na osnovu Vašeg radnog vremena, usluga i osoblja, a zatim na američke i kanadske brojeve šalje SMS potvrdu i podsetnik 24 sata pre termina. Pozive preusmerava na jedan broj, po pravilima koja odredite. Ako niste uneli broj za preusmeravanje ili preusmeravanje ne uspe, prima poruku i Vašem timu šalje obaveštenje imejlom. Kontrolna tabla čuva snimak, transkript i rezime od jednog reda za svaki poziv.
 
 Svaki poziv počinje na podrazumevanom jeziku firme: engleskom, francuskom, španskom, srpskom, nemačkom, brazilskom portugalskom, italijanskom ili holandskom. Recepcioner zatim odgovara na jeziku pozivaoca. Radi na OpenAI GPT-Live modelu i govori 70+ jezika, uključujući španski i srpski.
 
@@ -213,7 +213,7 @@ Paket [Starter](/sr/pricing/) košta $30 mesečno za 150 minuta, zatim $0.20 po 
 
 Upoznajte ograničenja pre nego što se prijavite:
 
-- Od kalendara podržava samo Google Calendar.
+- Od kalendara podržava samo Google Calendar, Cal.com i Calendly.
 - Nema direktnu sinhronizaciju sa softverom za ordinacije ili terenski servis. Druge alate povezujete preko webhookova i REST API-ja.
 - AI ne odgovara na SMS poruke. Vaš tim na njih odgovara iz kontrolne table.
 - Preusmerenja idu na jedan broj, a osoba koja se javi ne dobija usmenu najavu pre nego što preuzme poziv.

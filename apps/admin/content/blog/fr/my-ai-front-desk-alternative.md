@@ -27,7 +27,7 @@ Frontdesk, anciennement My AI Front Desk, vend un large espace commercial IA. Lo
 | Minutes supplémentaires | 25 crédits (0,25 $) la minute ; la réserve mensuelle de 1 000 crédits couvre environ 40 minutes | 0,20 $ sur Starter, 0,18 $ sur Pro |
 | Périmètre | Main-d'œuvre IA multicanale et CRM | Réceptionniste IA téléphonique et opérations d'appel |
 | Canaux | Voix, SMS bidirectionnels, chat, e-mail, formulaires | Voix, alertes au propriétaire par e-mail ou SMS, tableau de bord |
-| Réservation | Google Calendar, Outlook ou Calendly | Google Calendar |
+| Réservation | Google Calendar, Outlook ou Calendly | Google Calendar, Cal.com ou Calendly |
 | Transferts | Transferts assistés selon vos règles | Transfert aveugle vers un seul numéro |
 | Langues | Plus de 20 langues, avec détection de la langue de l'appelant | Commence dans l'une des 8 langues au choix, puis répond dans la langue de l'appelant (plus de 70) |
 | CRM | CRM intégré et séquences, synchronisation HubSpot et Salesforce | Dossiers d'appel, webhooks et API REST, sans synchronisation CRM native |
@@ -50,7 +50,7 @@ Les pages de Frontdesk annoncent la voix entrante, les appels sortants automatis
 
 Ce périmètre aide une entreprise sans CRM qui veut capter un prospect, lui écrire, l'appeler et suivre l'échange. Frontdesk vend aussi des forfaits partenaires en marque blanche, qui commencent à 500 $ par mois selon sa FAQ tarifaire.
 
-LobbyStack évite de facturer des outils commerciaux aux clients qui veulent un réceptionniste. Il conserve les appelants, rendez-vous, messages, transcriptions, résumés et règles, et réserve les rendez-vous dans Google Calendar. Les webhooks et l'API REST transmettent les appels et les réservations à vos outils.
+LobbyStack évite de facturer des outils commerciaux aux clients qui veulent un réceptionniste. Il conserve les appelants, rendez-vous, messages, transcriptions, résumés et règles, et réserve les rendez-vous dans Google Calendar, Cal.com ou Calendly. Les webhooks et l'API REST transmettent les appels et les réservations à vos outils.
 
 ## Frontdesk ne vend plus qu'un forfait à 99 $
 
