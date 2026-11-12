@@ -24,7 +24,7 @@ export function PhoneField({ id, countryLabel, value, onChange, errorId }: { id:
   const draft = useRef("");
   return (
     <div className="flex min-w-0">
-      <PhoneCountrySelect ariaLabel={countryLabel} className="rounded-r-none px-4 font-medium text-muted-foreground" countries={countries} onChange={(next) => { setCountry(next as Country); draft.current = ""; onChange({ phone: "", incomplete: false }); }} value={country} />
+      <PhoneCountrySelect ariaLabel={countryLabel} className="rounded-r-none px-4 font-medium" countries={countries} onChange={(next) => { setCountry(next as Country); draft.current = ""; onChange({ phone: "", incomplete: false }); }} value={country} />
       <PhoneInput
         aria-describedby={errorId}
         aria-invalid={errorId ? true : undefined}

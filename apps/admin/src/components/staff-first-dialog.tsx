@@ -165,7 +165,7 @@ export function StaffFirstDialog({ businessId, defaultLocale, onOpenChange, onSa
                       <FieldDescription>{t("agent:staffFirst.number.hint")}</FieldDescription>
                     </FieldContent>
                     <div className="flex w-full min-w-0">
-                      <PhoneCountrySelect ariaLabel={t("agent:fields.transferNumber.country")} className="rounded-r-none px-4 font-medium text-muted-foreground" countries={countries} onChange={(next) => update({ country: next as Country, number: "", rawNumber: "" })} value={draft.country} />
+                      <PhoneCountrySelect ariaLabel={t("agent:fields.transferNumber.country")} className="rounded-r-none px-4 font-medium" countries={countries} onChange={(next) => update({ country: next as Country, number: "", rawNumber: "" })} value={draft.country} />
                       <PhoneInput
                         aria-label={t("agent:staffFirst.number.label")}
                         className="rounded-l-none border-l-0"

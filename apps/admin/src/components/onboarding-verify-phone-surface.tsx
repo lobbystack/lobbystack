@@ -140,7 +140,7 @@ export function OnboardingVerifyPhoneSurface() {
         <Field>
           <FieldLabel htmlFor="onboarding-phone">{t("verifyPhone.fields.mobileNumber")}</FieldLabel>
           <div className="flex min-w-0">
-            <PhoneCountrySelect ariaLabel={t("verifyPhone.fields.country")} className="rounded-l-xl rounded-r-none font-medium text-muted-foreground" countries={options} onChange={(next) => { setCountry(next as Country); setPhone(""); setError(null); }} value={country} />
+            <PhoneCountrySelect ariaLabel={t("verifyPhone.fields.country")} className="rounded-l-xl rounded-r-none font-medium" countries={options} onChange={(next) => { setCountry(next as Country); setPhone(""); setError(null); }} value={country} />
             <PhoneInput autoFocus className="rounded-l-none border-l-0" containerClassName="min-w-0 flex-1" country={country} disabled={!sellsNumbers} id="onboarding-phone" limitNationalDigits onChange={(value) => setPhone(value ?? "")} value={phone} />
           </div>
           {sellsNumbers ? <FieldDescription>{t("verifyPhone.hint")}</FieldDescription> : null}

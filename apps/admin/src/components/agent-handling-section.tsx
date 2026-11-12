@@ -208,7 +208,7 @@ export function AgentHandlingSection({ agentId, businessId, canManage }: AgentSe
                   <Skeleton className="h-10 w-full rounded-xl sm:w-72" />
                 ) : (
                   <div className="flex w-full min-w-0 sm:w-fit">
-                    <PhoneCountrySelect ariaLabel={t("agent:fields.transferNumber.country")} className="rounded-r-none px-4 font-medium text-muted-foreground" countries={countries.filter((option) => isTransferCountry(option.code))} disabled={!canManage} onChange={(next) => { transferNumberEdited.current = true; setTransferCountry(next as Country); setTransferNumber(""); setTransferNumberInputValue(""); setTransferStatus(null); }} value={transferCountry} />
+                    <PhoneCountrySelect ariaLabel={t("agent:fields.transferNumber.country")} className="rounded-r-none px-4 font-medium" countries={countries.filter((option) => isTransferCountry(option.code))} disabled={!canManage} onChange={(next) => { transferNumberEdited.current = true; setTransferCountry(next as Country); setTransferNumber(""); setTransferNumberInputValue(""); setTransferStatus(null); }} value={transferCountry} />
                     <PhoneInput
                       className="rounded-l-none border-l-0 sm:w-40"
                       containerClassName="min-w-0 flex-1"
