@@ -55,7 +55,7 @@ export function OpeningsPicker({ date, today, timeZone, times, loading, failed, 
         <DatePicker className="w-44" id={dateId} language={i18n.language} locale={intlLocale(i18n.language)} min={today} onChange={(day) => { if (day >= today) onDateChange(day); }} value={date} />
       </div> : <section aria-label={t("appointments.openings.date")} className="flex justify-center overflow-hidden rounded-xl border">
         <Calendar
-          className="bg-transparent"
+          className="w-full! bg-transparent sm:w-fit!"
           defaultMonth={keyToLocalDate(date)}
           disabled={{ before: keyToLocalDate(today) }}
           locale={DAY_PICKER_LOCALES[i18n.language as keyof typeof DAY_PICKER_LOCALES] ?? enUS}
