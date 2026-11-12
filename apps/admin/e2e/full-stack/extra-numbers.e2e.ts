@@ -19,6 +19,7 @@ import { startThirdParties, type ThirdParties } from "../fixtures/third-parties"
 // sends. The worker then buys the number from a fake Twilio, and it lands on
 // that agent at the price the owner saw. The second test does the same
 // through the public API, and ends the plan to see the subscription follow.
+// The third gets the add-on from the billing page.
 
 const prefix = "extra-numbers";
 let thirdParties: ThirdParties;
@@ -50,7 +51,7 @@ async function secondAgent(request: APIRequestContext, baseURL: string, business
   return (await created.json() as { id: string }).id;
 }
 
-test("an owner on Starter sets up monthly billing, then buys a number for a second agent at the price shown", async ({ page, baseURL }, testInfo) => {
+test("an owner on Starter buys a number for a second agent, getting the add-on on the way, at the price shown", async ({ page, baseURL }, testInfo) => {
   test.setTimeout(180_000);
   const emails: string[] = [];
   const businessIds: string[] = [];
@@ -67,22 +68,18 @@ test("an owner on Starter sets up monthly billing, then buys a number for a seco
     await page.getByText(nav.channels.buyNumber, { exact: true }).click();
     await expect(page).toHaveURL(`/agents/${agentId}/channels/phone`);
 
-    // The first extra number needs monthly billing, which a Polar checkout sets up.
-    await expect(page.getByText(settings.phoneNumber.extra.billingDescription, { exact: true })).toBeVisible();
-    await expect(page.getByRole("button", { name: settings.phoneNumber.extra.buy, exact: true })).toHaveCount(0);
-    await page.screenshot({ path: testInfo.outputPath("extra-number-billing.png") });
-    await page.getByRole("button", { name: settings.phoneNumber.extra.subscribe, exact: true }).click();
+    // Buy a number shows before the add-on too, with no billing copy, and starts the add-on's Polar checkout.
+    const buy = page.getByRole("button", { name: settings.phoneNumber.extra.buy, exact: true });
+    await expect(buy).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath("addon-agent-page.png") });
+    await buy.click();
     // The fake checkout's page is its success URL, so the owner lands back on the agent at once.
     await expect(page).toHaveURL(new RegExp(`/agents/${agentId}/channels/phone\\?extraNumbersCheckout=`), { timeout: 30_000 });
     expect(thirdParties.polar.checkouts.at(-1)).toMatchObject({ products: [POLAR_EXTRA_NUMBERS_PRODUCT_ID], external_customer_id: `business:${owner.businessId}`, customer_email: owner.email });
-    await expect(page.getByText(settings.phoneNumber.extra.confirmingPayment, { exact: true })).toBeVisible();
 
+    // Once Polar confirms the add-on, the number picker opens by itself.
     await polarWebhook(page.request, "subscription.active", addOnSubscription(owner.businessId, `sub_extra_${randomUUID()}`));
-    await expect(page.getByText(settings.phoneNumber.extra.subscribed, { exact: true })).toBeVisible({ timeout: 30_000 });
-    const [account] = await database.db.select({ plan: billingAccounts.plan, state: billingAccounts.subscriptionState, addOn: billingAccounts.extraNumbersSubscriptionState }).from(billingAccounts).where(eq(billingAccounts.businessId, owner.businessId));
-    expect(account).toEqual({ plan: "starter", state: "active", addOn: "active" });
-
-    await page.getByRole("button", { name: settings.phoneNumber.extra.buy, exact: true }).click();
+    await expect.poll(async () => await database.db.select({ plan: billingAccounts.plan, state: billingAccounts.subscriptionState, addOn: billingAccounts.extraNumbersSubscriptionState }).from(billingAccounts).where(eq(billingAccounts.businessId, owner.businessId)), { timeout: 30_000 }).toEqual([{ plan: "starter", state: "active", addOn: "active" }]);
     const dialog = page.getByRole("dialog");
     await expect(dialog.getByText(price, { exact: true })).toBeVisible({ timeout: 20_000 });
     await page.screenshot({ path: testInfo.outputPath("extra-number-picker.png") });
@@ -112,7 +109,7 @@ test("an owner on Starter sets up monthly billing, then buys a number for a seco
   }
 });
 
-test("an API key sets up monthly billing and buys an extra number only at the price it repeats", async ({ page, baseURL }, testInfo) => {
+test("an API key gets the add-on and buys an extra number only at the price it repeats", async ({ page, baseURL }, testInfo) => {
   test.setTimeout(180_000);
   const emails: string[] = [];
   const businessIds: string[] = [];
@@ -135,11 +132,11 @@ test("an API key sets up monthly billing and buys an extra number only at the pr
       return { status: response.status(), body: await response.json() as { data?: unknown; error?: { code: string; message: string } } };
     };
 
-    type Offer = { phone_number: string; offer_token: string; monthly_price: { amount_cents: number } | null; billing_set_up: boolean };
+    type Offer = { phone_number: string; offer_token: string; monthly_price: { amount_cents: number } | null; add_on_active: boolean };
     const search = await call("POST", "/phone-numbers/extra/search", { country: "CA" });
     expect(search.status, JSON.stringify(search.body)).toBe(200);
     const [offer] = search.body.data as Offer[];
-    expect(offer).toMatchObject({ monthly_price: { amount_cents: 115, currency: "USD" }, billing_set_up: false });
+    expect(offer).toMatchObject({ monthly_price: { amount_cents: 115, currency: "USD" }, add_on_active: false });
 
     // The price has to be repeated, and monthly billing comes first.
     expect((await call("POST", "/phone-numbers/extra/claims", { offer_token: offer!.offer_token, agent_id: agentId }, true)).status).toBe(400);
@@ -152,7 +149,7 @@ test("an API key sets up monthly billing and buys an extra number only at the pr
     await expect.poll(async () => ((await call("GET", `/billing/extra-numbers/checkout/${checkoutId}`)).body.data as { status: string }).status, { timeout: 30_000 }).toBe("ready");
     const addOnId = `sub_extra_${randomUUID()}`;
     await polarWebhook(page.request, "subscription.active", addOnSubscription(owner.businessId, addOnId));
-    await expect.poll(async () => ((await call("GET", `/billing/extra-numbers/checkout/${checkoutId}`)).body.data as { billing_set_up: boolean }).billing_set_up, { timeout: 30_000 }).toBe(true);
+    await expect.poll(async () => ((await call("GET", `/billing/extra-numbers/checkout/${checkoutId}`)).body.data as { add_on_active: boolean }).add_on_active, { timeout: 30_000 }).toBe(true);
 
     const claimed = await call("POST", "/phone-numbers/extra/claims", { offer_token: offer!.offer_token, agent_id: agentId, accept_monthly_price_cents: 115 }, true);
     expect(claimed.status, JSON.stringify(claimed.body)).toBe(202);
@@ -165,6 +162,47 @@ test("an API key sets up monthly billing and buys an extra number only at the pr
     // The plan ends: the worker asks Polar to cancel the add-on at the end of its period.
     await polarWebhook(page.request, "subscription.revoked", { id: "sub_plan_e2e", status: "canceled", product_id: "e2e-retired-plan", modified_at: new Date().toISOString(), customer: { id: `cus_${owner.businessId.slice(0, 8)}`, external_id: `business:${owner.businessId}` } });
     await expect.poll(() => thirdParties.polar.subscriptionChanges.find((change) => change.id === addOnId)?.body, { timeout: 30_000 }).toEqual({ cancel_at_period_end: true });
+  } finally {
+    await removeFixtures(database, { emails, businessIds });
+  }
+});
+
+test("the billing page offers extra phone numbers as an add-on, and shows it active once paid", async ({ page }, testInfo) => {
+  test.setTimeout(180_000);
+  const emails: string[] = [];
+  const businessIds: string[] = [];
+  const addOn = settings.billing.addOns;
+  try {
+    const owner = await signUpOwner(database, page, testInfo, `${prefix}-billing`);
+    emails.push(owner.email);
+    businessIds.push(owner.businessId);
+    await setPlan(database, owner.businessId, "starter");
+    await holdNumber(database, owner.businessId, { carrier: "twilio", providerPhoneId: twilioPhoneSid() });
+
+    await page.goto("/workspace/billing");
+    const card = page.locator('[data-slot="card"]', { has: page.getByText(addOn.extraNumbers.title, { exact: true }) });
+    await expect(card.getByText(addOn.extraNumbers.description, { exact: true })).toBeVisible({ timeout: 20_000 });
+    await expect(card.getByText(addOn.extraNumbers.price.replace("{{price}}", "$1.15"), { exact: true })).toBeVisible();
+    await expect(card.getByText(addOn.active, { exact: true })).toHaveCount(0);
+    await card.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: testInfo.outputPath("addon-billing-inactive-desktop.png"), fullPage: true });
+    await page.setViewportSize({ width: 375, height: 812 });
+    await card.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: testInfo.outputPath("addon-billing-inactive-375.png"), fullPage: true });
+    await page.setViewportSize({ width: 1280, height: 720 });
+
+    // Get add-on goes through Polar's checkout and comes back to the billing page.
+    await card.getByRole("button", { name: addOn.get, exact: true }).click();
+    await expect(page).toHaveURL(/\/workspace\/billing\?extraNumbersCheckout=/, { timeout: 30_000 });
+    expect(thirdParties.polar.checkouts.at(-1)).toMatchObject({ products: [POLAR_EXTRA_NUMBERS_PRODUCT_ID], external_customer_id: `business:${owner.businessId}` });
+    await polarWebhook(page.request, "subscription.active", addOnSubscription(owner.businessId, `sub_extra_${randomUUID()}`));
+    await expect(card.getByText(addOn.active, { exact: true })).toBeVisible({ timeout: 30_000 });
+    await expect(card.getByText(addOn.extraNumbers.count_other.replace("{{count}}", "0"), { exact: true })).toBeVisible();
+    await expect(card.getByRole("button", { name: addOn.get, exact: true })).toHaveCount(0);
+    await page.screenshot({ path: testInfo.outputPath("addon-billing-active-desktop.png"), fullPage: true });
+    await page.setViewportSize({ width: 375, height: 812 });
+    await card.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: testInfo.outputPath("addon-billing-active-375.png"), fullPage: true });
   } finally {
     await removeFixtures(database, { emails, businessIds });
   }
