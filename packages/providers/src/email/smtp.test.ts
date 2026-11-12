@@ -2,9 +2,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { emailSender, hostBrand, resolveBrandLinks, type Brand } from "@lobbystack/shared";
 
 import hostEmails from "./__fixtures__/host-emails.json";
-import { SmtpEmailProvider, isPermanentSmtpRejection } from "./smtp";
+import { MARKETING_EMAIL_TEMPLATES, SmtpEmailProvider, isMarketingEmailTemplate, isPermanentSmtpRejection } from "./smtp";
 
 afterEach(() => vi.unstubAllEnvs());
+
+/** The links the worker signs for a marketing email's recipient. */
+const unsubscribe = { pageUrl: "https://app.example.test/en/unsubscribe/v1.token.sig", oneClickUrl: "https://app.example.test/api/email/unsubscribe?token=v1.token.sig" };
 
 type SendInput = Parameters<SmtpEmailProvider["sendTemplate"]>[0];
 type FixtureInput = Omit<SendInput, "brand">;
@@ -182,7 +185,7 @@ describe("SMTP delivery", () => {
     expect(sendMail).toHaveBeenCalledOnce();
   });
   describe("welcome", () => {
-    const welcome = { template: "welcome" as const, to: "owner@example.test", subject: "Welcome to LobbyStack, Ryan", variables: { locale: "en", firstName: "Ryan", businessName: "Metroprint", goal: "answer_calls", number: "+14388070285", url: "https://app.example.test/?setup=phoneNumber" } };
+    const welcome = { template: "welcome" as const, to: "owner@example.test", subject: "Welcome to LobbyStack, Ryan", unsubscribe, variables: { locale: "en", firstName: "Ryan", businessName: "Metroprint", goal: "answer_calls", number: "+14388070285", url: "https://app.example.test/?setup=phoneNumber" } };
 
     it("welcomes an owner who took a number, and its button forwards their missed calls", async () => {
       const { provider, sent } = capture();
@@ -210,12 +213,14 @@ describe("SMTP delivery", () => {
         "Questions or stuck on a step? Reply to this email and we'll help.",
         "",
         "The LobbyStack team",
+        "",
+        `Unsubscribe: ${unsubscribe.pageUrl}`,
       ].join("\n"));
       const html = sent().html as string;
       expect(html).toContain(">Welcome to LobbyStack, Ryan</h1>");
       expect(html).toContain('<td align="left" style="padding-bottom:32px;">');
       const anchors = [...html.matchAll(/<a href="([^"]+)"[^>]*>([^<]+)<\/a>/g)].map(([, href, text]) => ({ href, text }));
-      expect(anchors).toEqual([{ href: "https://app.example.test/?setup=phoneNumber", text: "Forward my missed calls" }]);
+      expect(anchors).toEqual([{ href: "https://app.example.test/?setup=phoneNumber", text: "Forward my missed calls" }, { href: unsubscribe.pageUrl, text: "Unsubscribe" }]);
     });
 
     it("asks an owner without a number to get one, and fits the steps to booking", async () => {
@@ -242,7 +247,7 @@ describe("SMTP delivery", () => {
   });
 
   describe("plan reminder", () => {
-    const reminder = { template: "plan_reminder" as const, to: "owner@example.test", variables: { locale: "en", firstName: "Ryan", businessName: "Metroprint", number: "+15550100123", url: "https://app.example.test/onboarding/plan" } };
+    const reminder = { template: "plan_reminder" as const, to: "owner@example.test", unsubscribe, variables: { locale: "en", firstName: "Ryan", businessName: "Metroprint", number: "+15550100123", url: "https://app.example.test/onboarding/plan" } };
 
     it("names the live number, formatted, and its button opens the plans", async () => {
       const { provider, sent } = capture();
@@ -260,11 +265,13 @@ describe("SMTP delivery", () => {
         "Start your 14-day free trial: https://app.example.test/onboarding/plan",
         "",
         "LobbyStack",
+        "",
+        `Unsubscribe: ${unsubscribe.pageUrl}`,
       ].join("\n"));
       const html = sent().html as string;
       expect(html).toContain('<td align="left" style="padding-bottom:32px;">');
       const anchors = [...html.matchAll(/<a href="([^"]+)"[^>]*>([^<]+)<\/a>/g)].map(([, href, text]) => ({ href, text }));
-      expect(anchors).toEqual([{ href: "https://app.example.test/onboarding/plan", text: "Start your 14-day free trial" }]);
+      expect(anchors).toEqual([{ href: "https://app.example.test/onboarding/plan", text: "Start your 14-day free trial" }, { href: unsubscribe.pageUrl, text: "Unsubscribe" }]);
       // The paid plans stay on the page.
       expect(sent().text).not.toMatch(/Starter|Pro\b|\$/);
     });
@@ -288,6 +295,35 @@ describe("SMTP delivery", () => {
       expect(serbian!.subject).toBe("Vaš broj (555) 010-0123 je aktivan");
       expect(serbian!.text).toContain("Započnite besplatnu probu od 14 dana: https://app.example.test/onboarding/plan");
       expect(`${serbian!.subject}${serbian!.text}`).not.toMatch(/[Ѐ-ӿ]/);
+    });
+  });
+
+  describe("unsubscribe", () => {
+    const welcome = { template: "welcome" as const, to: "owner@example.test", variables: { locale: "en", firstName: "Ryan", businessName: "Metroprint", url: "https://app.example.test/" } };
+
+    it("lists the marketing emails, and only them", () => {
+      expect(MARKETING_EMAIL_TEMPLATES).toEqual(["welcome", "plan_reminder"]);
+      for (const template of ["number_trial", "number_release", "verify_email", "password_reset", "invitation", "passkey_added", "operator_alert", "call_summary", "partner_pool_alert", "business_allowance_alert", "partner_business_allowance_alert"]) expect(isMarketingEmailTemplate(template)).toBe(false);
+    });
+
+    it("gives a marketing email the one-click unsubscribe headers (RFC 8058), with no mailto", async () => {
+      const { provider, sent } = capture();
+      await send(provider, { ...welcome, unsubscribe });
+      expect(sent().headers).toEqual({ "List-Unsubscribe": `<${unsubscribe.oneClickUrl}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" });
+    });
+
+    it("refuses to send a marketing email without its recipient's links", async () => {
+      const { provider, sendMail } = capture();
+      await expect(send(provider, welcome)).rejects.toThrow(/unsubscribe/);
+      expect(sendMail).not.toHaveBeenCalled();
+    });
+
+    it("leaves a transactional email without headers or footer, even when handed links", async () => {
+      const { provider, sent } = capture();
+      await send(provider, { template: "number_trial", to: "owner@example.test", unsubscribe, variables: { locale: "en", kind: "day10", businessName: "Acme", trialNumber: "+14165550123", endDate: "November 20", url: "https://app.example.test/settings/plan" } });
+      expect(sent().headers).toBeUndefined();
+      expect(sent().text).not.toContain("Unsubscribe");
+      expect(sent().html).not.toContain(unsubscribe.pageUrl);
     });
   });
 

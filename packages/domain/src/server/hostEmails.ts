@@ -9,7 +9,11 @@ import type { Database, DatabaseTransaction } from "@lobbystack/db";
 // again when it's sent, so one queued before a check existed, or by a path
 // that missed it, still stays home.
 
-/** The email templates only a direct business gets. Marketing emails belong here when the host adds them. */
+/**
+ * The email templates only a direct business gets. A new marketing email
+ * belongs here, and in MARKETING_EMAIL_TEMPLATES (packages/providers), which
+ * gives it the unsubscribe link and header and skips it for anyone who unsubscribed.
+ */
 export const HOST_ONLY_EMAIL_TEMPLATES = ["welcome", "plan_reminder", "number_trial", "number_release"] as const;
 
 export function isHostOnlyEmailTemplate(template: unknown): boolean {

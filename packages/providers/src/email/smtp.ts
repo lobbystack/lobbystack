@@ -13,7 +13,32 @@ export type SmtpConfig = {
   from: string;
 };
 
-type TemplateName = "existing_account" | "account_setup" | "verify_email" | "password_reset" | "passkey_added" | "invitation" | "operator_alert" | "feedback_submission" | "welcome" | "plan_reminder" | "number_trial" | "number_release" | "partner_pool_alert" | "business_allowance_alert" | "partner_business_allowance_alert" | "business_released" | "business_deleted" | "call_summary";
+export type TemplateName = "existing_account" | "account_setup" | "verify_email" | "password_reset" | "passkey_added" | "invitation" | "operator_alert" | "feedback_submission" | "welcome" | "plan_reminder" | "number_trial" | "number_release" | "partner_pool_alert" | "business_allowance_alert" | "partner_business_allowance_alert" | "business_released" | "business_deleted" | "call_summary";
+
+/**
+ * The marketing emails: the host's lifecycle emails that sell or nudge, which
+ * the law and the mailbox providers say a person must be able to stop. Each
+ * carries a List-Unsubscribe header with one-click unsubscribe (RFC 8058) and
+ * an Unsubscribe link in its footer, and the worker skips one to a person who
+ * unsubscribed. A new lifecycle email joins this list to get all three.
+ *
+ * - Marketing: `welcome` (after onboarding) and `plan_reminder` (both reminders to choose a plan).
+ * - Transactional, always sent: the number trial emails (day10, day13, ended,
+ *   minutes_out) and `number_release`, which tell an owner what happens to a
+ *   number they hold; sign-in and account emails (`verify_email`,
+ *   `password_reset`, `existing_account`, `account_setup`, `passkey_added`);
+ *   `invitation`; `operator_alert` and `call_summary`, which the business's
+ *   notification settings control; `feedback_submission`; the pool and
+ *   allowance alerts; and the notices that a business was released or deleted.
+ */
+export const MARKETING_EMAIL_TEMPLATES = ["welcome", "plan_reminder"] as const satisfies readonly TemplateName[];
+
+export function isMarketingEmailTemplate(template: unknown): template is (typeof MARKETING_EMAIL_TEMPLATES)[number] {
+  return typeof template === "string" && (MARKETING_EMAIL_TEMPLATES as readonly string[]).includes(template);
+}
+
+/** Where a marketing email's recipient unsubscribes: the page its footer links to, and the URL mail apps POST to for one-click unsubscribe. */
+export type EmailUnsubscribeLinks = { pageUrl: string; oneClickUrl: string };
 
 /**
  * Whether the mail provider refused the message for good. An SMTP 5xx
@@ -49,13 +74,17 @@ export class SmtpEmailProvider {
    * Sends one email under `brand`: the template writes the brand's name, logo
    * and links, and the subject when the caller gives none. The caller picks
    * the sender and Reply-To (emailSender in @lobbystack/shared); with no
-   * sender, the email goes out from EMAIL_FROM.
+   * sender, the email goes out from EMAIL_FROM. A marketing email needs its
+   * recipient's unsubscribe links, and goes out with them in its headers and
+   * footer; any other email ignores them.
    */
-  async sendTemplate(input: { template: TemplateName; to: string; subject?: string; variables: Record<string, string>; brand: EmailBrand; idempotencyKey?: string; from?: string; replyTo?: string }): Promise<{ messageId: string }> {
+  async sendTemplate(input: { template: TemplateName; to: string; subject?: string; variables: Record<string, string>; brand: EmailBrand; idempotencyKey?: string; from?: string; replyTo?: string; unsubscribe?: EmailUnsubscribeLinks }): Promise<{ messageId: string }> {
     assertCertificationRecipient("email", input.to);
+    const unsubscribe = isMarketingEmailTemplate(input.template) ? input.unsubscribe : undefined;
+    if (isMarketingEmailTemplate(input.template) && !unsubscribe) throw new Error(`The ${input.template} email needs its recipient's unsubscribe links.`);
     const brand = shownBrand(input.brand);
     const subject = input.subject ?? templateSubject(input.template, input.variables, brand);
-    const email = renderTemplate(input.template, subject, input.variables, brand);
+    const email = renderTemplate(input.template, subject, input.variables, brand, unsubscribe);
     const result = await this.transporter.sendMail({
       from: input.from ?? this.config.from,
       ...(input.replyTo ? { replyTo: input.replyTo } : {}),
@@ -63,6 +92,7 @@ export class SmtpEmailProvider {
       subject,
       text: email.text,
       ...(email.html ? { html: email.html } : {}),
+      ...(unsubscribe ? { headers: unsubscribeHeaders(unsubscribe) } : {}),
       ...(input.idempotencyKey ? { messageId: `<${createHash("sha256").update(input.idempotencyKey).digest("hex")}@mail.lobbystack.internal>` } : {}),
     });
     return { messageId: result.messageId };
@@ -164,10 +194,37 @@ function templateSubject(template: TemplateName, variables: Record<string, strin
   }
 }
 
-function renderTemplate(template: TemplateName, subject: string, variables: Record<string, string>, brand: EmailBrand): { text: string; html?: string } {
-  const text = templateBody(template, variables, brand);
-  const html = templateHtml(template, subject, variables, brand);
+function renderTemplate(template: TemplateName, subject: string, variables: Record<string, string>, brand: EmailBrand, unsubscribe?: EmailUnsubscribeLinks): { text: string; html?: string } {
+  const label = UNSUBSCRIBE_LABELS[emailCopyLocale(variables.locale)];
+  const body = templateBody(template, variables, brand);
+  // French puts a space before the colon.
+  const text = unsubscribe ? `${body}\n\n${label}${variables.locale === "fr" ? " : " : ": "}${unsubscribe.pageUrl}` : body;
+  const html = templateHtml(template, subject, variables, brand)?.replace(EMAIL_FOOTER_SLOT, unsubscribe ? renderUnsubscribeFooter(label, unsubscribe.pageUrl) : "");
   return html ? { text, html } : { text };
+}
+
+/** The footer link of a marketing email, in the recipient's language. */
+const UNSUBSCRIBE_LABELS: Record<"en" | "fr" | "es" | "sr", string> = {
+  en: "Unsubscribe",
+  fr: "Se désabonner",
+  es: "Cancelar la suscripción",
+  sr: "Odjavi se",
+};
+
+/**
+ * The headers mail apps read to offer their own unsubscribe button. A POST of
+ * `List-Unsubscribe=One-Click` to the URL unsubscribes at once (RFC 8058).
+ * The host has no inbound address, so there is no mailto.
+ */
+export function unsubscribeHeaders(links: EmailUnsubscribeLinks): Record<string, string> {
+  return { "List-Unsubscribe": `<${links.oneClickUrl}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" };
+}
+
+/** Where renderEmailLayout leaves room for a footer under the card. */
+const EMAIL_FOOTER_SLOT = "<!--email-footer-->";
+
+function renderUnsubscribeFooter(label: string, url: string): string {
+  return `<p style="margin:24px 0 0;font-size:13px;line-height:1.5;color:#6B7280;text-align:center;"><a href="${escapeHtml(url)}" style="color:#6B7280;text-decoration:underline;">${escapeHtml(label)}</a></p>`;
 }
 
 /** The HTML of an email, in the shared layout. */
@@ -1266,7 +1323,7 @@ function renderEmailLayout({ brand, previewText, content, align = "center" }: { 
                 ${content}
               </td>
             </tr>
-          </table>
+          </table>${EMAIL_FOOTER_SLOT}
         </td>
       </tr>
     </table>
