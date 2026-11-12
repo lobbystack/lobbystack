@@ -22,6 +22,7 @@ import { loadEntitlement } from "./entitlement";
 import { resolveBusinessBillingPlan } from "./contentRetentionPolicy";
 import { resolveSmsSender } from "./smsSender";
 import { documentInScope, knowledgeScopeFor, snippetInScope, type KnowledgeScope } from "./knowledgeScope";
+import { isWebsiteImportStalled, websiteImportDispatchSql, type WebsiteImportDispatch } from "./websiteImportHealth";
 
 const ragMeter = getMeter("lobbystack-rag");
 const searchDuration = ragMeter.createHistogram("rag.search.duration_ms", { unit: "ms" });
@@ -130,7 +131,8 @@ export async function createKnowledgeDocumentInTransaction(
   if (existing) {
     // A retry of an onboarding submission is still onboarding: without the
     // limit it would fall back to the full crawl this sampling exists to defer.
-    if (["cancelled", "error"].includes(existing.status)) await queueKnowledgeDocumentRetry(tx, { businessId: input.businessId, documentId: existing.id, crawlLimit }, existing);
+    // A crawl that stopped moving gets read again too, so resubmitting the site is a way out.
+    if (["cancelled", "error"].includes(existing.status) || (existing.status === "processing" && await websiteCrawlStalled(tx, input.businessId, existing.id))) await queueKnowledgeDocumentRetry(tx, { businessId: input.businessId, documentId: existing.id, crawlLimit }, existing);
     return existing.id;
   }
   const [document] = await tx.insert(knowledgeDocuments).values({
@@ -191,11 +193,19 @@ async function queueKnowledgeDocumentRetry(tx: DatabaseTransaction, input: { bus
     await enqueueOutbox(tx, { topic: document.sourceType === "website" ? "knowledge.crawlWebsite" : "knowledge.extractDocument", businessId: input.businessId, aggregateType: "knowledge_document", aggregateId: input.documentId, dedupeKey: `knowledge:${input.documentId}:retry:${document.revision + 1}`, payload: document.sourceType === "website" && document.sourceUrl ? { documentId: input.documentId, url: document.sourceUrl, revision: document.revision + 1, websiteIngestionJobId: ingestion!.id, limit: retryLimit } : { documentId: input.documentId, revision: document.revision + 1 } });
 }
 
+/** Reads a source again. A website keeps the page limit its last crawl ran with, so retrying onboarding's sample reads a sample again. */
 export async function retryKnowledgeDocument(context: DomainContext, input: { userId: string; businessId: string; documentId: string }): Promise<void> {
   await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
-    if (!(await retryKnowledgeDocumentInTransaction(tx, input))) throw new Error("Knowledge document not found.");
+    const [crawl] = await tx.select({ pageLimit: websiteIngestionJobs.pageLimit }).from(websiteIngestionJobs).where(and(eq(websiteIngestionJobs.businessId, input.businessId), eq(websiteIngestionJobs.rootDocumentId, input.documentId))).limit(1);
+    if (!(await retryKnowledgeDocumentInTransaction(tx, { ...input, crawlLimit: crawl?.pageLimit ?? undefined }))) throw new Error("Knowledge document not found.");
   });
+}
+
+/** Whether the document's crawl should be running but stopped moving. */
+async function websiteCrawlStalled(tx: DatabaseTransaction, businessId: string, documentId: string): Promise<boolean> {
+  const [crawl] = await tx.select({ status: websiteIngestionJobs.status, updatedAt: websiteIngestionJobs.updatedAt, dispatch: sql<WebsiteImportDispatch | null>`${websiteImportDispatchSql("website_ingestion_jobs")}` }).from(websiteIngestionJobs).where(and(eq(websiteIngestionJobs.businessId, businessId), eq(websiteIngestionJobs.rootDocumentId, documentId))).limit(1);
+  return Boolean(crawl && isWebsiteImportStalled(crawl));
 }
 
 /**

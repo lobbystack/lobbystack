@@ -126,7 +126,9 @@
         "question": "Radite li subotom?",
         "answer": "Da, do 13 časova."
       }
-    }
+    },
+    "stalled": "Nismo uspeli da završimo čitanje sajta {{host}}",
+    "tryAgain": "Pokušaj ponovo"
   },
   "verifyPhone": {
     "title": "Potvrdite broj mobilnog telefona",

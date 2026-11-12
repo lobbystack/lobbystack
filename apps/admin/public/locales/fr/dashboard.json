@@ -317,7 +317,8 @@
       "copyNumber": "Copier le numéro",
       "numberCopied": "Copié",
       "forwardCalls": "Configurer le transfert",
-      "choosePlan": "Choisir un forfait"
+      "choosePlan": "Choisir un forfait",
+      "tryAgain": "Réessayer"
     },
     "forwardingFrom": "Transfert depuis le {{number}}",
     "forwardingWorks": "Le transfert fonctionne"

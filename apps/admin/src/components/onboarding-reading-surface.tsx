@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { resolveOnboardingRoute, stageAfterWebsite } from "@lobbystack/shared";
 
 import { ReadingStatusSkeleton } from "@/components/loading-skeletons";
 import { ImportWaitSlides, useImportWait } from "@/components/onboarding-import-wait";
-import { currentWebsiteImport, isWebsiteImportRunning, websiteImportHost, websiteImportPercent, type WebsiteImportSummary } from "@/components/website-import-progress";
+import { Button } from "@/components/ui/button";
+import { currentWebsiteImport, isWebsiteImportRunning, isWebsiteImportStalled, websiteImportHost, websiteImportPercent, type WebsiteImportSummary } from "@/components/website-import-progress";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { requestJson } from "@/lib/request-json";
 import { useStepNavigation } from "@/lib/use-step-navigation";
@@ -36,7 +37,8 @@ export function OnboardingReadingSurface({ documentId }: { documentId?: string |
     retry: false,
     refetchInterval: (query) => {
       const list = query.state.data?.documents;
-      if (list?.some((document) => isWebsiteImportRunning(document.websiteImport))) return 2000;
+      // A stalled import is still watched here: the worker may pick it back up.
+      if (list?.some((document) => isWebsiteImportRunning(document.websiteImport) || isWebsiteImportStalled(document.websiteImport))) return 2000;
       // Keep looking for the submitted document, or for the import it queued.
       if (documentId && list) {
         const submitted = list.find((document) => document.id === documentId);
@@ -55,15 +57,34 @@ export function OnboardingReadingSurface({ documentId }: { documentId?: string |
   useEffect(() => { if (over) navigate(nextStep); }, [navigate, nextStep, over]);
 
   if (phase !== "waiting") return null;
+  // Without a submitted document, the import shown is the current one, which belongs to a document too.
+  const importDocumentId = documentId ?? documents.data?.documents.find((document) => document.websiteImport && document.websiteImport === websiteImport)?.id;
   const status = documentId && documents.isPending
     ? <ReadingStatusSkeleton label={t("reading.status", { host: websiteImportHost(business?.websiteUrl ?? ""), count: 0 })} />
-    : websiteImport && (!documentId || submitted?.websiteImport) ? <ReadingStatus job={websiteImport} /> : null;
+    : websiteImport && (!documentId || submitted?.websiteImport) ? <ReadingStatus documentId={importDocumentId} job={websiteImport} onRetried={() => void documents.refetch()} /> : null;
   return <ImportWaitSlides status={status} />;
 }
 
-/** The site being read and how many pages are in, as a line and a bar under the slide. */
-function ReadingStatus({ job }: { job: WebsiteImportSummary }) {
+/**
+ * The site being read and how many pages are in, as a line and a bar under
+ * the slide. A read that stalled says so and offers to start it again, at the
+ * same sample size.
+ */
+function ReadingStatus({ documentId, job, onRetried }: { documentId?: string | undefined; job: WebsiteImportSummary; onRetried: () => void }) {
   const { t } = useTranslation("onboarding");
+  const { business } = useActiveBusiness();
+  const retry = useMutation({
+    mutationFn: () => requestJson(`/api/knowledge/${encodeURIComponent(documentId!)}?businessId=${encodeURIComponent(business!.businessId)}`, { method: "PATCH", body: JSON.stringify({ action: "retry" }) }),
+    onSuccess: onRetried,
+  });
+  if (isWebsiteImportStalled(job)) {
+    return (
+      <div aria-live="polite" className="flex flex-col items-center gap-3">
+        <p className="truncate text-center type-body text-muted-foreground">{t("reading.stalled", { host: websiteImportHost(job.websiteUrl) })}</p>
+        {documentId && business ? <Button disabled={retry.isPending} onClick={() => retry.mutate()} size="sm" type="button" variant="outline">{t("reading.tryAgain")}</Button> : null}
+      </div>
+    );
+  }
   return (
     <div aria-live="polite" className="flex flex-col gap-3">
       <p className="truncate text-center type-body text-muted-foreground">{t("reading.status", { host: websiteImportHost(job.websiteUrl), count: job.importedCount })}</p>

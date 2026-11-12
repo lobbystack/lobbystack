@@ -10,12 +10,29 @@ export type WebsiteImportSummary = {
   websiteUrl: string;
   importedCount: number;
   indexedCount: number;
+  /** The server's read: the crawl should be running but stopped moving. */
+  stalled?: boolean;
 };
 
 const RUNNING_STATUSES = ["queued", "crawling", "indexing"];
 
+/** Still reading. A crawl that stalled isn't, so nobody watches it forever. */
 export function isWebsiteImportRunning(job: WebsiteImportSummary | null | undefined): boolean {
-  return Boolean(job && RUNNING_STATUSES.includes(job.status));
+  return Boolean(job && RUNNING_STATUSES.includes(job.status) && !job.stalled);
+}
+
+/** Says it's running, but the server saw no progress for too long. */
+export function isWebsiteImportStalled(job: WebsiteImportSummary | null | undefined): boolean {
+  return Boolean(job && RUNNING_STATUSES.includes(job.status) && job.stalled);
+}
+
+/**
+ * How often to look at an import again: often while it runs, and now and then
+ * once it stalled, so a crawl the worker picks back up shows its progress.
+ */
+export function websiteImportPollMs(job: WebsiteImportSummary | null | undefined): number | false {
+  if (isWebsiteImportRunning(job)) return 2500;
+  return isWebsiteImportStalled(job) ? 15_000 : false;
 }
 
 export function websiteImportHost(websiteUrl: string): string {
@@ -57,6 +74,7 @@ export function WebsiteImportProgress({ job, inline = false }: { job: WebsiteImp
   // the dashboard does not carry the onboarding namespace.
   const { t } = useTranslation("common");
   const host = websiteImportHost(job.websiteUrl);
+  const stalled = isWebsiteImportStalled(job);
   const failed = job.status === "failed" || job.status === "cancelled";
   const done = job.status === "completed";
   const percent = websiteImportPercent(job);
@@ -65,10 +83,10 @@ export function WebsiteImportProgress({ job, inline = false }: { job: WebsiteImp
   if (inline) {
     return (
       <div className="flex max-w-lg flex-col gap-3">
-        <p className="type-body-lg text-muted-foreground">
-          {failed ? t("websiteImport.failedTitle", { host }) : done ? t("websiteImport.doneTitle", { host }) : t("websiteImport.inlineRunning", { host, count: job.importedCount })}
+        <p aria-live="polite" className="type-body-lg text-muted-foreground">
+          {stalled ? t("websiteImport.stalledTitle", { host }) : failed ? t("websiteImport.failedTitle", { host }) : done ? t("websiteImport.doneTitle", { host }) : t("websiteImport.inlineRunning", { host, count: job.importedCount })}
         </p>
-        {failed || done ? null : (
+        {failed || done || stalled ? null : (
           <div aria-hidden="true" className="h-1 w-full overflow-hidden rounded-full bg-muted">
             <div className="h-full rounded-full bg-foreground transition-[width] duration-500" style={{ width: `${percent}%` }} />
           </div>
@@ -80,19 +98,21 @@ export function WebsiteImportProgress({ job, inline = false }: { job: WebsiteImp
   return (
     <Surface className="flex flex-col gap-3 p-4">
       <div className="flex items-start gap-3">
-        {failed || done ? (
-          failed ? <TriangleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-destructive" /> : <Check aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+        {failed || stalled || done ? (
+          failed || stalled ? <TriangleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-destructive" /> : <Check aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
         ) : null}
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <p className="truncate type-title">
-            {failed
+            {stalled
+              ? t("websiteImport.stalledTitle", { host })
+              : failed
               ? t("websiteImport.failedTitle", { host })
               : done
                 ? t("websiteImport.doneTitle", { host })
                 : t("websiteImport.runningTitle", { host })}
           </p>
           <p className="type-caption text-muted-foreground">
-            {failed
+            {failed || stalled
               ? t("websiteImport.failedHint")
               : done
                 ? t("websiteImport.doneHint", { count: job.indexedCount || job.importedCount })
@@ -101,7 +121,7 @@ export function WebsiteImportProgress({ job, inline = false }: { job: WebsiteImp
         </div>
         {isWebsiteImportRunning(job) ? <LoaderCircle aria-hidden="true" className="mt-1 size-4 shrink-0 animate-spin text-muted-foreground" /> : null}
       </div>
-      {failed ? null : (
+      {failed || stalled ? null : (
         <div aria-hidden="true" className="h-1 w-full overflow-hidden rounded-full bg-muted">
           <div className="h-full rounded-full bg-foreground transition-[width] duration-500" style={{ width: `${percent}%` }} />
         </div>

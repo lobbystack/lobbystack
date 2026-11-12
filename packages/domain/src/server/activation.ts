@@ -5,6 +5,7 @@ import { DASHBOARD_TEST_CALL_WIDGET_ID } from "@lobbystack/shared";
 
 import { callForwardingStatusInTransaction } from "./callForwarding";
 import { ONBOARDING_CRAWL_PAGE_LIMIT } from "./knowledge";
+import { websiteImportDispatchSql, withWebsiteImportHealth, type WebsiteImportDispatch } from "./websiteImportHealth";
 
 /**
  * How many times the operator has heard their own agent. A call that carried
@@ -41,21 +42,24 @@ export async function latestOperatorTestCall(tx: DatabaseTransaction, businessId
  * that URL's earlier import, so creation time alone would favour whichever site
  * was tried second: submit A, then B, then A again, and B is still newest. The
  * business record holds the site they settled on, so match it first and fall
- * back to the newest crawl when nothing matches.
+ * back to the newest crawl when nothing matches. stalled says whether a crawl
+ * that should be running stopped moving.
  */
 export async function currentWebsiteIngestion(tx: DatabaseTransaction, businessId: string) {
-  return (await tx.select({
+  return withWebsiteImportHealth((await tx.select({
     rootDocumentId: websiteIngestionJobs.rootDocumentId,
     status: websiteIngestionJobs.status,
     websiteUrl: websiteIngestionJobs.websiteUrl,
     importedCount: websiteIngestionJobs.importedCount,
     indexedCount: websiteIngestionJobs.indexedCount,
     pageLimit: websiteIngestionJobs.pageLimit,
+    updatedAt: websiteIngestionJobs.updatedAt,
+    dispatch: sql<WebsiteImportDispatch | null>`${websiteImportDispatchSql("website_ingestion_jobs")}`,
   }).from(websiteIngestionJobs).where(eq(websiteIngestionJobs.businessId, businessId)).orderBy(
     // coalesce, because a null comparison would sort first under DESC.
     desc(sql`coalesce(${websiteIngestionJobs.websiteUrl} = (select ${businesses.websiteUrl} from ${businesses} where ${businesses.id} = ${businessId}), false)`),
     desc(websiteIngestionJobs.createdAt),
-  ).limit(1))[0];
+  ).limit(1))[0] ?? null) ?? undefined;
 }
 
 /** Whether the business has answered a phone call: one that carried media and ended. Calls from the web don't count. */

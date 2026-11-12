@@ -126,7 +126,9 @@
         "question": "¿Abren los sábados?",
         "answer": "Sí, hasta las 13:00."
       }
-    }
+    },
+    "stalled": "No pudimos terminar de leer {{host}}",
+    "tryAgain": "Reintentar"
   },
   "verifyPhone": {
     "title": "Verifique su número de móvil",

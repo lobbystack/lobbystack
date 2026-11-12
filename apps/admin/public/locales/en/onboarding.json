@@ -125,7 +125,9 @@
         "question": "Open on Saturdays?",
         "answer": "Yes, until 1 PM."
       }
-    }
+    },
+    "stalled": "We couldn't finish reading {{host}}",
+    "tryAgain": "Try again"
   },
   "verifyPhone": {
     "title": "Verify your mobile number",

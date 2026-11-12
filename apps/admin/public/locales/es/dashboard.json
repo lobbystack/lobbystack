@@ -317,7 +317,8 @@
       "copyNumber": "Copiar número",
       "numberCopied": "Copiado",
       "forwardCalls": "Configurar el desvío",
-      "choosePlan": "Elegir un plan"
+      "choosePlan": "Elegir un plan",
+      "tryAgain": "Reintentar"
     },
     "forwardingFrom": "Desvío desde el {{number}}",
     "forwardingWorks": "El desvío funciona"

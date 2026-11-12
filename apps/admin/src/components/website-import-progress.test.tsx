@@ -7,7 +7,7 @@ import { createI18nInstance } from "@/i18n";
 import { resourcesForRoute } from "@/lib/i18n-resources";
 import { routeNamespaces } from "@/lib/route-namespaces";
 
-import { currentWebsiteImport, WebsiteImportProgress, type WebsiteImportSummary } from "./website-import-progress";
+import { currentWebsiteImport, isWebsiteImportRunning, isWebsiteImportStalled, WebsiteImportProgress, websiteImportPollMs, type WebsiteImportSummary } from "./website-import-progress";
 
 /**
  * The card renders on both the dashboard and the onboarding flow, and those
@@ -46,6 +46,24 @@ it("points a failed import at details the operator can add anywhere it renders",
   // The card also sits above the greeting field, so the hint cannot send
   // anyone to a form "below" it.
   expect(screen.getByText(/Add your business details by hand/)).toBeTruthy();
+});
+
+describe("a crawl that stalled", () => {
+  const stalled: WebsiteImportSummary = { status: "crawling", websiteUrl: "https://resend.com", importedCount: 0, indexedCount: 0, stalled: true };
+
+  it("says the read stopped instead of showing progress forever", () => {
+    renderOn("/", stalled);
+    expect(screen.getByText("We couldn't finish reading resend.com")).toBeTruthy();
+    expect(screen.queryByText(/pages read so far/)).toBeNull();
+  });
+
+  it("no longer counts as running, but is still looked at now and then", () => {
+    expect(isWebsiteImportRunning(stalled)).toBe(false);
+    expect(isWebsiteImportStalled(stalled)).toBe(true);
+    expect(websiteImportPollMs(stalled)).toBe(15_000);
+    expect(websiteImportPollMs(crawling)).toBe(2500);
+    expect(websiteImportPollMs({ ...stalled, status: "failed" })).toBe(false);
+  });
 });
 
 describe("choosing which crawl to show", () => {

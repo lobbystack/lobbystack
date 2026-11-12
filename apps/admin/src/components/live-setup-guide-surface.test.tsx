@@ -283,6 +283,18 @@ describe("steps", () => {
     expect(await screen.findByText(/clinic\.example/)).toBeTruthy();
     expect(screen.queryByRole("button", { name: copy.stepActions.fullScan })).toBeNull();
   });
+
+  it("says the read stopped when it stalled, and Try again reads the rest again in place", async () => {
+    const { fetchMock } = await setup({ activation: { websiteImport: { status: "queued", websiteUrl: "https://clinic.example", importedCount: 0, indexedCount: 0, stalled: true } } });
+    await list();
+    expect(await screen.findByText("We couldn't finish reading clinic.example")).toBeTruthy();
+    expect(screen.queryByText(/Pages read so far/)).toBeNull();
+    // Skip stays as the other way out.
+    expect(screen.getAllByRole("button", { name: copy.skipStep }).length).toBeGreaterThan(0);
+    await userEvent.click(screen.getByRole("button", { name: copy.stepActions.tryAgain }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/knowledge/doc_1?businessId=business", expect.objectContaining({ method: "PATCH", body: JSON.stringify({ action: "expand" }) })));
+    expect(router.push).not.toHaveBeenCalled();
+  });
 });
 
 describe("the test call step", () => {

@@ -317,7 +317,8 @@
       "copyNumber": "Kopiraj broj",
       "numberCopied": "Kopirano",
       "forwardCalls": "Podesite preusmeravanje",
-      "choosePlan": "Izaberite paket"
+      "choosePlan": "Izaberite paket",
+      "tryAgain": "Pokušaj ponovo"
     },
     "forwardingFrom": "Preusmeravanje sa broja {{number}}",
     "forwardingWorks": "Preusmeravanje radi"

@@ -126,7 +126,9 @@
         "question": "Ouvert le samedi ?",
         "answer": "Oui, jusqu'à 13 h."
       }
-    }
+    },
+    "stalled": "Nous n'avons pas pu finir de lire {{host}}",
+    "tryAgain": "Réessayer"
   },
   "verifyPhone": {
     "title": "Vérifiez votre numéro de mobile",

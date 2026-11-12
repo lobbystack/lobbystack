@@ -38,9 +38,12 @@
         "submitFailed": "Nismo mogli da pokrenemo uvoz sajta. Pokušajte ponovo.",
         "previewPending": "Čitamo ovaj sajt. Uvezene stranice će se automatski pojaviti ovde.",
         "previewFailed": "Uvoz nije uspeo. Pokušajte ponovo.",
+        "previewStalled": "Nismo uspeli da završimo čitanje ovog sajta.",
+        "tryAgain": "Pokušaj ponovo",
         "status": {
           "inProgress": "U toku",
-          "failed": "Neuspešno"
+          "failed": "Neuspešno",
+          "stalled": "Zaustavljeno"
         },
         "validation": {
           "urlRequired": "Unesite URL sajta koji želite da uvezete."

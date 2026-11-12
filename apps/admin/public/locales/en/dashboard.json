@@ -316,7 +316,8 @@
       "copyNumber": "Copy number",
       "numberCopied": "Copied",
       "forwardCalls": "Set up forwarding",
-      "choosePlan": "Choose a plan"
+      "choosePlan": "Choose a plan",
+      "tryAgain": "Try again"
     },
     "forwardingFrom": "Forwarding from {{number}}",
     "forwardingWorks": "Forwarding works"

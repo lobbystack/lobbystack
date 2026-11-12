@@ -49,6 +49,31 @@ describe("the wait after the website step", () => {
     await waitFor(() => expect(push).toHaveBeenCalledWith("/onboarding/number"));
   });
 
+  it("says the read stopped when it stalls, and Try again starts it again without leaving", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    let answer: unknown[] = [{ id: "document", websiteImport: running }];
+    setup(() => answer, "document");
+    await screen.findByText("reading.status");
+    answer = [{ id: "document", websiteImport: { ...running, status: "queued", stalled: true } }];
+    await act(() => vi.advanceTimersByTimeAsync(2_000));
+    await screen.findByText("reading.stalled");
+    expect(push).not.toHaveBeenCalled();
+    const fetchMock = vi.mocked(fetch);
+    answer = [{ id: "document", websiteImport: { ...running, status: "queued", stalled: false } }];
+    await act(async () => { screen.getByRole("button", { name: "reading.tryAgain" }).click(); });
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/knowledge/document?businessId=business", expect.objectContaining({ method: "PATCH", body: JSON.stringify({ action: "retry" }) })));
+    await screen.findByText("reading.status");
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it("still moves on at the limit while a stalled read waits", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    setup(() => [{ id: "document", websiteImport: { ...running, stalled: true } }], "document");
+    await screen.findByText("reading.stalled");
+    await act(() => vi.advanceTimersByTimeAsync(90_000));
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/onboarding/number"));
+  });
+
   it("moves on when the knowledge check fails", async () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
     client.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true, websiteUrl }] });
