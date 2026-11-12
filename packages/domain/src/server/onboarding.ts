@@ -158,7 +158,8 @@ export async function advanceOnboardingStageInTransaction(
 /**
  * Moves a business to the next onboarding stage. The caller has already
  * checked who may do that. A direct business has no phone step, so a move
- * there, from an old tab, goes to the number step instead.
+ * there, from an old tab, goes to the number step instead. Every move into
+ * complete schedules the welcome email, whichever step it comes from.
  */
 export async function moveOnboardingStageInTransaction(
   tx: DatabaseTransaction,
@@ -178,6 +179,7 @@ export async function moveOnboardingStageInTransaction(
     error.code = "onboarding_stage_conflict";
     throw error;
   }
+  if (to === "complete") await scheduleWelcomeEmailInTransaction(tx, input.businessId, new Date());
 }
 
 /**
@@ -215,8 +217,6 @@ export async function advanceOnboardingStage(
     // purchase fail and leave the business past the step with no number.
     if (!current.partnerId && current.deploymentMode === "cloud" && to === "attribution" && (currentStage === "phone_number" || currentStage === "verify_phone" || currentStage === "phone_number_claiming")) throw numberRequired();
     await advanceOnboardingStageInTransaction(tx, { ...input, to, from: currentStage, partnerId: current.partnerId, accessLevel: current.accessLevel });
-    // Leaving Meet your agent sends the welcome email, with or without the plans after it.
-    if (currentStage === "meet" && (to === "complete" || to === "choose_plan")) await scheduleWelcomeEmailInTransaction(tx, input.businessId, new Date());
     return to;
   });
 }
@@ -290,16 +290,27 @@ export async function readOnboardingAttribution(context: DomainContext, input: {
   });
 }
 
-/** Schedules the welcome email for when onboarding finishes. A partner's business never gets it. */
+/**
+ * The welcome job's dedupe key. Earlier releases used
+ * `onboarding-welcome:{businessId}` and also scheduled it on the way to the
+ * plans, where the job skips for good, so a row under that key doesn't mean a
+ * welcome went out. Onboarding completes once, and the email the job queues
+ * keeps its own dedupe key, `onboarding-welcome:{businessId}:email`.
+ */
+export function welcomeEmailDedupeKey(businessId: string): string {
+  return `onboarding-welcome:${businessId}:complete`;
+}
+
+/** Schedules the welcome email when onboarding finishes. A partner's business never gets it. */
 export async function scheduleWelcomeEmailInTransaction(tx: DatabaseTransaction, businessId: string, completedAt: Date): Promise<void> {
   if (!await businessGetsHostEmails(tx, businessId)) return;
-  // The dedupe key keeps a revisited last step from sending a second welcome.
+  // The dedupe key keeps a retried completion from sending a second welcome.
   await enqueueOutbox(tx, {
     topic: "onboarding.sendWelcome",
     businessId,
     aggregateType: "business",
     aggregateId: businessId,
-    dedupeKey: `onboarding-welcome:${businessId}`,
+    dedupeKey: welcomeEmailDedupeKey(businessId),
     availableAt: completedAt,
     payload: {},
   });
