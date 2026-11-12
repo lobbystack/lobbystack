@@ -162,3 +162,30 @@ describe("contact PINs", () => {
     expect(api.sent).toHaveLength(0);
   });
 });
+
+describe("extra numbers", () => {
+  const offer = { phone_number: "+14165550200", country: "CA", kind: "local", locality: "Toronto", region: "ON", capabilities: { voice: true, sms: true }, monthly_price: { amount_cents: 115, currency: "USD" }, billing_set_up: true, offer_token: "offer-1", expires_at: "2026-11-12T12:05:00.000Z" };
+  const agent = "0b7c1d2e-3f40-4a51-8b62-7c83d94ea5b6";
+
+  it("shows each offer's monthly price, and buys one only at the price it repeats", async () => {
+    const api = fakeApi({
+      "POST /api/v1/phone-numbers/extra/search": { body: { data: [offer], next_cursor: null, has_more: false } },
+      "POST /api/v1/phone-numbers/extra/claims": { status: 202, body: { data: { id: "claim-1", status: "pending", phone_number: offer.phone_number, phone_number_id: null, replaces_phone_number_id: null, error: null } } },
+    });
+    const search = await runCli(["numbers", "search-extra", "--country", "CA"], { fetch: api.fetch });
+    expect(search.code).toBe(exitCodes.ok);
+    expect(search.out).toMatch(/\+14165550200\s+Toronto\s+local\s+\$1\.15\/month\s+true\s+offer-1/);
+    const buy = await runCli(["numbers", "buy-extra", "offer-1", "--agent-id", agent, "--accept-monthly-price-cents", "115"], { fetch: api.fetch });
+    expect(buy.code).toBe(exitCodes.ok);
+    const sent = api.sent.find((request) => request.path === "/api/v1/phone-numbers/extra/claims")!;
+    expect(sent.body).toEqual({ offer_token: "offer-1", agent_id: agent, accept_monthly_price_cents: 115 });
+    expect(sent.headers["idempotency-key"]).toBeTruthy();
+  });
+
+  it("starts monthly billing for extra numbers and prints the page to pay on", async () => {
+    const api = fakeApi({ "POST /api/v1/billing/extra-numbers/checkout": { status: 202, body: { data: { id: "checkout-1", status: "ready", checkout_url: "https://polar.test/checkout", error: null, billing_set_up: false } } } });
+    const result = await runCli(["billing", "extra-numbers", "--agent-id", agent], { fetch: api.fetch });
+    expect(result).toMatchObject({ code: exitCodes.ok, out: "Send this page to whoever pays for extra numbers: https://polar.test/checkout" });
+    expect(api.sent[0]!.body).toEqual({ agent_id: agent });
+  });
+});

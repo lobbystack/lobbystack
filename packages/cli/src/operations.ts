@@ -30,6 +30,8 @@ export type OperationSpec = {
   /** Text fields that can also come from a file, as --content-file for content. */
   files?: string[];
   columns?: Column[];
+  /** How a list shows each row to people, such as a price in dollars. JSON output keeps the API's rows. */
+  view?(row: Row): Row;
   /** How people see one answer. Defaults to one line per field. */
   show?(data: Row): string;
   /** With --wait, follows the work the call started until it's done. */
@@ -214,17 +216,18 @@ export function operationCommand(path: string, spec: OperationSpec): Command {
         ...(idempotencyKey ? { idempotencyKey } : {}),
       } as never) as { data: unknown; next_cursor?: string | null; has_more?: boolean };
 
+      const tableOf = (rows: Row[]) => { const shown = spec.view ? rows.map(spec.view) : rows; return formatTable(shown, spec.columns ?? defaultColumns(shown)); };
       let data: Row;
       try {
         if (operation.list) {
           if (values.all === true) {
             const rows = await listAll(async (cursor) => await call(cursor ? { ...query, cursor } : query));
-            print(context.output, { data: rows, next_cursor: null, has_more: false }, () => formatTable(rows, spec.columns ?? defaultColumns(rows)));
+            print(context.output, { data: rows, next_cursor: null, has_more: false }, () => tableOf(rows));
             return;
           }
           const page = await call(query);
           const rows = page.data as Row[];
-          print(context.output, page, () => `${formatTable(rows, spec.columns ?? defaultColumns(rows))}${page.has_more && page.next_cursor ? `\n\nMore with --cursor ${page.next_cursor}, or --all.` : ""}`);
+          print(context.output, page, () => `${tableOf(rows)}${page.has_more && page.next_cursor ? `\n\nMore with --cursor ${page.next_cursor}, or --all.` : ""}`);
           return;
         }
         data = (await call(query)).data as Row;
