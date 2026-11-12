@@ -93,7 +93,7 @@ const claimRefusals: Record<string, [status: number, message: string]> = {
   business_number_required: [409, "Get this workspace's first number before you buy another."],
   extra_number_price_changed: [409, "The price of this number changed. Search again to see the new price."],
   // Migration 0217: extra numbers bill through their own monthly subscription.
-  extra_numbers_subscription_required: [409, "Set up monthly billing for extra numbers before you buy one."],
+  extra_numbers_subscription_required: [409, "Get the extra phone numbers add-on before you buy one."],
 };
 
 /** The refusal the dashboard shows for a claim check's reason. */

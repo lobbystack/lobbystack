@@ -348,6 +348,20 @@
       },
       "continue": "Continuar la configuración",
       "dashboard": "Ir al panel"
+    },
+    "addOns": {
+      "title": "Complementos",
+      "active": "Activo",
+      "get": "Contratar complemento",
+      "checkoutFailed": "No se pudo abrir el pago. Inténtelo de nuevo.",
+      "extraNumbers": {
+        "title": "Números adicionales",
+        "description": "Dé a un agente su propio número.",
+        "price": "Desde {{price}} por número /mes",
+        "count_one": "{{count}} número adicional",
+        "count_other": "{{count}} números adicionales",
+        "count_many": "{{count}} números adicionales"
+      }
     }
   },
   "subscription": {
@@ -395,7 +409,7 @@
       "title": "Este número se liberará el {{date}}",
       "description": "Los planes gratuitos no incluyen un número del negocio dedicado. Cambie a Starter o Pro antes de esa fecha para conservar {{number}}.",
       "upgradeCta": "Mejorar el plan para conservar este número",
-      "extraNumbersEnded": "La facturación mensual de los números adicionales terminó. Configúrela de nuevo antes de esa fecha para conservar {{number}}."
+      "extraNumbersEnded": "El complemento Números adicionales terminó. Vuelva a contratarlo antes de esa fecha para conservar {{number}}."
     },
     "freeTrial": {
       "description": "Todavía no tiene un número. Pruebe uno gratis durante 14 días.",
@@ -480,16 +494,11 @@
       "select": "Comprar",
       "monthly": "{{price}} al mes",
       "confirmTitle": "¿Comprar el {{number}}?",
-      "confirmDescription": "Cuesta {{price}} al mes, facturado cada mes aparte de su plan.",
+      "confirmDescription": "Cuesta {{price}} al mes.",
       "confirm": "Comprar número",
       "cancel": "Cancelar",
       "priceChanged": "El precio cambió. Busque de nuevo para verlo.",
-      "unavailable": "Este espacio de trabajo no puede comprar más números.",
-      "billingDescription": "Los números adicionales se facturan cada mes, aparte de su plan.",
-      "subscribe": "Configurar la facturación mensual",
-      "confirmingPayment": "Confirmando su pago.",
-      "subscribed": "La facturación mensual está configurada. Ya puede comprar un número.",
-      "checkoutFailed": "No se pudo abrir el pago. Inténtelo de nuevo."
+      "unavailable": "Este espacio de trabajo no puede comprar más números."
     }
   },
   "appearance": {

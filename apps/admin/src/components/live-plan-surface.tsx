@@ -11,6 +11,7 @@ import type { BillingPermissions } from "./billing-past-due-banner";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslation } from "react-i18next";
 
+import { BillingAddOns, BillingAddOnsSkeleton } from "./billing-add-ons";
 import { CancelPlanDialog } from "./cancel-plan-dialog";
 import { PageSurface } from "./page-surface";
 import { SectionBlock } from "./section-block";
@@ -164,6 +165,7 @@ export function LivePlanSurface() {
         </div>
       </Surface>
     </SectionBlock>
+    <BillingAddOns businessId={business.businessId} canManage={permissions?.hasBillingManagementAccess === true} plan={plan} />
     {plan !== "self_host" ? <><SpendingCapSection key={business.businessId} businessId={business.businessId} locale={i18n.language} t={(key, options) => t(key, options ?? {})} status={{ plan, overageSpendingCapCents: account?.overageSpendingCapCents ?? null, overageSpendCents: billing.data?.usageStatus?.overageSpendCents ?? 0, overageSpendCentsComplete: billing.data?.usageStatus?.usageComplete ?? true, overageSpendingCapReached: billing.data?.usageStatus?.overageSpendingCapReached ?? false, hasBillingManagementAccess: permissions?.hasBillingManagementAccess === true }} /><Transactions locale={i18n.language} transactions={billing.data?.transactions ?? []} t={t} /></> : null}
     </div>
   </PageSurface>;
@@ -388,6 +390,7 @@ function BillingSkeleton({
   return (
     <div className="flex w-full flex-col gap-10">
       <PlanSectionSkeleton t={t} />
+      <BillingAddOnsSkeleton />
       <SpendingCapSectionSkeleton t={t} />
       <TransactionsSectionSkeleton t={t} />
     </div>

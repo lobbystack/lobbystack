@@ -344,6 +344,19 @@
       },
       "continue": "Continue setup",
       "dashboard": "Go to your dashboard"
+    },
+    "addOns": {
+      "title": "Add-ons",
+      "active": "Active",
+      "get": "Get add-on",
+      "checkoutFailed": "Couldn't open checkout. Try again.",
+      "extraNumbers": {
+        "title": "Extra phone numbers",
+        "description": "Give an agent its own number.",
+        "price": "From {{price}} per number /month",
+        "count_one": "{{count}} extra number",
+        "count_other": "{{count}} extra numbers"
+      }
     }
   },
   "subscription": {
@@ -389,7 +402,7 @@
       "title": "This number will be released on {{date}}",
       "description": "Free plans do not include a dedicated business number. Upgrade to Starter or Pro before then to keep {{number}}.",
       "upgradeCta": "Upgrade to keep this number",
-      "extraNumbersEnded": "Monthly billing for extra numbers ended. Set it up again before then to keep {{number}}."
+      "extraNumbersEnded": "The extra phone numbers add-on ended. Get it again before then to keep {{number}}."
     },
     "freeTrial": {
       "description": "You don't have a number yet. Try one free for 14 days.",
@@ -473,16 +486,11 @@
       "select": "Buy",
       "monthly": "{{price}} a month",
       "confirmTitle": "Buy {{number}}?",
-      "confirmDescription": "It costs {{price}} a month, billed monthly apart from your plan.",
+      "confirmDescription": "It costs {{price}} a month.",
       "confirm": "Buy number",
       "cancel": "Cancel",
       "priceChanged": "The price changed. Search again to see it.",
-      "unavailable": "This workspace can't buy more numbers.",
-      "billingDescription": "Extra numbers bill monthly, apart from your plan.",
-      "subscribe": "Set up monthly billing",
-      "confirmingPayment": "Confirming your payment.",
-      "subscribed": "Monthly billing is set up. You can buy a number now.",
-      "checkoutFailed": "Couldn't open checkout. Try again."
+      "unavailable": "This workspace can't buy more numbers."
     }
   },
   "appearance": {
