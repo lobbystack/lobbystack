@@ -24,6 +24,7 @@ import { Surface } from "@/components/ui/surface";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { intlLocale } from "@/lib/locale";
 import { requestJson } from "@/lib/request-json";
+import { EmptyState } from "@/components/ui/empty-state";
 
 /** A template as the console lists it. */
 export type PartnerTemplate = { templateId: string; name: string; createdAt: string; template: BusinessTemplate };
@@ -187,10 +188,7 @@ export function PartnerTemplatesSurface() {
       ) : templates.isError ? (
         <Surface className="px-6 py-8"><p className="type-body-muted" role="alert">{t("templates.loadFailed")}</p></Surface>
       ) : rows.length === 0 ? (
-        <Surface className="flex flex-col items-center gap-3 px-6 py-16 text-center">
-          <h2 className="type-card-title">{t("templates.empty.title")}</h2>
-          {canManage ? null : <p className="max-w-sm type-body-muted">{t("templates.empty.memberDescription")}</p>}
-        </Surface>
+        <EmptyState description={canManage ? undefined : t("templates.empty.memberDescription")} title={t("templates.empty.title")} />
       ) : (
         <Surface className="overflow-hidden p-0">
           <Table>

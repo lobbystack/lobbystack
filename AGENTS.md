@@ -75,6 +75,7 @@
 - Preserve colors, copy, logic, responsiveness, and route architecture during consistency cleanup.
 - Whenever you add or change operator UI that waits on data, add or update its skeleton loading state in the same change: a new page, section, card, row, or tab, or a change to what one shows. Build it from `apps/admin/src/components/loading-skeletons.tsx`, and make every placeholder shape with the shadcn `Skeleton` from `@/components/ui/skeleton` ([docs](https://ui.shadcn.com/docs/components/base/skeleton)). Never hand-roll one with `animate-pulse` and a background color. Placeholders hold their real text, hidden (`HiddenTextSkeleton`), so they match the real layout in every language, and the loading block gets `aria-busy`. Keep a placeholder for each element that can appear, such as an optional card, and update the loading test with it.
 
+- Show an empty list or section with `EmptyState` from `@/components/ui/empty-state`: a title, an optional description, and an optional action such as the first add button. Never hand-roll a dashed or boxed empty message.
 ## Localization
 
 - Use translation keys for dashboard copy.

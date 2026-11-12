@@ -16,11 +16,11 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "./ui/field";
 import { Input } from "./ui/input";
 import { PageHeader } from "./page-header";
-import { Surface } from "@/components/ui/surface";
 import { PageSurface } from "./page-surface";
 import { Textarea } from "./ui/textarea";
 import { Status } from "@/components/ui/status";
 import { demoStatusVariant } from "@/lib/status-variants";
+import { EmptyState } from "@/components/ui/empty-state";
 
 type Demo = {
   demoId: string;
@@ -205,11 +205,8 @@ export function LiveDemosSurface({ partner }: { partner?: PartnerDemosOptions } 
         {loadError ? <p role="alert" className="type-body text-destructive">{loadError}</p> : null}
         {loading ? <Card><CardContent className="py-16 text-center type-body-muted">{t("operator.loading")}</CardContent></Card> : null}
         {!loading && !loadError && demos.length === 0 ? partnerId ? (
-          <Surface className="flex flex-col items-center gap-3 px-6 py-16 text-center">
-            <h2 className="type-card-title">{t("operator.partner.emptyTitle")}</h2>
-            <p className="max-w-sm type-body-muted">{t("operator.partner.empty")}</p>
-          </Surface>
-        ) : <Card><CardContent className="py-16 text-center type-body-muted">{t("operator.empty")}</CardContent></Card> : null}
+          <EmptyState description={t("operator.partner.empty")} title={t("operator.partner.emptyTitle")} />
+        ) : <EmptyState title={t("operator.empty")} /> : null}
         {demos.map((demo) => {
           const ingestionReady = demo.websiteIngestionStatus === "completed" || demo.websiteIngestionStatus === "unavailable";
           const ready = ingestionReady && demo.snapshotReady && demo.greetingReady && demo.promptsReady;

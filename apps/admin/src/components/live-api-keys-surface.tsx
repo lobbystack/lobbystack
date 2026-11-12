@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Surface } from "@/components/ui/surface";
 import { requestJson } from "@/lib/request-json";
 import { intlLocale } from "@/lib/locale";
+import { EmptyState } from "@/components/ui/empty-state";
 
 /** A key as an API keys page lists it: a business's own key, or a partner's platform key. */
 export type ApiKeyRecord = {
@@ -181,7 +182,7 @@ export function ApiKeysSurface({ namespace, layout, loading, canManage, scopes: 
         title={t("apiKeys.title")}
       >
         {rows.length === 0 ? (
-          <div className="rounded-xl border border-dashed p-12 text-center"><p className="type-empty-title">{t("apiKeys.empty")}</p></div>
+          <EmptyState title={t("apiKeys.empty")} />
         ) : (
           <Surface>
             <CredentialList label={t("apiKeys.title")}>

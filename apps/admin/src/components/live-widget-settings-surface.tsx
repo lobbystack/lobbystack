@@ -31,6 +31,7 @@ import { WidgetPreview } from "./widget/widget-preview";
 import { intlLocale } from "@/lib/locale";
 import { Status } from "@/components/ui/status";
 import { WIDGET_KEY_STATUS_VARIANTS } from "@/lib/status-variants";
+import { EmptyState } from "@/components/ui/empty-state";
 
 
 /** Languages the widget interface can be forced to, with their settings label keys. */
@@ -208,13 +209,7 @@ export function LiveWidgetSettingsSurface({ agentId, startAdding = false }: { ag
             {setStatus.isError ? <p className="type-body text-destructive">{setStatus.error.message}</p> : null}
           </div>
         ) : (
-          <div className="flex flex-col items-center gap-4 rounded-xl border border-dashed px-6 py-12 text-center">
-            <div className="flex max-w-sm flex-col gap-1">
-              <p className="type-item-title">{t("widget.keys.empty")}</p>
-              {issuanceEnabled ? <p className="type-body-muted">{t("widget:manage.emptyDescription")}</p> : null}
-            </div>
-            {newKeyButton}
-          </div>
+          <EmptyState action={newKeyButton} description={issuanceEnabled ? t("widget:manage.emptyDescription") : undefined} title={t("widget.keys.empty")} />
         )}
       </SectionBlock>
 

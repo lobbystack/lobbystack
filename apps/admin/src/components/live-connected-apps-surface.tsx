@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Surface } from "@/components/ui/surface";
 import { requestJson } from "@/lib/request-json";
 import { intlLocale } from "@/lib/locale";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export type ConnectedAppRecord = {
   id: string;
@@ -74,7 +75,7 @@ export function LiveConnectedAppsSurface() {
     <>
       <SectionBlock title={t("connectedApps.title")}>
         {rows.length === 0 ? (
-          <div className="rounded-xl border border-dashed p-12 text-center"><p className="type-empty-title">{t("connectedApps.emptyTitle")}</p><p className="type-empty-description mt-2">{t("connectedApps.emptyDescription")}</p></div>
+          <EmptyState description={t("connectedApps.emptyDescription")} title={t("connectedApps.emptyTitle")} />
         ) : (
           <Surface>
             <CredentialList label={t("connectedApps.title")}>

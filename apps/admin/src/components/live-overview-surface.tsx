@@ -42,6 +42,7 @@ import { useActiveBusiness } from "@/hooks/use-active-business";
 import { isSetupGuideFinished, SETUP_STEP_ORDER, showsSetupGuide } from "@/lib/setup-guide";
 import { Status } from "@/components/ui/status";
 import { appointmentStatusVariant, REQUEST_STATUS_VARIANTS } from "@/lib/status-variants";
+import { EmptyState } from "@/components/ui/empty-state";
 
 const OverviewCallChart = dynamic(() => import("./overview-call-chart").then((module) => module.OverviewCallChart), {
   loading: () => <Skeleton className="h-[350px] w-full" />,
@@ -251,7 +252,7 @@ export function LiveOverviewSurface() {
                       ))}
                     </ItemGroup>
                 </CardContent>
-              </Card> : unansweredCount > 0 ? null : <div className="rounded-xl border border-dashed p-12 text-center xl:flex xl:flex-1 xl:flex-col xl:items-center xl:justify-center"><p className="type-empty-title">{t("home.actionRequired.emptyTitle")}</p></div>}
+              </Card> : unansweredCount > 0 ? null : <EmptyState className="xl:flex xl:flex-1 xl:flex-col xl:items-center xl:justify-center" title={t("home.actionRequired.emptyTitle")} />}
           </section>
           <section className="animate-in fade-in slide-in-from-bottom-2 duration-200 order-first flex flex-col gap-3 xl:h-full">
             <div className="flex items-center justify-between gap-4 px-1"><Link aria-label={t("home.upcoming.appointmentsLink")} className="-mx-2 inline-flex items-center gap-1 rounded-md px-2 py-1 outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background" href="/appointments?view=list"><h2 className="type-section-title">{t("home.upcoming.title")}</h2><RowChevron /></Link>{summary.isLoading ? <Skeleton className="h-6 w-12 rounded-full" /> : <Badge variant="outline">{(summary.data?.upcoming.length ?? 0).toLocaleString(intlLocale(i18n.language))}</Badge>}</div>
@@ -278,7 +279,7 @@ export function LiveOverviewSurface() {
                   </div>;
                 })}
               </CardContent></Card>
-            ) : <div className="rounded-xl border border-dashed p-12 text-center xl:flex xl:flex-1 xl:flex-col xl:items-center xl:justify-center"><p className="type-empty-title">{t("home.upcoming.emptyTitle")}</p></div>}
+            ) : <EmptyState className="xl:flex xl:flex-1 xl:flex-col xl:items-center xl:justify-center" title={t("home.upcoming.emptyTitle")} />}
             <UpcomingDetails appointments={summary.data?.upcoming ?? []} id={detailsId} onClose={() => setDetailsId(null)} />
           </section>
         </div>

@@ -16,6 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { intlLocale } from "@/lib/locale";
 import { requestJson } from "@/lib/request-json";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export type UnansweredQuestion = { id: string; question: string; timesAsked: number; firstAskedAt: string; lastAskedAt: string; lastChannel: string };
 export type UnansweredQuestions = { questions: UnansweredQuestion[]; openCount: number };
@@ -127,6 +128,6 @@ export function UnansweredQuestionsSection({ businessId, canManage, layoutSettle
           </Fragment>;
         })}
       </ItemGroup></CardContent></Card>
-      : <div className="rounded-xl border border-dashed p-8 text-center"><p className="type-empty-title">{t("unansweredQuestions.emptyTitle")}</p><p className="type-empty-description mt-2">{t("unansweredQuestions.emptyDescription")}</p></div>}
+      : <EmptyState description={t("unansweredQuestions.emptyDescription")} title={t("unansweredQuestions.emptyTitle")} />}
   </section>;
 }

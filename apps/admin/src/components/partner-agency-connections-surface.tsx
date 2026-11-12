@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Surface } from "@/components/ui/surface";
 import { intlLocale } from "@/lib/locale";
 import { requestJson } from "@/lib/request-json";
+import { EmptyState } from "@/components/ui/empty-state";
 
 /**
  * The console's MCP connections, under its API keys: MCP clients such as Claude or Cursor
@@ -43,10 +44,10 @@ export function PartnerAgencyConnectionsSurface() {
   return (
     <>
       <SectionBlock title={t("agencyConnections.title")}>
-        <Surface>
-          {grants.isLoading ? <div className="p-6"><Skeleton className="h-24 w-full rounded-xl" /></div> : rows.length === 0 ? (
-            <p className="type-body-muted p-6 text-center">{t("agencyConnections.empty")}</p>
-          ) : (
+        {grants.isLoading ? <Surface><div className="p-6"><Skeleton className="h-24 w-full rounded-xl" /></div></Surface> : rows.length === 0 ? (
+          <EmptyState title={t("agencyConnections.empty")} />
+        ) : (
+          <Surface>
             <CredentialList label={t("agencyConnections.title")}>
               {rows.map((grant) => (
                 <CredentialRow
@@ -57,8 +58,8 @@ export function PartnerAgencyConnectionsSurface() {
                 />
               ))}
             </CredentialList>
-          )}
-        </Surface>
+          </Surface>
+        )}
       </SectionBlock>
 
       <ConfirmActionDialog

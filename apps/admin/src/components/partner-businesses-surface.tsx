@@ -34,6 +34,7 @@ import { requestJson } from "@/lib/request-json";
 import { availableTimeZones, groupTimeZones, isTimeZoneRegion, type TimeZoneOption } from "@/lib/time-zones";
 import { Status } from "@/components/ui/status";
 import { INVITATION_STATUS_VARIANTS, PACKAGE_SUBSCRIPTION_STATUS_VARIANTS } from "@/lib/status-variants";
+import { EmptyState } from "@/components/ui/empty-state";
 
 /** What a business is sold, with its overage in the package's currency, which only owners and admins see. */
 type PackageBilling = { kind: "package"; packageId: string; packageName: string; status: PackageSubscriptionStatus; overage: PackageOverage };
@@ -416,10 +417,7 @@ export function PartnerBusinessesSurface() {
       ) : businesses.isError ? (
         <Surface className="px-6 py-8"><p className="type-body-muted" role="alert">{t("businesses.loadFailed")}</p></Surface>
       ) : rows.length === 0 ? (
-        <Surface className="flex flex-col items-center gap-3 px-6 py-16 text-center">
-          <h2 className="type-card-title">{t("businesses.empty.title")}</h2>
-          {canCreate ? null : <p className="max-w-sm type-body-muted">{t("businesses.empty.memberDescription")}</p>}
-        </Surface>
+        <EmptyState description={canCreate ? undefined : t("businesses.empty.memberDescription")} title={t("businesses.empty.title")} />
       ) : (
         <Surface className="overflow-hidden p-0">
           <Table>
