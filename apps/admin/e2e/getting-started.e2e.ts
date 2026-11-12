@@ -2,7 +2,7 @@ import { expect, test, type Page, type TestInfo } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 
-import { businesses, createDatabaseClient } from "@lobbystack/db";
+import { businesses, createDatabaseClient, websiteIngestionJobs } from "@lobbystack/db";
 
 import common from "../public/locales/en/common.json" with { type: "json" };
 import dashboard from "../public/locales/en/dashboard.json" with { type: "json" };
@@ -100,6 +100,34 @@ test("Home shows Getting started above the dashboard until the owner skips setup
     await expect(dailyView(page)).toBeVisible();
     await expect(list(page)).toHaveCount(0);
   } finally {
+    await removeFixtures(database, email, businessId);
+    await database.pool.end();
+  }
+});
+
+test("Getting started says a website read stalled, and Try again starts it again", async ({ page }, testInfo) => {
+  test.setTimeout(120_000);
+  const database = migrator();
+  const email = `${prefix}-${randomUUID()}@example.invalid`;
+  let businessId: string | undefined;
+  try {
+    businessId = await newOwner(page, testInfo, database, email);
+    // A crawl the worker started 20 minutes ago and never reported on again, as when it crashed.
+    const documentId = randomUUID();
+    await database.db.execute(sql`update public.businesses set website_url = 'https://stalled.example.invalid/' where id = ${businessId}`);
+    await database.db.execute(sql`insert into public.knowledge_documents (id, business_id, source_type, title, source_url, status) values (${documentId}, ${businessId}, 'website', 'https://stalled.example.invalid/', 'https://stalled.example.invalid/', 'processing')`);
+    await database.db.execute(sql`insert into public.website_ingestion_jobs (business_id, root_document_id, website_url, provider, status, page_limit, created_at, updated_at) values (${businessId}, ${documentId}, 'https://stalled.example.invalid/', 'firecrawl', 'crawling', 50, now() - interval '20 minutes', now() - interval '20 minutes')`);
+    await page.goto("/");
+    await expect(list(page)).toBeVisible();
+    await expect(page.getByText(common.websiteImport.stalledTitle.replace("{{host}}", "stalled.example.invalid"), { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: dashboard.setupGuide.skipStep, exact: true }).first()).toBeVisible();
+    await page.getByRole("button", { name: dashboard.setupGuide.stepActions.tryAgain, exact: true }).click();
+    // The read starts over, and the step shows it running again.
+    await expect(page.getByText(common.websiteImport.inlineRunning.replace("{{host}}", "stalled.example.invalid").replace("{{count}}", "0"), { exact: true })).toBeVisible();
+    const [job] = await database.db.select({ status: websiteIngestionJobs.status }).from(websiteIngestionJobs).where(eq(websiteIngestionJobs.rootDocumentId, documentId));
+    expect(job?.status).toBe("queued");
+  } finally {
+    if (businessId) await database.db.execute(sql`delete from public.outbox_messages where business_id = ${businessId}`);
     await removeFixtures(database, email, businessId);
     await database.pool.end();
   }

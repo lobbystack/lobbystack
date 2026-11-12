@@ -1,7 +1,7 @@
-// Calls a receptionist's number with a scripted caller, to test a real phone
+// Calls an agent's number with a scripted caller, to test a real phone
 // line end to end. After the scripted lines, the caller stays silent for 15
 // seconds, or the scenario's endSilenceMs, so a call much shorter than its
-// script means the receptionist hung up. See docs/voice/testing.md.
+// script means the agent hung up. See docs/voice/testing.md.
 //
 // TWILIO_ACCOUNT_SID=... TWILIO_AUTH_TOKEN=... pnpm voice:call --from <number> --to <number> [--scenario <name>]...
 
@@ -24,7 +24,7 @@ const { values } = parseArgs({
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
 if (!accountSid || !authToken) throw new Error("Set TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN for the account that owns --from.");
-if (!values.from || !values.to) throw new Error("Pass --from (a number on that Twilio account) and --to (the receptionist's number).");
+if (!values.from || !values.to) throw new Error("Pass --from (a number on that Twilio account) and --to (the agent's number).");
 const client = twilio(accountSid, authToken);
 
 for (const scenario of findScenarios(values.scenario)) {
@@ -38,8 +38,8 @@ for (const scenario of findScenarios(values.scenario)) {
     status = fetched.status;
     duration = Number(fetched.duration ?? 0);
   }
-  // The script's silences alone outlast a call the receptionist ended.
+  // The script's silences alone outlast a call the agent ended.
   const hungUp = status === "completed" && duration < silenceS;
   const passed = scenario.expect === "ends" ? hungUp : status === "completed" && !hungUp;
-  console.log(`${passed ? "PASS" : "FAIL"} ${scenario.name.padEnd(17)} ${call.sid} ${status} ${duration} s, ${hungUp ? "the receptionist hung up" : "the script hung up"}`);
+  console.log(`${passed ? "PASS" : "FAIL"} ${scenario.name.padEnd(17)} ${call.sid} ${status} ${duration} s, ${hungUp ? "the agent hung up" : "the script hung up"}`);
 }

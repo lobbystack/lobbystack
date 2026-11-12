@@ -98,7 +98,7 @@ The release runs the migrator, then the worker, then the admin, and the previous
 - The previous worker saves every page it crawls with no agent and no `website_document_id`. For an agent-only import, the trigger `knowledge_documents_scope_crawled_page` from 0208 gives such a page the agent and website of the import crawling its host, as long as that import is still processing and no shared import holds the host. A page it saves for a shared website keeps `agent_id` null, and joins its website on the next re-import. Until then, a website switched off in that window can still answer from it, and the listing groups it by host.
 - The previous admin doesn't check scopes, so an owner on it can add a website whose host is already another scope's.
 
-The release after this one drops the trigger and `app.scope_crawled_page_like_its_import()`.
+Migration 0214, in the release after this one, dropped the trigger and `app.scope_crawled_page_like_its_import()`.
 
 ## Open questions
 

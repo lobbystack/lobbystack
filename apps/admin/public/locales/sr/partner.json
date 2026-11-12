@@ -552,7 +552,7 @@
   },
   "apiKeys": {
     "title": "API ključevi",
-    "empty": "Još nema API ključeva.",
+    "empty": "Još nema API ključeva",
     "createdOn": "Kreiran {{date}}",
     "lastUsed": "Poslednji put korišćen {{date}}",
     "neverUsed": "Nikad korišćen",

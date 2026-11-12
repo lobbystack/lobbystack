@@ -2,7 +2,7 @@ import { expect, type Page, type TestInfo } from "@playwright/test";
 import { createHmac, randomBytes, randomUUID } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 
-import { billingAccounts, businesses, createDatabaseClient, phoneNumbers } from "@lobbystack/db";
+import { billingAccounts, businesses, createDatabaseClient, phoneNumbers, defaultAgentIdOf } from "@lobbystack/db";
 
 import onboardingEnglish from "../../public/locales/en/onboarding.json" with { type: "json" };
 import onboardingFrench from "../../public/locales/fr/onboarding.json" with { type: "json" };
@@ -76,7 +76,7 @@ export const twilioPhoneSid = () => `PN${randomBytes(16).toString("hex")}`;
 /** An active number the business already holds, as a finished claim leaves it. */
 export async function holdNumber(database: Migrator, businessId: string, input: { carrier: "twilio" | "telnyx"; providerPhoneId?: string; e164?: string }): Promise<{ id: string; e164: string }> {
   const e164 = input.e164 ?? randomE164();
-  const [row] = await database.db.insert(phoneNumbers).values({ businessId, e164, carrier: input.carrier, providerPhoneId: input.providerPhoneId ?? null, status: "active", voiceEnabled: true, smsEnabled: true }).returning({ id: phoneNumbers.id });
+  const [row] = await database.db.insert(phoneNumbers).values({ businessId, agentId: defaultAgentIdOf(businessId), e164, carrier: input.carrier, providerPhoneId: input.providerPhoneId ?? null, status: "active", voiceEnabled: true, smsEnabled: true }).returning({ id: phoneNumbers.id });
   return { id: row!.id, e164 };
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode, type Ref } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -32,7 +32,7 @@ import { cn } from "@/lib/utils";
 
 export type { CalendarView };
 
-/** A booking being made in the side panel, drawn on the grid until it's saved or dropped. */
+/** A booking being made from a slot, drawn on the grid until it's saved or dropped. */
 export type CalendarDraft = { startsAt: string; endsAt: string; colorKey?: string | undefined };
 
 /** Lines a month cell has room for under its day number. */
@@ -58,9 +58,11 @@ type CalendarProps = {
   onOpenAppointment: (id: string) => void;
   /** Absent for roles that can't change time off. */
   onOpenTimeOff?: ((id: string) => void) | undefined;
-  /** Absent for roles that can't book. */
-  onCreateAt?: ((startsAt: string) => void) | undefined;
+  /** Absent for roles that can't book. Gets the clicked slot too, to place the booking beside it. */
+  onCreateAt?: ((startsAt: string, slot: HTMLElement) => void) | undefined;
   draft?: CalendarDraft | null | undefined;
+  /** The drawn draft, for the booking popover to sit beside. */
+  draftRef?: Ref<HTMLDivElement> | undefined;
   /** True while the shown range reloads. */
   busy?: boolean;
   /** Rendered after the Day/Week/Month switch, such as the page's List/Calendar switch. */
@@ -176,7 +178,7 @@ function TimeGrid(props: CalendarProps & { onOpenDay: (day: string) => void }) {
   return (
     <div className="overflow-hidden rounded-xl border">
       <div className="max-h-[min(70svh,44rem)] overflow-auto" data-testid="calendar-time-grid" ref={scroller}>
-        {/* Narrow enough that a week fits beside the booking panel at a laptop width; narrower than this, the grid scrolls. */}
+        {/* Narrower than this, a week scrolls sideways. */}
         <div className={cn(days.length > 1 && "min-w-[30rem]")}>
           <div className="sticky top-0 z-40 grid border-b bg-background" style={template}>
             <div aria-hidden="true" />
@@ -223,7 +225,7 @@ function TimeGrid(props: CalendarProps & { onOpenDay: (day: string) => void }) {
                   })}
                   {props.onCreateAt ? slotStarts(range.start, range.end).filter((start) => start < length && Date.parse(instantAt(column.day, start + SLOT_MINUTES, timeZone)) > now).map((start) => {
                     const startsAt = instantAt(column.day, start, timeZone);
-                    return <button aria-label={t("appointments.calendarView.newAt", { time: formatDateTime(startsAt, i18n.language, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone }) })} className="absolute inset-x-0 z-0 outline-none hover:bg-muted/60 focus-visible:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset" data-starts-at={startsAt} key={start} onClick={() => props.onCreateAt!(startsAt)} style={{ top: ((start - range.start * 60) * HOUR_HEIGHT) / 60, height: (SLOT_MINUTES * HOUR_HEIGHT) / 60 }} tabIndex={-1} type="button" />;
+                    return <button aria-label={t("appointments.calendarView.newAt", { time: formatDateTime(startsAt, i18n.language, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone }) })} className="absolute inset-x-0 z-0 outline-none hover:bg-muted/60 focus-visible:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset" data-starts-at={startsAt} key={start} onClick={(event) => props.onCreateAt!(startsAt, event.currentTarget)} style={{ top: ((start - range.start * 60) * HOUR_HEIGHT) / 60, height: (SLOT_MINUTES * HOUR_HEIGHT) / 60 }} tabIndex={-1} type="button" />;
                   }) : null}
                   {column.closures.map((segment) => {
                     const entry = timeOffById.get(segment.id)!;
@@ -264,7 +266,7 @@ function TimeGrid(props: CalendarProps & { onOpenDay: (day: string) => void }) {
                   {column.draft ? (() => {
                     const { top, height: draftHeight } = blockPosition(inRange(column.draft), range.start);
                     return (
-                      <div className={cn("pointer-events-none absolute inset-x-0.5 z-30 flex flex-col overflow-hidden rounded-md border-2 border-dashed px-1.5 py-0.5 type-caption leading-4 shadow-md", draft?.colorKey ? serviceColorClasses(draft.colorKey) : "border-primary bg-background text-foreground")} data-testid="calendar-draft" style={{ top, height: draftHeight }}>
+                      <div className={cn("pointer-events-none absolute inset-x-0.5 z-30 flex flex-col overflow-hidden rounded-md border-l-[3px] px-1.5 py-0.5 type-caption leading-4 shadow-lg ring-2 ring-background", draft?.colorKey ? serviceColorClasses(draft.colorKey) : "border-primary bg-primary text-primary-foreground")} data-testid="calendar-draft" ref={props.draftRef} style={{ top, height: draftHeight }}>
                         <span className="truncate font-medium">{t("appointments.create.title")}</span>
                         <span className="truncate tabular-nums">{labels.range(draft!.startsAt, draft!.endsAt)}</span>
                       </div>

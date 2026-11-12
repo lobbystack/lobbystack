@@ -51,19 +51,40 @@ function stubDecode(buffer: unknown | Error) {
 const waveformProps = { downloadLabel: "Download", initialDurationSeconds: 60, pauseLabel: "Pause", playLabel: "Play", seekLabel: "Seek in recording", src: "https://recordings.test/a.wav", waveform: true };
 
 it("draws flat bars and keeps the seek control until the recording is decoded", async () => {
-  const { fetchRecording } = stubDecode({ getChannelData: () => new Float32Array(1200).fill(0.5), length: 1200, numberOfChannels: 1 });
+  vi.stubGlobal("AudioContext", class {
+    decodeAudioData() { return new Promise(() => {}); }
+    close() { return Promise.resolve(); }
+  });
+  const fetchRecording = vi.fn(async () => new Response(new ArrayBuffer(8)));
+  vi.stubGlobal("fetch", fetchRecording);
   const { getByRole } = render(<CallRecordingPlayer {...waveformProps} />);
 
+  await vi.waitFor(() => expect(fetchRecording).toHaveBeenCalledTimes(1));
   const seek = getByRole("slider", { name: "Seek in recording" });
   const bars = [...seek.querySelectorAll("span")];
   expect(bars).toHaveLength(120);
   expect(parseFloat(bars[0]!.style.height)).toBeCloseTo(15, 3);
-  expect(fetchRecording).not.toHaveBeenCalled();
 });
 
-it("loads the recording on the first play", async () => {
-  const { fetchRecording } = stubDecode({ getChannelData: () => new Float32Array(1200).fill(0.5), length: 1200, numberOfChannels: 1 });
+it("decodes the recording when the player mounts, before anything plays", async () => {
+  const samples = new Float32Array(1200).fill(0.1);
+  samples.fill(1, 0, 600);
+  const { fetchRecording } = stubDecode({ getChannelData: () => samples, length: samples.length, numberOfChannels: 1 });
+  const play = vi.spyOn(HTMLMediaElement.prototype, "play");
   const { getByRole } = render(<CallRecordingPlayer {...waveformProps} />);
+  const seek = getByRole("slider", { name: "Seek in recording" });
+
+  await vi.waitFor(() => expect(seek.querySelectorAll("span")[0]!.style.height).toBe("100%"));
+  expect(fetchRecording).toHaveBeenCalledTimes(1);
+  expect(fetchRecording).toHaveBeenCalledWith(waveformProps.src, expect.anything());
+  expect(play).not.toHaveBeenCalled();
+  expect(getByRole("button", { name: "Play" })).toBeTruthy();
+});
+
+it("waits for the first play to load a recording without a waveform", async () => {
+  const { fetchRecording } = stubDecode({ getChannelData: () => new Float32Array(1200).fill(0.5), length: 1200, numberOfChannels: 1 });
+  const { getByRole } = render(<CallRecordingPlayer {...waveformProps} waveform={false} />);
+  expect(fetchRecording).not.toHaveBeenCalled();
 
   await act(async () => { getByRole("button", { name: "Play" }).click(); });
   await vi.waitFor(() => expect(fetchRecording).toHaveBeenCalledTimes(1));
@@ -76,14 +97,13 @@ it("draws the loudness of the recording as bars once it is decoded", async () =>
   const { getByRole } = render(<CallRecordingPlayer {...waveformProps} />);
   const seek = getByRole("slider", { name: "Seek in recording" });
 
-  await act(async () => { getByRole("button", { name: "Play" }).click(); });
   await vi.waitFor(() => expect(seek.querySelectorAll("span")[0]!.style.height).toBe("100%"));
   const bars = [...seek.querySelectorAll("span")];
   expect(bars).toHaveLength(120);
   expect(parseFloat(bars[119]!.style.height)).toBeCloseTo(10, 3);
 });
 
-it("seeks from the keyboard on the waveform, loading the recording if needed", async () => {
+it("seeks from the keyboard on the waveform", async () => {
   const { fetchRecording } = stubDecode({ getChannelData: () => new Float32Array(1200).fill(0.5), length: 1200, numberOfChannels: 1 });
   const { findByRole } = render(<CallRecordingPlayer {...waveformProps} />);
   const seek = await findByRole("slider", { name: "Seek in recording" });
@@ -95,10 +115,68 @@ it("seeks from the keyboard on the waveform, loading the recording if needed", a
 
 it("falls back to the slider when the recording can't be decoded", async () => {
   stubDecode(new Error("bad audio"));
-  const { container, getByRole, queryByRole } = render(<CallRecordingPlayer {...waveformProps} />);
-  await act(async () => { getByRole("button", { name: "Play" }).click(); });
+  const { container, queryByRole } = render(<CallRecordingPlayer {...waveformProps} />);
   await vi.waitFor(() => expect(container.querySelector("[data-slot='slider']")).not.toBeNull());
   expect(queryByRole("slider", { name: "Seek in recording" })).toBeNull();
+});
+
+describe("waveform layout", () => {
+  /** Reports `width` for every observed element, the way the browser would once the row is laid out. */
+  function stubWidth(width: number) {
+    vi.stubGlobal("ResizeObserver", class {
+      constructor(private readonly callback: ResizeObserverCallback) {}
+      observe(target: Element) { this.callback([{ target, contentRect: { width } } as unknown as ResizeObserverEntry], this as unknown as ResizeObserver); }
+      disconnect() {}
+      unobserve() {}
+    });
+  }
+
+  it("takes the rest of the row, and moves to a line of its own under play, time and download when the player is narrow", () => {
+    stubDecode({ getChannelData: () => new Float32Array(1200).fill(0.5), length: 1200, numberOfChannels: 1 });
+    const { container, getByRole } = render(<CallRecordingPlayer {...waveformProps} />);
+    const classes = (element: Element) => element.className.split(" ");
+    // The player is its own size container: under 12rem the row is a grid, from 12rem one flex line.
+    expect(classes(container.firstElementChild!)).toContain("@container/recording");
+    const row = container.querySelector("[data-slot='recording-row']")!;
+    expect(classes(row)).toEqual(expect.arrayContaining(["grid", "grid-cols-[auto_minmax(0,1fr)_auto]", "@min-[12rem]/recording:flex"]));
+    const seek = getByRole("slider", { name: "Seek in recording" });
+    expect(classes(seek)).toEqual(expect.arrayContaining(["flex", "flex-1", "min-w-12", "col-span-full", "row-start-2"]));
+    expect(classes(container.querySelector("[data-slot='recording-time']")!)).toEqual(expect.arrayContaining(["min-w-0", "shrink", "truncate"]));
+    expect(classes(getByRole("button", { name: "Play" }))).toContain("shrink-0");
+    expect(classes(getByRole("link", { name: "Download" }))).toContain("shrink-0");
+    // The DOM order is the one-line order, so the flex row reads play, waveform, time, download.
+    expect([...row.children].map((child) => child.getAttribute("aria-label") ?? child.getAttribute("data-slot"))).toEqual(["Play", "Seek in recording", "recording-time", "Download"]);
+    // No bar hides behind a breakpoint: the count follows the width instead.
+    expect([...seek.querySelectorAll("span")].some((bar) => bar.className.includes("hidden"))).toBe(false);
+  });
+
+  it("draws fewer, wider bars when the row is narrow, keeping the loudest of each group", async () => {
+    stubWidth(89);
+    const samples = new Float32Array(1200).fill(0.1);
+    samples.fill(1, 0, 10);
+    stubDecode({ getChannelData: () => samples, length: samples.length, numberOfChannels: 1 });
+    const { getByRole } = render(<CallRecordingPlayer {...waveformProps} />);
+    const seek = getByRole("slider", { name: "Seek in recording" });
+
+    await vi.waitFor(() => expect(seek.querySelectorAll("span")[0]!.style.height).toBe("100%"));
+    const bars = [...seek.querySelectorAll("span")];
+    expect(bars).toHaveLength(30);
+    expect(parseFloat(bars[1]!.style.height)).toBeCloseTo(10, 3);
+  });
+
+  it("keeps a few bars even when the waveform is at its narrowest", () => {
+    stubWidth(10);
+    stubDecode({ getChannelData: () => new Float32Array(1200).fill(0.5), length: 1200, numberOfChannels: 1 });
+    const { getByRole } = render(<CallRecordingPlayer {...waveformProps} />);
+    expect(getByRole("slider", { name: "Seek in recording" }).querySelectorAll("span")).toHaveLength(8);
+  });
+
+  it("draws every bar on a wide row", () => {
+    stubWidth(1200);
+    stubDecode({ getChannelData: () => new Float32Array(1200).fill(0.5), length: 1200, numberOfChannels: 1 });
+    const { getByRole } = render(<CallRecordingPlayer {...waveformProps} />);
+    expect(getByRole("slider", { name: "Seek in recording" }).querySelectorAll("span")).toHaveLength(120);
+  });
 });
 
 describe("space bar on the waveform player", () => {

@@ -106,7 +106,7 @@ export function PartnerShell({ billingPage = false, businessDashboard = false, c
             ref={contentScrollRef}
             className="@container/content min-h-0 overflow-x-hidden overflow-y-auto overscroll-contain"
           >
-            <SiteHeader fixed scrollContainerRef={contentScrollRef} />
+            <SiteHeader fixed />
             <Main id="partner-main-content" tabIndex={-1} className="flex flex-1 flex-col">
               {children}
             </Main>

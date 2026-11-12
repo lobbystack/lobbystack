@@ -26,6 +26,7 @@ import { parsePriceInput } from "@/lib/price-input";
 import { requestJson } from "@/lib/request-json";
 import { Status } from "@/components/ui/status";
 import { PACKAGE_STATUS_VARIANTS } from "@/lib/status-variants";
+import { EmptyState } from "@/components/ui/empty-state";
 
 /** A package as GET /api/partner/packages lists it. Amounts are in the currency's smallest unit. */
 type PartnerPackage = {
@@ -171,7 +172,7 @@ export function PartnerPackagesSurface() {
   const createDialog = currency ? (
     <Dialog onOpenChange={(next) => { setCreateOpen(next); if (!next) { setDraft(EMPTY_DRAFT); setCreateError(null); setCreateSubmitted(false); } }} open={createOpen}>
       <DialogTrigger render={<Button size="sm" />}>{t("packages.create.action")}</DialogTrigger>
-      <DialogContent size="sm">
+      <DialogContent>
         <form className="flex flex-col gap-6" noValidate onSubmit={(event) => { event.preventDefault(); setCreateSubmitted(true); if (!create.isPending && draft.name.trim() && draft.price.trim()) { setCreateError(null); create.mutate(); } }}>
           <DialogHeader>
             <DialogTitle>{t("packages.create.title")}</DialogTitle>
@@ -231,10 +232,7 @@ export function PartnerPackagesSurface() {
         </Surface>
       ) : null}
       {data.packages.length === 0 ? (
-        <Surface className="flex flex-col items-center gap-3 px-6 py-16 text-center">
-          <h2 className="type-card-title">{t("packages.empty.title")}</h2>
-          {data.stripe.configured ? null : <p className="max-w-sm type-body-muted">{t("packages.empty.noStripe")}</p>}
-        </Surface>
+        <EmptyState description={data.stripe.configured ? undefined : t("packages.empty.noStripe")} title={t("packages.empty.title")} />
       ) : (
         <Surface className="overflow-hidden p-0">
           <Table>

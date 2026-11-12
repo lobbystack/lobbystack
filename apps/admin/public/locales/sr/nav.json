@@ -117,7 +117,6 @@
   },
   "accountMenu": "Meni naloga",
   "agentMenu": {
-    "conversations": "Razgovori",
     "noChannels": "Još nema kanala"
   },
   "agents": {
@@ -149,7 +148,7 @@
     "madeDefault": "{{name}} je sada podrazumevani agent",
     "makeDefaultFailed": "Nismo uspeli da promenimo podrazumevanog agenta.",
     "remove": "Ukloni agenta",
-    "removeDefaultHint": "Prvo postavite drugog podrazumevanog agenta",
+    "removeDefaultHint": "Prvo postavite drugog podrazumevanog",
     "removeTitle": "Ukloniti agenta {{name}}?",
     "removeDescription": "Njegovi kanali i otvoreni razgovori prelaze na agenta {{name}}.",
     "removeDescriptionPick": "Njegovi kanali i otvoreni razgovori prelaze na agenta kog izaberete.",

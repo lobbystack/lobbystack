@@ -20,7 +20,7 @@ export const INSTAGRAM_TOKEN_REFRESH_BEFORE_MS = 14 * 24 * 60 * 60_000;
 const INSTAGRAM_TOKEN_MIN_AGE_MS = 24 * 60 * 60_000;
 const INSTAGRAM_DELIVERY_LEASE_MS = 10 * 60_000;
 /**
- * This many receptionist replies in the window means another bot is probably
+ * This many agent replies in the window means another bot is probably
  * answering back: a loop replies every few seconds, while a person asking
  * quick follow-ups takes far longer between messages.
  */
@@ -60,7 +60,7 @@ export async function connectInstagramAccount(
     const [previous] = await tx.select({ instagramUserId: instagramAccounts.instagramUserId }).from(instagramAccounts).where(eq(instagramAccounts.businessId, input.businessId)).limit(1).for("update");
     if (previous && previous.instagramUserId !== input.instagramUserId) await closeInstagramConversationsInTransaction(tx, input.businessId, now);
     const values = { connectedByUserId: input.userId, instagramUserId: input.instagramUserId, username: input.username ?? null, encryptedAccessToken: input.encryptedAccessToken, tokenExpiresAt: input.tokenExpiresAt, status: "connected", lastError: null, updatedAt: now };
-    const [account] = await tx.insert(instagramAccounts).values({ businessId: input.businessId, ...values })
+    const [account] = await tx.insert(instagramAccounts).values({ businessId: input.businessId, agentId: defaultAgentIdOf(input.businessId), ...values })
       .onConflictDoUpdate({ target: instagramAccounts.businessId, set: values })
       .returning({ id: instagramAccounts.id, agentId: instagramAccounts.agentId });
     await resolveBusinessNotificationsInTransaction(tx, { businessId: input.businessId, kinds: ["instagram_reconnect"], now });
@@ -134,7 +134,7 @@ async function findOrCreateInstagramContact(tx: DatabaseTransaction, input: { bu
 
 /**
  * Saves a direct message someone sent the business's Instagram account and,
- * while the receptionist answers the conversation, queues its reply. Meta
+ * while the agent answers the conversation, queues its reply. Meta
  * retries webhooks, so a message already saved is skipped.
  */
 export async function receiveInstagramMessage(
@@ -171,7 +171,7 @@ export type InstagramReplyContext = {
 };
 
 /**
- * What the receptionist needs to answer an Instagram message, or null when it
+ * What the agent needs to answer an Instagram message, or null when it
  * shouldn't: the team took the conversation over, a newer message arrived
  * (its own job answers them together), Instagram's 24-hour window closed, or
  * it has replied so often lately that the conversation goes to the team.
@@ -197,12 +197,12 @@ export async function loadInstagramReplyContext(context: DomainContext, input: {
 }
 
 /**
- * Whether the receptionist still answers `messageId`: the conversation is an
+ * Whether the agent still answers `messageId`: the conversation is an
  * open Instagram one it handles, the contact isn't blocked, and that message is
  * still the newest. A newer message has its own job, which answers them
  * together, and a reply that went out after it already answered it. Locks the
  * conversation, so the answer holds until the transaction ends. Returns the
- * conversation's agent, or null when the receptionist doesn't answer.
+ * conversation's agent, or null when the agent doesn't answer.
  */
 async function stillAnsweringInTransaction(tx: DatabaseTransaction, input: { businessId: string; conversationId: string; messageId: string }): Promise<{ agentId: string | null } | null> {
   const [conversation] = await tx.select({ automationState: conversations.automationState, channel: conversations.channel, status: conversations.status, contactBlockedAt: contacts.operatorBlockedAt, agentId: conversations.agentId })
@@ -214,7 +214,7 @@ async function stillAnsweringInTransaction(tx: DatabaseTransaction, input: { bus
   return latest?.id === input.messageId && latest.direction === "inbound" ? { agentId: conversation.agentId } : null;
 }
 
-/** Alerts the team to a message the receptionist acted on but couldn't finish answering. One alert per conversation each hour. */
+/** Alerts the team to a message the agent acted on but couldn't finish answering. One alert per conversation each hour. */
 export async function alertUnansweredInstagram(context: DomainContext, input: { businessId: string; conversationId: string }): Promise<void> {
   await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     await queueOperatorAlertInTransaction(tx, { businessId: input.businessId, eventKind: "aiReplyFailed", eventKey: `instagram-unanswered:${input.conversationId}:${new Date().toISOString().slice(0, 13)}`, subject: "Instagram message needs a reply", body: "The receptionist couldn't finish answering an Instagram message. Open Messages to reply." });
@@ -222,7 +222,7 @@ export async function alertUnansweredInstagram(context: DomainContext, input: { 
 }
 
 /**
- * Saves the receptionist's reply to `answeringMessageId` and queues it for
+ * Saves the agent's reply to `answeringMessageId` and queues it for
  * Instagram, or returns null when, while the reply was written, the team took
  * the conversation over or a newer message arrived.
  */

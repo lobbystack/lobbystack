@@ -4,7 +4,7 @@ import { Webhook } from "standardwebhooks";
 
 import { and, eq, inArray } from "drizzle-orm";
 
-import { businesses, createDatabaseClient, messages, outboxMessages, phoneNumbers, providerEvents } from "@lobbystack/db";
+import { businesses, createDatabaseClient, messages, outboxMessages, phoneNumbers, providerEvents, defaultAgentIdOf } from "@lobbystack/db";
 
 const postgresPort = process.env.POSTGRES_PORT ?? "15433";
 const postgresPassword = process.env.POSTGRES_PASSWORD ?? "replace-with-a-long-local-password";
@@ -45,7 +45,7 @@ async function main(): Promise<void> {
 
   try {
     await migrator.db.insert(businesses).values({ id: businessId, slug: `webhook-${suffix}`, name: "Webhook Check", timezone: "UTC", businessType: "service_company" });
-    await migrator.db.insert(phoneNumbers).values({ businessId, e164: businessPhone, providerPhoneId: `PN${suffix.replaceAll("-", "")}` });
+    await migrator.db.insert(phoneNumbers).values({ businessId, agentId: defaultAgentIdOf(businessId), e164: businessPhone, providerPhoneId: `PN${suffix.replaceAll("-", "")}` });
 
     const polarUrl = `${adminBaseUrl}/api/webhooks/polar`;
     const polarBody = JSON.stringify({ id: polarEventId, type: "order.created", timestamp: new Date().toISOString(), data: { businessId, id: `order-${suffix}` } });

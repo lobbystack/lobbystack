@@ -25,4 +25,15 @@ describe("Input", () => {
     expect(password.className).toContain("font-sans");
     expect(password.className).not.toContain("font-mono");
   });
+
+  it("drops the native look on date and time fields, so iOS keeps them inside the field's width", () => {
+    render(<><Input aria-label="date" type="date" /><Input aria-label="when" type="datetime-local" /><Input aria-label="name" type="text" /></>);
+    for (const label of ["date", "when"]) {
+      const field = screen.getByLabelText(label);
+      expect(field.className).toContain("appearance-none");
+      expect(field.className).toContain("min-w-0");
+      expect(field.className).toContain("h-10");
+    }
+    expect(screen.getByLabelText("name").className).not.toContain("appearance-none");
+  });
 });

@@ -2,7 +2,7 @@ import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
 import { and, eq, inArray, isNull, lt, lte, ne, or, sql } from "drizzle-orm";
 
-import { agentOfRow, agents, businesses, enqueueOutbox, numberTrials, onboardingNumberClaimEvents, phoneNumbers, users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { agentOfRow, agents, businesses, defaultAgentIdOf, enqueueOutbox, numberTrials, onboardingNumberClaimEvents, phoneNumbers, users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { isCarrierId, type CarrierId } from "@lobbystack/providers/telephony/types";
 
 import { requireBusinessAdmin } from "../authz";
@@ -436,7 +436,7 @@ export async function completeNumberProvisioning(context: DomainContext, input: 
     const offered = (await tx.select({ selection: onboardingNumberClaimEvents.selectionContext }).from(onboardingNumberClaimEvents).where(and(eq(onboardingNumberClaimEvents.id, input.claimId), eq(onboardingNumberClaimEvents.businessId, input.businessId))).limit(1))[0]?.selection;
     // Claims from before voice-only numbers didn't record texting; those numbers all text.
     const smsEnabled = offered?.sms !== false;
-    const [number] = existing ? [existing] : await tx.insert(phoneNumbers).values({ businessId: input.businessId, e164: input.e164, providerPhoneId: input.providerPhoneId, ...(input.carrier ? { carrier: input.carrier } : {}), ...(input.carrierConnectionId ? { carrierConnectionId: input.carrierConnectionId } : {}), status: "active", voiceEnabled: true, smsEnabled, voiceWebhookStatus: "synced", voiceWebhookTargetUrl: input.voiceUrl, voiceWebhookLastSyncedAt: new Date(), ...(input.smsUrl ? { smsWebhookStatus: "synced", smsWebhookTargetUrl: input.smsUrl, smsWebhookLastSyncedAt: new Date() } : {}) }).returning({ id: phoneNumbers.id });
+    const [number] = existing ? [existing] : await tx.insert(phoneNumbers).values({ businessId: input.businessId, agentId: defaultAgentIdOf(input.businessId), e164: input.e164, providerPhoneId: input.providerPhoneId, ...(input.carrier ? { carrier: input.carrier } : {}), ...(input.carrierConnectionId ? { carrierConnectionId: input.carrierConnectionId } : {}), status: "active", voiceEnabled: true, smsEnabled, voiceWebhookStatus: "synced", voiceWebhookTargetUrl: input.voiceUrl, voiceWebhookLastSyncedAt: new Date(), ...(input.smsUrl ? { smsWebhookStatus: "synced", smsWebhookTargetUrl: input.smsUrl, smsWebhookLastSyncedAt: new Date() } : {}) }).returning({ id: phoneNumbers.id });
     if (!number) throw new Error("Provisioned number could not be persisted.");
     if (input.monthlyCostCents !== undefined) await recordPartnerNumberCostInTransaction(tx, { businessId: input.businessId, phoneNumberId: number.id, monthlyCostCents: input.monthlyCostCents });
     const claim = (await tx.update(onboardingNumberClaimEvents).set({ status: "claimed", phoneNumberId: number.id, providerPhoneId: input.providerPhoneId, purchasedAt: new Date(), completedAt: new Date(), updatedAt: new Date() }).where(and(eq(onboardingNumberClaimEvents.id, input.claimId), eq(onboardingNumberClaimEvents.businessId, input.businessId), eq(onboardingNumberClaimEvents.status, "provisioning"))).returning({ purpose: onboardingNumberClaimEvents.purpose, replacingPhoneNumberId: onboardingNumberClaimEvents.replacingPhoneNumberId }))[0];
@@ -456,7 +456,7 @@ export async function completeNumberProvisioning(context: DomainContext, input: 
       // stays on the step it's on. A business past the number stays put too.
       await tx.update(businesses).set({ onboardingStage: sql`CASE WHEN ${businesses.onboardingStage} IN ('attribution', 'meet', 'choose_plan', 'complete') OR (${businesses.partnerId} IS NOT NULL AND ${businesses.onboardingStage} NOT IN ('phone_number', 'phone_number_claiming')) THEN ${businesses.onboardingStage} WHEN ${businesses.partnerId} IS NULL THEN 'attribution' ELSE 'meet' END`, updatedAt: new Date() }).where(eq(businesses.id, input.businessId));
     }
-    // Every number starts on the receptionist. With staff answers first on for the agent it reaches, routing moves this one to the webhook.
+    // Every number starts on the agent. With staff answers first on for the agent it reaches, routing moves this one to the webhook.
     const profile = (await tx.select({ staffFirstMode: agents.staffFirstMode }).from(phoneNumbers).innerJoin(agents, agentOfRow(phoneNumbers.businessId, phoneNumbers.agentId)).where(eq(phoneNumbers.id, number.id)).limit(1))[0];
     if (profile && profile.staffFirstMode !== "never") await enqueueNumberRouting(tx, { businessId: input.businessId, phoneNumberId: number.id, mode: "receptionist" });
     // The business has a number again.

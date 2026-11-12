@@ -156,7 +156,7 @@ describe("on a partner's host", () => {
     await expect(requireOnboardingStage("/onboarding/meet")).rejects.toThrow("redirect:/onboarding/verify-phone");
   });
 
-  it("keeps an activity-only owner to the phone, since the partner sets the receptionist up", async () => {
+  it("keeps an activity-only owner to the phone, since the partner sets the agent up", async () => {
     fixture.state = { businessId: "business-1", stage: "verify_phone", steps: ["verify_phone"] };
     for (const path of ["/onboarding/website", "/onboarding/language", "/onboarding/meet"]) {
       await expect(requireOnboardingStage(path)).rejects.toThrow("redirect:/onboarding/verify-phone");

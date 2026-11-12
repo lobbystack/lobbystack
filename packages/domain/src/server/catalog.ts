@@ -81,7 +81,7 @@ export async function createService(
   });
 }
 
-/** Adds a service and refreshes the receptionist snapshot. Callers authorize first. */
+/** Adds a service and refreshes the agent snapshot. Callers authorize first. */
 export async function insertServiceInTransaction(
   tx: DatabaseTransaction,
   input: { businessId: string; name: string; slug: string; durationMinutes: number; description?: string | undefined; active?: boolean | undefined; priceType?: ServicePriceType | undefined; priceMinor?: number | null | undefined; priceMaxMinor?: number | null | undefined },
@@ -221,7 +221,7 @@ export async function unassignStaffFromService(
  * Replaces the weekly hours a person set, in the dashboard or the API: the
  * listed windows, other days closed. A day can have several windows. Marks
  * the hours as the operator's, so AI never replaces them, unless only the
- * closures changed. Refreshes the receptionist snapshot. Given closures
+ * closures changed. Refreshes the agent snapshot. Given closures
  * replace every closure, including ones that already ended; without them,
  * closures stay as they are. Callers authorize first.
  */

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { RECEPTIONIST_INSTRUCTIONS_MAX_LENGTH, RECEPTIONIST_TEXT_MAX_LENGTH } from "../receptionist";
+import { AGENT_INSTRUCTIONS_MAX_LENGTH, AGENT_TEXT_MAX_LENGTH } from "../agentSettings";
 import { CONTACT_PASSCODES_MAX_PER_REQUEST, KNOWLEDGE_UPLOAD_MAX_BYTES } from "./constants";
 import { apiAgentSchema, apiCallSchema, apiMessageSchema, apiReceptionistSchema, apiAppointmentCreateSchema,apiAppointmentRescheduleSchema, apiContactCreateSchema, apiContactPasscodesGenerateSchema, apiContactPasscodesUpdateSchema, apiKnowledgeEntryCreateSchema, apiKnowledgeUploadCreateSchema, apiReceptionistUpdateSchema, parseApiInput } from "./schemas";
 
@@ -40,12 +40,12 @@ describe("parseApiInput", () => {
     expect(parseApiInput(apiKnowledgeEntryCreateSchema, { type: "video" })).toEqual({ ok: false, details: [{ path: "type", message: "Invalid input" }] });
   });
 
-  it("checks receptionist changes with the dashboard's limits", () => {
+  it("checks agent changes with the dashboard's limits", () => {
     expect(parseApiInput(apiReceptionistUpdateSchema, { summary: "Written by hand.", regenerate_summary: true })).toEqual({ ok: false, details: [{ path: "regenerate_summary", message: "Send summary or regenerate_summary, not both." }] });
     expect(parseApiInput(apiReceptionistUpdateSchema, { greeting: "  Hello.  ", transfer_number: null, regenerate_summary: true })).toEqual({ ok: true, data: { greeting: "Hello.", transfer_number: null, regenerate_summary: true } });
-    expect(parseApiInput(apiReceptionistUpdateSchema, { voice_instructions: "x".repeat(RECEPTIONIST_INSTRUCTIONS_MAX_LENGTH) }).ok).toBe(true);
+    expect(parseApiInput(apiReceptionistUpdateSchema, { voice_instructions: "x".repeat(AGENT_INSTRUCTIONS_MAX_LENGTH) }).ok).toBe(true);
     for (const bad of [
-      { greeting: "x".repeat(RECEPTIONIST_TEXT_MAX_LENGTH + 1) },
+      { greeting: "x".repeat(AGENT_TEXT_MAX_LENGTH + 1) },
       { greeting: null },
       { transfer_number: "416-555-0134" },
       { transfer_mode: "sometimes" },
@@ -102,7 +102,7 @@ describe("agents", () => {
     expect(apiCallSchema.safeParse({ ...call, agent_id: "front-desk" }).success).toBe(false);
   });
 
-  it("shows an agent's own settings and leaves the business summary to the receptionist", () => {
+  it("shows an agent's own settings and leaves the business summary to /receptionist", () => {
     expect(Object.keys(apiAgentSchema.shape)).toEqual(expect.arrayContaining(["id", "name", "is_default", "paused", "created_at", ...Object.keys(apiReceptionistSchema.shape).filter((key) => !key.startsWith("summary"))]));
     expect(apiAgentSchema.shape).not.toHaveProperty("summary");
     expect(apiAgentSchema.shape).not.toHaveProperty("summary_source");

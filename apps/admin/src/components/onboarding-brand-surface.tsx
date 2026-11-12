@@ -146,7 +146,7 @@ export function OnboardingBrandSurface({ askAppName, askLogo }: { askAppName: bo
             <div className="flex items-center gap-2">
               <label
                 className={cn(
-                  "flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-xl border border-dashed bg-card px-4 py-3 type-title transition-colors focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background",
+                  "flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-xl border border-dashed bg-card px-4 py-3 type-title transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50",
                   dragging ? "border-foreground/60 bg-muted/40" : "border-border hover:border-foreground/40 hover:bg-muted",
                 )}
                 onDragLeave={(event) => { event.preventDefault(); setDragging(false); }}
@@ -161,7 +161,7 @@ export function OnboardingBrandSurface({ askAppName, askLogo }: { askAppName: bo
                   onChange={(event) => { void pick(event.target.files?.[0]); event.target.value = ""; }}
                   type="file"
                 />
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted">
+                <span className={cn("flex size-10 shrink-0 items-center justify-center", logo && "rounded-xl bg-muted")}>
                   {logo ? <img alt="" className="size-6 object-contain" src={logo.previewUrl} /> : <ImageUp aria-hidden="true" className="size-4 text-muted-foreground" />}
                 </span>
                 <span>{t(logo ? "brand.logoChange" : "brand.logoChoose")}</span>

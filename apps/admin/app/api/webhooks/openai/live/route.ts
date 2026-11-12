@@ -161,7 +161,7 @@ async function answerCall(client: LiveClient, input: { sessionId: string; busine
       // retries a 503 once, then forwards to the number stored on the Telnyx
       // number. A staff-first number reaches GPT-Live from a <Dial>, so the
       // refusal comes back to that <Dial>'s action URL instead, which forwards
-      // the same way. A trial number also moves off the receptionist so later
+      // the same way. A trial number also moves off the agent so later
       // calls forward directly.
       await markNumberTrialMinutesExhausted(domain, { businessId: input.businessId }).catch((cause: unknown) => console.error("[live] couldn't switch the trial number to forwarding", cause instanceof Error ? cause.message : cause));
       await client.live.sessions.reject(input.sessionId, { status_code: 503 });

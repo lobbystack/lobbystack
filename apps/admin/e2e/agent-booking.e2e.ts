@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { test, expect, type Browser } from "@playwright/test";
 import { and, eq } from "drizzle-orm";
-import { agents, appointments, billingAccounts, businessHours, businesses, createDatabaseClient, inboxItems, outboxMessages, services, staff, users, widgetKeys, type Database } from "@lobbystack/db";
+import { agents, appointments, billingAccounts, businessHours, businesses, createDatabaseClient, inboxItems, outboxMessages, services, staff, users, widgetKeys, type Database, defaultAgentIdOf } from "@lobbystack/db";
 import { createBusiness, refreshBusinessSnapshot } from "@lobbystack/domain";
 import { startWidgetProvider } from "./fixtures/widget-provider";
 import english from "../public/locales/en/widget.json" with { type: "json" };
@@ -34,7 +34,7 @@ async function seedBusiness(database: Database, bookingMode: "instant" | "reques
   await database.insert(services).values({ businessId, name: "Drain cleaning", slug: "drain-cleaning", durationMinutes: 60 });
   await database.update(agents).set({ bookingMode }).where(eq(agents.businessId, businessId));
   const key = `agent-e2e-${randomUUID()}`;
-  await database.insert(widgetKeys).values({ businessId, keyHash: createHash("sha256").update(key).digest("hex"), allowedOrigins: ["http://localhost:18090"], config: { title: "Northside Plumbing", localeOverride: "en" } });
+  await database.insert(widgetKeys).values({ businessId, agentId: defaultAgentIdOf(businessId), keyHash: createHash("sha256").update(key).digest("hex"), allowedOrigins: ["http://localhost:18090"], config: { title: "Northside Plumbing", localeOverride: "en" } });
   await refreshBusinessSnapshot({ db: database }, { businessId });
   return { userId, businessId, key };
 }

@@ -11,7 +11,7 @@ export function isCarrierId(value: unknown): value is CarrierId {
 }
 
 /**
- * The carriers that forward a call the receptionist refuses to a number
+ * The carriers that forward a call the agent refuses to a number
  * stored on the carrier (see NumberRouting.forwardsRefusedCalls). Domain code
  * reads it to know which numbers to re-route when that number changes.
  */
@@ -88,19 +88,19 @@ export type NumberRoutingMode = "receptionist" | "fallback" | "staff_first";
 
 export interface NumberRouting {
   readonly carrier: CarrierId;
-  /** What's missing before a number can reach the receptionist, such as the SIP trunk; undefined when nothing is. Checked before a purchase. */
+  /** What's missing before a number can reach the agent, such as the SIP trunk; undefined when nothing is. Checked before a purchase. */
   missingSetup(): string | undefined;
   /**
-   * Whether the carrier forwards a call the receptionist refuses to a number
+   * Whether the carrier forwards a call the agent refuses to a number
    * stored on the carrier, rather than asking our voice webhook. Such a
    * carrier needs `refusedCallsForwardTo` each time the number is routed.
    */
   readonly forwardsRefusedCalls: boolean;
   /**
-   * Points the number's calls at the receptionist or the fallback webhook.
+   * Points the number's calls at the agent or the fallback webhook.
    * Returns where they now go, as the number's voice target. Throws when the
    * carrier's SIP path isn't configured. `refusedCallsForwardTo` is where a
-   * call the receptionist refuses goes, or null to let it fail.
+   * call the agent refuses goes, or null to let it fail.
    * `carrierConnectionId` is the connection only this number uses, for a
    * carrier whose calls name it instead of the dialled number.
    */

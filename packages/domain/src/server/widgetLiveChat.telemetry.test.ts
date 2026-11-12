@@ -46,7 +46,7 @@ describe("live chat telemetry", () => {
     expect(mocks.recordProductEvent).not.toHaveBeenCalled();
   });
 
-  it("records conversation.team_request_expired when the receptionist takes the chat back", async () => {
+  it("records conversation.team_request_expired when the agent takes the chat back", async () => {
     mocks.withBusinessTransaction.mockResolvedValue(true);
 
     await expect(expireTeamRequest(context, { ...chat, requestedAt: new Date(), locale: "fr" })).resolves.toEqual({ expired: true });

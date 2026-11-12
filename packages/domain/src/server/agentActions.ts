@@ -18,10 +18,10 @@ import { queueOperatorAlert } from "./notifications";
 import { recordProductEventBestEffort } from "./productEvents";
 import { CANCELLATION_REQUEST, createVoiceFollowUpTask, RESCHEDULE_REQUEST, type FollowUpRequest } from "./voice";
 
-// Actions the receptionist agent takes on a business's behalf, whatever the
+// Actions the agent takes on a business's behalf, whatever the
 // channel. Each one opens its own tenant-scoped transaction.
 
-export type ReceptionistChannel = "voice" | "web_voice" | "web_chat" | "instagram" | "sms";
+export type AgentActionChannel = "voice" | "web_voice" | "web_chat" | "instagram" | "sms";
 
 /** The active service with this id, or the one a caller's words name. */
 async function activeService(tx: DatabaseTransaction, businessId: string, service: { id: string } | { name: string }) {
@@ -105,7 +105,7 @@ async function earlierBooking(tx: DatabaseTransaction, input: { businessId: stri
  */
 export async function bookForCaller(
   context: DomainContext,
-  input: { businessId: string; service: { id: string } | { name: string }; startsAt: string; timezone: string; contactPhone: string; contactName?: string; channel: ReceptionistChannel | "api" | "dashboard"; callerPhone?: string; callId?: string; preferredStaffId?: string; smsConsent?: SmsConsentAnswer; apiAudit?: ApiAudit; operatorUserId?: string; durationMinutes?: number; notes?: string; internalNotes?: string },
+  input: { businessId: string; service: { id: string } | { name: string }; startsAt: string; timezone: string; contactPhone: string; contactName?: string; channel: AgentActionChannel | "api" | "dashboard"; callerPhone?: string; callId?: string; preferredStaffId?: string; smsConsent?: SmsConsentAnswer; apiAudit?: ApiAudit; operatorUserId?: string; durationMinutes?: number; notes?: string; internalNotes?: string },
 ): Promise<{ ok: true; appointmentId?: string; serviceName: string; startsAt: string; alreadyBooked?: true; employeeName?: string } | { ok: false; reason: BookingRefusal }> {
   const distinctId = getPostHogDistinctIdForBusinessSystem(input.businessId);
   const failed = async (reason: BookingRefusal | "unknown", serviceId?: string) => {
@@ -253,7 +253,7 @@ export async function rescheduleForCaller(
 
 export async function takeMessageForStaff(
   context: DomainContext,
-  input: { businessId: string; message: string; channel: ReceptionistChannel; callerName?: string; callbackPhone?: string; urgency?: string; callbackWindow?: string; callId?: string; conversationId?: string; request?: FollowUpRequest; agentId?: string },
+  input: { businessId: string; message: string; channel: AgentActionChannel; callerName?: string; callbackPhone?: string; urgency?: string; callbackWindow?: string; callId?: string; conversationId?: string; request?: FollowUpRequest; agentId?: string },
 ) {
   const alert = { eventKind: "voiceMessage" as const, subject: "New voice message", body: "A caller left a voice message. Open the inbox to review it." };
   // A website, Instagram or text conversation is the person's own thread: a staff
@@ -302,7 +302,7 @@ export async function requestCancellationForCaller(
   return await passAppointmentRequestToTeam(context, input, "cancellation");
 }
 
-type AppointmentRequestInput = { businessId: string; channel: ReceptionistChannel; timezone: string; callerName: string; appointmentStartsAt?: string; serviceName?: string; callbackPhone?: string; notes?: string; callId?: string; conversationId?: string; agentId?: string };
+type AppointmentRequestInput = { businessId: string; channel: AgentActionChannel; timezone: string; callerName: string; appointmentStartsAt?: string; serviceName?: string; callbackPhone?: string; notes?: string; callId?: string; conversationId?: string; agentId?: string };
 
 /**
  * Passes a caller's request to move an appointment to a new time to the team,

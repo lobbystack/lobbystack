@@ -13,7 +13,7 @@ export const docsLocales = ["en", "fr", "es"] as const;
 export type DocsLocale = (typeof docsLocales)[number];
 
 const icons: Record<SetupPromptId, string> = {
-  "no-code": "wand-magic-sparkles",
+  "no-code": "briefcase",
   saas: "code",
   "white-label": "palette",
   partner: "store",

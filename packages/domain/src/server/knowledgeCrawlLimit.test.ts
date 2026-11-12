@@ -164,6 +164,50 @@ describe("website crawl page limits", () => {
     expect(written.length).toBeGreaterThanOrEqual(2);
   });
 
+  it("keeps the page limit the crawl ran with when the dashboard tries a website again", async () => {
+    written.length = 0;
+    mocks.requireBusinessAdmin.mockReset();
+    const selected = [[{ pageLimit: ONBOARDING_CRAWL_PAGE_LIMIT }], [{ id: "doc_1", sourceType: "website", sourceUrl: "https://example.com", revision: 1 }]];
+    let call = 0;
+    mocks.withBusinessTransaction.mockImplementation(async (_db: unknown, _input: unknown, run: (tx: unknown) => Promise<unknown>) => await run({
+      select: () => recordingBuilder(selected[call++] ?? []),
+      insert: () => recordingBuilder([{ id: "job_1" }]),
+      update: () => recordingBuilder([]),
+      execute: () => recordingBuilder([]),
+    }));
+    await retryKnowledgeDocument(context, { userId: "user_1", businessId: "biz_1", documentId: "doc_1" });
+    expect(written.length).toBeGreaterThanOrEqual(1);
+    expect(written.every(row => row.pageLimit === ONBOARDING_CRAWL_PAGE_LIMIT)).toBe(true);
+  });
+
+  it("reads a site again when it's submitted while its crawl is stalled", async () => {
+    mocks.enqueueOutbox.mockClear();
+    const selected = [
+      [{ onboardingStage: "complete" }],
+      [{ id: "doc_1", sourceType: "website", sourceUrl: "https://example.com", revision: 2, status: "processing", agentId: null }],
+      [{ status: "queued", updatedAt: new Date(Date.now() - 20 * 60_000), dispatch: { createdAt: new Date(Date.now() - 20 * 60_000), publishedAt: null } }],
+    ];
+    let call = 0;
+    const tx = { select: () => builder(selected[call++] ?? []), insert: () => builder([{ id: "job_1" }]), update: () => builder([]), execute: () => builder([]) };
+    await createKnowledgeDocumentInTransaction(tx as never, { businessId: "biz_1", title: "https://example.com", sourceUrl: "https://example.com" });
+    const job = mocks.enqueueOutbox.mock.calls.at(-1)?.[1] as { topic: string; payload: Record<string, unknown> } | undefined;
+    expect(job?.topic).toBe("knowledge.crawlWebsite");
+    expect(job?.payload.revision).toBe(3);
+  });
+
+  it("leaves a crawl that's still moving alone when its site is submitted again", async () => {
+    mocks.enqueueOutbox.mockClear();
+    const selected = [
+      [{ onboardingStage: "complete" }],
+      [{ id: "doc_1", sourceType: "website", sourceUrl: "https://example.com", revision: 2, status: "processing", agentId: null }],
+      [{ status: "crawling", updatedAt: new Date(), dispatch: null }],
+    ];
+    let call = 0;
+    const tx = { select: () => builder(selected[call++] ?? []), insert: () => builder([{ id: "job_1" }]), update: () => builder([]), execute: () => builder([]) };
+    await createKnowledgeDocumentInTransaction(tx as never, { businessId: "biz_1", title: "https://example.com", sourceUrl: "https://example.com" });
+    expect(mocks.enqueueOutbox).not.toHaveBeenCalled();
+  });
+
   it("keeps the onboarding sample well below the full read", () => {
     expect(ONBOARDING_CRAWL_PAGE_LIMIT).toBeLessThan(FULL_CRAWL_PAGE_LIMIT);
   });

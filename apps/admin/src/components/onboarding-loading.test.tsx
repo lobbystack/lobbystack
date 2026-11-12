@@ -93,10 +93,12 @@ describe("onboarding steps while they load", () => {
     expect(busy.querySelectorAll("[data-slot='skeleton']")).toHaveLength(15);
   });
 
-  it("holds a place for the crawl card while the knowledge list answers", () => {
+  it("holds the reading line and bar under the slide while the knowledge list answers", () => {
     renderLoading(<OnboardingReadingSurface documentId="document" />, true);
     const busy = document.querySelector("[aria-busy='true']")!;
-    expect(busy.querySelectorAll("[data-slot='skeleton']").length).toBeGreaterThanOrEqual(4);
+    expect(busy.textContent).toContain("reading.status");
+    expect(busy.querySelectorAll("[data-slot='skeleton']")).toHaveLength(2);
+    expect(busy.closest("[data-slot='surface']")).toBeNull();
   });
 
   it("shows the test call, and each agent field, as placeholders", () => {

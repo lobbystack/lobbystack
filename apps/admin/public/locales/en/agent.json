@@ -38,9 +38,12 @@
         "submitFailed": "We couldn't start the website import. Please try again.",
         "previewPending": "We're crawling this website. Imported pages will appear here automatically.",
         "previewFailed": "Import failed. Please try again.",
+        "previewStalled": "We couldn't finish reading this website.",
+        "tryAgain": "Try again",
         "status": {
           "inProgress": "In progress",
-          "failed": "Failed"
+          "failed": "Failed",
+          "stalled": "Stopped"
         },
         "validation": {
           "urlRequired": "Enter a website URL to import."

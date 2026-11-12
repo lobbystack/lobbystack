@@ -9,7 +9,7 @@ vi.mock("@lobbystack/domain", async () => ({
 }));
 
 import { requestTeamForWidgetChat } from "@lobbystack/domain";
-import { createReceptionistTools, type AgentToolContext } from "./tools";
+import { createAgentTools, type AgentToolContext } from "./tools";
 
 type Execute = (input: object, options: object) => Promise<Record<string, unknown>>;
 
@@ -18,7 +18,7 @@ const liveChat = { locale: "fr" as const, onTeamRequested };
 const chat = { domain: { db: {} as never }, channel: "web_chat" as const, conversationId: "conv_1", snapshot: demoSnapshot };
 
 function requestTeamMember(context: AgentToolContext, input: object = {}) {
-  return (createReceptionistTools(context).requestTeamMember!.execute! as Execute)(input, { toolCallId: "1", messages: [] });
+  return (createAgentTools(context).requestTeamMember!.execute! as Execute)(input, { toolCallId: "1", messages: [] });
 }
 
 const withHours = (hours: BusinessContextSnapshot["hours"]): AgentToolContext => ({ ...chat, liveChat, snapshot: { ...demoSnapshot, hours } });
@@ -36,7 +36,7 @@ afterAll(() => {
 describe("requestTeamMember", () => {
   it("is offered only on a website chat whose widget has live chat on", () => {
     const noChatYet = { domain: chat.domain, channel: chat.channel, snapshot: chat.snapshot };
-    const offered = (context: AgentToolContext) => "requestTeamMember" in createReceptionistTools(context);
+    const offered = (context: AgentToolContext) => "requestTeamMember" in createAgentTools(context);
     expect(offered({ ...chat, liveChat })).toBe(true);
     expect(offered(chat)).toBe(false);
     expect(offered({ ...noChatYet, liveChat })).toBe(false);

@@ -808,7 +808,7 @@ type TrialEmailKind = "day10" | "day13" | "ended" | "minutes_out";
 type TrialCopy = { subject: string; lines: string[]; button: string };
 
 // The trial emails, written to be urgent and true: the trial does end, the
-// receptionist does stop answering, and we do release the number afterwards.
+// agent does stop answering, and we do release the number afterwards.
 function numberTrialCopy(kind: TrialEmailKind, locale: string | undefined, v: Record<string, string>): TrialCopy {
   const calls = Number(v.calls ?? "0");
   const num = v.trialNumber ?? "";

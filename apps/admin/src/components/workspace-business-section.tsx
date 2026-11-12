@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { Sparkles } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { intlLocale, runtimeLocales, type RuntimeLocale } from "@lobbystack/shared";
 import { currencyRegion, runtimeLocaleRegion } from "@/lib/country-flag";
@@ -14,11 +13,12 @@ import { useTelemetry } from "@/components/product-analytics";
 import { settingRowClassName } from "@/components/text-setting-row";
 import { Button } from "@/components/ui/button";
 import { Flag } from "@/components/flag";
-import { Combobox, ComboboxCollection, ComboboxContent, ComboboxEmpty, ComboboxGroup, ComboboxInput, ComboboxItem, ComboboxLabel, ComboboxList, ComboboxTrigger, ComboboxValue } from "@/components/ui/combobox";
+import { Combobox, ComboboxCollection, ComboboxContent, ComboboxEmpty, ComboboxGroup, ComboboxSearch, ComboboxItem, ComboboxLabel, ComboboxList, ComboboxTrigger, ComboboxValue } from "@/components/ui/combobox";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Item, ItemActions, ItemContent, ItemDescription, ItemTitle } from "@/components/ui/item";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 import { Surface } from "@/components/ui/surface";
 import { Textarea } from "@/components/ui/textarea";
 import { agentSettingsQueryKey, fetchAgentSettings, useAgentSettingsQuery, useSaveWorkspace, type AgentSettings, type WorkspacePatch } from "@/hooks/use-agent-settings";
@@ -30,7 +30,7 @@ type TimeZoneItemGroup = { value: string; label: string; items: TimeZoneOption[]
 type CurrencyOption = { id: string; label: string };
 
 // Matches SelectTrigger, so the searchable timezone picker looks like the selects beside it.
-const COMBOBOX_TRIGGER_CLASS = "flex h-9 w-full min-w-0 items-center justify-between gap-1.5 rounded-xl border border-input bg-input/30 px-3 py-2 type-body whitespace-nowrap transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 sm:w-56";
+const COMBOBOX_TRIGGER_CLASS = "flex h-9 w-full min-w-0 items-center justify-between gap-1.5 rounded-xl border border-input bg-input/30 px-3 py-2 type-body whitespace-nowrap transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 sm:w-56";
 
 /** The workspace's business details, which every agent shares: summary, languages, time zone, currency and opening hours. */
 export function WorkspaceBusinessSection({ businessId, canManage, heading = true }: { businessId: string; canManage: boolean; /** Off on the page of the same name, whose header already says it. */ heading?: boolean }) {
@@ -283,7 +283,7 @@ export function WorkspaceBusinessSection({ businessId, canManage, heading = true
                 </div>
                 {rewritingInDialog ? (
                   <p className="flex items-center gap-2 type-body-muted" role="status">
-                    <Sparkles aria-hidden="true" className="size-4 animate-pulse" />
+                    <Spinner aria-hidden="true" />
                     {t("agent:fields.summary.regenerating")}
                   </p>
                 ) : null}
@@ -389,8 +389,7 @@ export function WorkspaceBusinessSection({ businessId, canManage, heading = true
                     <span className="min-w-0 flex-1 truncate text-left"><ComboboxValue /></span>
                   </ComboboxTrigger>
                   <ComboboxContent className="min-w-(--anchor-width)">
-                    {/* Above the list, so the list doesn't paint over the input's focus ring. */}
-                    <ComboboxInput className="relative z-10" clearSearchLabel={t("common:accessibility.clearSearch")} placeholder={t("agent:fields.timezone.search")} showTrigger={false} />
+                    <ComboboxSearch clearSearchLabel={t("common:accessibility.clearSearch")} placeholder={t("agent:fields.timezone.search")} />
                     <ComboboxEmpty>{t("agent:fields.timezone.noResults")}</ComboboxEmpty>
                     <ComboboxList>
                       {(group: TimeZoneItemGroup) => (
@@ -427,7 +426,7 @@ export function WorkspaceBusinessSection({ businessId, canManage, heading = true
                     <span className="flex min-w-0 flex-1 items-center gap-2.5 text-left"><ComboboxValue>{(option: CurrencyOption | null) => option ? <><Flag region={currencyRegion(option.id)} /><span className="truncate">{option.label}</span></> : null}</ComboboxValue></span>
                   </ComboboxTrigger>
                   <ComboboxContent className="min-w-(--anchor-width)">
-                    <ComboboxInput className="relative z-10" clearSearchLabel={t("common:accessibility.clearSearch")} placeholder={t("agent:fields.currency.search")} showTrigger={false} />
+                    <ComboboxSearch clearSearchLabel={t("common:accessibility.clearSearch")} placeholder={t("agent:fields.currency.search")} />
                     <ComboboxEmpty>{t("agent:fields.currency.noResults")}</ComboboxEmpty>
                     <ComboboxList>{(option: CurrencyOption) => <ComboboxItem key={option.id} value={option}><Flag region={currencyRegion(option.id)} />{option.label}</ComboboxItem>}</ComboboxList>
                   </ComboboxContent>

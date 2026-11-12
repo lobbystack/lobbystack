@@ -135,7 +135,7 @@ describe("v1 resource serializers match the published schemas", () => {
   });
 
   it("serializes an agent with its own settings and none of the workspace's", () => {
-    const agent = serializeAgent({ id: agentId, name: "After hours", isDefault: false, greeting: "Hi", tone: "warm", summary: "Maple Salon cuts hair.", summarySource: "operator", bookingPolicy: "Book", voiceInstructions: null, smsInstructions: null, chatInstructions: "Be brief.", transferMode: "weird", transferNumber: null, appointmentChangePolicy: null, bookingMode: "request", voice: "nova", staffFirstMode: "never", staffFirstNumber: null, staffFirstRingSeconds: 20, staffFirstMessage: null, staffFirstHandoverMessage: null, createdAt: now, updatedAt: new Date(now.getTime() + 1_000) }, true);
+    const agent = serializeAgent({ id: agentId, name: "After hours", isDefault: false, greeting: "Hi", tone: "warm", bookingPolicy: "Book", voiceInstructions: null, smsInstructions: null, chatInstructions: "Be brief.", transferMode: "weird", transferNumber: null, appointmentChangePolicy: null, bookingMode: "request", voice: "nova", staffFirstMode: "never", staffFirstNumber: null, staffFirstRingSeconds: 20, staffFirstMessage: null, staffFirstHandoverMessage: null, createdAt: now, updatedAt: new Date(now.getTime() + 1_000) }, true);
     expect(apiAgentSchema.parse(agent)).toEqual(agent);
     expect(agent).toMatchObject({ id: agentId, name: "After hours", is_default: false, paused: true, chat_instructions: "Be brief.", booking_mode: "request", created_at: now.toISOString(), updated_at: "2026-09-27T15:00:01.000Z" });
     expect(agent).not.toHaveProperty("summary");

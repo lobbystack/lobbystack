@@ -38,9 +38,12 @@
         "submitFailed": "Nous n'avons pas pu démarrer l'import du site web. Réessayez.",
         "previewPending": "Nous explorons ce site web. Les pages importées apparaîtront ici automatiquement.",
         "previewFailed": "L'importation a echoue. Veuillez reessayer.",
+        "previewStalled": "Nous n'avons pas pu finir de lire ce site.",
+        "tryAgain": "Réessayer",
         "status": {
           "inProgress": "En cours",
-          "failed": "Échec"
+          "failed": "Échec",
+          "stalled": "Interrompu"
         },
         "validation": {
           "urlRequired": "Entrez l'URL du site web à importer."

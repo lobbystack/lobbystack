@@ -1046,7 +1046,7 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       return { status: result.finalized ? "completed" : "skipped", entityId: result.sessionId ?? callId };
     }
     case "conversation.expireTeamRequest": {
-      // A website visitor asked for a person: hand the chat back to the receptionist if nobody joined.
+      // A website visitor asked for a person: hand the chat back to the agent if nobody joined.
       const conversationId = String(job.payload.conversationId ?? "");
       const requestedAt = new Date(String(job.payload.requestedAt ?? ""));
       if (!conversationId || !Number.isFinite(requestedAt.getTime())) return { status: "skipped" };

@@ -12,8 +12,8 @@ vi.mock("@lobbystack/domain", async () => ({
 }));
 
 import { verifyCallerChangePasscode, verifyCallerForChange } from "@lobbystack/domain";
-import { receptionistCapabilities, type Conversation } from "./capabilities";
-import { createReceptionistTools, type CallControl, type KeypadPasscodeCheck } from "./tools";
+import { agentCapabilities, type Conversation } from "./capabilities";
+import { createAgentTools, type CallControl, type KeypadPasscodeCheck } from "./tools";
 
 type Execute = (input: object, options: object) => Promise<Record<string, unknown>>;
 
@@ -22,7 +22,7 @@ const policy = (verificationMode: AppointmentChangeVerificationMode) => ({ appoi
 const snapshotFor = (verificationMode: AppointmentChangeVerificationMode, extra: Partial<BusinessContextSnapshot> = {}): BusinessContextSnapshot => ({ ...demoSnapshot, timezone: "America/Toronto", ...policy(verificationMode), ...extra });
 
 function tools(options: { verificationMode?: AppointmentChangeVerificationMode; callControl?: CallControl; snapshot?: Partial<BusinessContextSnapshot> } = {}) {
-  const set = createReceptionistTools({
+  const set = createAgentTools({
     domain: { db: {} as never },
     channel: "voice",
     callId: "call_1",
@@ -120,8 +120,8 @@ describe("appointment change tools when the business requires a keypad PIN", () 
   });
 });
 
-describe("the keypad PIN in the receptionist's capabilities", () => {
-  const offers = (verificationMode: AppointmentChangeVerificationMode, conversation: Partial<Conversation>) => receptionistCapabilities(snapshotFor(verificationMode), { channel: "voice", ...conversation }).tools;
+describe("the keypad PIN in the agent's capabilities", () => {
+  const offers = (verificationMode: AppointmentChangeVerificationMode, conversation: Partial<Conversation>) => agentCapabilities(snapshotFor(verificationMode), { channel: "voice", ...conversation }).tools;
 
   it("needs a phone call that takes a PIN when the business requires one", () => {
     const keypad = keypadCall().callControl;
@@ -142,7 +142,7 @@ describe("the keypad PIN in the receptionist's capabilities", () => {
 
 describe("the agent's appointment policy", () => {
   const agentTools = (agentId?: string) => {
-    const set = createReceptionistTools({ domain: { db: {} as never }, channel: "voice", callId: "call_1", callerPhone, snapshot: snapshotFor("phone_match_and_facts", agentId ? { agentId } : {}) });
+    const set = createAgentTools({ domain: { db: {} as never }, channel: "voice", callId: "call_1", callerPhone, snapshot: snapshotFor("phone_match_and_facts", agentId ? { agentId } : {}) });
     return (input: object) => (set.verifyAppointmentForChange!.execute! as Execute)(input, { toolCallId: "1", messages: [] });
   };
 

@@ -11,7 +11,7 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "@/components/ui/input-group"
-import { ChevronDownIcon, XIcon, CheckIcon } from "lucide-react"
+import { ChevronDownIcon, XIcon, CheckIcon, SearchIcon } from "lucide-react"
 
 import { Spinner } from "@/components/ui/spinner"
 const Combobox = ComboboxPrimitive.Root
@@ -119,6 +119,56 @@ function ComboboxInput({
   )
 }
 
+/**
+ * The search field at the top of a ComboboxContent: one borderless row with a
+ * line under it, so it reads as the list's header rather than a second box.
+ */
+function ComboboxSearch({
+  className,
+  clearSearchLabel,
+  onChange,
+  ...props
+}: ComboboxPrimitive.Input.Props & {
+  /** Adds a button that empties the typed text once there is some; its label names the button. */
+  clearSearchLabel?: string
+}) {
+  const inputRef = React.useRef<HTMLInputElement>(null)
+  const [hasText, setHasText] = React.useState(false)
+  function clearText() {
+    const input = inputRef.current
+    if (!input) return
+    // Goes through the input's own setter and an input event, so the combobox sees the change.
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set?.call(input, "")
+    input.dispatchEvent(new Event("input", { bubbles: true }))
+    input.focus()
+  }
+  return (
+    <div data-slot="combobox-search" className={cn("flex h-11 items-center gap-2 border-b border-border px-3", className)}>
+      <SearchIcon aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
+      <ComboboxPrimitive.Input
+        ref={inputRef}
+        className="h-full min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+        onChange={(event) => {
+          setHasText(event.currentTarget.value.length > 0)
+          onChange?.(event)
+        }}
+        {...props}
+      />
+      {clearSearchLabel && hasText && (
+        <InputGroupButton
+          aria-label={clearSearchLabel}
+          className="-mr-1"
+          onClick={clearText}
+          onMouseDown={(event) => event.preventDefault()}
+          size="icon-xs"
+        >
+          <XIcon />
+        </InputGroupButton>
+      )}
+    </div>
+  )
+}
+
 function ComboboxContent({
   className,
   side = "bottom",
@@ -145,7 +195,7 @@ function ComboboxContent({
         <ComboboxPrimitive.Popup
           data-slot="combobox-content"
           data-chips={!!anchor}
-          className={cn("group/combobox-content relative max-h-(--available-height) w-(--anchor-width) max-w-(--available-width) min-w-[calc(var(--anchor-width)+--spacing(7))] origin-(--transform-origin) overflow-hidden rounded-xl bg-popover text-popover-foreground shadow-md ring-1 ring-foreground/5 duration-100 data-[chips=true]:min-w-(--anchor-width) data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 *:data-[slot=input-group]:m-1 *:data-[slot=input-group]:mb-0 *:data-[slot=input-group]:h-9 *:data-[slot=input-group]:rounded-md *:data-[slot=input-group]:border-none *:data-[slot=input-group]:bg-input/30 *:data-[slot=input-group]:shadow-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95", className )}
+          className={cn("group/combobox-content relative max-h-(--available-height) w-(--anchor-width) max-w-(--available-width) min-w-[calc(var(--anchor-width)+--spacing(7))] origin-(--transform-origin) overflow-hidden rounded-xl bg-popover text-popover-foreground shadow-md ring-1 ring-foreground/5 duration-100 data-[chips=true]:min-w-(--anchor-width) data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95", className )}
           {...props}
         />
       </ComboboxPrimitive.Positioner>
@@ -256,7 +306,7 @@ function ComboboxChips({
     <ComboboxPrimitive.Chips
       data-slot="combobox-chips"
       className={cn(
-        "flex min-h-10 flex-wrap items-center gap-1.5 rounded-xl border border-input bg-input/30 bg-clip-padding px-2.5 py-1.5 text-sm transition-colors focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background has-aria-invalid:border-destructive has-aria-invalid:ring-[3px] has-aria-invalid:ring-destructive/20 has-data-[slot=combobox-chip]:px-1.5 dark:has-aria-invalid:border-destructive/50 dark:has-aria-invalid:ring-destructive/40",
+        "flex min-h-10 flex-wrap items-center gap-1.5 rounded-xl border border-input bg-input/30 bg-clip-padding px-2.5 py-1.5 text-sm transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 has-aria-invalid:border-destructive has-aria-invalid:ring-[3px] has-aria-invalid:ring-destructive/20 has-data-[slot=combobox-chip]:px-1.5 dark:has-aria-invalid:border-destructive/50 dark:has-aria-invalid:ring-destructive/40",
         className
       )}
       {...props}
@@ -315,6 +365,7 @@ function useComboboxAnchor() {
 export {
   Combobox,
   ComboboxInput,
+  ComboboxSearch,
   ComboboxContent,
   ComboboxList,
   ComboboxItem,

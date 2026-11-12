@@ -70,7 +70,7 @@ describe("GET /api/widget/history", () => {
     expect(mocks.loadWidgetChatView).toHaveBeenCalledWith({}, { businessId, conversationId, liveChatOn: false });
   });
 
-  it("tells the chat view when the widget has live chat on, as only then a quiet team's chat goes back to the receptionist", async () => {
+  it("tells the chat view when the widget has live chat on, as only then a quiet team's chat goes back to the agent", async () => {
     mocks.widgetConfig = { liveChat: { enabled: true } };
     mocks.loadWidgetChatView.mockResolvedValue({ automationState: "ai_active", waitingForTeam: false, teamMemberName: null, messages: [] });
 

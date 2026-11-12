@@ -19,13 +19,15 @@ afterEach(() => { cleanup(); clients.forEach((client) => client.clear()); client
 const skeletons = () => document.querySelectorAll('[data-slot="skeleton"]').length;
 const hidden = (text: string) => screen.getByText(text).className.includes("invisible");
 
-function renderCall({ workspace = true, detail = false }: { workspace?: boolean; detail?: boolean } = {}) {
+const TIMELINE = [{ type: "received", at: "2026-09-01T12:00:00Z", status: "done" }, { type: "connected", at: "2026-09-01T12:00:05Z", status: "done" }, { type: "completed", at: "2026-09-01T12:05:00Z", status: "done" }];
+
+function renderCall({ workspace = true, detail = false, timeline = [] as typeof TIMELINE }: { workspace?: boolean; detail?: boolean; timeline?: typeof TIMELINE } = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } }); clients.push(client);
   if (workspace) client.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true }] });
   if (detail) client.setQueryData(["call", "business", "call-1"], {
     call: { id: "call-1", legacyConvexId: null, providerCallId: "CA1", provider: "twilio", transport: "voice", status: "completed", disposition: null, transferState: null, startedAt: "2026-09-01T12:00:00Z", endedAt: "2026-09-01T12:05:00Z", providerDurationSeconds: 300, gatewaySessionId: null },
     contact: { name: "Ada Lovelace", phone: null, email: null },
-    outcome: null, timeline: [], transcript: [], recording: { state: "missing" }, appointments: [], followUpTasks: [],
+    outcome: null, timeline, transcript: [], recording: { state: "missing" }, appointments: [], followUpTasks: [],
   });
   else vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {})));
   render(<QueryClientProvider client={client}><LiveCallDetailSurface callId="call-1" /></QueryClientProvider>);
@@ -49,6 +51,22 @@ describe("call detail loading state", () => {
     expect(screen.getByRole("heading", { level: 1, name: "Ada Lovelace" })).toBeTruthy();
     expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual(["detail.tabs.details", "detail.tabs.transcript", "detail.tabs.recording"]);
     expect(screen.getByRole("tab", { name: "detail.tabs.details", selected: true })).toBeTruthy();
+  });
+});
+
+describe("call events timeline", () => {
+  it("gives each event an equal column that wraps its label and date, so a phone shows all three", () => {
+    renderCall({ detail: true, timeline: TIMELINE });
+    const timeline = document.querySelector<HTMLElement>("[data-slot='call-timeline']")!;
+    expect(timeline.className.split(" ")).toContain("grid");
+    expect(timeline.className).not.toContain("overflow-x-auto");
+    expect(timeline.style.gridTemplateColumns).toBe("repeat(3, minmax(0, 1fr))");
+    const columns = [...timeline.children];
+    expect(columns.map((column) => column.textContent?.split("detail.events.")[1]?.replace(/Sep.*$/, ""))).toEqual(["received", "connected", "completed"]);
+    for (const column of columns) expect(column.className.split(" ")).toEqual(expect.arrayContaining(["min-w-0", "text-center"]));
+    expect(screen.getByText("detail.events.completed").className).not.toContain("whitespace-nowrap");
+    // A line joins each event to the next, and none follows the last.
+    expect(columns.map((column) => column.querySelectorAll("[aria-hidden='true'].bg-border").length)).toEqual([1, 1, 0]);
   });
 });
 

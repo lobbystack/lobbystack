@@ -33,7 +33,7 @@ async function withBusiness(plan: "free_cloud" | "starter", run: (world: World) 
       const businessId = randomUUID();
       await tx.insert(businesses).values({ id: businessId, slug: `agents-${businessId}`, name: "Harbor Dental", timezone: "UTC", businessType: "test", deploymentMode: "cloud" });
       await tx.insert(billingAccounts).values({ businessId, billingKey: `business:${businessId}`, plan, subscriptionState: plan === "starter" ? "active" : "none" }).onConflictDoUpdate({ target: billingAccounts.businessId, set: { plan, subscriptionState: plan === "starter" ? "active" : "none" } });
-      const [agent] = await tx.insert(agents).values({ businessId, isDefault: true, name: "Front desk", greeting: "Front desk here", tone: "warm", summary: "A clinic", bookingPolicy: "Book", transferMode: "on_request", voice: "cedar", voiceInstructions: "Day voice" }).returning({ id: agents.id });
+      const [agent] = await tx.insert(agents).values({ businessId, isDefault: true, name: "Front desk", greeting: "Front desk here", tone: "warm", bookingPolicy: "Book", transferMode: "on_request", voice: "cedar", voiceInstructions: "Day voice" }).returning({ id: agents.id });
       const [number] = await tx.insert(phoneNumbers).values({ businessId, agentId: agent!.id, e164: "+15145550111", providerPhoneId: `PN${randomUUID()}`, status: "active", carrier: "twilio" }).returning({ id: phoneNumbers.id });
       const [widget] = await tx.insert(widgetKeys).values({ businessId, agentId: agent!.id, keyHash: randomUUID() }).returning({ id: widgetKeys.id });
       await tx.insert(agentRules).values([{ businessId, agentId: agent!.id, title: "Day rule", content: "Offer mornings", sortOrder: 0 }, { businessId, agentId: agent!.id, title: "On calls", content: "Day voice", sortOrder: 1, channel: "voice" }]);
@@ -123,7 +123,7 @@ describe.skipIf(!testUrl)("managing a business's agents", () => {
   it("pauses an extra agent on Free, so the default agent answers its channels", async () => {
     await withBusiness("free_cloud", async ({ tx, businessId, defaultAgent, widgetId }) => {
       // A business that had two agents on a paid plan, now on Free.
-      const [evening] = await tx.insert(agents).values({ businessId, name: "Evening", greeting: "Evening desk here", tone: "calm", summary: "A clinic", bookingPolicy: "Book", transferMode: "never" }).returning({ id: agents.id });
+      const [evening] = await tx.insert(agents).values({ businessId, name: "Evening", greeting: "Evening desk here", tone: "calm", bookingPolicy: "Book", transferMode: "never" }).returning({ id: agents.id });
       await tx.update(widgetKeys).set({ agentId: evening!.id }).where(eq(widgetKeys.id, widgetId));
       await refreshBusinessSnapshot({ db: tx as unknown as Database }, { businessId });
       const [stored] = await tx.select({ snapshot: businessContextSnapshots.snapshot }).from(businessContextSnapshots).where(eq(businessContextSnapshots.businessId, businessId));

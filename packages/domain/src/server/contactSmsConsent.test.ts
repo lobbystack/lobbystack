@@ -7,7 +7,7 @@ vi.mock("./booking", () => ({ bookAppointment: vi.fn(), findAvailability: vi.fn(
 import { contacts, smsConsentEvents, type DatabaseTransaction } from "@lobbystack/db";
 
 import { recordSmsConsentAnswerInTransaction, smsConsentOnFile, type SmsConsentAnswer } from "./contactSmsConsent";
-import { cancelForCaller, verifyCallerChangeCode, verifyCallerChangePasscode, verifyCallerForChange } from "./receptionistActions";
+import { cancelForCaller, verifyCallerChangeCode, verifyCallerChangePasscode, verifyCallerForChange } from "./agentActions";
 
 const context = { db: {} as never };
 

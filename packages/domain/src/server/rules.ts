@@ -125,7 +125,7 @@ export async function reorderAgentRulesInTransaction(tx: DatabaseTransaction, in
 }
 
 async function publishRulesChanged(tx: DatabaseTransaction, businessId: string, entityId: string | undefined, dedupeKey: string): Promise<void> {
-  // The receptionist reads rules only from the business snapshot.
+  // The agent reads rules only from the business snapshot.
   await enqueueOutbox(tx, {
     topic: "snapshot.refresh",
     businessId,

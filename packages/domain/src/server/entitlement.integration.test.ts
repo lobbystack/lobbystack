@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
-import { billingAccounts, billingUsageEvents, businesses, createDatabaseClient, onboardingPhoneVerifications, phoneNumbers, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { billingAccounts, billingUsageEvents, businesses, createDatabaseClient, onboardingPhoneVerifications, phoneNumbers, users, withBusinessTransaction, type Database, type DatabaseTransaction, defaultAgentIdOf } from "@lobbystack/db";
 import { hasLiveEntitlement, type Entitlement } from "@lobbystack/shared";
 
 import { getWebVoiceBillingAllowance, getWidgetChatAllowance, reserveTextReplyUsageInTransaction, reserveWebVoiceUsageInTransaction, reserveWidgetChatUsageInTransaction } from "./billing";
@@ -75,7 +75,7 @@ async function numberStepBusiness(tx: DatabaseTransaction, input: { withNumber?:
   await tx.execute(sql`reset role`);
   await tx.update(businesses).set({ onboardingStage: input.withNumber ? "complete" : "phone_number" }).where(eq(businesses.id, businessId));
   await tx.insert(onboardingPhoneVerifications).values({ businessId, userId, phoneE164: phone, countryCode: "CA", status: "approved", approvedAt: new Date(), expiresAt: new Date(Date.now() + 600_000), requestFingerprint: "test" });
-  const [number] = input.withNumber ? await tx.insert(phoneNumbers).values({ businessId, e164: testNumber(), status: "active" }).returning({ id: phoneNumbers.id }) : [];
+  const [number] = input.withNumber ? await tx.insert(phoneNumbers).values({ businessId, agentId: defaultAgentIdOf(businessId), e164: testNumber(), status: "active" }).returning({ id: phoneNumbers.id }) : [];
   return { userId, businessId, phone, phoneNumberId: number?.id ?? null };
 }
 

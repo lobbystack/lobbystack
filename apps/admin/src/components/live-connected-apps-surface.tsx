@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Surface } from "@/components/ui/surface";
 import { requestJson } from "@/lib/request-json";
 import { intlLocale } from "@/lib/locale";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export type ConnectedAppRecord = {
   id: string;
@@ -65,18 +66,18 @@ export function LiveConnectedAppsSurface() {
   });
 
   // Whether the section exists depends on the person's role, so it holds its place for anyone whose plan has MCP and goes away if the role can't manage it.
-  if (businesses.isLoading) return can("mcp") ? <SectionSkeleton description={t("connectedApps.description")} title={t("connectedApps.title")}><CredentialRowsSkeleton actions={1} /></SectionSkeleton> : null;
+  if (businesses.isLoading) return can("mcp") ? <SectionSkeleton title={t("connectedApps.title")}><CredentialRowsSkeleton actions={1} /></SectionSkeleton> : null;
   if (!canManage) return null;
-  if (grants.isLoading) return <SectionSkeleton description={t("connectedApps.description")} title={t("connectedApps.title")}><CredentialRowsSkeleton actions={1} /></SectionSkeleton>;
+  if (grants.isLoading) return <SectionSkeleton title={t("connectedApps.title")}><CredentialRowsSkeleton actions={1} /></SectionSkeleton>;
 
   const rows = grants.data?.grants ?? [];
   return (
     <>
-      <SectionBlock description={t("connectedApps.description")} title={t("connectedApps.title")}>
-        <Surface>
-          {rows.length === 0 ? (
-            <p className="type-body-muted p-6 text-center">{t("connectedApps.empty")}</p>
-          ) : (
+      <SectionBlock title={t("connectedApps.title")}>
+        {rows.length === 0 ? (
+          <EmptyState description={t("connectedApps.emptyDescription")} title={t("connectedApps.emptyTitle")} />
+        ) : (
+          <Surface>
             <CredentialList label={t("connectedApps.title")}>
               {rows.map((grant) => (
                 <CredentialRow
@@ -87,8 +88,8 @@ export function LiveConnectedAppsSurface() {
                 />
               ))}
             </CredentialList>
-          )}
-        </Surface>
+          </Surface>
+        )}
       </SectionBlock>
 
       <ConfirmActionDialog

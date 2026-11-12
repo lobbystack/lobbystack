@@ -1,5 +1,4 @@
-import { buttonVariants } from "@/marketing/components/ui/button"
-import { appLoginUrl, appSignupUrl } from "@/marketing/lib/app-links"
+import { NavbarAuthLinks } from "@/marketing/components/NavbarAuthLinks"
 import { GithubIcon } from "@/marketing/components/GithubIcon"
 import { localizeHref, localizePath, type Locale } from "@/marketing/i18n"
 import { cn } from "@/marketing/lib/utils"
@@ -64,6 +63,7 @@ const labels = {
     login: "Log in",
     github: "LobbyStack on GitHub",
     tryFree: "Try for free",
+    dashboard: "Dashboard",
     blog: "Blog",
     changelog: "Changelog",
     helpCenter: "Help Center",
@@ -81,6 +81,7 @@ const labels = {
     login: "Connexion",
     github: "LobbyStack sur GitHub",
     tryFree: "Essayer gratuitement",
+    dashboard: "Tableau de bord",
     blog: "Blog",
     changelog: "Journal des changements",
     helpCenter: "Centre d'aide",
@@ -98,6 +99,7 @@ const labels = {
     login: "Iniciar sesión",
     github: "LobbyStack en GitHub",
     tryFree: "Pruébelo gratis",
+    dashboard: "Panel",
     blog: "Blog",
     changelog: "Registro de cambios",
     helpCenter: "Centro de ayuda",
@@ -115,6 +117,7 @@ const labels = {
     login: "Prijava",
     github: "LobbyStack na GitHub-u",
     tryFree: "Isprobajte besplatno",
+    dashboard: "Kontrolna tabla",
     blog: "Blog",
     changelog: "Dnevnik izmena",
     helpCenter: "Centar za pomoć",
@@ -542,22 +545,7 @@ export function Navbar({ locale = "en" }: NavbarProps) {
           >
             <GithubIcon className="size-[18px]" />
           </a>
-          <a
-            href={appLoginUrl(locale)}
-            className="rounded-full px-3 py-2 text-sm font-medium text-foreground transition-colors duration-150 hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-          >
-            {copy.login}
-          </a>
-          <a
-            href={appSignupUrl(locale)}
-            className={cn(buttonVariants(), "ml-2")}
-            data-ph-signup-cta
-            data-ph-capture-attribute-section="navbar"
-            data-ph-capture-attribute-action="try_for_free"
-            data-ph-capture-attribute-destination={appSignupUrl(locale)}
-          >
-            {copy.tryFree}
-          </a>
+          <NavbarAuthLinks locale={locale} copy={copy} placement="navbar" />
         </div>
 
         <details className="group/mobile-menu lg:hidden">
@@ -694,22 +682,7 @@ export function Navbar({ locale = "en" }: NavbarProps) {
                 <GithubIcon className="size-4" />
                 GitHub
               </a>
-              <a
-                href={appLoginUrl(locale)}
-                className="rounded-md px-3 py-2 text-center text-sm font-medium text-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-              >
-                {copy.login}
-              </a>
-              <a
-                href={appSignupUrl(locale)}
-                className={buttonVariants()}
-                data-ph-signup-cta
-                data-ph-capture-attribute-section="mobile_navbar"
-                data-ph-capture-attribute-action="try_for_free"
-                data-ph-capture-attribute-destination={appSignupUrl(locale)}
-              >
-                {copy.tryFree}
-              </a>
+              <NavbarAuthLinks locale={locale} copy={copy} placement="mobile_navbar" />
             </div>
           </div>
         </details>

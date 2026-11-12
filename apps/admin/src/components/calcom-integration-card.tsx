@@ -26,7 +26,7 @@ function CalcomLogo() {
   </svg>;
 }
 
-/** The Cal.com card on the integrations page, with its dialog for the event type the receptionist books. */
+/** The Cal.com card on the integrations page, with its dialog for the event type the agent books. */
 export function CalcomIntegrationCard({ businessId, canManage, data }: { businessId: string | undefined; canManage: boolean; data: IntegrationsViewModel | undefined }) {
   const { t, i18n } = useTranslation("settings");
   const telemetry = useTelemetry();
@@ -97,7 +97,7 @@ export function CalcomIntegrationCard({ businessId, canManage, data }: { busines
       </div></div>
       <div className="flex flex-col gap-1"><h2 className="type-section-title">{t("integrations.cards.calcom.title")}</h2><p className="type-body-muted line-clamp-2">{t("integrations.cards.calcom.description")}</p></div>
     </li>
-    <Dialog onOpenChange={setDialogOpen} open={dialogOpen}><DialogContent className="w-full gap-0 p-0">
+    <Dialog onOpenChange={setDialogOpen} open={dialogOpen}><DialogContent size="sm" className="gap-0 p-0">
       <DialogHeader className="flex-row items-center gap-3 p-6 pb-4"><CalcomLogo /><div className="flex flex-col gap-1"><DialogTitle>{t("integrations.calcom.sheetTitle")}</DialogTitle><DialogDescription>{t("integrations.calcom.sheetDescription")}</DialogDescription></div></DialogHeader>
       <div className="flex flex-col gap-4 px-6 pb-6">
         {connection && needsAttention ? <Alert variant="destructive"><AlertTitle>{connected || syncing || syncFailed ? t("integrations.calcom.syncNeedsAttention") : t("integrations.status.reconnectRequired")}</AlertTitle><AlertDescription className="flex flex-col gap-3"><span>{syncFailed && !discoveryFailed ? t("integrations.calcom.syncFailed") : t("integrations.calcom.discoveryFailed")}</span>{canRefresh ? <Button className="w-fit" disabled={!canManage || update.isPending || syncing} onClick={() => update.mutate({ method: "POST" })} size="sm" variant="outline"><RefreshCcw data-icon="inline-start" />{t("integrations.calcom.refresh")}</Button> : null}</AlertDescription></Alert> : null}

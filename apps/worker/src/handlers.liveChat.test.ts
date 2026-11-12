@@ -23,7 +23,7 @@ function expiryJob(businessId: string, payload: Record<string, unknown>): JobEnv
 }
 
 describe("conversation.expireTeamRequest", () => {
-  it("hands the chat back to the receptionist in the chat's language when nobody joined", async () => {
+  it("hands the chat back to the agent in the chat's language when nobody joined", async () => {
     const businessId = randomUUID();
     const conversationId = randomUUID();
     vi.mocked(expireTeamRequest).mockResolvedValue({ expired: true });

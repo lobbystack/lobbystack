@@ -70,12 +70,15 @@ export function OnboardingRouteShell({ children }: { children: React.ReactNode }
     }
     router.push("/");
   }, [queryClient, returnTarget, router]);
+  // Back to dashboard takes Sign out's place. Neither shows until the
+  // workspaces load, so one never swaps for the other.
+  const showSignOut = !businesses.isPending && !returnTarget;
   return (
     <ReplacementOnboardingShell
       description={DESCRIBED.has(route.key) ? t(`${route.key}.description`) : ""}
       legalAgreement="business"
       onBackToDashboard={returnTarget ? () => void backToDashboard() : undefined}
-      onSignOut={() => void signOut()}
+      onSignOut={showSignOut ? () => void signOut() : undefined}
       progress={onboardingProgress(pathname, business?.partnerAccessLevel)}
       title={t(selectedNumber ? "number.selectedTitle" : `${route.key}.title`)}
       width={route.width}

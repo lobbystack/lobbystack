@@ -302,7 +302,7 @@ function DetailSkeleton({ t }: { t: (key: string) => string }) {
       </Surface>
 
       <div>
-        <div className="inline-flex items-center gap-2">
+        <div className="scroll-row items-center gap-2">
           {tabs.map(([tab, Icon]) => (
             <Skeleton aria-hidden="true" className="inline-flex h-9 items-center gap-1.5 rounded-full px-4 type-title whitespace-nowrap" key={tab}>
               <Icon className="invisible size-4" />

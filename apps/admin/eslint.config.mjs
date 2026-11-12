@@ -32,6 +32,14 @@ export default defineConfig([
       // Server actions and route handlers legitimately accept untyped payloads.
       "@typescript-eslint/no-explicit-any": "warn",
       "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
+      // CLAUDE.md, Design system: never use a sparkle icon.
+      "no-restricted-imports": ["error", {
+        patterns: [{
+          group: ["lucide-react", "lucide-react/*"],
+          importNamePattern: "[Ss]parkle",
+          message: "Never use a sparkle icon (CLAUDE.md, Design system). Pick a Lucide icon that names the thing, or leave the icon out.",
+        }],
+      }],
     },
   },
   {

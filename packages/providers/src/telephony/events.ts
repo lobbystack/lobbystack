@@ -29,7 +29,7 @@ export type SmsStatusEvent = {
   providerNumSegments?: number;
 };
 
-/** A call the carrier asks our voice webhook about: one the receptionist won't take. */
+/** A call the carrier asks our voice webhook about: one the agent won't take. */
 export type FallbackCallEvent = {
   /** The numbers the call may have been dialled to, most likely first. */
   dialled: string[];

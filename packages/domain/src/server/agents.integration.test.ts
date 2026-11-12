@@ -4,7 +4,7 @@ import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vites
 import { agents, businesses, businessMemberships, createDatabaseClient, rlsContextStatement, users, type Database, type DatabaseTransaction, type RlsContext } from "@lobbystack/db";
 import { defaultAgentName, defaultGreeting, runtimeLocales } from "@lobbystack/shared";
 
-import { saveReceptionistProfileInTransaction } from "./receptionistProfile";
+import { saveAgentSettingsInTransaction } from "./agentSettings";
 import { insertOwnerlessBusinessInTransaction, updateBusinessInTransaction } from "./tenancy";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
@@ -143,7 +143,7 @@ describe.skipIf(!client)("a business's default agent", () => {
     const businessId = randomUUID();
     created.push(businessId);
     await client!.db.insert(businesses).values({ id: businessId, slug: `first-${businessId}`, name: "Roma", timezone: "UTC", businessType: "test", defaultLocale: "it" });
-    await as("lobbystack_worker", { businessId, actorType: "worker" }, async (tx) => await saveReceptionistProfileInTransaction(tx, { businessId, businessName: "Roma", locale: "it", patch: { tone: "warm" } }));
+    await as("lobbystack_worker", { businessId, actorType: "worker" }, async (tx) => await saveAgentSettingsInTransaction(tx, { businessId, businessName: "Roma", locale: "it", patch: { tone: "warm" } }));
     expect(await agentOf(businessId)).toEqual([{ name: "Agente predefinito", isDefault: true, greeting: defaultGreeting("Roma", "it") }]);
   });
 });

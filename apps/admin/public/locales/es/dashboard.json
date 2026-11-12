@@ -138,7 +138,6 @@
     },
     "recentCalls": {
       "title": "Llamadas recientes",
-      "description": "{{count}} llamadas recientes en la actividad más reciente.",
       "durationValue": "{{value}} s"
     },
     "actionRequired": {
@@ -147,7 +146,6 @@
       "titleWithContact": "{{message}} para {{name}}",
       "urgent": "Urgente",
       "emptyTitle": "No hay acciones pendientes",
-      "emptyDescription": "Aquí aparecerá lo que requiera una acción manual.",
       "fields": {
         "callback": "Devolver llamada",
         "callbackWindow": "Horario preferido para devolver la llamada"
@@ -176,7 +174,6 @@
       "unknownService": "Servicio desconocido",
       "employee": "Empleado: {{name}}",
       "emptyTitle": "No hay citas próximas",
-      "emptyDescription": "Las nuevas reservas aparecerán aquí en cuanto se creen.",
       "status": {
         "booked": "Reservada",
         "confirmed": "Confirmada"
@@ -304,7 +301,7 @@
       "testCall": "Pregúntele lo que más le preguntan quienes llaman.",
       "phoneNumber": "Dé a su agente su propio número para atender a personas reales.",
       "phoneNumberTrial": "Conteste sus llamadas perdidas gratis durante 14 días, sin tarjeta.",
-      "forwardCalls": "¿Conserva el número al que ya llaman sus clientes? Su agente también puede contestar en ese número.",
+      "forwardCalls": "¿Conserva el número al que ya llaman sus clientes? Su agente también puede contestar en ese número. Opcional.",
       "numberLost": "Su prueba gratuita terminó. Elija un plan para recuperar su número."
     },
     "stepActions": {
@@ -317,7 +314,8 @@
       "copyNumber": "Copiar número",
       "numberCopied": "Copiado",
       "forwardCalls": "Configurar el desvío",
-      "choosePlan": "Elegir un plan"
+      "choosePlan": "Elegir un plan",
+      "tryAgain": "Reintentar"
     },
     "forwardingFrom": "Desvío desde el {{number}}",
     "forwardingWorks": "El desvío funciona"

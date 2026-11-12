@@ -247,20 +247,45 @@ describe("appointments calendar", () => {
     expect(within(sheet).getByText(en.appointments.create.internalNotesHint)).toBeTruthy();
   });
 
-  it("starts a booking from an empty slot: a draft on the grid and the side panel, which Escape drops", async () => {
+  it("starts a booking from an empty slot: a draft on the grid and a popover over the calendar, which another slot moves and Escape drops", async () => {
     vi.useFakeTimers({ toFake: ["Date"], now: NOW });
     await setup("en", false, "scheduler");
     await screen.findByRole("tab", { name: en.appointments.calendarView.week });
     const slot = document.querySelector<HTMLButtonElement>('[data-starts-at="2026-09-03T09:30:00.000Z"]')!;
     expect(slot.getAttribute("aria-label")).toBe("New appointment at Thu, Sep 3, 9:30 AM");
     await userEvent.click(slot);
-    const panel = await screen.findByRole("complementary", { name: en.appointments.create.title });
+    const popover = await screen.findByRole("dialog", { name: en.appointments.create.title });
+    expect(popover.getAttribute("data-slot")).toBe("popover-content");
+    // It floats over the calendar rather than sitting beside it.
+    expect(screen.getByRole("region", { name: en.appointments.views.calendar }).contains(popover)).toBe(false);
+    expect(screen.queryByRole("complementary")).toBeNull();
     expect(within(screen.getByTestId("calendar-draft")).getByText(/9:30\s–\s10:30\sAM/)).toBeTruthy();
-    expect(within(panel).getByTestId("appointment-form-time").textContent).toMatch(/Thu, Sep 3, 9:30\s–\s10:30\sAM/);
-    await userEvent.click(within(panel).getByLabelText(en.appointments.create.notes));
+    expect(within(popover).getByTestId("appointment-form-time").textContent).toMatch(/Thu, Sep 3, 9:30\s–\s10:30\sAM/);
+    // A date field instead of a month.
+    expect((within(popover).getByLabelText(en.appointments.openings.date) as HTMLInputElement).value).toBe("2026-09-03");
+    await userEvent.type(within(popover).getByLabelText(en.appointments.create.notes), "Window seat");
+
+    // Another slot moves the booking and keeps what's filled in.
+    await userEvent.click(document.querySelector<HTMLButtonElement>('[data-starts-at="2026-09-04T11:00:00.000Z"]')!);
+    await waitFor(() => expect(within(screen.getByTestId("calendar-draft")).getByText(/11:00\sAM\s–\s12:00\sPM/)).toBeTruthy());
+    const moved = screen.getByRole("dialog", { name: en.appointments.create.title });
+    expect((within(moved).getByLabelText(en.appointments.create.notes) as HTMLTextAreaElement).value).toBe("Window seat");
+
     await userEvent.keyboard("{Escape}");
-    await waitFor(() => expect(screen.queryByRole("complementary")).toBeNull());
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(screen.queryByTestId("calendar-draft")).toBeNull();
+  });
+
+  it("opens New appointment in a centered dialog, with no draft on the grid", async () => {
+    vi.useFakeTimers({ toFake: ["Date"], now: NOW });
+    await setup("en", false, "scheduler");
+    await screen.findByRole("tab", { name: en.appointments.calendarView.week });
+    await userEvent.click(screen.getByRole("button", { name: en.appointments.create.action }));
+    const dialog = await screen.findByRole("dialog", { name: en.appointments.create.title });
+    expect(dialog.getAttribute("data-slot")).toBe("dialog-content");
+    expect(screen.queryByTestId("calendar-draft")).toBeNull();
+    await userEvent.click(within(dialog).getByRole("button", { name: en.appointments.create.cancel }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 
   it("offers no empty slots to viewers, who can't book", async () => {

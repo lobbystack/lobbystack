@@ -13,7 +13,7 @@ import { Popover, PopoverContent, PopoverTitle, PopoverTrigger } from "@/compone
 import { useNotifications } from "@/hooks/use-notifications";
 import { formatRelativeTime } from "@/lib/locale";
 import { cn } from "@/lib/utils";
-import { NOTIFICATION_ICONS, notificationCopy, notificationHref } from "./notification-copy";
+import { notificationCopy, notificationHref } from "./notification-copy";
 
 type NotificationBellProps = {
   /** Opens a dashboard page. The phone's menu sheet passes its own, which closes the sheet first. */
@@ -91,9 +91,7 @@ export function NotificationBell({ className, navigate, side = "bottom" }: Notif
 
 function NotificationRow({ item, language, onOpen }: { item: BusinessNotificationItem; language: string; onOpen: () => void }) {
   const { t } = useTranslation("nav");
-  const Icon = NOTIFICATION_ICONS[item.kind];
   const { title, line } = notificationCopy(item, t, language);
-  const action = item.category === "action";
   return (
     <li>
       <button
@@ -104,9 +102,6 @@ function NotificationRow({ item, language, onOpen }: { item: BusinessNotificatio
         onClick={onOpen}
         type="button"
       >
-        <span aria-hidden="true" className={cn("flex size-8 shrink-0 items-center justify-center rounded-full [&_svg]:size-4", action ? "bg-status-warning text-status-warning-foreground" : "bg-muted text-muted-foreground")}>
-          <Icon />
-        </span>
         <span className="flex min-w-0 flex-1 flex-col gap-0.5">
           <span className={cn("type-body", !item.read && "font-medium")}>{title}</span>
           <span className="line-clamp-2 type-body-muted">{line}</span>

@@ -22,7 +22,7 @@ async function businessByPhone(phone: string): Promise<string | undefined> {
 }
 
 /**
- * Where a call the receptionist won't take goes: the first dialled number
+ * Where a call the agent won't take goes: the first dialled number
  * that belongs to a business decides, and resolveRefusedCallForward picks the
  * forward. A forward to the dialled number or the line that forwarded the
  * call here would loop, so those get a busy signal.

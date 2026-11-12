@@ -122,7 +122,7 @@ describe("LiveCallController greeting", () => {
     expect(greetingEvents.map((event) => `${event.step}${event.attempt}${event.trigger ? ` ${event.trigger}` : ""}`)).toEqual(["sent1 start", "acknowledged1", "sent2 retry", "acknowledged2", "sent3 retry", "acknowledged3"]);
   });
 
-  it("stops sending the command once the receptionist speaks", async () => {
+  it("stops sending the command once the agent speaks", async () => {
     fakeTimers();
     const greetingEvents: GreetingEvent[] = [];
     const { socket } = setup({ onGreeting: (event) => greetingEvents.push(event) });
@@ -195,7 +195,7 @@ describe("LiveCallController greeting", () => {
     expect(closed[0]?.inputAudio).toEqual({ chunks: 42, coveredMs: 4_200, loudMs: 200, payloadBytes: 42 * pcm(20).length });
   });
 
-  it("doesn't take loud caller audio for the receptionist's greeting", async () => {
+  it("doesn't take loud caller audio for the agent's greeting", async () => {
     fakeTimers();
     const greetingEvents: GreetingEvent[] = [];
     const { socket } = setup({ onGreeting: (event) => greetingEvents.push(event) });
@@ -1214,7 +1214,7 @@ describe("LiveCallController transcript and silence", () => {
     expect(checkIns(socket)).toHaveLength(0);
     await vi.advanceTimersByTimeAsync(1);
     expect(checkIns(socket)).toEqual([expect.objectContaining({ delegation_id: null, event_id: "check_in_1", content: expect.stringContaining("still there") })]);
-    // The receptionist asking doesn't count as the caller answering.
+    // The agent asking doesn't count as the caller answering.
     socket.emit("session.output_transcript.delta", { delta: "Are you still there?", start_ms: 10_500, end_ms: 11_500 });
     await vi.advanceTimersByTimeAsync(10_000);
     expect(checkIns(socket)).toHaveLength(2);
@@ -1296,7 +1296,7 @@ describe("LiveCallController wrap-up", () => {
     const { socket, controller, hangup } = setup();
     // The caller's words place the session timeline: 1,000 ms in, now.
     socket.emit("session.input_transcript.delta", { delta: "And the price?", start_ms: 500, end_ms: 1_000 });
-    // The receptionist is finishing a sentence when the limit hits.
+    // The agent is finishing a sentence when the limit hits.
     socket.emit("session.output_transcript.delta", { delta: "It's forty dollars.", start_ms: 900, end_ms: 1_100 });
     void controller.wrapUp("duration_limit");
     await vi.advanceTimersByTimeAsync(300);

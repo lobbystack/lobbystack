@@ -4,6 +4,7 @@ import { RadioGroup } from "@base-ui/react/radio-group"
 import { Tabs as TabsPrimitive } from "@base-ui/react/tabs"
 import { cva, type VariantProps } from "class-variance-authority"
 
+import { useScrollRowRef } from "@/components/ui/scroll-row"
 import { cn } from "@/lib/utils"
 
 function Tabs({
@@ -25,14 +26,15 @@ function Tabs({
 }
 
 const tabsListVariants = cva(
-  "group/tabs-list inline-flex w-fit items-center justify-center rounded-full p-1 text-muted-foreground group-data-horizontal/tabs:h-9 group-data-vertical/tabs:h-fit group-data-vertical/tabs:flex-col data-[variant=line]:rounded-none",
+  // A horizontal row scrolls sideways when it doesn't fit (see scroll-row in theme.css), so tabs are cut off at the content edge instead of running past it.
+  "group/tabs-list flex w-fit items-center justify-start rounded-full p-1 group-data-horizontal/tabs:scroll-row text-muted-foreground group-data-horizontal/tabs:h-9 group-data-vertical/tabs:h-fit group-data-vertical/tabs:flex-col data-[variant=line]:rounded-none",
   {
     variants: {
       variant: {
         // Polar's SegmentedControl: a round track with round segments, the active one raised.
         default: "gap-1 bg-muted",
         line: "gap-1 bg-transparent",
-        pills: "gap-2 bg-transparent p-0",
+        pills: "gap-2 bg-transparent p-0 group-data-horizontal/tabs:h-auto group-data-horizontal/tabs:scroll-row-bleed",
       },
     },
     defaultVariants: {
@@ -43,14 +45,17 @@ const tabsListVariants = cva(
 
 function TabsList({
   className,
+  ref,
   variant = "default",
   ...props
 }: TabsPrimitive.List.Props & VariantProps<typeof tabsListVariants>) {
+  const rowRef = useScrollRowRef<HTMLDivElement>(ref)
   return (
     <TabsPrimitive.List
       data-slot="tabs-list"
       data-variant={variant}
       className={cn(tabsListVariants({ variant }), className)}
+      ref={rowRef}
       {...props}
     />
   )
@@ -83,13 +88,15 @@ const SegmentedControlValue = React.createContext<unknown>(undefined)
  * select, and screen readers announce a radio group. Label it with
  * aria-label or aria-labelledby.
  */
-function SegmentedControl<Value>({ className, value, ...props }: RadioGroup.Props<Value>) {
+function SegmentedControl<Value>({ className, ref, value, ...props }: RadioGroup.Props<Value>) {
+  const rowRef = useScrollRowRef<HTMLDivElement>(ref)
   return (
     <SegmentedControlValue.Provider value={value}>
       <RadioGroup
         data-slot="segmented-control"
         data-variant="default"
-        className={cn(tabsListVariants({ variant: "default" }), "flex w-full", className)}
+        className={cn(tabsListVariants({ variant: "default" }), "scroll-row w-full", className)}
+        ref={rowRef}
         value={value}
         {...props}
       />
@@ -97,14 +104,14 @@ function SegmentedControl<Value>({ className, value, ...props }: RadioGroup.Prop
   )
 }
 
-/** One choice in a SegmentedControl, drawn as a tab trigger and raised while chosen. Long labels wrap. */
+/** One choice in a SegmentedControl, drawn as a tab trigger and raised while chosen. Each sizes to its label, so a long label takes more room before it wraps. */
 function SegmentedControlItem<Value>({ className, value, ...props }: Radio.Root.Props<Value>) {
   const chosen = React.useContext(SegmentedControlValue) === value
   return (
     <Radio.Root
       data-slot="segmented-control-item"
       data-active={chosen ? "" : undefined}
-      className={cn(tabsTriggerClassName, "min-h-8 cursor-pointer text-center leading-tight whitespace-normal", className)}
+      className={cn(tabsTriggerClassName, "min-h-8 flex-auto cursor-pointer text-center leading-tight whitespace-normal", className)}
       value={value}
       {...props}
     />

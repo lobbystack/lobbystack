@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { isTextChatChannel } from "@lobbystack/shared";
 
+import { canEditContacts, EditableContactName } from "@/components/editable-contact-name";
 import { useTelemetry } from "@/components/product-analytics";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -18,7 +19,7 @@ import { formatDateTime } from "@/lib/locale";
 import { requestJson } from "@/lib/request-json";
 import { cn } from "@/lib/utils";
 
-export type ThreadMessage = { id: string; conversationId: string; contactName: string | null; contactPhone: string | null; visitorName: string | null; visitorEmail: string | null; channel: string | null; automationState: string | null; teamRequestedAt?: string | null; body: string; direction: string; status: string; createdAt: string };
+export type ThreadMessage = { id: string; conversationId: string; contactId?: string | null; contactName: string | null; contactPhone: string | null; visitorName: string | null; visitorEmail: string | null; channel: string | null; automationState: string | null; teamRequestedAt?: string | null; body: string; direction: string; status: string; createdAt: string };
 
 type Thread = { messages: ThreadMessage[]; textRepliesOn?: boolean };
 
@@ -112,7 +113,7 @@ export function ConversationThread({ back, conversationId }: { back?: ReactNode;
       <div className="flex flex-wrap items-center gap-3 border-b p-4">
         {back}
         <Avatar><AvatarFallback className="ph-mask">{initials(latest.visitorName ?? latest.contactName, displayName)}</AvatarFallback></Avatar>
-        <div className="min-w-0"><h2 className="ph-mask truncate type-item-title">{displayName}</h2><p className="ph-mask truncate type-body-muted">{subtitle(latest, t)}</p></div>
+        <div className="min-w-0"><h2 className="ph-mask truncate type-item-title"><EditableContactName businessId={business?.businessId} canEdit={canEditContacts(business?.role)} contactId={latest.contactId} displayName={displayName} /></h2><p className="ph-mask truncate type-body-muted">{subtitle(latest, t)}</p></div>
         {canHandOff ? (
           <div className="ml-auto flex items-center gap-2">
             <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 type-label", automation === "ai_active" ? "bg-teal-50 text-teal-700" : "bg-amber-50 text-amber-700")}>
@@ -125,7 +126,7 @@ export function ConversationThread({ back, conversationId }: { back?: ReactNode;
         ) : null}
       </div>
       {waiting ? <p className="border-b bg-amber-50 px-4 py-2 type-caption text-amber-800">{t("page.waitingDescription")}</p> : null}
-      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4">
+      <div className="flex flex-1 flex-col gap-3 p-4 md:min-h-0 md:overflow-y-auto">
         {thread.data!.messages.map((message) => (
           <div className={cn("flex", message.direction === "outbound" ? "justify-end" : "justify-start")} key={message.id}>
             <div className={cn("max-w-[80%] rounded-2xl px-4 py-3 type-body", message.direction === "outbound" ? "rounded-br-sm bg-primary text-primary-foreground" : "rounded-bl-sm bg-muted text-foreground")}>

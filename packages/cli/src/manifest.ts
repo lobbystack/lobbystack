@@ -53,7 +53,7 @@ export type ManifestFile = UploadFile & {
  * Reads every document the manifest lists, before anything changes. Each has
  * to be inside the manifest's folder once links are followed, so a link can't
  * make a file from elsewhere on the computer, such as a saved API key, part of
- * what the receptionist tells callers.
+ * what the agent tells callers.
  */
 export async function readManifestFiles(manifest: Manifest, baseDir: string): Promise<ManifestFile[]> {
   const entries = manifest.knowledge?.files ?? [];

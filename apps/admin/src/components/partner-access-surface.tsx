@@ -10,6 +10,7 @@ import { Surface } from "@/components/ui/surface";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatDateTime } from "@/lib/locale";
 import { requestJson } from "@/lib/request-json";
+import { EmptyState } from "@/components/ui/empty-state";
 
 type PartnerAccessEvent = { id: string; kind: "opened" | "left"; at: string; name: string | null; partnerName: string | null };
 
@@ -45,7 +46,7 @@ export function PartnerAccessSurface() {
     <div className="flex flex-col gap-4">
       {header}
       {rows.length === 0 ? (
-        <Surface className="px-6 py-8"><p className="type-body-muted">{t("partnerAccess.empty", { appName })}</p></Surface>
+        <EmptyState title={t("partnerAccess.empty", { appName })} />
       ) : (
         <Surface className="overflow-x-auto">
           <Table>

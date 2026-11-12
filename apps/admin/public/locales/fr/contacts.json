@@ -187,6 +187,7 @@
   "edit": {
     "title": "Modifier le contact",
     "name": "Nom",
+    "contactName": "Nom du contact",
     "email": "E-mail",
     "cancel": "Annuler",
     "save": "Enregistrer",

@@ -48,8 +48,14 @@ describe("phone card on Home", () => {
     const { container } = await renderCard({ lines: [front] });
     const heading = screen.getByRole("heading", { name: en.home.phone.status.ready });
     // The dot sits after the heading's text, green and still in both states.
-    const dot = heading.nextElementSibling!;
+    const dotLine = heading.nextElementSibling!;
+    expect(dotLine.getAttribute("data-slot")).toBe("phone-status-dot-line");
+    // It centers on the heading's first line: a box one heading line tall, at the top of the row, with the heading's type.
+    expect(heading.parentElement!.className.split(" ")).toContain("items-start");
+    expect(dotLine.className.split(" ")).toEqual(expect.arrayContaining(["h-lh", "items-center", "type-section-title"]));
+    const dot = dotLine.firstElementChild!;
     expect(dot.getAttribute("data-slot")).toBe("phone-status-dot");
+    expect(dot.className.split(" ")).toEqual(expect.arrayContaining(["size-2", "rounded-full"]));
     expect(dot.className).toContain("bg-status-success-foreground");
     expect(dot.className).not.toMatch(/animate-/);
     // The number shows alone, and one number needs no agent name.
@@ -75,7 +81,7 @@ describe("phone card on Home", () => {
   it("says the agent is taking calls once a call came in, with the same green dot", async () => {
     await renderCard({ called: true, lines: [{ ...front, staffFirstMode: "always" }] });
     const heading = screen.getByRole("heading", { name: en.home.phone.status.live });
-    expect(heading.nextElementSibling!.className).toContain("bg-status-success-foreground");
+    expect(heading.nextElementSibling!.querySelector("[data-slot='phone-status-dot']")!.className).toContain("bg-status-success-foreground");
     expect(screen.queryByText(en.home.phone.status.ready)).toBeNull();
     expect(screen.getByRole("button", { name: en.home.phone.answersFirst.team })).toBeTruthy();
   });

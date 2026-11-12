@@ -70,7 +70,8 @@ describe("widget key issuance gate", () => {
   it("leaves the agent to the default without one, and refuses one that isn't a UUID", async () => {
     vi.stubEnv("WIDGET_KEY_ISSUANCE_ENABLED", "true");
     expect((await POST(request({ allowedOrigins: [] }))).status).toBe(200);
-    expect(mocks.values).toHaveBeenCalledWith(expect.not.objectContaining({ agentId: expect.anything() }));
+    // The default agent, as a subquery that reads the business's default.
+    expect(mocks.values).toHaveBeenCalledWith(expect.objectContaining({ agentId: expect.objectContaining({ queryChunks: expect.any(Array) }) }));
     expect(domain.requireActiveAgentInTransaction).not.toHaveBeenCalled();
     expect((await POST(request({ allowedOrigins: [], agentId: "evening" }))).status).toBe(400);
     expect(mocks.insert).toHaveBeenCalledTimes(1);

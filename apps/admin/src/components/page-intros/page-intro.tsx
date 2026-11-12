@@ -67,7 +67,7 @@ export function PageIntroCard({ page, onDismiss }: { page: PageIntroId; onDismis
     <DialogContent
       size="sm"
       data-page-intro={page}
-      className="max-h-[calc(100svh-2rem)] gap-0 overflow-y-auto p-0 motion-safe:data-open:slide-in-from-bottom-4 motion-safe:data-open:duration-300 motion-reduce:animate-none"
+      className="max-h-[calc(100svh-2rem)] gap-0 overflow-x-hidden overflow-y-auto p-0 motion-safe:data-open:slide-in-from-bottom-4 motion-safe:data-open:duration-300 motion-reduce:animate-none"
       overlayClassName="motion-reduce:animate-none"
     >
       <Illustration />

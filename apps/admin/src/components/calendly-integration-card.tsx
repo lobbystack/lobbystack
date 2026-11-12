@@ -26,7 +26,7 @@ function CalendlyLogo() {
   </svg>;
 }
 
-/** The Calendly card on the integrations page, with its dialog for the event type the receptionist books. */
+/** The Calendly card on the integrations page, with its dialog for the event type the agent books. */
 export function CalendlyIntegrationCard({ businessId, canManage, data }: { businessId: string | undefined; canManage: boolean; data: IntegrationsViewModel | undefined }) {
   const { t, i18n } = useTranslation("settings");
   const telemetry = useTelemetry();
@@ -100,7 +100,7 @@ export function CalendlyIntegrationCard({ businessId, canManage, data }: { busin
       </div></div>
       <div className="flex flex-col gap-1"><h2 className="type-section-title">{t("integrations.cards.calendly.title")}</h2><p className="type-body-muted line-clamp-2">{t("integrations.cards.calendly.description")}</p></div>
     </li>
-    <Dialog onOpenChange={setDialogOpen} open={dialogOpen}><DialogContent className="w-full gap-0 p-0">
+    <Dialog onOpenChange={setDialogOpen} open={dialogOpen}><DialogContent size="sm" className="gap-0 p-0">
       <DialogHeader className="flex-row items-center gap-3 p-6 pb-4"><CalendlyLogo /><div className="flex flex-col gap-1"><DialogTitle>{t("integrations.calendly.sheetTitle")}</DialogTitle><DialogDescription>{t("integrations.calendly.sheetDescription")}</DialogDescription></div></DialogHeader>
       <div className="flex flex-col gap-4 px-6 pb-6">
         {connection && planBlocked ? <Alert variant="destructive"><AlertTitle>{t("integrations.calendly.planRequiredTitle")}</AlertTitle><AlertDescription>{t("integrations.calendly.planRequired")}</AlertDescription></Alert> : null}

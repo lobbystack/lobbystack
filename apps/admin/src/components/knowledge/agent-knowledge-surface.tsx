@@ -83,6 +83,7 @@ export function AgentKnowledgeSurface({ agentId }: { agentId: string }) {
         loading={false}
         menu={canManage ? (source) => <SourceMenu actions={actions} isOff={!source.active} onEdit={(entry) => { setEditing(entry); setForm("text"); }} source={source} /> : undefined}
         onOpen={(source) => open(source, false)}
+        onRetry={canManage && !actions.pending ? (source) => void actions.run("reimport", [source]) : undefined}
         rows={own}
         selection={canManage ? ownSelection : undefined}
       />

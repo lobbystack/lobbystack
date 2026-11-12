@@ -1,6 +1,5 @@
 // @vitest-environment jsdom
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -9,7 +8,7 @@ import { OnboardingReadingSurface } from "./onboarding-reading-surface";
 const { push, router } = vi.hoisted(() => { const push = vi.fn(); return { push, router: { push, prefetch: vi.fn() } }; });
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
-vi.mock("./onboarding-import-wait", async (importOriginal) => ({ ...await importOriginal<typeof import("./onboarding-import-wait")>(), ImportWaitSlides: () => <p>slides</p> }));
+vi.mock("./onboarding-import-wait", async (importOriginal) => ({ ...await importOriginal<typeof import("./onboarding-import-wait")>(), ImportWaitSlides: ({ status }: { status?: React.ReactNode }) => <div><p>slides</p>{status}</div> }));
 
 const websiteUrl = "https://example.com/";
 const running = { status: "crawling", websiteUrl, importedCount: 1, indexedCount: 0 };
@@ -32,11 +31,54 @@ describe("the wait after the website step", () => {
     expect(screen.queryByText("slides")).toBeNull();
   });
 
-  it("shows only while the import runs, and always lets the operator continue", async () => {
+  it("shows while the import runs, with no way to skip it", async () => {
     setup(() => [{ id: "document", websiteImport: running }]);
     await screen.findByText("slides");
+    expect(screen.getByText("reading.status")).toBeTruthy();
+    expect(screen.queryByRole("button")).toBeNull();
     expect(push).not.toHaveBeenCalled();
-    await userEvent.click(screen.getByRole("button", { name: "reading.skip" }));
+  });
+
+  it("moves on when the submitted import fails", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    let answer: unknown[] = [{ id: "document", websiteImport: running }];
+    setup(() => answer, "document");
+    await screen.findByText("reading.status");
+    answer = [{ id: "document", websiteImport: { ...running, status: "failed" } }];
+    await act(() => vi.advanceTimersByTimeAsync(2_000));
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/onboarding/number"));
+  });
+
+  it("says the read stopped when it stalls, and Try again starts it again without leaving", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    let answer: unknown[] = [{ id: "document", websiteImport: running }];
+    setup(() => answer, "document");
+    await screen.findByText("reading.status");
+    answer = [{ id: "document", websiteImport: { ...running, status: "queued", stalled: true } }];
+    await act(() => vi.advanceTimersByTimeAsync(2_000));
+    await screen.findByText("reading.stalled");
+    expect(push).not.toHaveBeenCalled();
+    const fetchMock = vi.mocked(fetch);
+    answer = [{ id: "document", websiteImport: { ...running, status: "queued", stalled: false } }];
+    await act(async () => { screen.getByRole("button", { name: "reading.tryAgain" }).click(); });
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/knowledge/document?businessId=business", expect.objectContaining({ method: "PATCH", body: JSON.stringify({ action: "retry" }) })));
+    await screen.findByText("reading.status");
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it("still moves on at the limit while a stalled read waits", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    setup(() => [{ id: "document", websiteImport: { ...running, stalled: true } }], "document");
+    await screen.findByText("reading.stalled");
+    await act(() => vi.advanceTimersByTimeAsync(90_000));
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/onboarding/number"));
+  });
+
+  it("moves on when the knowledge check fails", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
+    client.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true, websiteUrl }] });
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ error: "down" }, { status: 500 })));
+    render(<QueryClientProvider client={client}><OnboardingReadingSurface documentId="document" /></QueryClientProvider>);
     await waitFor(() => expect(push).toHaveBeenCalledWith("/onboarding/number"));
   });
 

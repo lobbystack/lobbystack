@@ -193,7 +193,7 @@ describe.skipIf(!client)("operator contact and channel data under operator RLS",
     });
   });
 
-  it("adds up booked value and time saved from the receptionist's own bookings and handled calls", async () => {
+  it("adds up booked value and time saved from the agent's own bookings and handled calls", async () => {
     await rollbackTest(async (tx) => {
       const { businessId, userId, ids } = await seed(tx);
       await tx.execute(sql`reset role`);
@@ -484,7 +484,7 @@ describe.skipIf(!client)("phone card on Home", () => {
       const settings = { businessId, greeting: "Hello", tone: "warm", summary: "", bookingPolicy: "Book", transferMode: "on_request" };
       const [frontDesk] = await tx.insert(agents).values({ ...settings, name: "Front desk", isDefault: true }).returning({ id: agents.id, name: agents.name });
       const [evening] = await tx.insert(agents).values({ ...settings, name: "Evening", staffFirstMode: "business_hours" }).returning({ id: agents.id });
-      const number = (e164: string, minutesAgo: number, extra: Partial<typeof phoneNumbers.$inferInsert> = {}) => ({ businessId, e164, status: "active", voiceEnabled: true, smsEnabled: true, createdAt: new Date(Date.now() - minutesAgo * 60_000), ...extra });
+      const number = (e164: string, minutesAgo: number, extra: Partial<typeof phoneNumbers.$inferInsert> = {}) => ({ businessId, agentId: frontDesk!.id, e164, status: "active", voiceEnabled: true, smsEnabled: true, createdAt: new Date(Date.now() - minutesAgo * 60_000), ...extra });
       const suffix = String(Math.floor(Math.random() * 1_000)).padStart(3, "0");
       await tx.insert(phoneNumbers).values([
         // The default agent answers a number with no agent of its own.

@@ -6,7 +6,7 @@ import { BookingUnavailableError, type NoOpeningsReason } from "../availability"
 import { requireBusinessMembership } from "../authz";
 import { appointmentNotes, findOpeningsInTransaction } from "./booking";
 import type { DomainContext } from "./context";
-import { bookForCaller } from "./receptionistActions";
+import { bookForCaller } from "./agentActions";
 
 function serviceUnavailable(): Error {
   return Object.assign(new Error("Service is not available."), { status: 409, code: "service_unavailable" });
@@ -37,7 +37,7 @@ export async function findBookingOpenings(
  * calendar sync, webhooks and telemetry follow, with the dashboard as the
  * channel and the operator in the audit log. Takes the scheduler role or
  * above. The business's booking mode doesn't apply: it governs the
- * receptionist, and the operator is the business. A time that isn't open
+ * agent, and the operator is the business. A time that isn't open
  * throws BookingUnavailableError.
  */
 export async function bookAppointmentForOperator(

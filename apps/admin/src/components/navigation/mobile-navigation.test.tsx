@@ -45,9 +45,11 @@ describe("the phone menu sheet", () => {
     expect(within(account).getByRole("link", { name: "sidebar.accountSettings" }).getAttribute("href")).toBe("/account");
     expect(within(account).getByRole("link", { name: "items.affiliate" }).getAttribute("href")).toBe("/affiliate");
     for (const name of ["feedback.trigger", "sidebar.toggleTheme", "sidebar.signOut"]) expect(within(account).getByRole("button", { name })).toBeTruthy();
-    // The same groups as the sidebar's account menu, with a line between each.
-    const outline = [...account.querySelectorAll("[data-sidebar=menu-button], [data-account-separator]")].map((element) => element.hasAttribute("data-account-separator") ? "—" : element.textContent);
-    expect(outline).toEqual(["sidebar.accountSettings", "—", "feedback.trigger", "feedback.helpCenter", "items.affiliate", "—", "sidebar.toggleTheme", "—", "sidebar.signOut"]);
+    // One list from Search to Sign out, with a single line between the sections and the account menu.
+    const outline = [...sheet.querySelectorAll("[data-sidebar=menu-button], [data-account-email], [data-slot=separator]")].map((element) => element.getAttribute("data-slot") === "separator" ? "—" : element.textContent);
+    expect(outline).toEqual(["items.analytics", "items.agents", "items.business", "items.settings", "—", "Ooperator@example.invalid", "sidebar.accountSettings", "feedback.trigger", "feedback.helpCenter", "items.affiliate", "sidebar.toggleTheme", "sidebar.signOut"]);
+    expect(sheet.querySelector("[data-menu-level]")!.querySelectorAll("[data-sidebar=menu]")).toHaveLength(1);
+    expect(account.querySelectorAll("[data-sidebar=menu]")).toHaveLength(1);
   });
 
   it("drills into Settings and Business with a back row, as the sidebar does", async () => {

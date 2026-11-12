@@ -106,7 +106,7 @@ describe.skipIf(!client)("website imports in the bell", () => {
   it("opens an agent's Specific knowledge for a website only that agent uses, and Knowledge for a shared one", async () => {
     await rollbackTest(async (tx) => {
       const { businessId, doc } = await seed(tx);
-      const [agent] = await tx.insert(agents).values({ businessId, name: "Weekend line", greeting: "Hello", tone: "warm", summary: "", bookingPolicy: "", transferMode: "never" }).returning({ id: agents.id });
+      const [agent] = await tx.insert(agents).values({ businessId, name: "Weekend line", greeting: "Hello", tone: "warm", bookingPolicy: "", transferMode: "never" }).returning({ id: agents.id });
       const owned = await doc("website", "https://weekend.example.com/");
       await tx.update(knowledgeDocuments).set({ agentId: agent!.id }).where(eq(knowledgeDocuments.id, owned));
       const shared = await doc("website", "https://example.com/");

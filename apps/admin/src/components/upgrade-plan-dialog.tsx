@@ -86,7 +86,7 @@ export function UpgradePlanDialog({
 
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
-      <DialogContent className="max-h-[calc(100svh-2rem)] overflow-y-auto sm:max-w-[72rem]">
+      <DialogContent className="max-h-[calc(100svh-2rem)] overflow-x-hidden overflow-y-auto sm:max-w-[72rem]">
         <DialogHeader>
           <DialogTitle>
             {t("billing.upgradeDialog.title")}

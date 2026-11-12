@@ -45,12 +45,13 @@ function originOf(value: string | undefined): string | undefined {
 
 /**
  * The marketing site's policy. Its hero voice demo calls the dashboard host's
- * live-call API, and Cloudflare Web Analytics loads its beacon from its own origin.
+ * live-call API, its navbar asks the dashboard whether the visitor is signed
+ * in, and Cloudflare Web Analytics loads its beacon from its own origin.
  */
 export function marketingSecurityHeaders(env: Record<string, string | undefined> = process.env): Record<string, string> {
   const posthogOrigin = posthogSources(env).join(" ");
   const callOrigins = Array.from(new Set(
-    [originOf(env.APP_BASE_URL) ?? "https://app.lobbystack.com", originOf(env.NEXT_PUBLIC_LIVE_CALL_ENDPOINT)].filter(Boolean),
+    [originOf(env.APP_BASE_URL) ?? "https://app.lobbystack.com", originOf(env.NEXT_PUBLIC_APP_URL), originOf(env.NEXT_PUBLIC_LIVE_CALL_ENDPOINT)].filter(Boolean),
   )).join(" ");
   return {
     "Content-Security-Policy": [

@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { Fragment, useState, type ReactNode, type RefObject } from "react";
+import { useState, type ReactNode, type RefObject } from "react";
 import { ChevronRight, ExternalLink, LayoutList, SearchIcon, XIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -13,7 +13,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetClose, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { SidebarGroup, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
+import { SidebarGroup, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import { useAgents } from "@/hooks/use-agents";
 import { agentIdOf, levelFor, type Direction, type MenuLevel } from "@/lib/navigation-levels";
 import { useAccountMenu, type NavigationUser } from "./account-menu";
@@ -55,7 +55,8 @@ function DrillRow({ icon: Icon, label, onSelect }: { icon: NavLink["icon"]; labe
 
 /**
  * The sheet's first menu: search and the pages the tab bar leaves out, then
- * Agents, Business and Settings, which open their menus in the sheet.
+ * Agents, Business and Settings, which open their menus in the sheet. One
+ * list, so every row sits the same gap from the next.
  */
 function RootMenu({ closeThen, onDrill }: { closeThen: (next?: () => void) => void; onDrill: (level: SheetLevel) => void }) {
   const { t } = useTranslation("nav");
@@ -68,26 +69,22 @@ function RootMenu({ closeThen, onDrill }: { closeThen: (next?: () => void) => vo
   const agentsTarget: SheetLevel | null = hasChoice ? "agents" : primary ? `agent:${primary.id}` : null;
   const sections = allowed([links.agents, links.business, links.settings]);
   return (
-    <>
-      <MenuGroup>
-        {searchReady ? (
-          <SidebarMenuItem>
-            <SidebarMenuButton onClick={() => closeThen(openSearch)}>
-              <SearchIcon />
-              <span>{t("search.button")}</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        ) : null}
-        {analytics.map((link) => <MenuRow active={pathname.startsWith(link.href)} href={link.href} key={link.href} label={link.label} leading={<link.icon aria-hidden="true" className="size-4 shrink-0 [&_svg]:size-4" size={16} />} title={link.label} />)}
-      </MenuGroup>
-      {sections.length ? <MenuGroup>
-        {sections.map((link) => {
-          if (link === links.agents && !agentsTarget) return <MenuRow href={link.href} key={link.href} label={link.label} leading={<link.icon aria-hidden="true" className="size-4 shrink-0 [&_svg]:size-4" size={16} />} title={link.label} />;
-          const level: SheetLevel = link === links.agents ? agentsTarget! : link === links.business ? "business" : "settings";
-          return <DrillRow icon={link.icon} key={link.href} label={link.label} onSelect={() => onDrill(level)} />;
-        })}
-      </MenuGroup> : null}
-    </>
+    <MenuGroup>
+      {searchReady ? (
+        <SidebarMenuItem>
+          <SidebarMenuButton onClick={() => closeThen(openSearch)}>
+            <SearchIcon />
+            <span>{t("search.button")}</span>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      ) : null}
+      {analytics.map((link) => <MenuRow active={pathname.startsWith(link.href)} href={link.href} key={link.href} label={link.label} leading={<link.icon aria-hidden="true" className="size-4 shrink-0 [&_svg]:size-4" size={16} />} title={link.label} />)}
+      {sections.map((link) => {
+        if (link === links.agents && !agentsTarget) return <MenuRow href={link.href} key={link.href} label={link.label} leading={<link.icon aria-hidden="true" className="size-4 shrink-0 [&_svg]:size-4" size={16} />} title={link.label} />;
+        const level: SheetLevel = link === links.agents ? agentsTarget! : link === links.business ? "business" : "settings";
+        return <DrillRow icon={link.icon} key={link.href} label={link.label} onSelect={() => onDrill(level)} />;
+      })}
+    </MenuGroup>
   );
 }
 
@@ -134,26 +131,21 @@ function AccountRow({ closeThen, item }: { closeThen: (next?: () => void) => voi
   );
 }
 
-/** The account menu's items, under the person's email. */
+/** The account menu's items, under the person's email, as one list with the same rows as the menu above. */
 function AccountSection({ closeThen, onFeedback, partnerConsole, user }: { closeThen: (next?: () => void) => void; onFeedback: () => void; partnerConsole: boolean; user: NavigationUser }) {
   const { t } = useTranslation("nav");
   const actions = useAccountMenu({ partnerConsole });
   const groups = useAccountMenuGroups({ ...actions, onFeedback });
   return (
-    <SidebarGroup aria-label={t("accountMenu")} className="mt-auto" data-account-section="" role="group">
-      <SidebarGroupLabel className="h-auto gap-2 py-2 type-body-muted">
-        <Avatar size="sm"><AvatarFallback>{user.email.trim().charAt(0).toUpperCase() || "?"}</AvatarFallback></Avatar>
-        <span className="min-w-0 truncate" title={user.email}>{user.email}</span>
-      </SidebarGroupLabel>
-      {groups.map((group, index) => (
-        <Fragment key={group[0]!.key}>
-          {/* The group's padding plus this inset lines it up with the sheet's other group lines. */}
-          {index > 0 ? <Separator className="mx-3 my-2 w-auto! bg-sidebar-border" data-account-separator="" /> : null}
-          <SidebarMenu>
-            {group.map((item) => <AccountRow closeThen={closeThen} item={item} key={item.key} />)}
-          </SidebarMenu>
-        </Fragment>
-      ))}
+    <SidebarGroup aria-label={t("accountMenu")} data-account-section="" role="group">
+      <SidebarMenu>
+        {/* A row's height and padding. The 24px avatar overhangs the 16px icon column by 4px each side, so the email starts where the labels do. */}
+        <SidebarMenuItem className="flex h-11 items-center gap-2 px-3 type-body-muted" data-account-email="">
+          <Avatar className="-mx-1" size="sm"><AvatarFallback>{user.email.trim().charAt(0).toUpperCase() || "?"}</AvatarFallback></Avatar>
+          <span className="min-w-0 truncate" title={user.email}>{user.email}</span>
+        </SidebarMenuItem>
+        {groups.flat().map((item) => <AccountRow closeThen={closeThen} item={item} key={item.key} />)}
+      </SidebarMenu>
     </SidebarGroup>
   );
 }
@@ -192,7 +184,7 @@ function SheetMenus({ closeThen, onFeedback, partnerConsole, user }: { closeThen
       <div className={`flex flex-col duration-200 ease-out motion-reduce:animate-none ${state.direction ? SLIDE[state.direction] : ""}`} data-menu-level={shown} key={shown}>
         {menu}
       </div>
-      {shown === "root" ? <div className="mt-auto flex flex-col">
+      {shown === "root" ? <div className="flex flex-col">
         {/* The plans open once the sheet has closed, so they don't open under it. */}
         <NumberTrialChip className="mx-4 mb-2" openWith={(openPlans) => closeThen(openPlans)} />
         <Separator className="mx-5 w-auto! bg-sidebar-border" />

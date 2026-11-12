@@ -190,7 +190,7 @@ describe.skipIf(!client)("businesses with no owner", () => {
     };
   }
 
-  it("creates a business with no owner that still has its staff member, receptionist profile and first snapshot", async () => {
+  it("creates a business with no owner that still has its staff member, agent profile and first snapshot", async () => {
     vi.stubEnv("DEPLOYMENT_MODE", "cloud");
     await rollbackTest(async (tx) => {
       await tx.execute(sql`set local role lobbystack_app`);

@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it, vi } from "vitest";
-import { agents, billingAccounts, businessContextSnapshots, businesses, calls, contacts, conversations, createDatabaseClient, instagramAccounts, messages, outboxMessages, phoneNumbers, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { agents, billingAccounts, businessContextSnapshots, businesses, calls, contacts, conversations, createDatabaseClient, instagramAccounts, messages, outboxMessages, phoneNumbers, withBusinessTransaction, type Database, type DatabaseTransaction, defaultAgentIdOf } from "@lobbystack/db";
 
 import { businessHasPhoneNumber } from "../snapshot";
 import { getOrCreateWidgetConversation } from "./conversations";
@@ -9,8 +9,8 @@ import { loadInstagramReplyContext, receiveInstagramMessage } from "./instagram"
 import { refreshBusinessSnapshot } from "./knowledge";
 import { finishLiveCall, listOpenLiveCalls, startLivePhoneCall, startLiveWebCall } from "./liveCalls";
 import { desiredNumberRouting, enqueueNumberAgentChange, refreshStaleRefusedCallForwards, resolveRefusedCallForward } from "./numberTrials";
-import { lookupCallerAppointments, takeMessageForStaff } from "./receptionistActions";
-import { activeAgentExistsInTransaction } from "./receptionistProfile";
+import { lookupCallerAppointments, takeMessageForStaff } from "./agentActions";
+import { activeAgentExistsInTransaction } from "./agentSettings";
 import { loadTextReplyReachInTransaction, receiveInboundSms } from "./sms";
 import { getBusinessSnapshotForAgent } from "./snapshotCache";
 import { decideStaffFirstCall, loadStaffFirstHandover, recordStaffAnsweredCall } from "./staffFirst";
@@ -164,7 +164,7 @@ describe.skipIf(!testUrl)("each channel answers as its own agent", () => {
       expect(await desiredNumberRouting({ db }, { businessId, phoneNumberId: numberA })).toMatchObject({ mode: "receptionist" });
       expect(await desiredNumberRouting({ db }, { businessId, phoneNumberId: numberB })).toMatchObject({ mode: "staff_first" });
       expect(await decideStaffFirstCall({ db }, { businessId, e164: LINE_B, providerCallId: `CA${randomUUID()}`, from: CALLER })).toMatchObject({ action: "ring", phone: STAFF_B });
-      expect(await decideStaffFirstCall({ db }, { businessId, e164: LINE_A, providerCallId: `CA${randomUUID()}`, from: CALLER })).toMatchObject({ action: "receptionist" });
+      expect(await decideStaffFirstCall({ db }, { businessId, e164: LINE_A, providerCallId: `CA${randomUUID()}`, from: CALLER })).toMatchObject({ action: "agent" });
       expect(await loadStaffFirstHandover({ db }, { businessId, e164: LINE_B })).toMatchObject({ message: "Evening handover" });
       expect(await loadStaffFirstHandover({ db }, { businessId, e164: LINE_A })).not.toHaveProperty("message");
 
@@ -192,7 +192,7 @@ describe.skipIf(!testUrl)("each channel answers as its own agent", () => {
         await tx.insert(businesses).values({ id: other, slug: `agents-${other}`, name: "Other", timezone: "UTC", businessType: "test" });
         return other;
       });
-      const [foreign] = await asMigrator(tx, async () => await tx.insert(agents).values({ businessId: otherBusinessId, greeting: "Hi", tone: "warm", summary: "Other", bookingPolicy: "Book", transferMode: "never" }).returning({ id: agents.id }));
+      const [foreign] = await asMigrator(tx, async () => await tx.insert(agents).values({ businessId: otherBusinessId, greeting: "Hi", tone: "warm", bookingPolicy: "Book", transferMode: "never" }).returning({ id: agents.id }));
       await tx.execute(sql`set local role lobbystack_app`);
       const find = (agentId: string) => withBusinessTransaction(db, { businessId, actorType: "system" }, (inner) => activeAgentExistsInTransaction(inner, { businessId, agentId }));
       expect(await find(agentB)).toBe(true);
@@ -335,8 +335,8 @@ describe.skipIf(!testUrl)("a business with one agent", () => {
       const businessId = randomUUID();
       await tx.insert(businesses).values({ id: businessId, slug: `one-agent-${businessId}`, name: "Harbor Dental", timezone: "UTC", businessType: "test", deploymentMode: "cloud" });
       await tx.insert(billingAccounts).values({ businessId, billingKey: `business:${businessId}`, plan: "starter", subscriptionState: "active" }).onConflictDoUpdate({ target: billingAccounts.businessId, set: { plan: "starter", subscriptionState: "active" } });
-      const [agent] = await tx.insert(agents).values({ businessId, isDefault: true, greeting: "Hello", tone: "warm", summary: "Clinic", bookingPolicy: "Book", transferMode: "on_request", transferNumber: TRANSFER_A }).returning({ id: agents.id });
-      await tx.insert(phoneNumbers).values({ businessId, e164: LINE_A, providerPhoneId: `PN${randomUUID()}`, status: "active", voiceEnabled: true, smsEnabled: true });
+      const [agent] = await tx.insert(agents).values({ businessId, isDefault: true, greeting: "Hello", tone: "warm", bookingPolicy: "Book", transferMode: "on_request", transferNumber: TRANSFER_A }).returning({ id: agents.id });
+      await tx.insert(phoneNumbers).values({ businessId, agentId: defaultAgentIdOf(businessId), e164: LINE_A, providerPhoneId: `PN${randomUUID()}`, status: "active", voiceEnabled: true, smsEnabled: true });
       await refreshBusinessSnapshot({ db: tx as unknown as Database }, { businessId });
       await tx.execute(sql`set local role lobbystack_worker`);
       const db = tx as unknown as Database;
@@ -358,8 +358,8 @@ describe.skipIf(!testUrl)("a business with one agent", () => {
     await client!.db.transaction(async (tx) => {
       const businessId = randomUUID();
       await tx.insert(businesses).values({ id: businessId, slug: `old-shape-${businessId}`, name: "Harbor Dental", timezone: "UTC", businessType: "test" });
-      const [agent] = await tx.insert(agents).values({ businessId, isDefault: true, greeting: "Hello", tone: "warm", summary: "Clinic", bookingPolicy: "Book", transferMode: "never" }).returning({ id: agents.id });
-      await tx.insert(phoneNumbers).values({ businessId, e164: LINE_A, providerPhoneId: `PN${randomUUID()}`, status: "active", voiceEnabled: true });
+      const [agent] = await tx.insert(agents).values({ businessId, isDefault: true, greeting: "Hello", tone: "warm", bookingPolicy: "Book", transferMode: "never" }).returning({ id: agents.id });
+      await tx.insert(phoneNumbers).values({ businessId, agentId: defaultAgentIdOf(businessId), e164: LINE_A, providerPhoneId: `PN${randomUUID()}`, status: "active", voiceEnabled: true });
       await refreshBusinessSnapshot({ db: tx as unknown as Database }, { businessId });
       const db = tx as unknown as Database;
       const current = (await getBusinessSnapshotForAgent({ db }, { businessId }))!;
@@ -382,8 +382,8 @@ describe.skipIf(!testUrl)("a row from before agents were recorded", () => {
       await tx.execute(sql`alter table public.${sql.identifier(table)} drop constraint ${sql.identifier(`${table}_agent_id_present`)}`);
       const businessId = randomUUID();
       await tx.insert(businesses).values({ id: businessId, slug: `old-row-${businessId}`, name: "Harbor Dental", timezone: "UTC", businessType: "test", deploymentMode: "cloud", textRepliesEnabled: true });
-      const [agent] = await tx.insert(agents).values({ businessId, isDefault: true, greeting: "Hello", tone: "warm", summary: "Clinic", bookingPolicy: "Book", transferMode: "never" }).returning({ id: agents.id });
-      await tx.insert(phoneNumbers).values({ businessId, e164: LINE_A, providerPhoneId: `PN${randomUUID()}`, status: "active", voiceEnabled: true, smsEnabled: true });
+      const [agent] = await tx.insert(agents).values({ businessId, isDefault: true, greeting: "Hello", tone: "warm", bookingPolicy: "Book", transferMode: "never" }).returning({ id: agents.id });
+      await tx.insert(phoneNumbers).values({ businessId, agentId: defaultAgentIdOf(businessId), e164: LINE_A, providerPhoneId: `PN${randomUUID()}`, status: "active", voiceEnabled: true, smsEnabled: true });
       await run({ tx, db: tx as unknown as Database, businessId, agentId: agent!.id });
       throw rollback;
     }).catch((error: unknown) => { if (error !== rollback) throw error; });

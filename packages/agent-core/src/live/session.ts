@@ -1,4 +1,4 @@
-import { normalizeReceptionistVoice, type BusinessContextSnapshot, type ReceptionistVoice } from "@lobbystack/shared";
+import { normalizeAgentVoice, type BusinessContextSnapshot, type AgentVoice } from "@lobbystack/shared";
 import type { BuiltInVoice, MediaSessionConfig } from "openai/resources/live/live";
 import type { SessionAcceptParams } from "openai/resources/live/sessions";
 
@@ -7,11 +7,11 @@ import { buildLiveInstructions } from "../instructions";
 export const LIVE_MODEL = "gpt-live-1";
 
 // Fails to compile when the shared list offers a voice GPT-Live doesn't have.
-true satisfies (ReceptionistVoice extends BuiltInVoice ? true : never);
+true satisfies (AgentVoice extends BuiltInVoice ? true : never);
 
 /** The business's voice from the snapshot. Snapshots from before the choice, or with a retired voice, speak in marin. */
-function sessionVoice(snapshot: BusinessContextSnapshot): ReceptionistVoice {
-  return normalizeReceptionistVoice(snapshot.voice);
+function sessionVoice(snapshot: BusinessContextSnapshot): AgentVoice {
+  return normalizeAgentVoice(snapshot.voice);
 }
 
 // Events the browser may see. It can watch the conversation and end it, but it

@@ -69,7 +69,7 @@ describe.skipIf(!client)("service deletion under operator RLS", () => {
     });
   });
 
-  it("changes a service's fields and refreshes the receptionist snapshot", async () => {
+  it("changes a service's fields and refreshes the agent snapshot", async () => {
     await rollbackTest(async (tx) => {
       const { db, businessId, userId, serviceId } = await seed(tx);
       await updateService({ db }, { userId, businessId, serviceId, name: "Drain jetting", durationMinutes: 45, description: "High pressure." });

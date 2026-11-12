@@ -1085,8 +1085,7 @@
   },
   "apiKeys": {
     "title": "Claves de API",
-    "description": "Use una clave para conectar su propio código u otra aplicación a la API de {{appName}}.",
-    "empty": "Aún no hay claves de API.",
+    "empty": "Aún no hay claves de API",
     "createdOn": "Creada el {{date}}",
     "lastUsed": "Último uso el {{date}}",
     "neverUsed": "Nunca usada",
@@ -1153,7 +1152,7 @@
   "webhooks": {
     "title": "Webhooks",
     "description": "{{appName}} envía un HTTPS POST a su URL cuando ocurre algo, como una llamada finalizada o una nueva reserva.",
-    "empty": "Aún no hay endpoints de webhook.",
+    "empty": "Aún no hay endpoints de webhook",
     "enabledLabel": "Enviar eventos a este endpoint",
     "restricted": {
       "title": "Solo los propietarios y administradores pueden gestionar los webhooks",
@@ -1245,8 +1244,8 @@
   },
   "connectedApps": {
     "title": "Conexiones MCP",
-    "description": "Asistentes de IA, como Claude o ChatGPT, que alguien conectó al iniciar sesión.",
-    "empty": "Aún no hay conexiones MCP. Para agregar una, agregue {{appName}} en la configuración del asistente e inicie sesión.",
+    "emptyTitle": "Aún no hay conexiones MCP",
+    "emptyDescription": "Para agregar una, agregue {{appName}} en la configuración del asistente e inicie sesión.",
     "neverUsed": "Nunca usada",
     "unnamed": "Aplicación sin nombre",
     "connectedOn": "Conectada el {{date}}",

@@ -17,7 +17,7 @@ import { fetchPartnerTemplates, partnerTemplatesQueryKey, SaveTemplateDialog } f
 import { useTelemetry } from "@/components/product-analytics";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Combobox, ComboboxCollection, ComboboxContent, ComboboxEmpty, ComboboxGroup, ComboboxInput, ComboboxItem, ComboboxLabel, ComboboxList, ComboboxTrigger, ComboboxValue } from "@/components/ui/combobox";
+import { Combobox, ComboboxCollection, ComboboxContent, ComboboxEmpty, ComboboxGroup, ComboboxSearch, ComboboxItem, ComboboxLabel, ComboboxList, ComboboxTrigger, ComboboxValue } from "@/components/ui/combobox";
 import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Field, FieldContent, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
@@ -34,6 +34,7 @@ import { requestJson } from "@/lib/request-json";
 import { availableTimeZones, groupTimeZones, isTimeZoneRegion, type TimeZoneOption } from "@/lib/time-zones";
 import { Status } from "@/components/ui/status";
 import { INVITATION_STATUS_VARIANTS, PACKAGE_SUBSCRIPTION_STATUS_VARIANTS } from "@/lib/status-variants";
+import { EmptyState } from "@/components/ui/empty-state";
 
 /** What a business is sold, with its overage in the package's currency, which only owners and admins see. */
 type PackageBilling = { kind: "package"; packageId: string; packageName: string; status: PackageSubscriptionStatus; overage: PackageOverage };
@@ -68,8 +69,8 @@ const BILLING_ERRORS: Record<string, string> = {
   stripe_not_configured: "businesses.billing.errors.notConfigured",
 };
 
-// Matches SelectTrigger, as the time zone picker in the receptionist's settings does.
-const COMBOBOX_TRIGGER_CLASS = "flex h-9 w-full min-w-0 items-center justify-between gap-1.5 rounded-xl border border-input bg-input/30 px-3 py-2 type-body whitespace-nowrap transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50";
+// Matches SelectTrigger, as the time zone picker in the agent's settings does.
+const COMBOBOX_TRIGGER_CLASS = "flex h-9 w-full min-w-0 items-center justify-between gap-1.5 rounded-xl border border-input bg-input/30 px-3 py-2 type-body whitespace-nowrap transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50";
 
 /** The time zone of the browser creating the business, which the partner changes when its client is elsewhere. */
 function browserTimeZone(): string {
@@ -165,7 +166,7 @@ function OverageDialog({ partnerId, business, billing, onClose }: { partnerId: s
 
   return (
     <Dialog onOpenChange={(next) => { if (!next) onClose(); }} open>
-      <DialogContent size="sm">
+      <DialogContent>
         <form className="flex flex-col gap-6" noValidate onSubmit={(event) => { event.preventDefault(); if (!save.isPending) { setError(null); save.mutate(); } }}>
           <DialogHeader>
             <DialogTitle>{t("businesses.overage.title", { name: business.name })}</DialogTitle>
@@ -333,7 +334,7 @@ export function PartnerBusinessesSurface() {
     <Dialog onOpenChange={(next) => { setOpen(next); if (!next) reset(); }} open={open}>
       <DialogTrigger render={<Button disabled={businesses.isLoading} size="sm" />}>{t("businesses.create.action")}</DialogTrigger>
       {/* With templates and packages the form runs taller than a laptop screen, so it scrolls inside the window. */}
-      <DialogContent size="sm" className="max-h-[calc(100dvh-2rem)] overflow-y-auto">
+      <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-x-hidden overflow-y-auto">
         <form className="flex flex-col gap-6" noValidate onSubmit={(event) => { event.preventDefault(); setSubmitted(true); if (!create.isPending && name.trim() && ownerEmail.trim()) { setError(null); create.mutate(); } }}>
           <DialogHeader>
             <DialogTitle>{t("businesses.create.title")}</DialogTitle>
@@ -362,7 +363,7 @@ export function PartnerBusinessesSurface() {
                   <span className="min-w-0 flex-1 truncate text-left"><ComboboxValue /></span>
                 </ComboboxTrigger>
                 <ComboboxContent className="min-w-(--anchor-width)">
-                  <ComboboxInput className="relative z-10" clearSearchLabel={t("common:accessibility.clearSearch")} placeholder={t("businesses.create.timezoneSearch")} showTrigger={false} />
+                  <ComboboxSearch clearSearchLabel={t("common:accessibility.clearSearch")} placeholder={t("businesses.create.timezoneSearch")} />
                   <ComboboxEmpty>{t("businesses.create.timezoneNoResults")}</ComboboxEmpty>
                   <ComboboxList>
                     {(group: { value: string; label: string; items: TimeZoneOption[] }) => (
@@ -416,10 +417,7 @@ export function PartnerBusinessesSurface() {
       ) : businesses.isError ? (
         <Surface className="px-6 py-8"><p className="type-body-muted" role="alert">{t("businesses.loadFailed")}</p></Surface>
       ) : rows.length === 0 ? (
-        <Surface className="flex flex-col items-center gap-3 px-6 py-16 text-center">
-          <h2 className="type-card-title">{t("businesses.empty.title")}</h2>
-          {canCreate ? null : <p className="max-w-sm type-body-muted">{t("businesses.empty.memberDescription")}</p>}
-        </Surface>
+        <EmptyState description={canCreate ? undefined : t("businesses.empty.memberDescription")} title={t("businesses.empty.title")} />
       ) : (
         <Surface className="overflow-hidden p-0">
           <Table>

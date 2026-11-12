@@ -21,7 +21,7 @@ import type { DomainContext } from "./context";
 /**
  * What a person may do in a business. Activity is calls, chats,
  * appointments, contacts and messages. Setup is the rest of today's owner and
- * admin work in the business: the receptionist, knowledge, hours, services,
+ * admin work in the business: the agent, knowledge, hours, services,
  * rules, numbers, integrations, the website widget and analytics. Team is
  * the business's team.
  */

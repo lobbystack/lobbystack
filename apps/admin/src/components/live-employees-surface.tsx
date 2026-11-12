@@ -64,7 +64,7 @@ type Employee = {
 
 type ServiceOption = { id: string; name: string };
 
-const PICKER_TRIGGER_CLASS = "flex h-9 w-full items-center justify-between gap-1.5 rounded-xl border border-input bg-input/30 px-3 py-2 type-body whitespace-nowrap transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background data-invalid:border-destructive data-invalid:ring-[3px] data-invalid:ring-destructive/20";
+const PICKER_TRIGGER_CLASS = "flex h-9 w-full items-center justify-between gap-1.5 rounded-xl border border-input bg-input/30 px-3 py-2 type-body whitespace-nowrap transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 data-invalid:border-destructive data-invalid:ring-[3px] data-invalid:ring-destructive/20";
 const DAY_PICKER_LOCALES = { en: enUS, fr, es, sr: srLatn } as const;
 
 // Time off days are calendar dates, YYYY-MM-DD, read and written in local time so they don't shift a day.
@@ -246,7 +246,7 @@ function ServicesPicker({ id, invalid, label, onChange, services, value }: { id:
       <div className="border-b p-2">
         <SearchInput aria-label={t("add.fields.services.search")} onValueChange={setQuery} onKeyDown={(event) => { if (event.key === "Enter") event.preventDefault(); }} placeholder={t("add.fields.services.search")} ref={searchRef} value={query} />
       </div>
-      {visible.length ? <div className="flex max-h-64 flex-col overflow-y-auto p-1">
+      {visible.length ? <div className="flex max-h-64 flex-col overflow-x-hidden overflow-y-auto p-1">
         <label className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 font-medium hover:bg-muted">
           <Checkbox checked={allVisibleChosen} onCheckedChange={toggleVisible} />{t(allVisibleChosen ? "add.fields.services.unselectAll" : "add.fields.services.selectAll")}
         </label>

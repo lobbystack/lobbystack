@@ -2,7 +2,7 @@ import { createHash, createHmac, randomUUID } from "node:crypto";
 
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { agents, auditLogs, businesses, businessInvitations, createDatabaseClient, onboardingNumberClaimEvents, operatorNotificationDeliveries, outboxMessages, partnerNumberCharges, phoneNumbers, users, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { agents, auditLogs, businesses, businessInvitations, createDatabaseClient, onboardingNumberClaimEvents, operatorNotificationDeliveries, outboxMessages, partnerNumberCharges, phoneNumbers, users, type Database, type DatabaseTransaction, defaultAgentIdOf } from "@lobbystack/db";
 import type { ApiKeyScope } from "@lobbystack/shared";
 
 import { forgetCachedBrands } from "./brands";
@@ -238,7 +238,7 @@ describe.skipIf(!client)("a partner's platform key and phone numbers", () => {
       expect(await refusal(claimPhoneNumberForApi(worker, caller, { offerToken: signedOffer({ businessId, subject: `platform:${acme.key.platformKeyId}` }) }, key))).toMatchObject({ status: 409, message: expect.stringContaining("paid tier") });
 
       // Free's one number is a trial, which a replacement bought by a key would turn into a number nobody pays for.
-      const [number] = await asMigrator(tx, async () => await tx.insert(phoneNumbers).values({ businessId, e164: testNumber(), status: "active" }).returning({ id: phoneNumbers.id }));
+      const [number] = await asMigrator(tx, async () => await tx.insert(phoneNumbers).values({ businessId, agentId: defaultAgentIdOf(businessId), e164: testNumber(), status: "active" }).returning({ id: phoneNumbers.id }));
       expect(await refusal(searchPhoneNumbersForApi(worker, caller, { replaces: number!.id }, { ...key, provider }))).toMatchObject({ status: 409 });
       expect(await refusal(claimPhoneNumberForApi(worker, caller, { offerToken: signedOffer({ businessId, subject: `platform:${acme.key.platformKeyId}`, purpose: "replacement" }), replaces: number!.id }, key))).toMatchObject({ status: 409, message: expect.stringContaining("paid tier") });
 
@@ -443,7 +443,7 @@ describe.skipIf(!client)("a business with no owner", () => {
       const acme = await partner(tx, "Acme Software");
       const businessId = await ownerless(acme);
       const e164 = testNumber();
-      await asMigrator(tx, async () => await tx.insert(phoneNumbers).values({ businessId, e164, status: "active" }));
+      await asMigrator(tx, async () => await tx.insert(phoneNumbers).values({ businessId, agentId: defaultAgentIdOf(businessId), e164, status: "active" }));
       const worker = workerContext(tx);
       expect(await resolveNumberFallback(worker, { businessId, e164 })).toEqual({ action: "reject" });
 

@@ -388,6 +388,7 @@
     "doneHint_other": "{{count}} páginas están listas para responder preguntas.",
     "failedTitle": "No pudimos leer {{host}}",
     "failedHint": "Añada los datos de su negocio a mano o vuelva a intentar la importación desde su panel.",
-    "inlineRunning": "Leyendo {{host}}. Páginas leídas hasta ahora: {{count}}"
+    "inlineRunning": "Leyendo {{host}}. Páginas leídas hasta ahora: {{count}}",
+    "stalledTitle": "No pudimos terminar de leer {{host}}"
   }
 }

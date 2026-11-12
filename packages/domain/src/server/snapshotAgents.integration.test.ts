@@ -30,7 +30,6 @@ describe.skipIf(!client)("agents in the business snapshot", () => {
       name: "Front desk",
       greeting: "Hi there",
       tone: "warm",
-      summary: "Test",
       bookingPolicy: "Book",
       bookingMode: "request",
       transferMode: "on_request",
@@ -42,8 +41,7 @@ describe.skipIf(!client)("agents in the business snapshot", () => {
       staffFirstNumber: "+14165550001",
     }).returning({ id: agents.id });
     agentId = agent!.id;
-    // Left without agent_id, as old code writes it: the trigger assigns the default agent.
-    await client!.db.execute(sql`insert into public.agent_rules (business_id, title, content, sort_order) values (${businessId}::uuid, 'Parking', 'Use the rear lot', 0)`);
+    await client!.db.execute(sql`insert into public.agent_rules (business_id, agent_id, title, content, sort_order) values (${businessId}::uuid, ${agentId}::uuid, 'Parking', 'Use the rear lot', 0)`);
   });
 
   afterEach(async () => {

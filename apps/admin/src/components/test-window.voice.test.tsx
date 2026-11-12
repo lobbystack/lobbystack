@@ -193,7 +193,7 @@ describe("the call in the window", () => {
 });
 
 describe("TestWindow voice call endings", () => {
-  it("ends the call normally when the receptionist hangs up", async () => {
+  it("ends the call normally when the agent hangs up", async () => {
     const connection = await startConnectedCall();
 
     act(() => {
@@ -347,7 +347,7 @@ describe("TestWindow voice call endings", () => {
     expect(connection.close).not.toHaveBeenCalled();
   });
 
-  it("ends the call normally when the receptionist hangs up during a disconnect", async () => {
+  it("ends the call normally when the agent hangs up during a disconnect", async () => {
     const connection = await startConnectedCall();
     vi.useFakeTimers();
 

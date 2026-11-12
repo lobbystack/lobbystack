@@ -1,3 +1,6 @@
+import { Readable } from "node:stream";
+import type { ReadableStream as NodeReadableStream } from "node:stream/web";
+
 import {
   CreateBucketCommand,
   DeleteObjectCommand,
@@ -12,6 +15,8 @@ import {
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { registerStorageHttpEndpoint, withSpan } from "@lobbystack/telemetry/node";
+
+import { InvalidByteRangeError, type OpenedObject } from "./range";
 
 export type S3StorageConfig = {
   bucket: string;
@@ -163,6 +168,24 @@ export class S3StorageProvider {
       return new Uint8Array();
     }
     return await result.Body.transformToByteArray();
+  }
+
+  /** Streams the object, or the slice a `bytes=` Range header names, so a route can serve it from the app's own origin. */
+  async openObject(input: { key: string; range?: string }): Promise<OpenedObject> {
+    await this.ensureBucket();
+    const result = await this.run("get", async () => {
+      try {
+        return await this.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: input.key, ...(input.range ? { Range: input.range } : {}) }));
+      } catch (error) {
+        if (error instanceof Error && error.name === "InvalidRange") throw new InvalidByteRangeError();
+        throw error;
+      }
+    });
+    const body = result.Body instanceof Readable ? result.Body : result.Body ? Readable.fromWeb(result.Body.transformToWebStream() as NodeReadableStream<Uint8Array>) : Readable.from([]);
+    const length = result.ContentLength ?? 0;
+    const slice = /^bytes (\d+)-(\d+)\/(\d+)$/.exec(result.ContentRange ?? "");
+    if (!input.range || !slice) return { body, length, totalLength: length };
+    return { body, length, totalLength: Number(slice[3]), start: Number(slice[1]), end: Number(slice[2]) };
   }
 
   async createDownloadUrl(input: { key: string; expiresInSeconds: number; range?: string }): Promise<string> {

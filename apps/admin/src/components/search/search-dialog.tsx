@@ -166,7 +166,7 @@ function SearchPanel({ businessId, onClose }: { businessId: string | undefined; 
         />
         <button aria-label={t("search.keys.close")} className="shrink-0 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background" onClick={onClose} type="button"><Key>Esc</Key></button>
       </div>
-      <div aria-label={t("search.title")} className="min-h-0 flex-1 overflow-y-auto p-2" id="search-results" role="listbox">
+      <div aria-label={t("search.title")} className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto p-2" id="search-results" role="listbox">
         {text.trim() && !results.length && !loading ? <p className="type-body-muted px-3 py-6 text-center">{t("search.empty", { query: text.trim() })}</p> : null}
         {groups.map((group) => (
           <div className="pb-1" key={group} role="group" aria-label={t(`search.groups.${group}`)}>
@@ -238,7 +238,7 @@ export function SearchDialog({ businessId }: { businessId: string | undefined })
   const close = useCallback(() => setOpen(false), []);
   return (
     <Dialog onOpenChange={setOpen} open={open}>
-      <DialogContent className="top-[12%] translate-y-0 gap-0 overflow-hidden p-0 sm:max-w-xl" showCloseButton={false}>
+      <DialogContent className="top-[12%] translate-y-0 gap-0 overflow-hidden p-0" showCloseButton={false}>
         <DialogHeader className="sr-only"><DialogTitle>{t("search.title")}</DialogTitle><DialogDescription>{t("search.description")}</DialogDescription></DialogHeader>
         {open ? <SearchPanel businessId={businessId} onClose={close} /> : null}
       </DialogContent>

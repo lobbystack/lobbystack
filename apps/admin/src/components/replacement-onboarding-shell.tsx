@@ -22,8 +22,8 @@ type OnboardingShellProps = {
   legalFooter?: React.ReactNode;
   /** The agreement line login and signup show, for the action the person is taking. Left out when the partner has no terms or privacy page. */
   legalAgreement?: "login" | "signup" | "business" | "emailChange" | "passwordReset" | "verifyEmail";
-  onSignOut?: () => void;
-  /** Shown before Sign out when the person has a finished workspace to go back to. */
+  onSignOut?: (() => void) | undefined;
+  /** Shown when the person has a finished workspace to go back to. The caller leaves out onSignOut then. */
   onBackToDashboard?: (() => void) | undefined;
 };
 
@@ -45,7 +45,7 @@ const widths = { sm: "max-w-sm", md: "max-w-md", lg: "max-w-lg", xl: "max-w-xl",
 
 const legalPrefixKeys = { login: "login.legalPrefix", signup: "signup.legal.prefix", business: "signup.legal.businessPrefix", emailChange: "signup.legal.emailChangePrefix", passwordReset: "forgotPassword.legalPrefix", verifyEmail: "verifyEmail.legalPrefix" } as const;
 
-const headerButton = "rounded-full px-4 py-3 type-title text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
+const headerButton = "min-w-0 rounded-full px-4 py-3 type-title text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 
 export function ReplacementOnboardingShell({ icon, eyebrow, title, description, progress, width = "md", children, legalFooter: customLegalFooter, legalAgreement, onBackToDashboard, onSignOut }: OnboardingShellProps) {
   const { t, i18n } = useTranslation("onboarding");
@@ -70,12 +70,14 @@ export function ReplacementOnboardingShell({ icon, eyebrow, title, description, 
   return (
     <div className="relative flex min-h-svh w-full flex-col bg-background text-foreground">
       {onSignOut || onBackToDashboard ? (
-        <div className="absolute right-6 top-6 flex items-center gap-1">
+        // The header spans the page inside its gutter, so a long label stays on screen at every width.
+        // On phones it takes its own row above the content; from sm up it floats over the top margin.
+        <header className="flex min-w-0 items-center justify-end gap-1 px-6 pt-6 sm:absolute sm:inset-x-0 sm:top-0">
           {onBackToDashboard ? <button className={headerButton} onClick={onBackToDashboard} type="button">{t("shell.backToDashboard")}</button> : null}
           {onSignOut ? <button className={headerButton} onClick={onSignOut} type="button">{t("shell.signOut")}</button> : null}
-        </div>
+        </header>
       ) : null}
-      <main className={cn("flex flex-1 flex-col items-center px-6 pb-12", onSignOut ? "pt-20 sm:pt-12" : "pt-12")}>
+      <main className={cn("flex flex-1 flex-col items-center px-6 pb-12", onSignOut || onBackToDashboard ? "pt-3 sm:pt-12" : "pt-12")}>
         <div className={cn("my-auto flex w-full flex-col items-center", widths[width])}>
           <BrandMark />
           <div className="mt-10 flex w-full flex-col items-center gap-4 text-center">

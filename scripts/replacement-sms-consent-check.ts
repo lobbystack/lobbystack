@@ -4,7 +4,7 @@ import { and, eq } from "drizzle-orm";
 
 import { OPERATOR_SMS_DISCLOSURE_VERSION } from "@lobbystack/shared";
 
-import { billingAccounts, businessMemberships, businesses, contacts, conversations, createDatabaseClient, messages, operatorNotificationDeliveries, operatorNotificationPreferences, outboxMessages, phoneNumbers, smsConsentEvents, users, withBusinessTransaction } from "@lobbystack/db";
+import { billingAccounts, businessMemberships, businesses, contacts, conversations, createDatabaseClient, messages, operatorNotificationDeliveries, operatorNotificationPreferences, outboxMessages, phoneNumbers, smsConsentEvents, users, withBusinessTransaction, defaultAgentIdOf } from "@lobbystack/db";
 import { appendMessage, claimOperatorNotificationDelivery, claimSmsDelivery, defaultOperatorNotificationEventPreferences, getNotificationPreferences, loadOperatorNotificationDelivery, loadSmsDeliveryTarget, queueOperatorAlert, receiveInboundSms, setContactSmsManualBlock, setNotificationPreferences } from "@lobbystack/domain";
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -24,7 +24,7 @@ async function main(): Promise<void> {
     await migrator.db.insert(users).values({ id: userId, email: `${userId}@example.invalid`, normalizedEmail: `${userId}@example.invalid`, phone: "+14165550778" });
     await migrator.db.insert(businesses).values([{ id: businessId, slug: `sms-consent-${businessId}`, name: "SMS consent certification", deploymentMode: "self_hosted_standard", timezone: "UTC", businessType: "test" }, { id: foreignBusinessId, slug: `sms-consent-${foreignBusinessId}`, name: "Foreign SMS consent certification", timezone: "UTC", businessType: "test" }]);
     await migrator.db.insert(businessMemberships).values({ businessId, userId, role: "business_owner" });
-    await migrator.db.insert(phoneNumbers).values({ businessId, e164: "+14165550779", providerPhoneId: `PN-${randomUUID()}` });
+    await migrator.db.insert(phoneNumbers).values({ businessId, agentId: defaultAgentIdOf(businessId), e164: "+14165550779", providerPhoneId: `PN-${randomUUID()}` });
 
     const stopProviderId = `SM-${randomUUID()}`;
     const stopMessage = await receiveInboundSms({ db: worker.db }, { businessId, providerMessageId: stopProviderId, from: phone, to: "+14165550779", body: "STOP", payload: {} });

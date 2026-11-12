@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { DEFAULT_RECEPTIONIST_VOICE, normalizeReceptionistVoice, normalizeRuntimeLocale, resolveOnboardingRoute, runtimeLocales, type ReceptionistVoice, type RuntimeLocale } from "@lobbystack/shared";
+import { DEFAULT_AGENT_VOICE, normalizeAgentVoice, normalizeRuntimeLocale, resolveOnboardingRoute, runtimeLocales, type AgentVoice, type RuntimeLocale } from "@lobbystack/shared";
 import { LoaderCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
@@ -26,7 +26,7 @@ import { runtimeLocaleRegion } from "@/lib/country-flag";
 import { requestJson } from "@/lib/request-json";
 
 type Agent = { business: { defaultLocale: string } | null; profile: { name: string; greeting: string; voice: string } | null };
-type Change = { name?: string; greeting?: string; voice?: ReceptionistVoice; locale?: RuntimeLocale };
+type Change = { name?: string; greeting?: string; voice?: AgentVoice; locale?: RuntimeLocale };
 
 /** The last screen: the operator tests the agent on the left and adjusts it on the right. */
 export function OnboardingMeetSurface() {
@@ -67,7 +67,7 @@ function MeetAgent() {
   const [error, setError] = useState<string | null>(null);
   const name = nameDraft ?? profile?.name ?? "";
   const greeting = greetingDraft ?? profile?.greeting ?? "";
-  const voice = profile ? normalizeReceptionistVoice(profile.voice) : DEFAULT_RECEPTIONIST_VOICE;
+  const voice = profile ? normalizeAgentVoice(profile.voice) : DEFAULT_AGENT_VOICE;
   const voicePreview = useVoicePreview(savedLocale);
   const voiceTraits = useVoiceTraits();
 

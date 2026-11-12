@@ -13,7 +13,7 @@ import { CredentialList, CredentialRow } from "@/components/credential-list";
 import { HeaderActions } from "@/components/header-actions";
 import { PageHeader } from "@/components/page-header";
 import { SecretReveal } from "@/components/secret-reveal";
-import { CredentialRowsSkeleton, HiddenTextSkeleton, SmallButtonSkeleton } from "@/components/loading-skeletons";
+import { CredentialRowsSkeleton, SmallButtonSkeleton } from "@/components/loading-skeletons";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Surface } from "@/components/ui/surface";
 import { requestJson } from "@/lib/request-json";
 import { intlLocale } from "@/lib/locale";
+import { EmptyState } from "@/components/ui/empty-state";
 
 /** A key as an API keys page lists it: a business's own key, or a partner's platform key. */
 export type ApiKeyRecord = {
@@ -67,11 +68,11 @@ type KeyDialog = { mode: "create" } | { mode: "update"; record: ApiKeyRecord };
 
 /**
  * The page layout has a title of its own. In Settings the page header already
- * says API keys, so the section shows its description and puts its action in
- * that header, like other pages.
+ * says API keys, so the section puts its action in that header, like other
+ * pages.
  */
-function ApiKeysFrame({ layout, title, description, action, children }: { layout: ApiKeysSurfaceProps["layout"]; title: string; description: ReactNode; action: ReactNode; children: ReactNode }) {
-  if (layout === "section") return <section className="flex flex-col gap-5"><HeaderActions>{action}</HeaderActions><p className="type-section-description">{description}</p>{children}</section>;
+function ApiKeysFrame({ layout, title, action, children }: { layout: ApiKeysSurfaceProps["layout"]; title: string; action: ReactNode; children: ReactNode }) {
+  if (layout === "section") return <section className="flex flex-col gap-5"><HeaderActions>{action}</HeaderActions>{children}</section>;
   return (
     <div className="flex flex-col gap-6">
       <PageHeader actions={action} title={title} />
@@ -167,7 +168,7 @@ export function ApiKeysSurface({ namespace, layout, loading, canManage, scopes: 
   // The workspace, then the keys: the page turns real once both are known.
   if (loading || keys.isLoading) {
     const action = <SmallButtonSkeleton label={t("apiKeys.create.action")} />;
-    if (layout === "section") return <section aria-busy="true" className="flex flex-col gap-5"><HiddenTextSkeleton className="type-section-description">{t("apiKeys.description")}</HiddenTextSkeleton><CredentialRowsSkeleton actions={2} /></section>;
+    if (layout === "section") return <section aria-busy="true" className="flex flex-col gap-5"><CredentialRowsSkeleton actions={2} /></section>;
     return <div className="flex flex-col gap-6"><PageHeader actions={action} title={t("apiKeys.title")} /><CredentialRowsSkeleton actions={2} /></div>;
   }
   if (!canManage) return <Alert><AlertTitle>{t("apiKeys.restricted.title")}</AlertTitle><AlertDescription>{t("apiKeys.restricted.description")}</AlertDescription></Alert>;
@@ -177,18 +178,13 @@ export function ApiKeysSurface({ namespace, layout, loading, canManage, scopes: 
     <>
       <ApiKeysFrame
         action={<Button onClick={openCreate} size={layout === "section" ? "default" : "sm"}>{t("apiKeys.create.action")}</Button>}
-        description={layout === "section" ? t("apiKeys.description") : null}
         layout={layout}
         title={t("apiKeys.title")}
       >
-        <Surface>
-          {rows.length === 0 ? (
-            layout === "page" ? (
-            <div className="flex flex-col items-center gap-3 px-6 py-16 text-center">
-              <h2 className="type-card-title">{t("apiKeys.empty")}</h2>
-            </div>
-          ) : <p className="type-body-muted p-6 text-center">{t("apiKeys.empty")}</p>
-          ) : (
+        {rows.length === 0 ? (
+          <EmptyState title={t("apiKeys.empty")} />
+        ) : (
+          <Surface>
             <CredentialList label={t("apiKeys.title")}>
               {rows.map((row) => {
                 const locked = !canUpdate(row);
@@ -208,13 +204,13 @@ export function ApiKeysSurface({ namespace, layout, loading, canManage, scopes: 
                 );
               })}
             </CredentialList>
-          )}
-        </Surface>
+          </Surface>
+        )}
       </ApiKeysFrame>
 
       <Dialog onOpenChange={closeDialog} open={dialog !== null}>
         {/* The scope list is taller than a laptop's screen, so the dialog scrolls. */}
-        <DialogContent size="sm" className="max-h-[calc(100svh-2rem)] overflow-y-auto">
+        <DialogContent size="sm" className="max-h-[calc(100svh-2rem)] overflow-x-hidden overflow-y-auto">
           {created ? (
             <>
               <DialogHeader>
