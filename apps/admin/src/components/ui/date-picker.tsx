@@ -54,7 +54,7 @@ function DatePicker({ value, onChange, min, language, locale, placeholder, disab
             aria-describedby={describedBy}
             aria-invalid={invalid || undefined}
             aria-label={ariaLabel}
-            className={cn("w-full justify-start rounded-xl font-normal tabular-nums aria-invalid:border-destructive", !label && "text-muted-foreground", className)}
+            className={cn("w-full justify-start rounded-xl border-input font-normal tabular-nums shadow-xs aria-invalid:border-destructive", !label && "text-muted-foreground", className)}
             disabled={disabled}
             id={id}
             type="button"
