@@ -40,7 +40,7 @@ describe("parseApiInput", () => {
     expect(parseApiInput(apiKnowledgeEntryCreateSchema, { type: "video" })).toEqual({ ok: false, details: [{ path: "type", message: "Invalid input" }] });
   });
 
-  it("checks receptionist changes with the dashboard's limits", () => {
+  it("checks agent changes with the dashboard's limits", () => {
     expect(parseApiInput(apiReceptionistUpdateSchema, { summary: "Written by hand.", regenerate_summary: true })).toEqual({ ok: false, details: [{ path: "regenerate_summary", message: "Send summary or regenerate_summary, not both." }] });
     expect(parseApiInput(apiReceptionistUpdateSchema, { greeting: "  Hello.  ", transfer_number: null, regenerate_summary: true })).toEqual({ ok: true, data: { greeting: "Hello.", transfer_number: null, regenerate_summary: true } });
     expect(parseApiInput(apiReceptionistUpdateSchema, { voice_instructions: "x".repeat(AGENT_INSTRUCTIONS_MAX_LENGTH) }).ok).toBe(true);
@@ -102,7 +102,7 @@ describe("agents", () => {
     expect(apiCallSchema.safeParse({ ...call, agent_id: "front-desk" }).success).toBe(false);
   });
 
-  it("shows an agent's own settings and leaves the business summary to the receptionist", () => {
+  it("shows an agent's own settings and leaves the business summary to /receptionist", () => {
     expect(Object.keys(apiAgentSchema.shape)).toEqual(expect.arrayContaining(["id", "name", "is_default", "paused", "created_at", ...Object.keys(apiReceptionistSchema.shape).filter((key) => !key.startsWith("summary"))]));
     expect(apiAgentSchema.shape).not.toHaveProperty("summary");
     expect(apiAgentSchema.shape).not.toHaveProperty("summary_source");

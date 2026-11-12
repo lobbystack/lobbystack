@@ -26,7 +26,7 @@ function CalcomLogo() {
   </svg>;
 }
 
-/** The Cal.com card on the integrations page, with its dialog for the event type the receptionist books. */
+/** The Cal.com card on the integrations page, with its dialog for the event type the agent books. */
 export function CalcomIntegrationCard({ businessId, canManage, data }: { businessId: string | undefined; canManage: boolean; data: IntegrationsViewModel | undefined }) {
   const { t, i18n } = useTranslation("settings");
   const telemetry = useTelemetry();

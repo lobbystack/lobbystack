@@ -4,7 +4,7 @@ import { demoSnapshot, type BusinessContextSnapshot } from "@lobbystack/shared";
 import { MockLanguageModelV4 } from "ai/test";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Runs delegations through the real receptionist agent and tools, with a
+// Runs delegations through the real agent and tools, with a
 // scripted model in place of OpenAI and the domain writes stubbed.
 
 const sockets = vi.hoisted(() => [] as Array<EventEmitter & { sent: unknown[] }>);

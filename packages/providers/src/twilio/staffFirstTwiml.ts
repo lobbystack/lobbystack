@@ -102,7 +102,7 @@ function spokenPhone(phone: string): string {
   return phone.replace(/\D/g, "").split("").join(", ");
 }
 
-/** What the staff leg hears. It hangs up unless someone presses 1, so a voicemail greeting leaves the call to the receptionist. */
+/** What the staff leg hears. It hangs up unless someone presses 1, so a voicemail greeting leaves the call to the agent. */
 export function staffPromptTwiml(input: { business: string; caller: { name?: string | null | undefined; phone?: string | undefined }; locale: RuntimeLocale; pressUrl: string }): string {
   const copy = STAFF_PROMPTS[input.locale] ?? STAFF_PROMPTS.en;
   const who = input.caller.name?.trim() || (input.caller.phone ? spokenPhone(input.caller.phone) : undefined);
@@ -119,7 +119,7 @@ export function staffPressTwiml(digits: string | undefined): string {
   return digits === "1" ? emptyTwiml() : hangupTwiml();
 }
 
-/** Dials the target the receptionist chose. Twilio sends it as a phone number or a SIP or tel URI. */
+/** Dials the target the agent chose. Twilio sends it as a phone number or a SIP or tel URI. */
 export function referTwiml(target: string): string {
   return respond((response) => { response.dial({ answerOnBridge: true }, target); });
 }

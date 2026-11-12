@@ -181,7 +181,7 @@ export const businesses = pgTable(
     legalName: text("legal_name"),
     timezone: varchar("timezone", { length: 80 }).notNull(),
     defaultLocale: varchar("default_locale", { length: 8 }).default("en").notNull(),
-    /** The language the team reads what the receptionist writes for it; null follows `defaultLocale`. */
+    /** The language the team reads what the agent writes for it; null follows `defaultLocale`. */
     teamLocale: varchar("team_locale", { length: 8 }),
     /** ISO 4217 code every service price is in. */
     currency: varchar("currency", { length: 3 }).default("USD").notNull(),
@@ -213,7 +213,7 @@ export const businesses = pgTable(
     phoneNumberReplacementReservedAt: timestamp("phone_number_replacement_reserved_at", { withTimezone: true }),
     phoneNumberReplacementUsedAt: timestamp("phone_number_replacement_used_at", { withTimezone: true }),
     telemetryEnabled: boolean("telemetry_enabled").default(true).notNull(),
-    // Whether the receptionist answers texts to the business's own number. Only the host turns it on, with pnpm text-replies:set.
+    // Whether the agent answers texts to the business's own number. Only the host turns it on, with pnpm text-replies:set.
     textRepliesEnabled: boolean("text_replies_enabled").default(false).notNull(),
     // Who set the opening hours: none yet, AI from the knowledge sources, or a person.
     hoursSource: varchar("hours_source", { length: 16 }).$type<"none" | "generated" | "operator">().default("none").notNull(),
@@ -774,7 +774,7 @@ export const agents = pgTable(
     // The GPT-Live voice calls speak in. No check constraint: a voice OpenAI
     // retires stays stored and calls fall back to marin.
     voice: varchar("voice", { length: 32 }).default("marin").notNull(),
-    // Staff answers first: when calls ring this phone before the receptionist answers.
+    // Staff answers first: when calls ring this phone before the agent answers.
     staffFirstMode: varchar("staff_first_mode", { length: 16 }).$type<"never" | "business_hours" | "always">().default("never").notNull(),
     staffFirstNumber: text("staff_first_number"),
     staffFirstRingSeconds: smallint("staff_first_ring_seconds").default(15).notNull(),
@@ -937,7 +937,7 @@ export const conversations = pgTable(
     automationPausedByUserId: uuid("automation_paused_by_user_id").references(() => users.id, { onDelete: "set null" }),
     // A website visitor asked for a person and is waiting for someone from the team to join.
     teamRequestedAt: timestamp("team_requested_at", { withTimezone: true }),
-    // A team member joined the chat after the visitor asked for a person. Only such a chat goes back to the receptionist when the team goes quiet in it.
+    // A team member joined the chat after the visitor asked for a person. Only such a chat goes back to the agent when the team goes quiet in it.
     teamJoinedAt: timestamp("team_joined_at", { withTimezone: true }),
     summary: text("summary"),
     currentIntent: text("current_intent"),
@@ -1298,7 +1298,7 @@ export const businessNotificationReads = pgTable(
   (table) => [primaryKey({ columns: [table.notificationId, table.userId] }), index("business_notification_reads_business_user_idx").on(table.businessId, table.userId)],
 );
 
-// Questions the receptionist found no knowledge for (migration 0168). The same
+// Questions the agent found no knowledge for (migration 0168). The same
 // normalized question counts again on its open or dismissed row.
 export const unansweredQuestions = pgTable(
   "unanswered_questions",
@@ -1434,7 +1434,7 @@ export const calendarConnections = pgTable(
   (table) => [uniqueIndex("calendar_connections_business_provider_account_unique").on(table.businessId, table.provider, table.externalAccountId), index("calendar_connections_business_idx").on(table.businessId, table.status)],
 );
 
-// A business's connected Instagram professional account, whose direct messages the receptionist answers.
+// A business's connected Instagram professional account, whose direct messages the agent answers.
 export const instagramAccounts = pgTable(
   "instagram_accounts",
   {

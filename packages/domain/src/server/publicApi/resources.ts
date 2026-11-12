@@ -404,7 +404,7 @@ export async function listAppointmentResources(tx: DatabaseTransaction, business
   return toPage(rows, limit, serializeAppointment, (row) => ({ at: row.createdAt, id: row.id }));
 }
 
-// Messages the receptionist took for the team (voice follow-up inbox items).
+// Messages the agent took for the team (voice follow-up inbox items).
 
 export type MessageMetadata = { callerName?: string; callbackPhone?: string; urgency?: string; callbackWindow?: string; channel?: string; message?: string };
 
@@ -675,7 +675,7 @@ export function serializeCalendarConnection(row: { id: string; provider: string;
   };
 }
 
-// Receptionist
+// /receptionist: the default agent's settings and the business summary
 
 const summarySources = ["placeholder", "generated", "operator"] as const;
 

@@ -173,7 +173,7 @@ const GREETING = "Thanks for calling. How can we help your smile today?";
 
 /**
  * Harbor Dental, set up through the API's operations as the partner's admin:
- * French callers, Monday hours, its own website, a receptionist with a
+ * French callers, Monday hours, its own website, an agent with a
  * transfer number, a service only its own staff member takes and one turned
  * off, a rule, an FAQ and a text, an FAQ turned off, its own site and a guide
  * on another site as sources, and a document.
@@ -293,7 +293,7 @@ describe.skipIf(!client)("business templates", () => {
     });
   });
 
-  it("names the new business wherever the saved receptionist, services, rules and knowledge named the one it came from, by the whole name", async () => {
+  it("names the new business wherever the saved agent, services, rules and knowledge named the one it came from, by the whole name", async () => {
     await rollbackTest(async (tx) => {
       const acme = await partner(tx, "Acme Reception");
       const setup = { worker: workerContext(tx), storage: memoryStorage().storage };

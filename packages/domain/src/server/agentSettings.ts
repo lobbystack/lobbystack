@@ -33,7 +33,7 @@ import { saveLegacyInstructionsInTransaction, withLegacyInstructions } from "./c
 import { assertTransferNumberAllowed, enqueueRefusedCallForwardRefresh } from "./numberTrials";
 import { assertStaffFirstChange, enqueueStaffFirstRouting } from "./staffFirst";
 
-// Receptionist settings. The dashboard and the v1 API check and save them
+// Agent settings. The dashboard and the v1 API check and save them
 // here, so both follow one set of rules.
 
 /** Whether the business has this agent and it isn't archived. Run it under the operator's own access. */
@@ -86,7 +86,7 @@ export type AgentSettingsChange = {
   name?: string;
   patch: AgentSettingsPatch;
   locale?: RuntimeLocale;
-  /** The language the team reads the receptionist's notes in. Null goes back to following `locale`. */
+  /** The language the team reads the agent's notes in. Null goes back to following `locale`. */
   teamLocale?: RuntimeLocale | null;
   timezone?: string;
   currency?: string;
@@ -124,7 +124,7 @@ function appointmentPolicy(value: unknown): AppointmentChangePolicy | undefined 
 }
 
 /**
- * Reads the dashboard's receptionist settings body: profile fields in
+ * Reads the dashboard's agent settings body: profile fields in
  * camelCase plus locale, timezone, currency and regenerateSummary. Throws a
  * 400 error that names the first field that is wrong.
  */
@@ -163,7 +163,7 @@ export function readAgentSettingsChange(body: unknown): AgentSettingsChange {
   return { patch, ...(name !== undefined ? { name } : {}), ...(locale !== undefined ? { locale } : {}), ...(teamLocale !== undefined ? { teamLocale } : {}), ...(timezone !== undefined ? { timezone } : {}), ...(currency !== undefined ? { currency } : {}), regenerateSummary: regenerateSummary === true };
 }
 
-/** The settings a receptionist has before anyone edits them. */
+/** The settings an agent has before anyone edits them. */
 export function defaultAgentSettings(businessName: string, locale: RuntimeLocale = "en") {
   return {
     name: defaultAgentName(locale),
@@ -189,7 +189,7 @@ export function defaultAgentSettings(businessName: string, locale: RuntimeLocale
 /**
  * Saves the fields given, creating the profile from the defaults (greeting in
  * locale) when the business has none, and refreshes the snapshot calls read
- * the receptionist from. A transfer number must pass the same country and
+ * the agent from. A transfer number must pass the same country and
  * free-trial checks as the dashboard's. A summary someone writes is never
  * replaced by AI; regenerateSummary hands it back to AI and queues the
  * rewrite. Voice, SMS and chat instructions go to the agent's rules for those
@@ -224,7 +224,7 @@ export async function saveAgentSettingsInTransaction(
     : await insertDefaultAgentInTransaction(tx, input, changes);
   if (!profile) return null;
   await saveLegacyInstructionsInTransaction(tx, { businessId, agentId: profile.id, patch: instructions });
-  // Some carriers forward a call the receptionist refuses to a number stored on the carrier, so they learn the new transfer number.
+  // Some carriers forward a call the agent refuses to a number stored on the carrier, so they learn the new transfer number.
   if (patch.transferNumber !== undefined) await enqueueRefusedCallForwardRefresh(tx, businessId, profile.id);
   if (patch.staffFirstMode !== undefined) await enqueueStaffFirstRouting(tx, businessId, profile.id);
   await enqueueAgentSnapshotRefresh(tx, { businessId, agentId: profile.id, change: "agent_updated", dedupeKey: `snapshot:${businessId}:profile:${profile.updatedAt.toISOString()}` });

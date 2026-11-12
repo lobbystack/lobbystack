@@ -234,7 +234,7 @@ export async function setKnowledgeDocumentActive(context: DomainContext, input: 
   });
 }
 
-/** Turns a document on or off for the receptionist. False when the business has no such document. Callers authorize first. */
+/** Turns a document on or off for the agent. False when the business has no such document. Callers authorize first. */
 export async function setKnowledgeDocumentActiveInTransaction(tx: DatabaseTransaction, input: { businessId: string; documentId: string; active: boolean }): Promise<boolean> {
   const [document] = await tx.update(knowledgeDocuments).set({ active: input.active, updatedAt: new Date() }).where(and(eq(knowledgeDocuments.id, input.documentId), eq(knowledgeDocuments.businessId, input.businessId))).returning({ id: knowledgeDocuments.id });
   if (!document) return false;
@@ -343,7 +343,7 @@ export async function createKnowledgeSnippet(
   });
 }
 
-/** Inserts a snippet, shared unless agentId names the one agent that uses it, and refreshes the receptionist snapshot. Callers authorize first. */
+/** Inserts a snippet, shared unless agentId names the one agent that uses it, and refreshes the agent snapshot. Callers authorize first. */
 export async function createKnowledgeSnippetInTransaction(
   tx: DatabaseTransaction,
   input: { businessId: string; title: string; content: string; tags?: string[]; priority?: number; active?: boolean; agentId?: string | undefined },
@@ -365,7 +365,7 @@ export async function updateKnowledgeSnippet(
   });
 }
 
-/** Changes the fields given and refreshes the receptionist snapshot. Null when the business has no such snippet. Callers authorize first. */
+/** Changes the fields given and refreshes the agent snapshot. Null when the business has no such snippet. Callers authorize first. */
 export async function updateKnowledgeSnippetInTransaction(
   tx: DatabaseTransaction,
   input: { businessId: string; snippetId: string; title?: string | undefined; content?: string | undefined; tags?: string[] | undefined; priority?: number | undefined; active?: boolean | undefined },
@@ -384,7 +384,7 @@ export async function deleteKnowledgeSnippet(context: DomainContext, input: { us
   });
 }
 
-/** Deletes a snippet and refreshes the receptionist snapshot. False when the business has no such snippet. Callers authorize first. */
+/** Deletes a snippet and refreshes the agent snapshot. False when the business has no such snippet. Callers authorize first. */
 export async function deleteKnowledgeSnippetInTransaction(tx: DatabaseTransaction, input: { businessId: string; snippetId: string }): Promise<boolean> {
   const [snippet] = await tx.delete(knowledgeSnippets).where(and(eq(knowledgeSnippets.id, input.snippetId), eq(knowledgeSnippets.businessId, input.businessId))).returning({ id: knowledgeSnippets.id });
   if (!snippet) return false;
@@ -863,7 +863,7 @@ export async function refreshBusinessSnapshot(
 }
 
 /**
- * Counts the indexed text the receptionist searches, in UTF-8 bytes. Uploaded
+ * Counts the indexed text the agent searches, in UTF-8 bytes. Uploaded
  * files don't count: a PDF's images and layout take space the agent never reads.
  */
 export async function getKnowledgeStorageUsageBytes(tx: DatabaseTransaction, businessId: string, options: { excludeDocumentId?: string } = {}): Promise<number> {

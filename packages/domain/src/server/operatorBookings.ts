@@ -37,7 +37,7 @@ export async function findBookingOpenings(
  * calendar sync, webhooks and telemetry follow, with the dashboard as the
  * channel and the operator in the audit log. Takes the scheduler role or
  * above. The business's booking mode doesn't apply: it governs the
- * receptionist, and the operator is the business. A time that isn't open
+ * agent, and the operator is the business. A time that isn't open
  * throws BookingUnavailableError.
  */
 export async function bookAppointmentForOperator(

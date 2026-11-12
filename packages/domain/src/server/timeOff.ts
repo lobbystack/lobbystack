@@ -95,7 +95,7 @@ async function listTimeOffById(tx: DatabaseTransaction, businessId: string, id: 
     .where(and(eq(closures.businessId, businessId), eq(closures.id, id)));
 }
 
-// The receptionist's snapshot lists the closures, so it's rebuilt after each change.
+// The agent's snapshot lists the closures, so it's rebuilt after each change.
 async function refreshSnapshot(tx: DatabaseTransaction, businessId: string, closureId: string) {
   await enqueueOutbox(tx, { topic: "snapshot.refresh", businessId, aggregateType: "closure", aggregateId: closureId, dedupeKey: `closure:${closureId}:snapshot:${Date.now()}`, payload: { businessId, reason: "time_off_updated" } });
 }

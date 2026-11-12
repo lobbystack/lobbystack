@@ -87,7 +87,7 @@ export async function POST(request: Request) {
     const conversation = await getOrCreateWidgetConversation(context, { businessId: session.businessId, widgetVisitorId: body.visitorId, ...(session.agentId ? { agentId: session.agentId } : {}) });
     const { conversationId } = conversation;
     // With live chat on, a chat the team joined after the visitor asked for a
-    // person goes back to the receptionist once the team goes quiet in it. A
+    // person goes back to the agent once the team goes quiet in it. A
     // chat the team took over itself stays paused until someone presses
     // Resume AI.
     const liveChatOn = session.config.liveChat?.enabled === true;
@@ -113,7 +113,7 @@ export async function POST(request: Request) {
     const assistantMessageId = randomUUID();
     const traceId = randomUUID();
     const generationStartedAt = performance.now();
-    // Set when the receptionist asks the team to join: the chat then waits for them.
+    // Set when the agent asks the team to join: the chat then waits for them.
     let teamRequested = false;
     const replyMetadata = () => teamRequested ? { automationState: "human_handoff", waitingForTeam: true } : { automationState: "ai_active" };
     const stream = createUIMessageStream({

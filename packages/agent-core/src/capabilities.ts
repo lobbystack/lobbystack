@@ -40,7 +40,7 @@ const TOOL_USE = {
 
 export type ToolName = keyof typeof TOOL_USE;
 
-/** A tool's kind and progress line. A name that isn't a receptionist tool counts as other. */
+/** A tool's kind and progress line. A name that isn't an agent tool counts as other. */
 export function toolUse(name: string): { kind: ToolKind; progress: string } {
   return Object.hasOwn(TOOL_USE, name) ? TOOL_USE[name as ToolName] : { kind: "other", progress: `ran ${name}` };
 }

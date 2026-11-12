@@ -38,7 +38,7 @@ const NO_CALL: VoiceCaptions = { status: "idle", turns: [] };
 
 type WidgetMessageMetadata = {
   automationState?: "ai_active" | "human_handoff";
-  /** The receptionist asked the team to join, and the chat waits for them. */
+  /** The agent asked the team to join, and the chat waits for them. */
   waitingForTeam?: boolean;
   /** A team member wrote this message, with their first name when they have one. */
   fromTeam?: boolean;
@@ -46,7 +46,7 @@ type WidgetMessageMetadata = {
 };
 type WidgetMessage = UIMessage<WidgetMessageMetadata>;
 
-/** Who answers the chat: the receptionist, or the team, which was asked to join or is in the chat. */
+/** Who answers the chat: the agent, or the team, which was asked to join or is in the chat. */
 type ChatHandling = { handoff: boolean; waitingForTeam: boolean; teamMemberName: string | null };
 const AGENT_HANDLING: ChatHandling = { handoff: false, waitingForTeam: false, teamMemberName: null };
 
@@ -615,7 +615,7 @@ type ThreadEntry = {
   message: WidgetMessage;
   /** The first name of the team member who wrote the message, when they have one. */
   teamMemberName: string | null;
-  /** The first team message after the receptionist's: someone from the team joined the chat. */
+  /** The first team message after the agent's: someone from the team joined the chat. */
   joined: boolean;
   /** Where the speaker changes to a team member, their name goes above the message. */
   showName: boolean;

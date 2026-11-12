@@ -654,7 +654,7 @@ describe.skipIf(!testUrl)("public API against PostgreSQL with RLS", () => {
     }
   });
 
-  it("reads and changes the receptionist, refreshing the snapshot only when something changes", async () => {
+  it("reads and changes the agent, refreshing the snapshot only when something changes", async () => {
     const context = { db: worker!.db };
     const before = await getReceptionistForApi(context, a.caller);
     expect(before).toMatchObject({ greeting: "Hi", tone: "warm", booking_policy: "Book", transfer_mode: "never", booking_mode: "instant", appointment_change_policy: { enabled: true, allow_cancel: true, allow_reschedule: true, verification_mode: "phone_match_and_facts" } });
@@ -691,7 +691,7 @@ describe.skipIf(!testUrl)("public API against PostgreSQL with RLS", () => {
     expect(await audits()).toContainEqual({ payload: expect.objectContaining({ fields: ["regenerate_summary"] }) });
     const rewrites = await admin!.db.select({ payload: outboxMessages.payload }).from(outboxMessages).where(and(eq(outboxMessages.topic, "business.generateSummary"), eq(outboxMessages.businessId, a.businessId)));
     expect(rewrites).toContainEqual({ payload: expect.objectContaining({ reason: "operator_regenerate", force: true }) });
-    // The other business's receptionist is untouched.
+    // The other business's agent is untouched.
     expect((await getReceptionistForApi(context, b.caller)).greeting).toBe("Hi");
   });
 
@@ -702,7 +702,7 @@ describe.skipIf(!testUrl)("public API against PostgreSQL with RLS", () => {
     expect((await getReceptionistForApi(context, a.caller)).transfer_number).not.toBe("+8613800138000");
   });
 
-  it("shows a business with no receptionist row the defaults, and saves them with its first change", async () => {
+  it("shows a business with no agent row the defaults, and saves them with its first change", async () => {
     const businessId = randomUUID();
     await admin!.db.insert(businesses).values({ id: businessId, slug: `api-bare-${businessId}`, name: "Bare Clinic", timezone: "UTC", businessType: "test" });
     const caller: ApiKeyCaller = { businessId, apiKeyId: randomUUID() };

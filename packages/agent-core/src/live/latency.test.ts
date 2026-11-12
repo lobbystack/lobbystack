@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { LiveLatencyTracker } from "./latency";
 
 describe("LiveLatencyTracker", () => {
-  it("measures the greeting and the silence before each answer from the receptionist's transcript", () => {
+  it("measures the greeting and the silence before each answer from the agent's transcript", () => {
     const tracker = new LiveLatencyTracker();
     tracker.agentTranscript(900, 1_000);
     tracker.agentTranscript(1_000, 2_400);
@@ -16,7 +16,7 @@ describe("LiveLatencyTracker", () => {
     expect(tracker.summarize()).toEqual({ firstSpeechMs: 900, greetedFirst: true, answerGapsMs: [650, 1_200], speechSource: "transcript" });
   });
 
-  it("counts the receptionist as greeting first only when it spoke before the caller", () => {
+  it("counts the agent as greeting first only when it spoke before the caller", () => {
     const tracker = new LiveLatencyTracker();
     tracker.callerTranscript(500, 1_500);
     tracker.agentTranscript(2_300, 3_000);
@@ -32,7 +32,7 @@ describe("LiveLatencyTracker", () => {
     expect(tracker.summarize().answerGapsMs).toEqual([500]);
   });
 
-  it("skips caller speech the receptionist talked over and answers that start before the caller finishes", () => {
+  it("skips caller speech the agent talked over and answers that start before the caller finishes", () => {
     const tracker = new LiveLatencyTracker();
     tracker.agentTranscript(0, 5_000);
     tracker.callerTranscript(2_000, 2_500);
@@ -43,7 +43,7 @@ describe("LiveLatencyTracker", () => {
     expect(tracker.summarize().answerGapsMs).toEqual([]);
   });
 
-  it("reports nothing for a call where the receptionist never spoke", () => {
+  it("reports nothing for a call where the agent never spoke", () => {
     const tracker = new LiveLatencyTracker();
     tracker.callerTranscript(100, 900);
 

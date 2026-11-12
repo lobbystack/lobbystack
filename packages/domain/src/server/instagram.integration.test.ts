@@ -39,7 +39,7 @@ async function asWorker<T>(tx: DatabaseTransaction, run: (db: Database) => Promi
   }
 }
 
-/** A business whose receptionist has answered `replies` Instagram messages, then gets one more. */
+/** A business whose agent has answered `replies` Instagram messages, then gets one more. */
 async function seedExchange(tx: DatabaseTransaction, replies: number, at: (index: number) => Date) {
   const businessId = randomUUID();
   await tx.insert(businesses).values({ id: businessId, slug: businessId, name: "Javor", timezone: "UTC", businessType: "test", telemetryEnabled: true, deploymentMode: "self_hosted_standard" });
@@ -71,7 +71,7 @@ async function seedExchange(tx: DatabaseTransaction, replies: number, at: (index
 const recently = (index: number) => new Date(Date.now() - 60_000 + index * 1_000);
 
 describe.skipIf(!testUrl)("Instagram reply limit against PostgreSQL under production logins", () => {
-  it("hands the conversation to the team once the receptionist has replied too often in the window", async () => {
+  it("hands the conversation to the team once the agent has replied too often in the window", async () => {
     await rollbackTest(async (tx) => {
       const exchange = await seedExchange(tx, INSTAGRAM_AI_REPLY_LIMIT, recently);
 

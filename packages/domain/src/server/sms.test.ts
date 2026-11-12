@@ -153,7 +153,7 @@ describe("the business's SMS number", () => {
   });
 });
 
-describe("the receptionist's text replies", () => {
+describe("the agent's text replies", () => {
   const reach = { phone: "+14165550123", operatorBlockedAt: null, smsConsentStatus: null, customerTexted: true, from: "+14165550100", textRepliesEnabled: true, selfHosted: false };
   const usNumber = "+12125550123";
 

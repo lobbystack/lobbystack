@@ -221,7 +221,7 @@ describe("POST /api/widget/chat", () => {
     expect(savedReplies()).toEqual([]);
   });
 
-  it("doesn't check on the team in a chat the receptionist has", async () => {
+  it("doesn't check on the team in a chat the agent has", async () => {
     await readSse(await POST(widgetRequest()));
     expect(mocks.returnQuietTeamChat).not.toHaveBeenCalled();
   });

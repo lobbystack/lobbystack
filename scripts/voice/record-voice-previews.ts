@@ -1,4 +1,4 @@
-// Records the voice previews in the dashboard's voice dialog: every receptionist
+// Records the voice previews in the dashboard's voice dialog: every agent
 // voice saying one short line in each runtime language. Each clip is a real
 // GPT-Live session opened with the production phone config, so it sounds like
 // the start of a call. Run it once and commit the clips; it skips files that

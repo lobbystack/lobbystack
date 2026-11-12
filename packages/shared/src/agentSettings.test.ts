@@ -60,7 +60,7 @@ describe("randomContactPasscode", () => {
   });
 });
 
-describe("receptionist voices", () => {
+describe("agent voices", () => {
   it("defaults to marin, the voice every call used before businesses could pick one", () => {
     expect(DEFAULT_AGENT_VOICE).toBe("marin");
     expect(agentVoices).toContain(DEFAULT_AGENT_VOICE);

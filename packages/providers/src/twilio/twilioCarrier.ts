@@ -76,7 +76,7 @@ export function createTwilioCarrier(env: Env = process.env, provider?: TwilioPro
         // The admin app dials GPT-Live from the webhook. Without the project, a call would have nowhere to go.
         if (!sipAddress(env)) throw new Error("OPENAI_PROJECT_ID is required to ring staff first. See docs/voice/runtime.md.");
         const staffFirstUrl = webhook("staff-first/incoming");
-        // If the webhook fails, the caller still reaches the receptionist.
+        // If the webhook fails, the caller still reaches the agent.
         await twilio.routeNumber({ providerPhoneId: input.providerPhoneId, trunkSid, mode: "fallback", fallbackUrl: staffFirstUrl, errorUrl: webhook("staff-first/fallback") });
         return { target: staffFirstUrl };
       }

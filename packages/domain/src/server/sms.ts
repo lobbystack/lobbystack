@@ -22,7 +22,7 @@ const SMS_HELP_KEYWORDS = new Set(["HELP", "INFO", "AIDE"]);
 
 /**
  * "YES" restarts texts only for a phone that opted out. Anyone else who texts
- * it is answering a question, such as the receptionist offering a time, even
+ * it is answering a question, such as the agent offering a time, even
  * though Twilio marks it OptOutType=START as it does START and UNSTOP.
  */
 function isStartKeyword(keyword: string, input: { body: string; optedOut?: boolean | undefined }): boolean {
@@ -323,7 +323,7 @@ export function smsReplyBlockedReason(reach: SmsReach, complianceReply = false):
 }
 
 /**
- * Why the receptionist can't text this contact, or null when it can. On top of
+ * Why the agent can't text this contact, or null when it can. On top of
  * the rule for any text: the business has to have replies on, the shared
  * number never carries them because a toll-free number maps to one business,
  * and a cloud business can't reach US recipients, US territories included,
@@ -338,7 +338,7 @@ export function textReplyBlockedReason(reach: TextReplyReach): SmsReplyBlockedRe
   return !reach.selfHosted && smsRecipientRegion(reach.phone!) === "us" ? "sms_registration_required" : null;
 }
 
-/** Whether the receptionist answers texts for this business. */
+/** Whether the agent answers texts for this business. */
 export async function textRepliesEnabledInTransaction(tx: DatabaseTransaction, businessId: string): Promise<boolean> {
   return (await tx.select({ textRepliesEnabled: businesses.textRepliesEnabled }).from(businesses).where(eq(businesses.id, businessId)).limit(1))[0]?.textRepliesEnabled === true;
 }
@@ -371,7 +371,7 @@ export async function smsReplyBlockedInTransaction(tx: DatabaseTransaction, inpu
  * What to send for a queued text, why it can't go out, or null when no such
  * text is waiting. A reply to a customer who agreed to texts and hasn't had
  * one yet comes after the opt-in confirmation; a STOP, START or HELP reply
- * never does. The receptionist's replies meet the stricter rule again here, so
+ * never does. The agent's replies meet the stricter rule again here, so
  * turning replies off stops the ones already queued.
  */
 export async function loadSmsDeliveryTarget(db: Database, input: { businessId: string; messageId: string }): Promise<{ to: string; from: string; body: string; optIn?: SmsOptInConfirmation } | { blocked: SmsReplyBlockedReason } | null> {

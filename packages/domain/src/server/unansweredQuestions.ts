@@ -47,7 +47,7 @@ export function normalizeUnansweredQuestion(question: string): string {
 }
 
 /**
- * Saves a question the receptionist found no knowledge for. Asked again while
+ * Saves a question the agent found no knowledge for. Asked again while
  * its row is open or dismissed, it counts there instead of adding a row, so a
  * dismissed question stays dismissed until it expires with other caller
  * content; asked after that, it opens a new row. The call and conversation it came from
@@ -137,7 +137,7 @@ async function lockOpenQuestion(tx: DatabaseTransaction, input: { businessId: st
 
 /**
  * Saves the answer as a text entry titled with the question, which refreshes
- * the receptionist's snapshot like any new entry, and marks the question
+ * the agent's snapshot like any new entry, and marks the question
  * answered. Owners and admins answer.
  */
 export async function answerUnansweredQuestion(

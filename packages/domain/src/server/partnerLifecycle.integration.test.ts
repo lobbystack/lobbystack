@@ -471,7 +471,7 @@ describe.skipIf(!client)("a paused partner's businesses", () => {
       const ended = ago(1);
       await endTier(tx, acme.partnerId, ended);
 
-      // For 30 days the receptionist answers.
+      // For 30 days the agent answers.
       await expect(ring()).resolves.toMatchObject({ blocked: false, duplicate: false });
       expect(await clock(tx, after(ended, 30))).toBe(1);
 

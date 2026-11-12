@@ -456,7 +456,7 @@ export async function completeNumberProvisioning(context: DomainContext, input: 
       // stays on the step it's on. A business past the number stays put too.
       await tx.update(businesses).set({ onboardingStage: sql`CASE WHEN ${businesses.onboardingStage} IN ('attribution', 'meet', 'choose_plan', 'complete') OR (${businesses.partnerId} IS NOT NULL AND ${businesses.onboardingStage} NOT IN ('phone_number', 'phone_number_claiming')) THEN ${businesses.onboardingStage} WHEN ${businesses.partnerId} IS NULL THEN 'attribution' ELSE 'meet' END`, updatedAt: new Date() }).where(eq(businesses.id, input.businessId));
     }
-    // Every number starts on the receptionist. With staff answers first on for the agent it reaches, routing moves this one to the webhook.
+    // Every number starts on the agent. With staff answers first on for the agent it reaches, routing moves this one to the webhook.
     const profile = (await tx.select({ staffFirstMode: agents.staffFirstMode }).from(phoneNumbers).innerJoin(agents, agentOfRow(phoneNumbers.businessId, phoneNumbers.agentId)).where(eq(phoneNumbers.id, number.id)).limit(1))[0];
     if (profile && profile.staffFirstMode !== "never") await enqueueNumberRouting(tx, { businessId: input.businessId, phoneNumberId: number.id, mode: "receptionist" });
     // The business has a number again.

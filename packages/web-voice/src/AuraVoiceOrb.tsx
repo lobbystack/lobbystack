@@ -99,7 +99,7 @@ type AuraVoiceOrbProps = {
 
 /**
  * The animated aura and round call button. The aura breathes while idle and
- * follows the receptionist's voice during a call.
+ * follows the agent's voice during a call.
  */
 export function AuraVoiceOrb({
   call,

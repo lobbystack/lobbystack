@@ -17,7 +17,7 @@ describe("buildAgentInstructions on a text", () => {
   });
 });
 
-describe("the receptionist's grammatical gender", () => {
+describe("the agent's grammatical gender", () => {
   const build = {
     live: (snapshot: typeof demoSnapshot) => buildLiveInstructions(snapshot, "voice", callStart),
     "browser call": (snapshot: typeof demoSnapshot) => buildLiveInstructions(snapshot, "web_voice", callStart),
@@ -648,7 +648,7 @@ describe("asking for a person on a browser call or a website chat", () => {
     expect(person(transfer("always"))).toContain(`tell them they can call +14165550000 and ask for a person, ${callBack}.`);
     expect(person(transfer("on_urgent"))).toContain(`tell them that for something urgent they can call +14165550000 and ask for a person, ${callBack}.`);
     expect(person(transfer("during_business_hours"))).toContain(`tell them they can call +14165550000 during opening hours and ask for a person, ${callBack}.`);
-    // Calling would only reach the receptionist again, or there's no number to call.
+    // Calling would only reach the agent again, or there's no number to call.
     for (const snapshot of [transfer("never"), { ...onRequest, transferPolicy: { mode: "on_request" as const } }, { ...onRequest, contactChannels: {} }]) {
       expect(person(snapshot)).toContain(`When the caller asks for a person, or a rule says to transfer them, tell them you can't connect them with anyone from here, ${callBack}.`);
       expect(person(snapshot)).not.toContain("ask for a person");

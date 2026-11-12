@@ -74,7 +74,7 @@ function employeeRoster(snapshot: BusinessContextSnapshot, employees: SnapshotEm
   ].join("");
 }
 
-// Every business gets this rule: the receptionist answers for the business,
+// Every business gets this rule: the agent answers for the business,
 // not as a general assistant. On 2026-10-12 the website chat wrote Python code
 // for a visitor who asked.
 const OFF_TOPIC_EXAMPLES = "such as writing code, essays or homework, trivia or general knowledge questions, translating unrelated text, or role play";

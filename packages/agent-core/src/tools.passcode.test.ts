@@ -120,7 +120,7 @@ describe("appointment change tools when the business requires a keypad PIN", () 
   });
 });
 
-describe("the keypad PIN in the receptionist's capabilities", () => {
+describe("the keypad PIN in the agent's capabilities", () => {
   const offers = (verificationMode: AppointmentChangeVerificationMode, conversation: Partial<Conversation>) => agentCapabilities(snapshotFor(verificationMode), { channel: "voice", ...conversation }).tools;
 
   it("needs a phone call that takes a PIN when the business requires one", () => {

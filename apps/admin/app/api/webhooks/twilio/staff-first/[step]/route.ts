@@ -40,7 +40,7 @@ function dialAgent(input: { businessId: string; called: string; locale: RuntimeL
   return dialAgentTwiml({ sipAddress: sip, called: input.called, locale: input.locale, message: input.message, actionUrl: stepUrl("receptionist-result", { business: input.businessId, called: input.called }), referUrl: stepUrl("refer") });
 }
 
-/** A call the receptionist can't take, handled as on the trunk's disaster recovery URL: forwarded when the business has somewhere to send it, otherwise busy. */
+/** A call the agent can't take, handled as on the trunk's disaster recovery URL: forwarded when the business has somewhere to send it, otherwise busy. */
 async function refusedCall(input: { businessId: string; called: string; forwardedFrom?: string | undefined }): Promise<string> {
   const to = await resolveRefusedCallForward(createWorkerDomainContext(), { businessId: input.businessId, e164: input.called, forwardedFrom: input.forwardedFrom });
   return to ? forwardTwiml(to) : rejectTwiml();
@@ -63,12 +63,12 @@ const callerPhone = (from: string | undefined) => from && E164_PATTERN.test(from
  *
  * incoming: Twilio asks what to do with a call to a staff-first number.
  * fallback: the number's voice fallback URL, for when incoming fails. It reads
- *   nothing from the database, so the caller reaches the receptionist anyway.
+ *   nothing from the database, so the caller reaches the agent anyway.
  * staff-prompt, staff-press: the staff leg, which bridges only on a press of 1.
  * staff-result: the ring ended. An accepted call is over; anything else goes
- *   to the receptionist.
- * receptionist-result: the leg to GPT-Live ended, or GPT-Live refused the call.
- * refer: the receptionist transferred the call.
+ *   to the agent.
+ * receptionist-result: the leg to GPT-Live ended, or GPT-Live refused the call. Calls under way during a deploy carry this name, so it stays.
+ * refer: the agent transferred the call.
  */
 export async function POST(request: Request, { params: route }: { params: Promise<{ step: string }> }) {
   const { step } = await route;
@@ -117,7 +117,7 @@ export async function POST(request: Request, { params: route }: { params: Promis
       return twiml(body ?? rejectTwiml());
     }
     case "staff-prompt": {
-      // Hanging up the staff leg leaves the call to the receptionist.
+      // Hanging up the staff leg leaves the call to the agent.
       if (!businessId) return twiml(hangupTwiml());
       try {
         const prompt = await loadStaffPrompt(domain, { businessId, from: callerPhone(params.From) });
@@ -137,7 +137,7 @@ export async function POST(request: Request, { params: route }: { params: Promis
         await recordStaffAnsweredCall(domain, { businessId, providerCallId: params.CallSid ?? "", from: callerPhone(params.From), to: called, seconds: Number(params.DialCallDuration) || 0 }).catch((error: unknown) => console.error("[staff-first] couldn't record a staff-answered call", error instanceof Error ? error.message : error));
         return twiml(hangupTwiml());
       }
-      // An action URL has no voice fallback, so a failed read still reaches the receptionist, without the message.
+      // An action URL has no voice fallback, so a failed read still reaches the agent, without the message.
       const handover = await loadStaffFirstHandover(domain, { businessId, e164: called }).catch((error: unknown) => {
         console.error("[staff-first] couldn't read the handover", error instanceof Error ? error.message : error);
         return { locale: "en" as const };

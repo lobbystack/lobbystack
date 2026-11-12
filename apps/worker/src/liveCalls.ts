@@ -416,7 +416,7 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
 
     const callControl: CallControl = {
       // The tool returns at once, so its answer reaches GPT-Live; the call
-      // ends after the receptionist has said goodbye. A caller who is done can
+      // ends after the agent has said goodbye. A caller who is done can
       // still say more first, and the call goes on. Spam and abuse end anyway.
       hangup: async (reason) => {
         if (reason === "abuse" && phone) await blockLiveCaller(input.domain, call);

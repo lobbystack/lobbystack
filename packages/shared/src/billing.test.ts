@@ -176,7 +176,7 @@ describe("billableVoiceSeconds", () => {
     expect(billableVoiceSeconds(15, "caller_finished", 12)).toBe(15);
   });
 
-  it("exempts calls the receptionist ended as spam", () => {
+  it("exempts calls the agent ended as spam", () => {
     expect(billableVoiceSeconds(240, "spam_ended")).toBe(0);
   });
 

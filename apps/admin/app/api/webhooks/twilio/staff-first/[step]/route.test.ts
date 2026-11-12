@@ -45,19 +45,19 @@ it("rings the staff phone with the business and dialled number in the action URL
 });
 
 it("passes the forwarding line on, for the loop guard", async () => {
-  mocks.decide.mockResolvedValue({ action: "receptionist", locale: "en" });
+  mocks.decide.mockResolvedValue({ action: "agent", locale: "en" });
   await post("incoming", { To: NUMBER, ForwardedFrom: STAFF });
   expect(mocks.decide).toHaveBeenCalledWith({}, expect.objectContaining({ forwardedFrom: STAFF }));
 });
 
 it("doesn't treat a withheld number as a caller", async () => {
-  mocks.decide.mockResolvedValue({ action: "receptionist", locale: "en" });
+  mocks.decide.mockResolvedValue({ action: "agent", locale: "en" });
   await post("incoming", { To: NUMBER, From: "anonymous" });
   expect(mocks.decide).toHaveBeenCalledWith({}, expect.objectContaining({ from: undefined }));
 });
 
-it("goes straight to the receptionist outside the mode's hours", async () => {
-  mocks.decide.mockResolvedValue({ action: "receptionist", locale: "en" });
+it("goes straight to the agent outside the mode's hours", async () => {
+  mocks.decide.mockResolvedValue({ action: "agent", locale: "en" });
   const { body } = await post("incoming", { To: NUMBER });
   expect(body).toContain(`<Sip>sip:proj_1@sip.api.openai.com;transport=tls;secure=true?X-LobbyStack-Called=tel:${NUMBER}</Sip>`);
 });
@@ -78,7 +78,7 @@ it("answers 500 when the decision fails, so Twilio tries the fallback URL", asyn
   expect((await post("incoming", { To: NUMBER })).status).toBe(500);
 });
 
-it("reaches the receptionist from the fallback URL without touching the database", async () => {
+it("reaches the agent from the fallback URL without touching the database", async () => {
   const { body } = await post("fallback", { To: NUMBER });
   expect(body).toContain(`X-LobbyStack-Called=tel:${NUMBER}`);
   expect(mocks.execute).not.toHaveBeenCalled();
@@ -86,7 +86,7 @@ it("reaches the receptionist from the fallback URL without touching the database
 
 it("forwards as a refused call when the deployment has no OpenAI project", async () => {
   vi.stubEnv("OPENAI_PROJECT_ID", "");
-  mocks.decide.mockResolvedValue({ action: "receptionist", locale: "en" });
+  mocks.decide.mockResolvedValue({ action: "agent", locale: "en" });
   mocks.forward.mockResolvedValue(STAFF);
   expect((await post("incoming", { To: NUMBER })).body).toContain(`<Dial>${STAFF}</Dial>`);
 });
@@ -98,7 +98,7 @@ it("reads the staff prompt with the caller's details", async () => {
   expect(mocks.prompt).toHaveBeenCalledWith({}, { businessId: BUSINESS, from: CALLER });
 });
 
-it("hangs up the staff leg when the prompt can't load, which leaves the call to the receptionist", async () => {
+it("hangs up the staff leg when the prompt can't load, which leaves the call to the agent", async () => {
   mocks.prompt.mockRejectedValue(new Error("database down"));
   expect((await post("staff-prompt", {}, `?business=${BUSINESS}`)).body).toContain("<Hangup/>");
 });
@@ -123,7 +123,7 @@ it("records nothing for a voicemail that answered without a press of 1", async (
   expect(mocks.record).not.toHaveBeenCalled();
 });
 
-it.each(["no-answer", "busy", "failed", "completed"])("hands a %s ring to the receptionist with the handover message", async (DialCallStatus) => {
+it.each(["no-answer", "busy", "failed", "completed"])("hands a %s ring to the agent with the handover message", async (DialCallStatus) => {
   mocks.handover.mockResolvedValue({ locale: "en", message: "Connecting you now." });
   const { body } = await post("staff-result", { DialCallStatus, DialBridged: "false" }, routed);
   expect(body).toContain("Connecting you now.");
@@ -135,12 +135,12 @@ it("does nothing when the caller left during the ring", async () => {
   expect((await post("staff-result", { DialCallStatus: "no-answer", DialBridged: "false", CallStatus: "completed" }, routed)).body).not.toContain("<Dial");
 });
 
-it("still reaches the receptionist when the handover can't load", async () => {
+it("still reaches the agent when the handover can't load", async () => {
   mocks.handover.mockRejectedValue(new Error("database down"));
   expect((await post("staff-result", { DialCallStatus: "no-answer", DialBridged: "false" }, routed)).body).toContain("<Sip>");
 });
 
-it("ends the call when the receptionist's leg finished", async () => {
+it("ends the call when the agent's leg finished", async () => {
   expect((await post("receptionist-result", { DialCallStatus: "completed", DialBridged: "true" }, routed)).body).toContain("<Hangup/>");
   expect(mocks.forward).not.toHaveBeenCalled();
 });
@@ -176,7 +176,7 @@ it("finds the business for a refused call that came through the fallback URL", a
   expect(mocks.forward).toHaveBeenCalledWith({}, expect.objectContaining({ businessId: BUSINESS }));
 });
 
-it("dials the target the receptionist chose", async () => {
+it("dials the target the agent chose", async () => {
   expect((await post("refer", { ReferTransferTarget: "tel:+14165550142" })).body).toContain(`>${STAFF}</Dial>`);
 });
 

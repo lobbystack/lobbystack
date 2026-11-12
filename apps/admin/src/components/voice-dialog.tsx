@@ -127,7 +127,7 @@ function VoiceRow({ voice, picked, inUse, preview, onPick }: { voice: AgentVoice
   );
 }
 
-/** Pick the receptionist's voice. Playing a clip never picks it; "Use this voice" saves. */
+/** Pick the agent's voice. Playing a clip never picks it; "Use this voice" saves. */
 export function VoiceDialog({ open, onOpenChange, current, preview, saving, onSave }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;

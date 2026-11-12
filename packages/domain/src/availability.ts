@@ -57,7 +57,7 @@ function overlaps(
 }
 
 /**
- * Why a time can't be booked, so the receptionist can tell a caller the truth
+ * Why a time can't be booked, so the agent can tell a caller the truth
  * instead of calling every refused time taken.
  *   no_hours: the business has no opening hours at all
  *   closed_day: the business is closed on that weekday

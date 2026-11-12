@@ -22,7 +22,7 @@ const withoutSeconds = z.iso.datetime({ offset: true, precision: -1 });
 const inputTimestamp = z.stringFormat("datetime", (value) => withSeconds.safeParse(value).success || withoutSeconds.safeParse(value).success).describe("ISO 8601 timestamp with a Z or numeric offset.");
 const e164 = z.string().regex(/^\+[1-9]\d{6,14}$/, "Use E.164 format, for example +14165550134.").describe("Phone number in E.164 format.");
 const clock = z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$|^24:00$/, "Use 24-hour HH:MM.").describe("Local time as 24-hour HH:MM.");
-// A business's caller language is the language the AI receptionist speaks.
+// A business's caller language is the language its agents speak.
 const locale = z.enum(runtimeLocales);
 // A contact's language picks the copy of the reminders and confirmations they receive.
 const contactLocale = z.enum(interfaceLocales).describe("Language for the contact's reminders and confirmations: en, fr, es or sr.");

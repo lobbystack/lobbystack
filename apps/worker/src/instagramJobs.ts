@@ -20,7 +20,7 @@ type JobResult = { status: "completed" | "skipped"; entityId?: string } | { stat
 const NO_REPLY = "NO_REPLY";
 const NO_REPLY_MARKER = new RegExp(`\\b${NO_REPLY}\\b`, "gi");
 
-// When the receptionist stays quiet, on channels where each reply goes straight to someone's phone.
+// When the agent stays quiet, on channels where each reply goes straight to someone's phone.
 export const NO_REPLY_INSTRUCTIONS = [
   `Not every message needs an answer. When the person's latest message only acknowledges or closes a finished exchange ("ok", "thanks", "great", "bye", a lone emoji or reaction) and they aren't waiting on anything, reply with exactly ${NO_REPLY} and nothing else.`,
   `Never use ${NO_REPLY} for a greeting, a question, a request, or when you still owe them an answer or confirmation.`,

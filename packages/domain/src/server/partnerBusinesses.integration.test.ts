@@ -182,7 +182,7 @@ describe.skipIf(!client)("creating a partner's business", () => {
         email: (await tx.select({ payload: outboxMessages.payload }).from(outboxMessages).where(and(eq(outboxMessages.aggregateId, created.invitationId), eq(outboxMessages.topic, "email.send"))))[0]?.payload,
         audit: await tx.select({ eventType: auditLogs.eventType, actorUserId: auditLogs.actorUserId, payload: auditLogs.payload }).from(auditLogs).where(eq(auditLogs.businessId, created.businessId)),
       }));
-      // At the activity level the partner sets the receptionist up, so the owner's onboarding starts at their phone.
+      // At the activity level the partner sets the agent up, so the owner's onboarding starts at their phone.
       expect(stored.business).toEqual({ name: "Harbor Dental", timezone: "America/Halifax", partnerId: acme.partnerId, accessLevel: "activity", onboardingStage: "verify_phone" });
       expect(stored.memberships).toEqual([]);
       expect(stored.invitations).toEqual([{ email: client!.email, role: "business_owner", transfersOwnership: false, invitedByUserId: acme.owner.userId }]);
@@ -506,7 +506,7 @@ describe.skipIf(!client)("the owner's onboarding", () => {
       const state = () => getActiveOnboardingState(context.db, owner!.userId, acme.brand);
       expect(await state()).toEqual({ businessId, stage: "website", steps: PARTNER_STEPS });
 
-      // The owner sets up the receptionist as a direct owner would.
+      // The owner sets up the agent as a direct owner would.
       await advanceOnboardingStage(context, { userId: owner!.userId, businessId, to: "verify_phone" });
       expect((await state()).stage).toBe("verify_phone");
       // The partner gives it numbers, so there's no number step and no trial to offer.

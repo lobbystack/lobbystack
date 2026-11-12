@@ -18,7 +18,7 @@ import { queueOperatorAlert } from "./notifications";
 import { recordProductEventBestEffort } from "./productEvents";
 import { CANCELLATION_REQUEST, createVoiceFollowUpTask, RESCHEDULE_REQUEST, type FollowUpRequest } from "./voice";
 
-// Actions the receptionist agent takes on a business's behalf, whatever the
+// Actions the agent takes on a business's behalf, whatever the
 // channel. Each one opens its own tenant-scoped transaction.
 
 export type AgentActionChannel = "voice" | "web_voice" | "web_chat" | "instagram" | "sms";

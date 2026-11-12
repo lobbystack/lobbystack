@@ -12,7 +12,7 @@ import { CALL_ENDING, DIRECT_ANSWER_TOOLS, directToolAnswer, fitToAppend, type D
 import { greetingCommand } from "./greeting";
 import { LiveLatencyTracker, type LiveCallLatency } from "./latency";
 
-type Turn = { role: "caller" | "receptionist"; text: string; endMs: number };
+type Turn = { role: "caller" | "agent"; text: string; endMs: number };
 
 export type DelegationTiming = {
   delegationId: string;
@@ -60,7 +60,7 @@ export type LiveCallSummary = {
    * session's close reason decides.
    */
   end: LiveCallEnd;
-  /** What the caller heard: when the receptionist first spoke and the gap before each answer. */
+  /** What the caller heard: when the agent first spoke and the gap before each answer. */
   latency?: LiveCallLatency;
   /**
    * The undocumented output audio events the sideband reflected: how many,
@@ -93,13 +93,13 @@ export type LiveCallWrapUp = LiveCallTimeout | "service_restart";
 /**
  * A transfer's progress: the REFER went out, OpenAI accepted it, the
  * destination answered, or the transfer failed and the call stays with the
- * receptionist.
+ * agent.
  */
 export type LiveCallTransferState = "referring" | "referred" | "completed" | "failed";
 
 export type GreetingEvent = {
   /**
-   * "spoken": the receptionist's voice was heard; attempt N means it followed
+   * "spoken": the agent's voice was heard; attempt N means it followed
    * the Nth greeting command, and attempt 0 that it spoke before any. "sent",
    * "acknowledged" and "failed" track each command.
    */
@@ -140,7 +140,7 @@ export type LiveCallSetup = {
   callerLeaving?: (conversation: string, abortSignal: AbortSignal) => Promise<boolean>;
   /**
    * The business takes PINs on the keypad, so key presses reach the transcript
-   * as "[pressed a key]", without the key: a PIN typed before the receptionist
+   * as "[pressed a key]", without the key: a PIN typed before the agent
    * asks for it stays out of the transcript too.
    */
   maskKeypad?: boolean;
@@ -229,7 +229,7 @@ const GOODBYE_START_MS = 4_000;
 const GOODBYE_MAX_MS = 15_000;
 const GOODBYE_QUIET_MS = 1_000;
 const GOODBYE_POLL_MS = 200;
-// A caller who is done is hung up on once the receptionist's goodbye has
+// A caller who is done is hung up on once the agent's goodbye has
 // played and both sides have been quiet this long, so they can still say
 // "oh, wait". Speech still coming holds it, up to the second bound.
 const CALLER_DONE_QUIET_MS = 2_000;
@@ -363,7 +363,7 @@ function endFromCloseReason(reason: string | undefined): LiveCallEnd {
 
 /**
  * Holds the sideband connection for one GPT-Live session for the whole call and
- * answers every delegation with the receptionist agent.
+ * answers every delegation with the agent.
  */
 export class LiveCallController {
   private readonly startedAt = Date.now();
@@ -416,9 +416,9 @@ export class LiveCallController {
   private passcodeChecks = 0;
   private latestPasscode: string | undefined;
   private maskKeypad = false;
-  // The session timeline, to tell when the receptionist's audio has played out.
+  // The session timeline, to tell when the agent's audio has played out.
   private timelineOrigin: number | undefined;
-  // The receptionist's speech, from output transcript text: where it ends on
+  // The agent's speech, from output transcript text: where it ends on
   // the session timeline, and when its latest words arrived.
   private lastSpeechEndMs = 0;
   private lastSpeechAt = Number.NEGATIVE_INFINITY;
@@ -490,11 +490,11 @@ export class LiveCallController {
     });
     // OpenAI's guide: transcript events arrive for intervals that contain
     // text, so words in session.output_transcript.delta are the evidence that
-    // the receptionist is speaking.
+    // the agent is speaking.
     socket.on("session.output_transcript.delta", (event) => {
       if (event.delta.trim()) this.heardSpeech(event.end_ms);
       this.measure(() => this.latency.agentTranscript(event.start_ms, event.end_ms));
-      this.appendTranscript("receptionist", event.delta, event.end_ms);
+      this.appendTranscript("agent", event.delta, event.end_ms);
       this.watchForMissedGoodbye();
     });
     // OpenAI reflects output audio to the sideband with timeline offsets, but
@@ -685,7 +685,7 @@ export class LiveCallController {
     }
   }
 
-  // The receptionist is audibly speaking: in its transcript, or in loud reflected audio.
+  // The agent is audibly speaking: in its transcript, or in loud reflected audio.
   private heardSpeech(endMs: number | undefined): void {
     this.greetingDone();
     this.lastSpeechAt = performance.now();
@@ -723,7 +723,7 @@ export class LiveCallController {
     }, () => undefined);
   }
 
-  /** The receptionist started speaking, so the greeting worked or isn't needed. */
+  /** The agent started speaking, so the greeting worked or isn't needed. */
   private greetingDone(): void {
     if (this.greetingSpoken) return;
     this.greetingSpoken = true;
@@ -758,7 +758,7 @@ export class LiveCallController {
     this.timelineOrigin = this.timelineOrigin === undefined ? origin : Math.min(this.timelineOrigin, origin);
   }
 
-  /** When the receptionist's speech so far will have finished playing, in performance.now() time. */
+  /** When the agent's speech so far will have finished playing, in performance.now() time. */
   private playbackEndsAt(): number {
     return this.timelineOrigin === undefined ? this.lastSpeechAt : this.timelineOrigin + this.lastSpeechEndMs;
   }
@@ -769,9 +769,9 @@ export class LiveCallController {
   }
 
   /**
-   * Runs `then` once the receptionist has said what it was just given: no
+   * Runs `then` once the agent has said what it was just given: no
    * request is running and its speech since then, or since the answer that
-   * followed, has played out. It stops waiting when the receptionist stays
+   * followed, has played out. It stops waiting when the agent stays
    * silent, or after GOODBYE_MAX_MS. OpenAI's guide: close only when playback
    * has finished and no pending work needs the session.
    *
@@ -814,7 +814,7 @@ export class LiveCallController {
     else this.endAfterGoodbye(reason);
   }
 
-  /** Ends the call once the receptionist has said goodbye. Nothing the caller says stops it. */
+  /** Ends the call once the agent has said goodbye. Nothing the caller says stops it. */
   private endAfterGoodbye(reason: AgentEnd): void {
     if (this.finished) return;
     this.endReason = reason;
@@ -918,7 +918,7 @@ export class LiveCallController {
     const reply = this.turns.at(lagging ? -2 : -1);
     const callerTurn = this.turns.at(lagging ? -3 : -2);
     const unanswered = () => !this.ending && !this.finished && !this.pendingHangup && !this.transfer && !this.passcode && this.runningDelegations === 0 && heard === this.lastCallerStartMs;
-    if (!callerLeaving || !unanswered() || heard <= this.missedGoodbyeCheckedMs || callerTurn?.role !== "caller" || reply?.role !== "receptionist") return;
+    if (!callerLeaving || !unanswered() || heard <= this.missedGoodbyeCheckedMs || callerTurn?.role !== "caller" || reply?.role !== "agent") return;
     // A timer can fire just before performance.now() reaches its delay.
     const waitMs = this.lastCallerAt + MISSED_GOODBYE_QUIET_MS - performance.now();
     if (waitMs > 0) {
@@ -1045,7 +1045,7 @@ export class LiveCallController {
   }
 
   /**
-   * Transfers a phone call with a SIP REFER once the receptionist has told the
+   * Transfers a phone call with a SIP REFER once the agent has told the
    * caller, the way endAfterGoodbye waits for the goodbye. Returns false when
    * no transfer starts: one is already under way or the call is ending.
    * onTransfer reports "referring" when the REFER goes out, "referred" when
@@ -1081,7 +1081,7 @@ export class LiveCallController {
     this.options.onTransfer?.("completed");
   }
 
-  // The caller is still with the receptionist, which offers to take a message.
+  // The caller is still with the agent, which offers to take a message.
   // Clearing the transfer lets a later one be tried.
   private transferFailed(message: string): void {
     if (this.transfer !== "referring" && this.transfer !== "referred") return;
@@ -1131,7 +1131,7 @@ export class LiveCallController {
     this.silenceTimer = setTimeout(() => this.options.onTimeout?.("silence_timeout"), this.options.silenceTimeoutMs);
   }
 
-  // The receptionist's own speech resets the timer but not the count, so the
+  // The agent's own speech resets the timer but not the count, so the
   // check-ins lead to the goodbye; only the caller starts them over.
   private checkInOnSilence(): void {
     if (this.ending || this.finished) return;

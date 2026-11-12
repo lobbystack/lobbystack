@@ -104,7 +104,7 @@ describe.skipIf(!testUrl)("AI text replies against PostgreSQL under production l
     });
   });
 
-  it("records OPT OUT, REVOKE and ARRET as opt-outs, with no reply from the receptionist", async () => {
+  it("records OPT OUT, REVOKE and ARRET as opt-outs, with no reply from the agent", async () => {
     await rollbackTest(async (tx) => {
       for (const keyword of ["OPT OUT", "revoke", "ARRÊT"]) {
         const business = await seedBusiness(tx, { enabled: true });
@@ -175,7 +175,7 @@ describe.skipIf(!testUrl)("AI text replies against PostgreSQL under production l
     });
   });
 
-  it("gives the receptionist the customer's number and the conversation", async () => {
+  it("gives the agent the customer's number and the conversation", async () => {
     await rollbackTest(async (tx) => {
       const business = await seedBusiness(tx, { enabled: true });
       const { messageId } = await business.receive("Are you open Sunday?");
@@ -267,7 +267,7 @@ describe.skipIf(!testUrl)("AI text replies against PostgreSQL under production l
     });
   });
 
-  it("keeps the conversation with the receptionist when only the business's daily limit is reached", async () => {
+  it("keeps the conversation with the agent when only the business's daily limit is reached", async () => {
     await rollbackTest(async (tx) => {
       const business = await seedBusiness(tx, { enabled: true });
       const { messageId } = await business.receive("Are you open Sunday?");

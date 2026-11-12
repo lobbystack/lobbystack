@@ -193,7 +193,7 @@ describe.skipIf(!client)("operator contact and channel data under operator RLS",
     });
   });
 
-  it("adds up booked value and time saved from the receptionist's own bookings and handled calls", async () => {
+  it("adds up booked value and time saved from the agent's own bookings and handled calls", async () => {
     await rollbackTest(async (tx) => {
       const { businessId, userId, ids } = await seed(tx);
       await tx.execute(sql`reset role`);

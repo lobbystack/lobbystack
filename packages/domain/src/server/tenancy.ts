@@ -95,7 +95,7 @@ export async function createBusiness(
 
 /**
  * Creates a business that has no owner yet, such as one a partner sets up
- * before it invites the owner. The business gets the staff member, receptionist
+ * before it invites the owner. The business gets the staff member, agent
  * profile and first snapshot every business gets. It counts toward no
  * account's cap and becomes no one's active business. No route calls this yet.
  */
@@ -128,7 +128,7 @@ type NewBusiness = {
 
 /**
  * Inserts a business with what every new business needs: its owner, the staff
- * member that stands for it, a receptionist profile, and its first snapshot.
+ * member that stands for it, an agent profile, and its first snapshot.
  * The transaction must be scoped to businessId, and timezone must already be
  * an IANA name. A generated slug gets a random suffix when taken; a taken slug
  * the caller chose fails with a unique violation.
@@ -147,7 +147,7 @@ export async function insertOwnerlessBusinessInTransaction(tx: DatabaseTransacti
   return { businessId: input.businessId };
 }
 
-/** How a new business's receptionist books, and answers calls and texts until someone changes them: the booking policy, and its first call and text rules. */
+/** How a new business's agent books, and answers calls and texts until someone changes them: the booking policy, and its first call and text rules. */
 export const NEW_BUSINESS_AGENT_INSTRUCTIONS = {
   bookingPolicy: "Only confirm a booking after availability is checked.",
   voiceInstructions: "Sound calm, confident, and concise. Escalate urgent requests to a human when policy requires it.",
@@ -247,7 +247,7 @@ async function insertBusinessRowsInTransaction(tx: DatabaseTransaction, input: N
     appointmentChangePolicy: defaultAppointmentChangePolicy,
   }).returning({ id: agents.id });
   if (!agent) throw new Error("Default agent could not be created.");
-  // What a new receptionist is told on calls and in texts, as rules kept to
+  // What a new agent is told on calls and in texts, as rules kept to
   // those channels and titled in the business's language, as migration 0203
   // turned the old instruction columns into. Nothing reads those columns now.
   // The snapshot refresh below picks them up.
@@ -362,7 +362,7 @@ export async function updateBusiness(
   });
 }
 
-/** Updates basic business fields and refreshes the receptionist's snapshot. Callers authorize first. */
+/** Updates basic business fields and refreshes the agent's snapshot. Callers authorize first. */
 export async function updateBusinessInTransaction(
   tx: DatabaseTransaction,
   input: { businessId: string; name?: string; timezone?: string; businessType?: string; defaultLocale?: string; defaultLocaleDetected?: boolean; teamLocale?: string | null; websiteUrl?: string | null; currency?: string },

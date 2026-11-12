@@ -342,7 +342,7 @@ describe.skipIf(!client)("the opt-in confirmation", () => {
 });
 
 describe.skipIf(!client)("text consent a business sends through the API or MCP", () => {
-  // The shared number's toll-free verification covers consent the receptionist collects on a call only.
+  // The shared number's toll-free verification covers consent the agent collects on a call only.
   it("doesn't count on cloud, where texts come from the shared number, and counts when self-hosted", async () => {
     vi.stubEnv("TWILIO_ALERT_SMS_FROM", SHARED);
     await rollbackTest(async (tx) => {

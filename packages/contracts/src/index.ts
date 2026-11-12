@@ -228,7 +228,7 @@ export const queueForJobType = {
   "sms.send": "critical",
   "appointment.sendChangeOtp": "critical",
   "sms.syncPrice": "critical",
-  // The receptionist's answer to an Instagram direct message, then its delivery.
+  // The agent's answer to an Instagram direct message, then its delivery.
   "sms.aiReply": "critical",
   "instagram.reply": "critical",
   "instagram.send": "critical",
@@ -280,7 +280,7 @@ export const queueForJobType = {
   "phoneNumber.reclaim": "maintenance",
   // The numbers a deleted business held, released with the provider.
   "phoneNumber.releaseDeleted": "maintenance",
-  // Moves a number between the receptionist and the forward-or-reject fallback; callers notice a delay.
+  // Moves a number between the agent and the forward-or-reject fallback; callers notice a delay.
   "phoneNumber.route": "critical",
   "numberTrial.sweep": "maintenance",
   "numberTrial.sendEmail": "default",

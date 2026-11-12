@@ -1,9 +1,9 @@
-// Receptionist settings rules the dashboard and the v1 API share.
+// Agent settings rules the dashboard and the v1 API share.
 
-/** When the receptionist may put a caller through to the team. */
+/** When the agent may put a caller through to the team. */
 export const transferModes = ["never", "always", "on_request", "on_urgent", "during_business_hours"] as const;
 
-/** When a call rings the staff phone before the receptionist answers. */
+/** When a call rings the staff phone before the agent answers. */
 export const staffFirstModes = ["never", "business_hours", "always"] as const;
 export type StaffFirstMode = (typeof staffFirstModes)[number];
 
@@ -15,11 +15,11 @@ export const DEFAULT_STAFF_FIRST_RING_SECONDS: StaffFirstRingSeconds = 15;
 /** The longest message the carrier reads to a caller before ringing or at handover. */
 export const STAFF_FIRST_MESSAGE_MAX_LENGTH = 200;
 
-/** How the receptionist handles appointment requests. */
+/** How the agent handles appointment requests. */
 export const bookingModes = ["off", "request", "instant"] as const;
 
 /**
- * The GPT-Live built-in voices a business can pick for its receptionist.
+ * The GPT-Live built-in voices a business can pick for its agent.
  * agent-core checks this list against the OpenAI SDK's BuiltInVoice type.
  */
 export const agentVoices = ["alloy", "ash", "ballad", "beacon", "bossa", "cedar", "cinder", "coral", "delta", "echo", "gleam", "marin", "meridian", "quartz", "ripple", "sage", "shimmer", "stone", "tempo", "verse", "vesper", "willow"] as const;
@@ -62,7 +62,7 @@ export const agentVoiceTraits: Record<AgentVoice, { pitch: AgentVoicePitch; pace
 export type AgentVoiceGender = "female" | "male" | "neutral";
 
 /**
- * Whether each voice sounds like a woman or a man, so the receptionist uses
+ * Whether each voice sounds like a woman or a man, so the agent uses
  * matching grammar when it talks about itself ("ravie" or "ravi"). From OpenAI's
  * descriptions where it gives one, otherwise from the preview clips' median
  * pitch: 99 to 117 Hz is male, 188 to 213 Hz female. alloy sits between them,

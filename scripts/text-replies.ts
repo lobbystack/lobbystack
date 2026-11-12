@@ -13,7 +13,7 @@ function printUsage(): void {
   pnpm text-replies:set --business <business id> --off
 
   --business  The business's id.
-  --on        The receptionist answers texts to the business's own number.
+  --on        The agent answers texts to the business's own number.
   --off       It stops, including replies already queued.
 
 A cloud business's texts to US numbers stay blocked either way until the

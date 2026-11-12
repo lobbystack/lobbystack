@@ -172,7 +172,7 @@ import { emitWebhookEventInTransaction } from "./webhooks";
 
 // The v1 public API operations. Each runs inside the API key's business with
 // the worker database role and RLS, and reuses the same domain rules as the
-// dashboard and the receptionist.
+// dashboard and the agent.
 
 /**
  * The API key's business and id. `actor` names the surface that used the key:
@@ -1179,7 +1179,7 @@ export async function updateNotificationPreferencesForApi(context: DomainContext
   });
 }
 
-// Rules the receptionist follows
+// Rules the agent follows
 
 /** Calls read 4,000 characters of a rule for every channel and 8,000 of one kept to a channel, so the API takes no more. */
 function assertRuleLength(content: string, channel: string | null): void {
@@ -1265,7 +1265,7 @@ export async function reorderRulesForApi(context: DomainContext, caller: ApiCall
   });
 }
 
-// Receptionist settings
+// /receptionist: the default agent's settings and the business summary
 
 const receptionistApiFields: Record<keyof AgentSettingsPatch, keyof ApiReceptionistUpdate> = {
   greeting: "greeting",
@@ -1287,7 +1287,7 @@ const receptionistApiFields: Record<keyof AgentSettingsPatch, keyof ApiReception
   staffFirstHandoverMessage: "staff_first_handover_message",
 };
 
-/** The business's receptionist row, or the defaults it would be saved with when it has none yet. */
+/** The default agent's row, or the defaults it would be saved with when it has none yet. */
 async function loadReceptionistState(tx: DatabaseTransaction, businessId: string, lock: boolean) {
   const [row] = await tx.select({ name: businesses.name, defaultLocale: businesses.defaultLocale, updatedAt: businesses.updatedAt }).from(businesses).where(eq(businesses.id, businessId)).limit(1);
   if (!row) throw notFound("Business");
@@ -1328,8 +1328,8 @@ export async function getReceptionistForApi(context: DomainContext, caller: ApiC
 }
 
 /**
- * Changes the fields sent. Values the receptionist already has change nothing,
- * so an unchanged receptionist isn't written, audited or refreshed. Sending a
+ * Changes the fields sent. Values the agent already has change nothing,
+ * so an unchanged agent isn't written, audited or refreshed. Sending a
  * summary makes it the business's own, so AI won't replace it, even when the
  * text is the same.
  */
@@ -1853,7 +1853,7 @@ async function bookingContext(tx: DatabaseTransaction, businessId: string) {
   return { timezone: business.timezone, bookingMode: normalizeBookingMode(profile?.bookingMode) };
 }
 
-/** The API books under the same rule the receptionist does: only in instant booking mode. */
+/** The API books under the same rule the agent does: only in instant booking mode. */
 function assertInstantBooking(bookingMode: "instant" | "request" | "off"): void {
   if (bookingMode === "off") throw new PublicApiError(409, "booking_disabled", "Booking is turned off for this business.");
   if (bookingMode === "request") throw new PublicApiError(409, "booking_requires_confirmation", "This business takes appointment requests that the team confirms. It does not accept direct bookings.");
@@ -1900,7 +1900,7 @@ export async function createAppointmentForApi(context: DomainContext, caller: Ap
       contactPhone = contact.phone;
     }
     if (input.staff_id) await assertBookableStaff(tx, caller.businessId, input.staff_id, input.service_id);
-    // The shared number's toll-free verification covers consent the receptionist
+    // The shared number's toll-free verification covers consent the agent
     // collects on a call, not consent a business asserts through the API or MCP.
     // A business that texts from the shared number (cloud) can't opt customers in here.
     const consentCounts = !isSharedSmsSender(await resolveSmsSender(tx, caller.businessId));

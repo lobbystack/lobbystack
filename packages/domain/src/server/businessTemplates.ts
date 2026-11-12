@@ -391,12 +391,12 @@ export function inProcessSetupPort(dependencies: BusinessSetupDependencies, call
   };
 }
 
-// The receptionist's settings that take one of a few values rather than words.
+// The agent's settings that take one of a few values rather than words.
 const RECEPTIONIST_CHOICES = new Set(["transfer_mode", "booking_mode", "voice", "appointment_change_policy"]);
 
 /**
  * The template's own words, with the business it was saved from renamed to
- * the one it sets up: the receptionist's text, and each service's, rule's,
+ * the one it sets up: the agent's text, and each service's, rule's,
  * FAQ's and text's. Only the whole name counts, so Harbor doesn't touch
  * Harborview, and the new name goes in as written, whatever it holds.
  */

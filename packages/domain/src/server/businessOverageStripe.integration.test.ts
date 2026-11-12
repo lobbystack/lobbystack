@@ -319,7 +319,7 @@ describe.skipIf(!client)("a business's overage on its partner's Stripe", () => {
       const sent = async (kind: string, threshold: string) => (await alertEmails(tx, acme.cedar)).filter((email) => email.variables.kind === kind && email.variables.threshold === threshold);
       const full = await sent("minutes", "100");
       expect(full).toHaveLength(2);
-      // With overage on, the email says the receptionist keeps answering, up to the partner's monthly limit.
+      // With overage on, the email says the agent keeps answering, up to the partner's monthly limit.
       expect(full.find((email) => email.to === `${acme.team.ownerId}@example.invalid`)!.variables).toMatchObject({ used: "11", included: "10", overage: "on", capped: "yes" });
       // On the bell, the 100% item takes the 80% one's place.
       const afterFull = await bell();

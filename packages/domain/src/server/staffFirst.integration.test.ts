@@ -168,7 +168,7 @@ describe.skipIf(!testUrl)("staff answers first against PostgreSQL", () => {
     });
   });
 
-  it("leaves a Telnyx number on the receptionist", async () => {
+  it("leaves a Telnyx number on the agent", async () => {
     await rollbackTest(async (tx) => {
       const businessId = await business(tx, { carrier: "telnyx" });
       const [number] = await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(eq(phoneNumbers.businessId, businessId));
@@ -193,12 +193,12 @@ describe.skipIf(!testUrl)("staff answers first against PostgreSQL", () => {
       return businessId;
     }
 
-    it("rings during hours and goes to the receptionist outside them", async () => {
+    it("rings during hours and goes to the agent outside them", async () => {
       await rollbackTest(async (tx) => {
         const businessId = await configured(tx, "business_hours");
         const at = (now: Date) => decide(tx, { businessId, e164: lobbyNumber, providerCallId: `CA${now.getTime()}`, from: "+14165550134", now });
         expect(await at(open)).toEqual({ action: "ring", locale: "en", phone: staffPhone, ringSeconds: 15, message: "One moment." });
-        expect(await at(closed)).toEqual({ action: "receptionist", locale: "en" });
+        expect(await at(closed)).toEqual({ action: "agent", locale: "en" });
       });
     });
 
@@ -213,14 +213,14 @@ describe.skipIf(!testUrl)("staff answers first against PostgreSQL", () => {
       });
     });
 
-    it("sends a forwarded call to the receptionist when the carrier names no forwarding line", async () => {
+    it("sends a forwarded call to the agent when the carrier names no forwarding line", async () => {
       await rollbackTest(async (tx) => {
         const businessId = await configured(tx, "always");
         const call = (providerCallId: string, now: Date) => decide(tx, { businessId, e164: lobbyNumber, providerCallId, from: caller, now });
         expect((await call("CA1", open)).action).toBe("ring");
         // Twilio repeating the webhook is the same call, not a forward.
         expect((await call("CA1", open)).action).toBe("ring");
-        expect((await call("CA2", new Date(open.getTime() + 20_000))).action).toBe("receptionist");
+        expect((await call("CA2", new Date(open.getTime() + 20_000))).action).toBe("agent");
         // Other callers still ring, and so does this one once the ring is over.
         expect((await decide(tx, { businessId, e164: lobbyNumber, providerCallId: "CA3", from: "+14165550155", now: new Date(open.getTime() + 20_000) })).action).toBe("ring");
         expect((await call("CA4", new Date(open.getTime() + 31_000))).action).toBe("ring");
@@ -233,7 +233,7 @@ describe.skipIf(!testUrl)("staff answers first against PostgreSQL", () => {
     it("won't ring the staff phone for a call from the staff phone", async () => {
       await rollbackTest(async (tx) => {
         const businessId = await configured(tx, "always");
-        expect(await decide(tx, { businessId, e164: lobbyNumber, providerCallId: "CA1", from: staffPhone, now: open })).toEqual({ action: "receptionist", locale: "en" });
+        expect(await decide(tx, { businessId, e164: lobbyNumber, providerCallId: "CA1", from: staffPhone, now: open })).toEqual({ action: "agent", locale: "en" });
       });
     });
 
@@ -264,7 +264,7 @@ describe.skipIf(!testUrl)("staff answers first against PostgreSQL", () => {
     it("won't ring the line that forwarded the call here", async () => {
       await rollbackTest(async (tx) => {
         const businessId = await configured(tx, "always");
-        expect(await decide(tx, { businessId, e164: lobbyNumber, providerCallId: "CA1", forwardedFrom: staffPhone, now: open })).toEqual({ action: "receptionist", locale: "en" });
+        expect(await decide(tx, { businessId, e164: lobbyNumber, providerCallId: "CA1", forwardedFrom: staffPhone, now: open })).toEqual({ action: "agent", locale: "en" });
       });
     });
 
@@ -272,7 +272,7 @@ describe.skipIf(!testUrl)("staff answers first against PostgreSQL", () => {
       await rollbackTest(async (tx) => {
         const businessId = await configured(tx, "always");
         await tx.insert(numberTrials).values({ businessId, userId: (await tx.select({ id: users.id }).from(users).limit(1))[0]!.id, status: "active", verifiedPhone: "+14165550199" });
-        expect(await decide(tx, { businessId, e164: lobbyNumber, providerCallId: "CA1", now: open })).toEqual({ action: "receptionist", locale: "en" });
+        expect(await decide(tx, { businessId, e164: lobbyNumber, providerCallId: "CA1", now: open })).toEqual({ action: "agent", locale: "en" });
         expect(await tx.select({ id: billingUsageEvents.id }).from(billingUsageEvents).where(eq(billingUsageEvents.businessId, businessId))).toEqual([]);
       });
     });
@@ -283,14 +283,14 @@ describe.skipIf(!testUrl)("staff answers first against PostgreSQL", () => {
       });
       const cap = STAFF_BRIDGED_MINUTES_PER_DAY * 60;
 
-      it("sends calls to the receptionist at the cap, and spends no attempt", async () => {
+      it("sends calls to the agent at the cap, and spends no attempt", async () => {
         await rollbackTest(async (tx) => {
           const businessId = await configured(tx, "always");
           await bridged(tx, businessId, cap - 1, new Date(open.getTime() - 60_000));
           expect(await decide(tx, { businessId, e164: lobbyNumber, providerCallId: "CA-under", from: caller, now: open })).toMatchObject({ action: "ring" });
           await bridged(tx, businessId, 1, new Date(open.getTime() - 60_000));
           const attempts = await tx.select({ id: billingUsageEvents.id }).from(billingUsageEvents).where(eq(billingUsageEvents.businessId, businessId));
-          expect(await decide(tx, { businessId, e164: lobbyNumber, providerCallId: "CA-over", from: "+14165550135", now: open })).toEqual({ action: "receptionist", locale: "en" });
+          expect(await decide(tx, { businessId, e164: lobbyNumber, providerCallId: "CA-over", from: "+14165550135", now: open })).toEqual({ action: "agent", locale: "en" });
           expect(await tx.select({ id: billingUsageEvents.id }).from(billingUsageEvents).where(eq(billingUsageEvents.businessId, businessId))).toHaveLength(attempts.length);
         });
       });
@@ -323,7 +323,7 @@ describe.skipIf(!testUrl)("staff answers first against PostgreSQL", () => {
           expect(source).toBe("billed_outside");
           expect(await decide(tx, { businessId, e164: lobbyNumber, providerCallId: "CA-under", from: caller, now: open })).toMatchObject({ action: "ring" });
           await bridged(tx, businessId, cap, new Date(open.getTime() - 60_000));
-          expect(await decide(tx, { businessId, e164: lobbyNumber, providerCallId: "CA-outside", from: caller, now: open })).toEqual({ action: "receptionist", locale: "en" });
+          expect(await decide(tx, { businessId, e164: lobbyNumber, providerCallId: "CA-outside", from: caller, now: open })).toEqual({ action: "agent", locale: "en" });
         });
       });
     });
@@ -331,7 +331,7 @@ describe.skipIf(!testUrl)("staff answers first against PostgreSQL", () => {
     it("stops ringing a business that fell back to Free", async () => {
       await rollbackTest(async (tx) => {
         const businessId = await configured(tx, "always", "free_cloud");
-        expect(await decide(tx, { businessId, e164: lobbyNumber, providerCallId: "CA1", now: open })).toEqual({ action: "receptionist", locale: "en" });
+        expect(await decide(tx, { businessId, e164: lobbyNumber, providerCallId: "CA1", now: open })).toEqual({ action: "agent", locale: "en" });
       });
     });
   });

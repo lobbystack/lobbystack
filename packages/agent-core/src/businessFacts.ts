@@ -1,7 +1,7 @@
 import { formatServicePrice, type BusinessContextSnapshot } from "@lobbystack/shared";
 import { DateTime } from "luxon";
 
-// Snapshot facts in the words the receptionist speaks them. The hours and
+// Snapshot facts in the words the agent speaks them. The hours and
 // services tools, their direct answers on calls, and GPT-Live's own
 // instructions all read from here, so a caller hears the same thing from each.
 

@@ -139,7 +139,7 @@ describe.skipIf(!client)("a partner's prospect demos against PostgreSQL", () => 
       // The partner's people work in it through opens, never on its team.
       expect(stored.team).toEqual([]);
       expect(stored.demo).toEqual({ partnerId: bright.partnerId, operatorUserId: bright.owner.userId });
-      // The receptionist names the partner, never the host.
+      // The agent names the partner, never the host.
       expect(stored.instructions).toContain("This is a prospect demo from Bright Desk.");
       expect(stored.instructions).not.toMatch(/LobbyStack|Front Desk/);
 
@@ -253,7 +253,7 @@ describe.skipIf(!client)("a partner's prospect demos against PostgreSQL", () => 
       }));
       // At the activity level the owner's only onboarding step is their phone, as for an owner the partner invited.
       expect(claimed.business).toEqual({ partnerId: bright.partnerId, accessLevel: "activity", onboardingStage: "verify_phone" });
-      // Real calls aren't a demo anymore: the receptionist gets back what a new business is told, apart from what someone changed during the demo.
+      // Real calls aren't a demo anymore: the agent gets back what a new business is told, apart from what someone changed during the demo.
       const receptionist = await asMigrator(tx, async () => ({
         bookingPolicy: (await tx.select({ bookingPolicy: agents.bookingPolicy }).from(agents).where(eq(agents.businessId, demo.businessId)))[0]?.bookingPolicy,
         rules: await tx.select({ channel: agentRules.channel, content: agentRules.content }).from(agentRules).where(eq(agentRules.businessId, demo.businessId)).orderBy(agentRules.sortOrder),
