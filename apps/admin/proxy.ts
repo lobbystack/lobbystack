@@ -35,7 +35,9 @@ const stateChangingMethods = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 const csrfExemptPrefixes = ["/api/auth", "/api/webhooks", "/api/health", "/api/voice", "/api/widget/", "/api/v1/", "/api/mcp"];
 // /api/storage/local authorizes each upload with a signed token in its URL, never a cookie, and
 // API clients such as the CLI send no Origin header. It is matched exactly so routes added beside it stay guarded.
-const csrfExemptPaths = new Set(["/api/storage/local"]);
+// /api/email/unsubscribe is the one-click unsubscribe a marketing email names (RFC 8058): mail
+// providers POST to it with no cookies or Origin, and its signed token is the only credential.
+const csrfExemptPaths = new Set(["/api/storage/local", "/api/email/unsubscribe"]);
 
 function isWebhookPath(pathname: string): boolean {
   return pathname.startsWith("/api/webhooks/");
@@ -83,11 +85,13 @@ const hostOnlyPrefixes = [
   "/affiliate",
   "/api/affiliate",
   "/api/check-in",
+  // Unsubscribing from the host's marketing emails, which a partner's businesses never get.
+  "/api/email/",
 ];
 
 function isHostOnlyPath(pathname: string): boolean {
-  // The OAuth consent and check-in pages answer under each locale, as /fr/oauth/consent.
-  return hasPrefix(pathname, hostOnlyPrefixes) || (localeFromPathname(pathname) !== null && hasPrefix(stripLocalePrefix(pathname), ["/oauth", "/check-in"]));
+  // The OAuth consent, check-in and unsubscribe pages answer under each locale, as /fr/oauth/consent.
+  return hasPrefix(pathname, hostOnlyPrefixes) || (localeFromPathname(pathname) !== null && hasPrefix(stripLocalePrefix(pathname), ["/oauth", "/check-in", "/unsubscribe"]));
 }
 
 function notFoundResponse(headers: Record<string, string>): NextResponse {

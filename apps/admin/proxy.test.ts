@@ -95,6 +95,16 @@ it("lets API clients PUT to signed local storage URLs without an Origin, and sti
   expect(lookalike.status).toBe(403);
 });
 
+it("lets mail providers POST a one-click unsubscribe without an Origin, and still guards resubscribing", async () => {
+  const oneClick = await visit("http://localhost:3210/api/email/unsubscribe?token=signed", { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: "List-Unsubscribe=One-Click" });
+  expect(oneClick.status).toBe(200);
+  expect(oneClick.headers.get("cache-control")).toBe("private, no-store");
+  expect((await visit("http://localhost:3210/api/email/subscribe?token=signed", { method: "POST", headers: { origin: "https://untrusted.invalid" } })).status).toBe(403);
+  expect((await visit("http://localhost:3210/api/email/subscribe?token=signed", { method: "POST", headers: { origin: "http://localhost:3210" } })).status).toBe(200);
+  // Only the one-click path itself is exempt.
+  expect((await visit("http://localhost:3210/api/email/unsubscribe-all", { method: "POST" })).status).toBe(403);
+});
+
 it("overwrites supplied locale headers and tolerates malformed cookies", async () => {
   const response = (await visit("http://localhost:3210/fr/login", { headers: { cookie: "lobbystack.locale=%E0%A4%A", "accept-language": "en", "x-lobbystack-locale": "en", "x-lobbystack-pathname": "/settings" } }));
   expect(response.headers.get("x-middleware-request-x-lobbystack-locale")).toBe("fr");
@@ -163,6 +173,7 @@ it("keeps sensitive and dynamic responses private while caching fixed public pag
   for (const url of [
     "/en/reset-password/token-value",
     "/en/check-in/token-value",
+    "/fr/unsubscribe/token-value",
     "/fr/verify-email?token=private",
     "/api/dashboard",
     "/api/realtime",
@@ -494,6 +505,9 @@ describe("a partner's host", () => {
       ["/api/affiliate/click", "POST"],
       ["/en/check-in/token", "GET"],
       ["/api/check-in", "POST"],
+      ["/en/unsubscribe/token", "GET"],
+      ["/api/email/unsubscribe?token=t", "POST"],
+      ["/api/email/subscribe?token=t", "POST"],
     ] as const) {
       const partner = await visit(`https://bright.portal.example.test${path}`, { method, headers: { origin: "https://bright.portal.example.test" } });
       expect(partner.status, `${method} ${path} on a partner's host`).toBe(404);
