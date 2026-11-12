@@ -2,7 +2,8 @@ import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 import { businesses, onboardingNumberClaimEvents, phoneNumbers } from "@lobbystack/db";
-import { partnerNumberAvailabilityInTransaction, schedulePhoneNumberRelease, verifiedPhone } from "@lobbystack/domain";
+import { extraNumberAvailabilityInTransaction, extraNumberPricesInTransaction, partnerNumberAvailabilityInTransaction, schedulePhoneNumberRelease, verifiedPhone } from "@lobbystack/domain";
+import { extraNumbersProductId } from "@lobbystack/shared";
 import { jsonError } from "@/lib/api-helpers";
 import { operatorRoute } from "@/lib/operator-request";
 
@@ -12,13 +13,20 @@ export const GET = operatorRoute(async ({ userId, businessId, transaction }) => 
   const workspace = await tx.select({ replacementReservedAt: businesses.phoneNumberReplacementReservedAt, replacementUsedAt: businesses.phoneNumberReplacementUsedAt }).from(businesses).where(eq(businesses.id, businessId)).limit(1);
   const partnerNumbers = await partnerNumberAvailabilityInTransaction(tx, businessId);
   const activeClaims = await tx.select({ id: onboardingNumberClaimEvents.id, status: onboardingNumberClaimEvents.status, purpose: onboardingNumberClaimEvents.purpose }).from(onboardingNumberClaimEvents).where(and(eq(onboardingNumberClaimEvents.businessId, businessId), eq(onboardingNumberClaimEvents.userId, userId), inArray(onboardingNumberClaimEvents.status, ["reserved", "provisioning"]))).orderBy(desc(onboardingNumberClaimEvents.reservedAt));
+  const prices = await extraNumberPricesInTransaction(tx, businessId);
+  const rows = await tx.select().from(phoneNumbers).where(and(eq(phoneNumbers.businessId, businessId), eq(phoneNumbers.status, "active"))).orderBy(asc(phoneNumbers.createdAt));
   return {
-    phoneNumbers: await tx.select().from(phoneNumbers).where(and(eq(phoneNumbers.businessId, businessId), eq(phoneNumbers.status, "active"))).orderBy(asc(phoneNumbers.createdAt)),
+    // An extra number's monthly price in US cents, or null for a number the plan includes or one that's free.
+    phoneNumbers: rows.map((row) => ({ ...row, monthlyPriceCents: prices.get(row.id) ?? null })),
     activeClaim: activeClaims[0] ?? null,
     replacement: { reservedAt: workspace[0]?.replacementReservedAt ?? null, usedAt: workspace[0]?.replacementUsedAt ?? null, activeClaim: activeClaims.find(claim => claim.purpose === "replacement") ?? null },
     // A partner's business gets its numbers from its partner's tier, not a plan its billing page shows. Its partner's trial
     // number needs the claimer's verified mobile, so the settings ask this person for one first when they have none here.
     partnerNumbers: partnerNumbers?.trial ? { ...partnerNumbers, phoneVerified: Boolean(await verifiedPhone(tx, { userId, businessId })) } : partnerNumbers,
+    // Whether the business can buy another number for an agent, whether it pays for one, whether its monthly add-on
+    // bills yet, whether this deployment sells that add-on, and why not.
+    extraNumbers: { ...await extraNumberAvailabilityInTransaction(tx, businessId), checkoutAvailable: Boolean(extraNumbersProductId(process.env) && process.env.POLAR_ACCESS_TOKEN) },
+    extraClaim: activeClaims.find(claim => claim.purpose === "extra") ?? null,
   };
 })));
 

@@ -344,6 +344,19 @@
       },
       "continue": "Continue setup",
       "dashboard": "Go to your dashboard"
+    },
+    "addOns": {
+      "title": "Add-ons",
+      "active": "Active",
+      "get": "Get add-on",
+      "checkoutFailed": "Couldn't open checkout. Try again.",
+      "extraNumbers": {
+        "title": "Extra phone numbers",
+        "description": "Give an agent its own number.",
+        "price": "From {{price}} per number /month",
+        "count_one": "{{count}} extra number",
+        "count_other": "{{count}} extra numbers"
+      }
     }
   },
   "subscription": {
@@ -388,7 +401,8 @@
     "reclaim": {
       "title": "This number will be released on {{date}}",
       "description": "Free plans do not include a dedicated business number. Upgrade to Starter or Pro before then to keep {{number}}.",
-      "upgradeCta": "Upgrade to keep this number"
+      "upgradeCta": "Upgrade to keep this number",
+      "extraNumbersEnded": "The extra phone numbers add-on ended. Get it again before then to keep {{number}}."
     },
     "freeTrial": {
       "description": "You don't have a number yet. Try one free for 14 days.",
@@ -466,7 +480,18 @@
       "changed": "Phone number changed. Your previous number will stay active for 30 days.",
       "added": "Phone number added."
     },
-    "numbersUnavailable": "Phone numbers aren't set up on this dashboard yet. Ask whoever runs it to connect a phone provider."
+    "numbersUnavailable": "Phone numbers aren't set up on this dashboard yet. Ask whoever runs it to connect a phone provider.",
+    "extra": {
+      "buy": "Buy a number",
+      "select": "Buy",
+      "monthly": "{{price}} a month",
+      "confirmTitle": "Buy {{number}}?",
+      "confirmDescription": "It costs {{price}} a month.",
+      "confirm": "Buy number",
+      "cancel": "Cancel",
+      "priceChanged": "The price changed. Search again to see it.",
+      "unavailable": "This workspace can't buy more numbers."
+    }
   },
   "appearance": {
     "title": "Preferences",
@@ -1070,6 +1095,12 @@
         "unavailable": "This code no longer works. Ask for a new one.",
         "checkFailed": "Couldn't check the code. Try again."
       }
+    },
+    "marketing": {
+      "title": "Marketing emails",
+      "label": "Tips and reminders",
+      "description": "Setup tips and reminders to choose a plan.",
+      "saveFailed": "We couldn't save your choice. Try again."
     }
   },
   "secretReveal": {

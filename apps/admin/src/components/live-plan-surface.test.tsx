@@ -12,12 +12,13 @@ vi.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { language: "en
 const clients: QueryClient[] = [];
 beforeEach(() => { route.search = new URLSearchParams(); vi.stubGlobal("localStorage", { getItem: () => null, setItem: vi.fn() }); });
 afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals(); vi.clearAllMocks(); });
-function setup({ billingFails = false, plan = "pro", admin = true, configured = false, transactions = false, accountMissing = false, planEndsAt = null as string | null, cancelFails = false } = {}) {
+function setup({ billingFails = false, plan = "pro", admin = true, configured = false, transactions = false, accountMissing = false, planEndsAt = null as string | null, cancelFails = false, numbers = { phoneNumbers: [] as Array<{ id: string; monthlyPriceCents: number | null }>, extraNumbers: { available: true, priced: true, subscribed: false, checkoutAvailable: false, refusal: null as string | null } } } = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } }); clients.push(client);
   client.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true }] });
   const billing = { permissions: { hasBillingManagementAccess: admin, hasCheckoutAccess: admin, hasCustomerPortalAccess: admin }, effectivePlan: accountMissing ? "free_cloud" : plan, planEndsAt, account: accountMissing ? null : { plan, subscriptionId: plan === "free_cloud" ? null : "subscription", billingInterval: "monthly", subscriptionState: "active", currentPeriodEnd: "2026-11-12T12:00:00Z", overageSpendingCapCents: null }, availableCheckoutPlans: configured ? ["pro"] : [], availableCheckoutIntervals: { starter: [], pro: configured ? ["monthly"] : [] }, transactions: transactions ? [{ kind: "refund", sourceId: "refund", status: "succeeded", amountCents: 1250, currency: "usd", description: "Usage credit", invoiceUrl: "https://example.invalid/invoice", occurredAt: "2026-09-04T12:00:00Z" }, { kind: "order", sourceId: "order", status: "partially_refunded", amountCents: 105_600, refundedAmountCents: 52_800, currency: "usd", description: "Pro annual", invoiceUrl: null, occurredAt: "2026-09-05T12:00:00Z" }] : [] };
   if (!billingFails) client.setQueryData(["billing", "business"], billing);
-  const fetchMock = vi.fn(async (url: string) => url.includes("/api/billing/cancel") ? cancelFails ? Response.json({ error: "Request failed." }, { status: 500 }) : Response.json({ endsAt: "2026-11-12T12:00:00Z" }) : Response.json(billing));
+  client.setQueryData(["phone-numbers", "business"], numbers);
+  const fetchMock = vi.fn(async (url: string, _init?: RequestInit) => url.includes("/api/billing/cancel") ? cancelFails ? Response.json({ error: "Request failed." }, { status: 500 }) : Response.json({ endsAt: "2026-11-12T12:00:00Z" }) : Response.json(billing));
   if (billingFails) fetchMock.mockResolvedValueOnce(Response.json({ error: "Unavailable" }, { status: 503 }));
   vi.stubGlobal("fetch", fetchMock);
   render(<QueryClientProvider client={client}><UpgradePlanDialogProvider onOpen={vi.fn()}><LivePlanSurface /></UpgradePlanDialogProvider></QueryClientProvider>);
@@ -154,10 +155,10 @@ describe("billing loading state", () => {
 
   it("shows a placeholder for every section, titles and descriptions included, shaped like the plan, the cap and the transactions", () => {
     renderPending();
-    expect(document.querySelectorAll("section").length).toBe(3);
+    expect(document.querySelectorAll("section").length).toBe(4);
     expect(screen.queryAllByRole("heading", { level: 2 })).toEqual([]);
     // Each placeholder holds its real text, hidden, so it is as wide as the text.
-    for (const text of ["billing.currentPlan.title", "billing.spendingCap.title", "billing.transactions.title", "billing.transactions.description", "billing.currentPlan.includedTitle", "billing.spendingCap.amountLabel"]) {
+    for (const text of ["billing.currentPlan.title", "billing.addOns.title", "billing.addOns.extraNumbers.title", "billing.spendingCap.title", "billing.transactions.title", "billing.transactions.description", "billing.currentPlan.includedTitle", "billing.spendingCap.amountLabel"]) {
       expect(screen.getByText(text).className).toContain("invisible");
     }
     // The four included items, as a two-column grid.
@@ -170,5 +171,38 @@ describe("billing loading state", () => {
     setup({ transactions: true });
     expect(screen.getAllByRole("heading", { level: 2 }).length).toBeGreaterThanOrEqual(3);
     expect(document.querySelectorAll('[data-slot="skeleton"]').length).toBe(0);
+  });
+});
+
+describe("the extra phone numbers add-on", () => {
+  const extraNumbers = (subscribed: boolean) => ({ available: true, priced: true, subscribed, checkoutAvailable: true, refusal: null });
+
+  it("offers the add-on from the cheapest number's price, and starts its checkout", async () => {
+    const fetchMock = setup({ plan: "starter", numbers: { phoneNumbers: [], extraNumbers: extraNumbers(false) } });
+    fetchMock.mockImplementation(async (url: string, _init?: RequestInit) => url.startsWith("/api/billing/extra-numbers/checkout?") ? Response.json({ id: "checkout", status: "ready", checkoutUrl: "https://polar.test/checkout", error: null, subscribed: false }) : url.startsWith("/api/billing/extra-numbers/checkout") ? Response.json({ requestId: "checkout" }, { status: 202 }) : Response.json({}));
+    const assign = vi.fn();
+    vi.stubGlobal("location", { ...window.location, assign, search: "" });
+    expect(screen.getByText("billing.addOns.extraNumbers.title")).toBeTruthy();
+    expect(translate).toHaveBeenCalledWith("billing.addOns.extraNumbers.price", { price: "$1.15" });
+    expect(screen.queryByText("billing.addOns.active")).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "billing.addOns.get" }));
+    await waitFor(() => expect(assign).toHaveBeenCalledWith("https://polar.test/checkout"));
+    const start = fetchMock.mock.calls.find(([url, init]) => String(url).startsWith("/api/billing/extra-numbers/checkout") && init?.method === "POST");
+    expect(JSON.parse(String(start?.[1]?.body))).toEqual({ businessId: "business" });
+  });
+
+  it("shows the active add-on and how many extra numbers it bills, with nothing to buy", () => {
+    setup({ plan: "enterprise", numbers: { phoneNumbers: [{ id: "included", monthlyPriceCents: null }, { id: "extra", monthlyPriceCents: 115 }], extraNumbers: extraNumbers(true) } });
+    expect(screen.getByText("billing.addOns.active")).toBeTruthy();
+    expect(translate).toHaveBeenCalledWith("billing.addOns.extraNumbers.count", { count: 1 });
+    expect(screen.queryByRole("button", { name: "billing.addOns.get" })).toBeNull();
+  });
+
+  it("leaves the add-on out on Free and where the deployment doesn't sell it", () => {
+    setup({ plan: "free_cloud", numbers: { phoneNumbers: [], extraNumbers: extraNumbers(false) } });
+    expect(screen.queryByText("billing.addOns.title")).toBeNull();
+    cleanup();
+    setup({ plan: "pro" });
+    expect(screen.queryByText("billing.addOns.title")).toBeNull();
   });
 });

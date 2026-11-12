@@ -85,7 +85,7 @@ LobbyStack answers inbound calls, understands what the caller needs, asks follow
 
 ### Appointment scheduling
 
-LobbyStack connects to Google Calendar, checks availability, offers time slots, books appointments, sends a confirmation text, and supports reschedules and cancellations.
+LobbyStack connects to Google Calendar, Cal.com or Calendly, checks availability, offers time slots, books appointments, sends a confirmation text, and supports reschedules and cancellations.
 
 ### Knowledge base
 

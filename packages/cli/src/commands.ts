@@ -8,7 +8,7 @@ import { defaultSleep, operationCommand, showRecord, waitUntilDone, type Column,
 import { formatTable, print } from "./output";
 import { readUploadFile, uploadKnowledgeFile } from "./upload";
 import { userAgent } from "./version";
-import { checkoutWait, claimWait, sourceWait } from "./waits";
+import { checkoutWait, claimWait, extraNumbersCheckoutWait, sourceWait } from "./waits";
 
 // The command groups. Most commands are specs for operationCommand; the few
 // that need more than one call, or a file, are written out below.
@@ -21,6 +21,12 @@ function group(name: string, summary: string, entries: Record<string, Entry>): [
     return [command, typeof entry === "function" ? entry(path) : operationCommand(path, entry)];
   }));
   return [name, { summary, commands }];
+}
+
+/** A row's monthly_price as "$1.15/month", or "-" when it has none. */
+function withMonthlyPrice(row: Row): Row {
+  const price = row.monthly_price as { amount_cents?: unknown } | null | undefined;
+  return { ...row, price: typeof price?.amount_cents === "number" ? `$${(price.amount_cents / 100).toFixed(2)}/month` : null };
 }
 
 const columns = (...keys: string[]): Column[] => keys.map((key) => ({ key, label: key.replace(/_/g, " ").replace(/^./, (first) => first.toUpperCase()) }));
@@ -236,14 +242,18 @@ export const groups: Record<string, Group> = Object.fromEntries([
     cap: { operation: "updateBilling", args: ["spending_cap_cents"] },
     checkout: { operation: "createCheckout", wait: checkoutWait, show: (data) => data.checkout_url ? `Send this page to whoever pays: ${String(data.checkout_url)}` : `${showRecord(data)}\n\nThe page isn't ready yet. Wait for it with --wait, or check with lobbystack billing checkout-status ${String(data.id)}.` },
     "checkout-status": { operation: "getCheckout" },
+    "extra-numbers": { operation: "createExtraNumbersCheckout", wait: extraNumbersCheckoutWait, show: (data) => data.add_on_active === true ? "The extra phone numbers add-on is already active." : data.checkout_url ? `Send this page to whoever pays for the extra phone numbers add-on: ${String(data.checkout_url)}` : `${showRecord(data)}\n\nThe page isn't ready yet. Wait for it with --wait, or check with lobbystack billing extra-numbers-status ${String(data.id)}.` },
+    "extra-numbers-status": { operation: "getExtraNumbersCheckout" },
     "managed-plan": { operation: "setManagedPlan", fixed: { plan: "enterprise" } },
     "end-managed-plan": { operation: "endManagedPlan" },
   }),
-  group("numbers", "Find, claim, replace and release phone numbers.", {
-    list: { operation: "listPhoneNumbers", columns: columns("id", "phone_number", "status", "release_scheduled_at") },
+  group("numbers", "Find, claim, buy, replace and release phone numbers.", {
+    list: { operation: "listPhoneNumbers", view: withMonthlyPrice, columns: columns("id", "phone_number", "status", "agent_id", "price", "release_scheduled_at") },
     search: { operation: "searchPhoneNumbers", columns: columns("phone_number", "locality", "region", "kind", "expires_at", "offer_token") },
     claim: { operation: "createPhoneNumberClaim", args: ["offer_token"], wait: claimWait },
     "claim-status": { operation: "getPhoneNumberClaim" },
+    "search-extra": { operation: "searchExtraPhoneNumbers", view: withMonthlyPrice, columns: columns("phone_number", "locality", "kind", "price", "add_on_active", "offer_token") },
+    "buy-extra": { operation: "createExtraPhoneNumberClaim", args: ["offer_token"], wait: claimWait },
     replace: { operation: "replacePhoneNumber", args: ["offer_token"], wait: claimWait },
     release: { operation: "releasePhoneNumber" },
   }),

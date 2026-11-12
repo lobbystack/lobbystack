@@ -1,0 +1,18 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.lobbystack/lobbystack",
+  "title": "LobbyStack",
+  "description": "AI receptionist: read calls, messages and contacts, book appointments, and update hours and FAQs.",
+  "version": "1.0.0",
+  "websiteUrl": "https://lobbystack.com/features/mcp/",
+  "repository": {
+    "url": "https://github.com/lobbystack/lobbystack",
+    "source": "github"
+  },
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://app.lobbystack.com/api/mcp"
+    }
+  ]
+}

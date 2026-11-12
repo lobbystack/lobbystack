@@ -30,7 +30,7 @@ Elija según tres cosas: quién debe contestar una fuga a las 2 a. m., en qué s
 - **Continental Message Solution, el mejor para usuarios de Rent Manager que quieren personas:** Rent Manager lo lista como socio de integración. Los planes se cobran cada 28 días, desde $50.
 - **Buildium Maintenance Contact Center, el mejor para usuarios de Buildium:** $0.70 o $1.10 por unidad al mes, con un mínimo de $140 al mes y $300 de configuración.
 - **Smith.ai, la mejor IA con recepcionistas en vivo detrás:** 25 llamadas de IA gratis al mes, y su página para administración de propiedades nombra AppFolio, Buildium y Yardi.
-- **LobbyStack (nuestro), la mejor IA de bajo costo para visitas en Google Calendar e inquilinos que hablan muchos idiomas:** $30 al mes por 150 minutos, sin tarifa de configuración y sin sincronización con software de administración de propiedades.
+- **LobbyStack (nuestro), la mejor IA de bajo costo para visitas en Google Calendar, Cal.com o Calendly e inquilinos que hablan muchos idiomas:** $30 al mes por 150 minutos, sin tarifa de configuración y sin sincronización con software de administración de propiedades.
 
 ## ¿Cómo se comparan estos servicios para administradores de propiedades?
 
@@ -130,11 +130,11 @@ Goodcall cobra por persona distinta que llama y no mide minutos: $79 al mes cubr
 
 El plan de $49 de Rosie cubre 250 minutos, sin transferencias, y solo agenda con un enlace enviado por SMS. El plan de $149 agrega reservas en el calendario y transferencias en vivo, y el de $299 agrega transferencias en cascada que prueban varios números ([página de precios](https://heyrosie.com/pricing)). Si se pasa de minutos, Rosie lo sube de plan. Su [página para administración de propiedades](https://heyrosie.com/industries/property-management) dice que Rosie le avisa de inmediato sobre emergencias fuera de horario y ofrece horarios para visitas. Habla inglés y español y no nombra ningún software de administración de propiedades.
 
-### LobbyStack (nuestro): la mejor IA de bajo costo para visitas en Google Calendar e inquilinos que hablan muchos idiomas
+### LobbyStack (nuestro): la mejor IA de bajo costo para visitas en Google Calendar, Cal.com o Calendly e inquilinos que hablan muchos idiomas
 
 El plan Starter de LobbyStack cuesta $30 al mes por 150 minutos, luego $0.20 por minuto. Pro cuesta $100 por 500 minutos, luego $0.18. Con facturación anual cuestan $24 y $80 al mes, y ningún plan tiene tarifa de configuración. LobbyStack mide el uso en segundos, y no cobra el spam ni las llamadas de menos de 10 segundos. Los planes no limitan cuántas llamadas contesta a la vez, algo útil cuando una falla en todo un edificio hace que muchos inquilinos llamen al mismo tiempo.
 
-Cada llamada empieza en el idioma predeterminado del negocio: inglés, francés, español, serbio, alemán, portugués de Brasil, italiano o neerlandés. Luego la recepcionista contesta en el idioma de quien llama: más de 70 idiomas con OpenAI GPT-Live, entre ellos español y serbio. Usted escribe su lista de emergencias en lenguaje sencillo, y ella transfiere las llamadas que coinciden a un número. Si la transferencia no se completa, se lo dice a quien llama, ofrece tomar un mensaje, y su equipo puede recibir una alerta "Live call transfer failed". Agenda visitas en Google Calendar y, si la persona acepta, envía por SMS una confirmación y un recordatorio 24 horas antes a números de Estados Unidos y Canadá. Cada llamada deja un resumen, una transcripción y una grabación en el panel, y cada mensaje genera una alerta por correo electrónico.
+Cada llamada empieza en el idioma predeterminado del negocio: inglés, francés, español, serbio, alemán, portugués de Brasil, italiano o neerlandés. Luego la recepcionista contesta en el idioma de quien llama: más de 70 idiomas con OpenAI GPT-Live, entre ellos español y serbio. Usted escribe su lista de emergencias en lenguaje sencillo, y ella transfiere las llamadas que coinciden a un número. Si la transferencia no se completa, se lo dice a quien llama, ofrece tomar un mensaje, y su equipo puede recibir una alerta "Live call transfer failed". Agenda visitas en Google Calendar, Cal.com o Calendly y, si la persona acepta, envía por SMS una confirmación y un recordatorio 24 horas antes a números de Estados Unidos y Canadá. Cada llamada deja un resumen, una transcripción y una grabación en el panel, y cada mensaje genera una alerta por correo electrónico.
 
 LobbyStack no se sincroniza con AppFolio, Buildium, Yardi ni Rent Manager, así que no crea órdenes de trabajo ahí. Los webhooks firmados para 6 eventos y una API REST pueden enviar los datos de la llamada a otras herramientas si alguien de su equipo lo configura. Las transferencias van a un solo número y sin aviso previo a quien recibe, así que no hay rotación de guardias, y un propietario no puede llegar en vivo a otra persona distinta de la que recibe las emergencias. No hay agentes humanos detrás, y la IA no responde mensajes de texto. El plan gratuito incluye 30 minutos de voz y un número de EE. UU. o Canadá gratis durante 14 días, sin tarjeta. Vea cómo clasifica las llamadas de inquilinos en la [página para administración de propiedades](/es/solutions/property-management-answering-service/).
 
@@ -218,7 +218,7 @@ Las líneas de los propios proveedores de software sí: la de Buildium se conect
 | Goodcall | No nombrado | No nombrado | No nombrado | Página sobre API | Preguntas frecuentes: conexiones nativas con Google Calendar, Google Sheets y HighLevel |
 | Ambs Call Center | No nombrado | No nombrado | No nombrado | No nombrado | LeadSimple, PropertyBase, Salesforce, Zapier |
 | MAP, SAS, Rosie | No nombrado | No nombrado | No nombrado | No nombrado | Calendarios; Rosie usa Zapier |
-| LobbyStack (nuestro) | No | No | No | No | Google Calendar; webhooks firmados; API REST |
+| LobbyStack (nuestro) | No | No | No | No | Google Calendar, Cal.com, Calendly; webhooks firmados; API REST |
 
 Antes de firmar, pida al proveedor que atienda una llamada de prueba y le muestre el resultado en su software: una orden de trabajo o solicitud de servicio, la unidad correcta y las notas de la llamada. Un logotipo en una página no le dice si el agente puede leer su lista de inquilinos o solo le manda un correo.
 
@@ -290,6 +290,6 @@ Fuentes:
 - **Personas en cada emergencia y confirmación de entrega:** MAP Communications, Specialty Answering Service o Ambs Call Center.
 - **Órdenes de trabajo registradas en su software por agentes en vivo:** PATLive o Continental Message Solution, o la línea de su proveedor de software si usa Buildium, AppFolio o Rent Manager.
 - **IA con recepcionistas en vivo como respaldo:** Smith.ai.
-- **Visitas en Google Calendar, clasificación de emergencias fuera de horario hacia un número de guardia por $30 a $100 al mes, e inquilinos que hablan muchos idiomas:** LobbyStack.
+- **Visitas en Google Calendar, Cal.com o Calendly, clasificación de emergencias fuera de horario hacia un número de guardia por $30 a $100 al mes, e inquilinos que hablan muchos idiomas:** LobbyStack.
 
 ¿Quiere escuchar cómo LobbyStack distingue una fuga a las 2 a. m. de una llave que gotea antes de pagar? [Cree una cuenta gratis](https://app.lobbystack.com/es/signup), escriba su lista de emergencias y pruébelo con 30 minutos de voz y un número gratis durante 14 días, sin tarjeta. Para conservar el número, los planes de pago empiezan en $30 al mes, sin tarifa de configuración. Vea cómo funcionan la clasificación y las visitas en la [página para administración de propiedades](/es/solutions/property-management-answering-service/).

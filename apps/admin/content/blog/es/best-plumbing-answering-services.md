@@ -31,7 +31,7 @@ Elija según quién debe contestar cuando el agua atraviesa un techo y en qué s
 - **Smith.ai, la mejor IA con recepcionistas en vivo detrás:** 25 llamadas de IA gratis al mes, y las tuberías reventadas e inundaciones pasan a recepcionistas humanos.
 - **Jobber Receptionist y Housecall Pro CSR AI, los mejores para empresas que ya usan ese software:** Jobber cobra $29 al mes por 30 conversaciones, y Housecall Pro no publica su precio.
 - **Goodcall, el mejor para clientes que vuelven a llamar:** $79 al mes por 100 personas distintas que llaman, y enrutamiento por palabras clave como "burst pipe" (tubería reventada) y "sewer backup" (regreso de aguas negras).
-- **LobbyStack (nuestro), el mejor para empresas que reservan en Google Calendar y reciben llamadas en muchos idiomas:** $30 al mes por 150 minutos, sin tarifa de configuración, y llamadas contestadas en el idioma de quien llama, en más de 70 idiomas.
+- **LobbyStack (nuestro), el mejor para empresas que reservan en Google Calendar, Cal.com o Calendly y reciben llamadas en muchos idiomas:** $30 al mes por 150 minutos, sin tarifa de configuración, y llamadas contestadas en el idioma de quien llama, en más de 70 idiomas.
 
 ## ¿Cómo se comparan estos servicios para plomeros?
 
@@ -133,13 +133,13 @@ La página de plomería menciona "ServiceTitan-compatible workflows". Las pregun
 
 El plan de $49 de Rosie solo agenda con un enlace por mensaje de texto y no tiene transferencias. El plan de $149 agrega reservas en el calendario y transferencias en vivo, y el de $299 agrega transferencias en cascada que prueban varios números ([página de precios](https://heyrosie.com/pricing)). Si se pasa de sus minutos, Rosie lo sube de plan. Rosie habla inglés y español. Su [página de plomería](https://heyrosie.com/industries/plumbing) dice que Rosie "can't dispatch plumbers directly" (no puede enviar plomeros por su cuenta), pero puede decir a quien llama si hay servicio de urgencias, dar instrucciones fuera de horario y avisarle a usted.
 
-### LobbyStack (nuestro): el mejor para empresas que reservan en Google Calendar y reciben llamadas en muchos idiomas
+### LobbyStack (nuestro): el mejor para empresas que reservan en Google Calendar, Cal.com o Calendly y reciben llamadas en muchos idiomas
 
 El plan Starter de LobbyStack cuesta $30 al mes por 150 minutos, y luego $0.20 por minuto. Pro cuesta $100 por 500 minutos, y luego $0.18. Con pago anual cuestan $24 y $80 al mes, y ningún plan tiene tarifa de configuración. LobbyStack mide el uso por segundos y no cobra el spam ni las llamadas de menos de 10 segundos. Los planes no limitan cuántas llamadas contesta a la vez, y las llamadas simultáneas comparten los mismos minutos.
 
-Cada llamada empieza en el idioma predeterminado del negocio: inglés, francés, español, serbio, alemán, portugués de Brasil, italiano o neerlandés. Después, la recepcionista contesta en el idioma de quien llama: más de 70 idiomas con OpenAI GPT-Live, entre ellos español y serbio. Usted le indica qué llamadas son urgentes, como agua que no se puede detener o aguas negras que salen por una coladera, y ella las transfiere a un solo número. Si la transferencia no se completa, se lo dice a quien llama, ofrece tomar un mensaje y su equipo puede recibir una alerta "Live call transfer failed". Reserva en Google Calendar y, si quien llama acepta, envía por mensaje de texto una confirmación y un recordatorio 24 horas antes a números de Estados Unidos y Canadá. Cada llamada deja un resumen, una transcripción y una grabación en el panel, y usted recibe un correo electrónico cuando la recepcionista toma un mensaje.
+Cada llamada empieza en el idioma predeterminado del negocio: inglés, francés, español, serbio, alemán, portugués de Brasil, italiano o neerlandés. Después, la recepcionista contesta en el idioma de quien llama: más de 70 idiomas con OpenAI GPT-Live, entre ellos español y serbio. Usted le indica qué llamadas son urgentes, como agua que no se puede detener o aguas negras que salen por una coladera, y ella las transfiere a un solo número. Si la transferencia no se completa, se lo dice a quien llama, ofrece tomar un mensaje y su equipo puede recibir una alerta "Live call transfer failed". Reserva en Google Calendar, Cal.com o Calendly y, si quien llama acepta, envía por mensaje de texto una confirmación y un recordatorio 24 horas antes a números de Estados Unidos y Canadá. Cada llamada deja un resumen, una transcripción y una grabación en el panel, y usted recibe un correo electrónico cuando la recepcionista toma un mensaje.
 
-No se sincroniza con ServiceTitan, Housecall Pro ni Jobber, y Google Calendar es su único calendario. Las transferencias van a un solo número sin resumen previo, y no hay rotación de guardias. No hay agentes humanos de respaldo, y la IA no contesta mensajes de texto. El plan gratis da 30 minutos de voz y un número de EE. UU. o Canadá gratis durante 14 días, sin tarjeta. Vea cómo maneja las llamadas urgentes en la página de [recepcionista con IA para plomeros](/es/solutions/ai-receptionist-for-plumbers/).
+No se sincroniza con ServiceTitan, Housecall Pro ni Jobber, y solo reserva en Google Calendar, Cal.com o Calendly. Las transferencias van a un solo número sin resumen previo, y no hay rotación de guardias. No hay agentes humanos de respaldo, y la IA no contesta mensajes de texto. El plan gratis da 30 minutos de voz y un número de EE. UU. o Canadá gratis durante 14 días, sin tarjeta. Vea cómo maneja las llamadas urgentes en la página de [recepcionista con IA para plomeros](/es/solutions/ai-receptionist-for-plumbers/).
 
 ## ¿Cuánto cuesta la atención telefónica para plomeros?
 
@@ -218,9 +218,9 @@ A Message Center, AnswerForce y PATLive nombran los tres en sus páginas de plom
 | Ruby | No nombrado | No nombrado | No nombrado | "Your existing scheduling software" |
 | MAP Communications, SAS | No nombrado | No nombrado | No nombrado | Ninguno nombrado |
 | Rosie | No nombrado | No nombrado | No nombrado | Zapier en todos los planes |
-| LobbyStack (nuestro) | No | No | No | Google Calendar; webhooks firmados para 6 eventos; API REST |
+| LobbyStack (nuestro) | No | No | No | Google Calendar, Cal.com, Calendly; webhooks firmados para 6 eventos; API REST |
 
-Si sus despachadores trabajan en ServiceTitan y el trabajo debe quedar ahí durante la llamada, elija Sameday AI, Avoca, Smith.ai o un servicio con personas que nombre ServiceTitan. Pida a cada uno que cree un trabajo de prueba antes de firmar. LobbyStack sirve a empresas que reservan en Google Calendar, o que copian las reservas a su software a mano o las envían ahí con sus webhooks y su API.
+Si sus despachadores trabajan en ServiceTitan y el trabajo debe quedar ahí durante la llamada, elija Sameday AI, Avoca, Smith.ai o un servicio con personas que nombre ServiceTitan. Pida a cada uno que cree un trabajo de prueba antes de firmar. LobbyStack sirve a empresas que reservan en Google Calendar, Cal.com o Calendly, o que copian las reservas a su software a mano o las envían ahí con sus webhooks y su API.
 
 ## ¿Cómo elegir un servicio de atención telefónica para una empresa de plomería?
 
@@ -287,6 +287,6 @@ Fuentes:
 - **Personas en cada llamada y un calendario de guardias:** A Message Center, MAP Communications o Specialty Answering Service.
 - **ServiceTitan, con el trabajo registrado ahí:** AnswerForce o PATLive con agentes en vivo, Sameday AI o Smith.ai con IA.
 - **Jobber o Housecall Pro:** pruebe primero la recepcionista incluida.
-- **Reservas en Google Calendar, exceso de llamadas y llamadas fuera de horario por $30 a $100 al mes, y clientes que hablan otros idiomas:** LobbyStack.
+- **Reservas en Google Calendar, Cal.com o Calendly, exceso de llamadas y llamadas fuera de horario por $30 a $100 al mes, y clientes que hablan otros idiomas:** LobbyStack.
 
 ¿Quiere oír a LobbyStack contestar una llamada por una tubería reventada antes de pagar? [Cree una cuenta gratis](https://app.lobbystack.com/es/signup) y pruébela con 30 minutos de voz y un número gratis durante 14 días, sin tarjeta. Los planes de pago no tienen tarifa de configuración. Después vea cómo funcionan las llamadas urgentes, las reservas y las transferencias en la página de [recepcionista con IA para plomeros](/es/solutions/ai-receptionist-for-plumbers/).

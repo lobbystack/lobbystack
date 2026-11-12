@@ -78,7 +78,7 @@ You can't import a Voice AI agent. Plan it as a short rebuild for each client:
 
 1. Copy the agent's prompt into LobbyStack's rules, and its facts into knowledge entries.
 2. Add the client's website, so the receptionist reads the services and hours.
-3. Add the services the client books, and connect Google Calendar or Cal.com.
+3. Add the services the client books, and connect Google Calendar, Cal.com or Calendly.
 4. Save the result as a [template](https://docs.lobbystack.com/white-label/templates) for the next client in that trade.
 5. Forward the client's line to the new number, and keep the old agent until you've heard real calls.
 

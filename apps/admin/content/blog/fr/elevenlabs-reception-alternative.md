@@ -30,7 +30,7 @@ Reception offre d'excellentes voix et parle plus de 70 langues. LobbyStack vous 
 | Appels simultanés au premier niveau | 1 | Aucune limite sur Starter et Pro sans plafond de dépenses |
 | Langues | Plus de 70, détection automatique | Répond dans la langue de l'appelant |
 | Personnel en premier | Mode intégré | Par le renvoi d'appel de votre opérateur |
-| Intégrations | Google Calendar, Zapier, webhooks, MCP | Google Calendar |
+| Intégrations | Google Calendar, Zapier, webhooks, MCP | Google Calendar, Cal.com, Calendly |
 | HIPAA | Non pris en charge | Auto-hébergement pour contrôler les données d'appel |
 | Code | Fermé, hébergé seulement | Licence MIT, cloud géré ou auto-hébergement |
 

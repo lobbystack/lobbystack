@@ -289,7 +289,7 @@ export function TradeCompare({ details, locale }: SectionProps) {
   const rows = [
     {
       topic: "Booking",
-      ai: "Books into Google Calendar during the call",
+      ai: "Books into Google Calendar, Cal.com or Calendly during the call",
       live: "Often takes a message for you to return",
     },
     {

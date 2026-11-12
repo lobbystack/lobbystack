@@ -34,7 +34,7 @@ We also tried to include CallFluent. Its site didn't load for us on October 27, 
 
 ## LobbyStack: a white label AI receptionist with a shared pool
 
-[LobbyStack White Label](/white-label/) sells one product: an AI receptionist that answers calls and website chats, books into Google Calendar, texts confirmations and transfers urgent calls. You don't build agents from scratch. You set up each client's receptionist, or start it from a template.
+[LobbyStack White Label](/white-label/) sells one product: an AI receptionist that answers calls and website chats, books into Google Calendar, Cal.com or Calendly, texts confirmations and transfers urgent calls. You don't build agents from scratch. You set up each client's receptionist, or start it from a template.
 
 **Partner price.** The Free tier costs $0 and includes 30 voice minutes, 50 chats and one 14-day trial number. Starter costs $49 a month for 250 minutes and 1,000 chats, Growth $199 for 1,300 minutes and 5,000 chats, and Scale $499 for 4,000 minutes and 10,000 chats. Every client draws on that one pool, with no fee per business. Past the pool, minutes cost $0.20, $0.15 or $0.12 depending on the tier.
 
@@ -46,7 +46,7 @@ We also tried to include CallFluent. Its site didn't load for us on October 27, 
 
 **Source.** The [code is MIT licensed](https://github.com/lobbystack/lobbystack), and every partner feature works on your own servers. The [build story](/blog/white-label-ai-receptionist/) explains how the program works inside.
 
-**Limits.** LobbyStack is a receptionist, so it doesn't run outbound campaigns or let you design call flows for other jobs. Calendar booking is Google Calendar only.
+**Limits.** LobbyStack is a receptionist, so it doesn't run outbound campaigns or let you design call flows for other jobs. Calendar booking works only with Google Calendar, Cal.com and Calendly.
 
 ## Frontdesk (formerly My AI Front Desk)
 

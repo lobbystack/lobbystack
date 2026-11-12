@@ -4,12 +4,12 @@ export const afterHoursFaqs: FaqItem[] = [
   {
     question: "What is an after-hours answering service?",
     answer:
-      "It answers your business phone when you're closed: nights, weekends and holidays. A live service has a person take a message. LobbyStack is an AI after-hours answering service, so it also answers questions from your details, books appointments into Google Calendar and transfers emergencies to your on-call number during the call.",
+      "It answers your business phone when you're closed: nights, weekends and holidays. A live service has a person take a message. LobbyStack is an AI after-hours answering service, so it also answers questions from your details, books appointments into Google Calendar, Cal.com or Calendly and transfers emergencies to your on-call number during the call.",
   },
   {
     question: "Can it book appointments after hours?",
     answer:
-      "Yes. LobbyStack offers open times from your Google Calendar inside your opening hours, books the one the caller picks and, if they agree, texts a confirmation. You see the booking on your calendar in the morning.",
+      "Yes. LobbyStack offers open times from your Google Calendar, Cal.com or Calendly inside your opening hours, books the one the caller picks and, if they agree, texts a confirmation. You see the booking on your calendar in the morning.",
   },
   {
     question: "How does it decide what's an emergency?",

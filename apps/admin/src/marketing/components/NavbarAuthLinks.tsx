@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, type ReactNode } from "react"
 
 import { buttonVariants } from "@/marketing/components/ui/button"
 import type { Locale } from "@/marketing/i18n"
@@ -43,6 +43,8 @@ type NavbarAuthLinksProps = {
   locale: Locale
   copy: { login: string; tryFree: string; dashboard: string }
   placement: "navbar" | "mobile_navbar"
+  /** Shown just before the links on the desktop bar, such as the GitHub link. */
+  lead?: ReactNode
 }
 
 /**
@@ -50,12 +52,12 @@ type NavbarAuthLinksProps = {
  * visitor already signed in. Pages render signed out, so a signed-out visitor
  * never sees the links change.
  */
-export function NavbarAuthLinks({ locale, copy, placement }: NavbarAuthLinksProps) {
+export function NavbarAuthLinks({ locale, copy, placement, lead }: NavbarAuthLinksProps) {
   const signedIn = useSignedIn()
   const dashboard = (
     <a
       href={appDashboardUrl(locale)}
-      className={cn(buttonVariants(), placement === "navbar" && "justify-self-end [grid-area:1/1]")}
+      className={buttonVariants()}
       data-ph-capture-attribute-section={placement}
       data-ph-capture-attribute-action="open_dashboard"
       data-ph-capture-attribute-destination={appDashboardUrl(locale)}
@@ -88,33 +90,48 @@ export function NavbarAuthLinks({ locale, copy, placement }: NavbarAuthLinksProp
     )
   }
 
-  // Both states share one grid cell. Signed in, the signed-out links stay in
-  // it, hidden, so the bar keeps its width and the menu beside it stays put.
+  const signedOutLinks = (
+    <>
+      <a
+        href={appLoginUrl(locale)}
+        className="rounded-full px-3 py-2 text-sm font-medium text-foreground transition-colors duration-150 hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+      >
+        {copy.login}
+      </a>
+      <a
+        href={appSignupUrl(locale)}
+        className={cn(buttonVariants(), "ml-2")}
+        data-ph-signup-cta
+        data-ph-capture-attribute-section="navbar"
+        data-ph-capture-attribute-action="try_for_free"
+        data-ph-capture-attribute-destination={appSignupUrl(locale)}
+      >
+        {copy.tryFree}
+      </a>
+    </>
+  )
+  if (!signedIn) {
+    return (
+      <div className="flex items-center gap-1">
+        {lead}
+        {signedOutLinks}
+      </div>
+    )
+  }
+
+  // Signed in, the signed-out links keep their room, hidden, so the bar's
+  // columns keep their width and the nav doesn't move. The room sits to the
+  // left of the GitHub link, which stays next to the Dashboard link.
   return (
     <div className="grid items-center">
-      <div
-        className={cn("flex items-center gap-1 [grid-area:1/1]", signedIn && "invisible")}
-        aria-hidden={signedIn || undefined}
-        inert={signedIn || undefined}
-      >
-        <a
-          href={appLoginUrl(locale)}
-          className="rounded-full px-3 py-2 text-sm font-medium text-foreground transition-colors duration-150 hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-        >
-          {copy.login}
-        </a>
-        <a
-          href={appSignupUrl(locale)}
-          className={cn(buttonVariants(), "ml-2")}
-          data-ph-signup-cta
-          data-ph-capture-attribute-section="navbar"
-          data-ph-capture-attribute-action="try_for_free"
-          data-ph-capture-attribute-destination={appSignupUrl(locale)}
-        >
-          {copy.tryFree}
-        </a>
+      <div className="invisible flex items-center gap-1 [grid-area:1/1]" aria-hidden inert>
+        {lead ? <span className="size-9" /> : null}
+        {signedOutLinks}
       </div>
-      {signedIn ? dashboard : null}
+      <div className="flex items-center gap-1 justify-self-end [grid-area:1/1]">
+        {lead}
+        {dashboard}
+      </div>
     </div>
   )
 }

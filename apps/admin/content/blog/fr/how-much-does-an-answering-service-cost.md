@@ -278,7 +278,7 @@ Avec une facturation à la minute entière, ajoutez environ une demi-minute par 
 
 LobbyStack coûte 30 $ à 40 appels, 60 $ à 100 appels et 118 $ à 200 appels (Pro, 100 $ pour 500 minutes plus 0,18 $ la minute). Les trois factures types reviennent à 30 $, 40 $ et 48 $. Avec la facturation annuelle, Starter coûte 24 $ par mois.
 
-Starter inclut 150 minutes, un numéro professionnel aux États-Unis, au Canada, au Royaume-Uni, en Australie ou en Nouvelle-Zélande, la réservation dans Google Calendar, et des SMS de confirmation et de rappel 24 heures avant le rendez-vous vers les numéros américains et canadiens. Il inclut aussi 20 tentatives de transfert par mois, puis 0,02 $ chacune.
+Starter inclut 150 minutes, un numéro professionnel aux États-Unis, au Canada, au Royaume-Uni, en Australie ou en Nouvelle-Zélande, la réservation dans Google Calendar, Cal.com ou Calendly, et des SMS de confirmation et de rappel 24 heures avant le rendez-vous vers les numéros américains et canadiens. Il inclut aussi 20 tentatives de transfert par mois, puis 0,02 $ chacune.
 
 Les forfaits ne limitent pas le nombre d'appels auxquels le réceptionniste répond en même temps. Les appels commencent dans votre langue par défaut (anglais, français, espagnol, serbe, allemand, portugais du Brésil, italien ou néerlandais), puis le réceptionniste répond dans la langue de l'appelant (plus de 70 langues). Vous gardez votre numéro et le renvoyez vers LobbyStack : la règle de renvoi de votre opérateur détermine si LobbyStack prend le débordement, les appels hors horaires ou tous les appels.
 
@@ -286,7 +286,7 @@ Les forfaits ne limitent pas le nombre d'appels auxquels le réceptionniste rép
 
 - Les transferts se font à l'aveugle, vers un seul numéro que vous choisissez. Sans numéro, le réceptionniste prend un message.
 - L'IA ne répond pas aux SMS.
-- Google Calendar est le seul agenda. Pour un CRM ou un logiciel de cabinet, vous passez par les webhooks et l'API REST.
+- Google Calendar, Cal.com et Calendly sont les seuls agendas. Pour un CRM ou un logiciel de cabinet, vous passez par les webhooks et l'API REST.
 - LobbyStack ne revendique aucune conformité HIPAA, et un appel téléphonique s'arrête à 30 minutes.
 - Le forfait Gratuit inclut un numéro américain ou canadien pendant 14 jours. Ensuite, vous testez dans le navigateur.
 

@@ -134,7 +134,7 @@ const en: WhiteLabelCopy = {
     eyebrow: "For your clients",
     title: "What your clients' receptionist does",
     body:
-      "Each business you add gets the same receptionist as LobbyStack's direct customers. It answers calls and website chats, books appointments in Google Calendar, texts confirmations and transfers urgent calls to the owner or staff.",
+      "Each business you add gets the same receptionist as LobbyStack's direct customers. It answers calls and website chats, books appointments in Google Calendar, Cal.com or Calendly, texts confirmations and transfers urgent calls to the owner or staff.",
     cta: "See the receptionist's features",
   },
   related: {
@@ -287,7 +287,7 @@ const fr: WhiteLabelCopy = {
     eyebrow: "Pour vos clients",
     title: "Ce que fait la réceptionniste de vos clients",
     body:
-      "Chaque entreprise que vous ajoutez reçoit la même réceptionniste que les clients directs de LobbyStack. Elle répond aux appels et aux clavardages du site, prend les rendez-vous dans Google Agenda, envoie les confirmations par texto et transfère les appels urgents au propriétaire ou à l'équipe.",
+      "Chaque entreprise que vous ajoutez reçoit la même réceptionniste que les clients directs de LobbyStack. Elle répond aux appels et aux clavardages du site, prend les rendez-vous dans Google Agenda, Cal.com ou Calendly, envoie les confirmations par texto et transfère les appels urgents au propriétaire ou à l'équipe.",
     cta: "Voir les fonctionnalités de la réceptionniste",
   },
   related: {
@@ -440,7 +440,7 @@ const es: WhiteLabelCopy = {
     eyebrow: "Para sus clientes",
     title: "Qué hace la recepcionista de sus clientes",
     body:
-      "Cada negocio que añade recibe la misma recepcionista que los clientes directos de LobbyStack. Atiende llamadas y chats del sitio web, reserva citas en Google Calendar, envía confirmaciones por SMS y transfiere las llamadas urgentes al propietario o al personal.",
+      "Cada negocio que añade recibe la misma recepcionista que los clientes directos de LobbyStack. Atiende llamadas y chats del sitio web, reserva citas en Google Calendar, Cal.com o Calendly, envía confirmaciones por SMS y transfiere las llamadas urgentes al propietario o al personal.",
     cta: "Ver las funciones de la recepcionista",
   },
   related: {
@@ -593,7 +593,7 @@ const sr: WhiteLabelCopy = {
     eyebrow: "Za vaše klijente",
     title: "Šta radi recepcioner vaših klijenata",
     body:
-      "Svaka firma koju dodate dobija istog recepcionera kao direktni korisnici LobbyStack-a. Odgovara na pozive i četove sa sajta, zakazuje termine u Google Calendar-u, šalje potvrde SMS-om i prebacuje hitne pozive vlasniku ili zaposlenima.",
+      "Svaka firma koju dodate dobija istog recepcionera kao direktni korisnici LobbyStack-a. Odgovara na pozive i četove sa sajta, zakazuje termine u Google Calendar-u, Cal.com-u ili Calendly-ju, šalje potvrde SMS-om i prebacuje hitne pozive vlasniku ili zaposlenima.",
     cta: "Pogledajte funkcije recepcionera",
   },
   related: {

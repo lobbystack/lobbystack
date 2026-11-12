@@ -55,6 +55,8 @@ export type ThirdParties = {
     webhooks: Array<{ url: string; events: string[] }>;
     bookings: Booking[];
   };
+  /** What the worker and admin asked Polar: checkouts it made, usage it reported, subscriptions it changed. */
+  polar: { checkouts: Array<Record<string, unknown>>; events: Array<Record<string, unknown>>; subscriptionChanges: Array<{ id: string; body: Record<string, unknown> }> };
   firecrawl: {
     /** How many of the next crawl starts to refuse with a 429, as a rate limit does. */
     rateLimitedStarts: number;
@@ -73,6 +75,7 @@ export async function startThirdParties(): Promise<ThirdParties> {
   const offered: string[] = [];
   const firecrawl: ThirdParties["firecrawl"] = { rateLimitedStarts: 0, starts: [] };
   const crawls = new Map<string, string>();
+  const polar: ThirdParties["polar"] = { checkouts: [], events: [], subscriptionChanges: [] };
 
   const numberResource = (sid: string, e164 = randomTorontoNumber()): Number => {
     const existing = numbers.get(sid);
@@ -209,6 +212,26 @@ export async function startThirdParties(): Promise<ThirdParties> {
     send(response, 200, { object: "list", data: inputs.map((_, index) => ({ object: "embedding", index, embedding: Array.from({ length: 1536 }, (_, dimension) => dimension === index % 1536 ? 1 : 0.001) })), model: "text-embedding-3-small", usage: { prompt_tokens: inputs.length, total_tokens: inputs.length } });
   }
 
+  // Polar's API as PolarBillingProvider calls it. A checkout's page is its success_url, as if the payer paid at once.
+  function polarApi(request: IncomingMessage, response: ServerResponse, url: URL, raw: string): void {
+    const path = url.pathname.replace(/^\/polar/, "");
+    const body = raw ? JSON.parse(raw) as Record<string, unknown> : {};
+    if (path === "/v1/checkouts/" && request.method === "POST") {
+      polar.checkouts.push(body);
+      return send(response, 201, { id: `checkout_${randomUUID()}`, url: body.success_url });
+    }
+    if (path === "/v1/events/ingest" && request.method === "POST") {
+      polar.events.push(...((body.events as Array<Record<string, unknown>> | undefined) ?? []));
+      return send(response, 200, { inserted: (body.events as unknown[] | undefined)?.length ?? 0 });
+    }
+    const subscription = /^\/v1\/subscriptions\/([^/]+)$/.exec(path);
+    if (subscription && request.method === "PATCH") {
+      polar.subscriptionChanges.push({ id: decodeURIComponent(subscription[1]!), body });
+      return send(response, 200, { id: subscription[1], ...body });
+    }
+    send(response, 404, { error: "ResourceNotFound", detail: `The fake has no ${request.method} ${path}.` });
+  }
+
   const server = createServer(async (request, response) => {
     const url = new URL(request.url ?? "/", THIRD_PARTY_ORIGIN);
     const raw = await readBody(request);
@@ -217,6 +240,7 @@ export async function startThirdParties(): Promise<ThirdParties> {
     if (url.pathname.startsWith("/calendly-auth/")) return calendlyAuth(request, response, url, raw);
     if (url.pathname.startsWith("/calendly-api/")) return calendlyApi(request, response, url, raw);
     if (url.pathname.startsWith("/firecrawl/")) return firecrawlApi(request, response, url, raw);
+    if (url.pathname.startsWith("/polar/")) return polarApi(request, response, url, raw);
     if (url.pathname === "/openai/v1/embeddings" && request.method === "POST") return embeddingsApi(response, raw);
     send(response, 404, { message: "Unknown third party." });
   });
@@ -231,6 +255,7 @@ export async function startThirdParties(): Promise<ThirdParties> {
     },
     calendly,
     firecrawl,
+    polar,
     close: async () => { server.closeAllConnections(); await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve())); },
   };
 }

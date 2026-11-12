@@ -57,9 +57,9 @@ Network errors can leave you unsure whether a request worked. Send an `Idempoten
 - `POST /knowledge`
 - `POST /services`
 - `POST /rules`
-- `POST /billing/checkout`
+- `POST /billing/checkout` and `POST /billing/extra-numbers/checkout`
 - `POST /widget-keys`
-- `POST /phone-numbers/claims` and `POST /phone-numbers/{phone_number_id}/replace`, which require it
+- `POST /phone-numbers/claims`, `POST /phone-numbers/extra/claims` and `POST /phone-numbers/{phone_number_id}/replace`, which require it
 - `POST /team/invitations`, which requires it
 
 `POST /webhooks` ignores the header, so LobbyStack never stores a copy of the signing secret. If a create request fails with a network error, check `GET /webhooks` before you retry.

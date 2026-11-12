@@ -1,4 +1,4 @@
-import { isUuid, partnerTierForProduct, selfHostedSupportProduct } from "@lobbystack/shared";
+import { extraNumbersProductId, isUuid, partnerTierForProduct, selfHostedSupportProduct } from "@lobbystack/shared";
 
 type RecordValue = Record<string, unknown>;
 const record = (value: unknown): RecordValue => value && typeof value === "object" && !Array.isArray(value) ? value as RecordValue : {};
@@ -47,6 +47,9 @@ export function normalizePolarEvent(type: string, data: RecordValue, env: Record
   // A self-hosted support product sells no plan or tier, but a hosted customer can buy one, and can
   // even switch its plan's subscription to one in the portal. Reconcile reads the flag to decide.
   const supportPlan = [productId, text(data.product_id), text(record(data.product).id)].map(selfHostedSupportProduct).find(plan => plan !== null) ?? null;
+  // The monthly extra numbers add-on sells a business no plan. Reconcile keeps it apart from the plan's subscription.
+  const addonProductId = extraNumbersProductId(env);
+  const extraNumbersAddon = !partnerId && addonProductId !== undefined && [productId, text(data.product_id), text(record(data.product).id)].includes(addonProductId);
   const subscriptionId = text(subscription.id) ?? text(data.subscription_id);
   const customerId = text(customer.id) ?? text(data.customer_id);
   const subscriptionState = text(subscription.status);
@@ -69,6 +72,7 @@ export function normalizePolarEvent(type: string, data: RecordValue, env: Record
       ...(subscriptionModifiedAt ? { subscriptionModifiedAt } : {}),
       ...(supportPlan ? { selfHostedSupport: true } : {}),
       ...(foreignProduct ? { foreignProduct: true } : {}),
+      ...(extraNumbersAddon ? { extraNumbersAddon: true } : {}),
     },
   };
 }

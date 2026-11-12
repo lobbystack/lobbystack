@@ -31,7 +31,7 @@ Pick by who should answer when water is coming through a ceiling and where your 
 - **Smith.ai, best AI with live receptionists behind it:** 25 free AI calls a month, with burst pipes and flooding escalated to human receptionists.
 - **Jobber Receptionist and Housecall Pro CSR AI, best for shops already on that software:** Jobber charges $29 a month for 30 conversations, and Housecall Pro doesn't publish its price.
 - **Goodcall, best for repeat callers:** $79 a month for 100 unique callers, and routing on keywords such as "burst pipe" and "sewer backup".
-- **LobbyStack (ours), best for Google Calendar shops with callers in many languages:** $30 a month for 150 minutes with no setup fee, and answers in the caller's language across 70+ languages.
+- **LobbyStack (ours), best for shops on Google Calendar, Cal.com or Calendly with callers in many languages:** $30 a month for 150 minutes with no setup fee, and answers in the caller's language across 70+ languages.
 
 ## How do answering services for plumbers compare?
 
@@ -133,13 +133,13 @@ The plumbing page lists "ServiceTitan-compatible workflows". The FAQ lists nativ
 
 Rosie's $49 plan books only by texted link and has no transfers. The $149 plan adds calendar booking and live transfers, and the $299 plan adds waterfall transfers that try several numbers ([pricing page](https://heyrosie.com/pricing)). Going over your minutes moves you up a plan. Rosie speaks English and Spanish. Its [plumbing page](https://heyrosie.com/industries/plumbing) says Rosie "can't dispatch plumbers directly", but she can tell callers whether emergency service is available, give after-hours instructions and notify you.
 
-### LobbyStack (ours): best for Google Calendar shops with callers in many languages
+### LobbyStack (ours): best for shops on Google Calendar, Cal.com or Calendly with callers in many languages
 
 LobbyStack's Starter plan costs $30 a month for 150 minutes, then $0.20 a minute. Pro costs $100 for 500 minutes, then $0.18. Billed annually, they cost $24 and $80 a month, and no plan has a setup fee. LobbyStack counts usage in seconds and doesn't bill spam or calls under 10 seconds. Plans don't limit how many calls it answers at once, and simultaneous calls share the same minutes.
 
-Each call opens in the business's default language: English, French, Spanish, Serbian, German, Brazilian Portuguese, Italian or Dutch. The receptionist then answers in the caller's language: 70+ languages on OpenAI GPT-Live, including Spanish and Serbian. You tell it which calls count as urgent, such as water that won't stop or sewage coming up a drain, and it transfers them to one number. If the transfer doesn't go through, it tells the caller, offers to take a message, and your team can get a "Live call transfer failed" alert. It books into Google Calendar and, when the caller agrees, texts a confirmation and a 24-hour reminder to US and Canadian numbers. Every call leaves a summary, transcript and recording in the dashboard, and you get an email when it takes a message.
+Each call opens in the business's default language: English, French, Spanish, Serbian, German, Brazilian Portuguese, Italian or Dutch. The receptionist then answers in the caller's language: 70+ languages on OpenAI GPT-Live, including Spanish and Serbian. You tell it which calls count as urgent, such as water that won't stop or sewage coming up a drain, and it transfers them to one number. If the transfer doesn't go through, it tells the caller, offers to take a message, and your team can get a "Live call transfer failed" alert. It books into Google Calendar, Cal.com or Calendly and, when the caller agrees, texts a confirmation and a 24-hour reminder to US and Canadian numbers. Every call leaves a summary, transcript and recording in the dashboard, and you get an email when it takes a message.
 
-It doesn't sync with ServiceTitan, Housecall Pro or Jobber, and Google Calendar is its only calendar. Transfers go to one number with no briefing, and you get no on-call rotation. No human agents back it up, and the AI doesn't reply to texts. Free gives you 30 voice minutes and a US or Canadian number free for 14 days, with no card. See how it handles urgent calls on the [AI receptionist for plumbers](/solutions/ai-receptionist-for-plumbers/) page.
+It doesn't sync with ServiceTitan, Housecall Pro or Jobber, and it books only into Google Calendar, Cal.com or Calendly. Transfers go to one number with no briefing, and you get no on-call rotation. No human agents back it up, and the AI doesn't reply to texts. Free gives you 30 voice minutes and a US or Canadian number free for 14 days, with no card. See how it handles urgent calls on the [AI receptionist for plumbers](/solutions/ai-receptionist-for-plumbers/) page.
 
 ## How much does an answering service for plumbers cost?
 
@@ -218,9 +218,9 @@ A Message Center, AnswerForce and PATLive name all three on their plumbing pages
 | Ruby | Not named | Not named | Not named | "Your existing scheduling software" |
 | MAP Communications, SAS | Not named | Not named | Not named | None named |
 | Rosie | Not named | Not named | Not named | Zapier on every plan |
-| LobbyStack (ours) | No | No | No | Google Calendar; signed webhooks for 6 events; REST API |
+| LobbyStack (ours) | No | No | No | Google Calendar, Cal.com, Calendly; signed webhooks for 6 events; REST API |
 
-If your dispatchers live in ServiceTitan and need the job written there during the call, pick Sameday AI, Avoca, Smith.ai or a live service that names ServiceTitan. Ask each one to create a test job there before you sign. LobbyStack fits shops that book in Google Calendar, or that copy bookings into their software by hand or push them there with its webhooks and API.
+If your dispatchers live in ServiceTitan and need the job written there during the call, pick Sameday AI, Avoca, Smith.ai or a live service that names ServiceTitan. Ask each one to create a test job there before you sign. LobbyStack fits shops that book in Google Calendar, Cal.com or Calendly, or that copy bookings into their software by hand or push them there with its webhooks and API.
 
 ## How do you choose an answering service for a plumbing company?
 
@@ -287,6 +287,6 @@ Sources:
 - **People on every call and an on-call roster:** A Message Center, MAP Communications or Specialty Answering Service.
 - **ServiceTitan, with the job written there:** AnswerForce or PATLive for live agents, Sameday AI or Smith.ai for AI.
 - **Jobber or Housecall Pro:** try the built-in receptionist first.
-- **Google Calendar booking, overflow and after-hours calls for $30 to $100 a month, and callers in other languages:** LobbyStack.
+- **Booking into Google Calendar, Cal.com or Calendly, overflow and after-hours calls for $30 to $100 a month, and callers in other languages:** LobbyStack.
 
 Want to hear LobbyStack take a burst-pipe call before you pay? [Create a free account](https://app.lobbystack.com/en/signup) and test it with 30 voice minutes and a free number for 14 days, no card needed. Paid plans have no setup fee. Then see how urgent calls, bookings and transfers work on the [AI receptionist for plumbers](/solutions/ai-receptionist-for-plumbers/) page.

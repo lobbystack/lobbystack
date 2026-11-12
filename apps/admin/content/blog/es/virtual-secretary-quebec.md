@@ -70,10 +70,10 @@ Con LobbyStack, por ejemplo:
 
 - la llamada empieza en francés cuando el francés es su idioma predeterminado, y pasa al inglés si quien llama lo habla;
 - contesta a partir de su sitio web, sus documentos y los precios que usted le da;
-- reserva en Google Calendar y envía la confirmación por SMS a los clientes que la aceptan;
+- reserva en Google Calendar, Cal.com o Calendly y envía la confirmación por SMS a los clientes que la aceptan;
 - transfiere las llamadas urgentes a su celular y toma un mensaje para el resto, con un aviso por correo o por SMS.
 
-Starter cuesta USD 30 al mes por 150 minutos, luego USD 0.20 por minuto. Con 40 llamadas de 3 minutos, la factura se queda en USD 30. También contesta a las 21:00 y el fin de semana, al mismo precio. Sus límites: cobra en dólares estadounidenses, solo se conecta a Google Calendar y no reemplaza a una persona en una llamada delicada o una tarea administrativa.
+Starter cuesta USD 30 al mes por 150 minutos, luego USD 0.20 por minuto. Con 40 llamadas de 3 minutos, la factura se queda en USD 30. También contesta a las 21:00 y el fin de semana, al mismo precio. Sus límites: cobra en dólares estadounidenses, solo se conecta a Google Calendar, Cal.com y Calendly, y no reemplaza a una persona en una llamada delicada o una tarea administrativa.
 
 ## ¿Cómo elegir entre una secretaria virtual y una recepcionista con IA?
 
@@ -95,7 +95,7 @@ Solo si usted compra esas horas. La mayoría trabaja de día. Para las llamadas 
 
 ### ¿Una secretaria virtual puede reservar mis citas?
 
-Sí, si le da acceso a su agenda. Una recepcionista con IA como LobbyStack también reserva durante la llamada, en Google Calendar, y envía la confirmación por SMS al cliente que la acepta.
+Sí, si le da acceso a su agenda. Una recepcionista con IA como LobbyStack también reserva durante la llamada, en Google Calendar, Cal.com o Calendly, y envía la confirmación por SMS al cliente que la acepta.
 
 ### ¿Una recepcionista con IA puede reemplazar a una secretaria virtual?
 

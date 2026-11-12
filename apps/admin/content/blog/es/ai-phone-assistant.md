@@ -52,7 +52,7 @@ Manténgalo corto: el nombre de la empresa y una pregunta. Por ejemplo: «Plombe
 
 ### 4. Conecte su calendario
 
-Conecte Google Calendar en las integraciones y elija el calendario de reservas. El asistente ofrece entonces los horarios libres durante la llamada y reserva. Si prefiere aprobar cada cita, el modo solicitud anota la hora deseada y su equipo la confirma. Los clientes que lo aceptan reciben un SMS de confirmación.
+Conecte Google Calendar, Cal.com o Calendly en las integraciones y elija dónde se guardan las reservas. El asistente ofrece entonces los horarios libres durante la llamada y reserva. Si prefiere aprobar cada cita, el modo solicitud anota la hora deseada y su equipo la confirma. Los clientes que lo aceptan reciben un SMS de confirmación.
 
 ### 5. Escriba sus reglas con palabras sencillas
 

@@ -27,6 +27,7 @@ type Copy = {
   then: (rate: string) => string;
   rate: (cents: number) => string;
   calls: string;
+  integrations: string;
   /** The agent limit on a card: a number of agents, or none. */
   agents: (limit: number | null) => string;
   free: { description: string; cta: string; number: string; support: string };
@@ -46,6 +47,7 @@ const copy: Record<PlanCardLocale, Copy> = {
     then: (rate) => `Then ${rate}/min`,
     rate: (cents) => `$${dollars(cents)}`,
     calls: "Unlimited calls at once",
+    integrations: "Zapier, webhook and MCP integrations",
     agents: (limit) => limit === null ? "Unlimited agents" : limit === 1 ? "1 agent" : `${limit} agents`,
     free: { description: "Full access for 14 days", cta: "Start free", number: "1 phone number", support: "Community support" },
     starter: { cta: "Get Starter", number: "1 dedicated business number", support: "Email support" },
@@ -60,6 +62,7 @@ const copy: Record<PlanCardLocale, Copy> = {
     then: (rate) => `Puis ${rate}/min`,
     rate: (cents) => `${dollars(cents).replace(".", ",")} $`,
     calls: "Appels simultanés illimités",
+    integrations: "Intégrations Zapier, webhooks et MCP",
     agents: (limit) => limit === null ? "Agents illimités" : limit === 1 ? "1 agent" : `${limit} agents`,
     free: { description: "Accès complet pendant 14 jours", cta: "Commencer gratuitement", number: "1 numéro de téléphone", support: "Support communautaire" },
     starter: { cta: "Choisir Starter", number: "1 numéro d'entreprise dédié", support: "Support par courriel" },
@@ -74,6 +77,7 @@ const copy: Record<PlanCardLocale, Copy> = {
     then: (rate) => `Luego ${rate}/min`,
     rate: (cents) => `$${dollars(cents)}`,
     calls: "Llamadas simultáneas ilimitadas",
+    integrations: "Integraciones con Zapier, webhooks y MCP",
     agents: (limit) => limit === null ? "Agentes ilimitados" : limit === 1 ? "1 agente" : `${limit} agentes`,
     free: { description: "Acceso completo durante 14 días", cta: "Empezar gratis", number: "1 número de teléfono", support: "Soporte de la comunidad" },
     starter: { cta: "Elegir Starter", number: "1 número dedicado para su negocio", support: "Soporte por correo electrónico" },
@@ -88,6 +92,7 @@ const copy: Record<PlanCardLocale, Copy> = {
     then: (rate) => `Zatim ${rate}/min`,
     rate: (cents) => `$${dollars(cents)}`,
     calls: "Neograničen broj istovremenih poziva",
+    integrations: "Integracije sa Zapier-om, webhookovima i MCP-om",
     agents: (limit) => limit === null ? "Neograničen broj agenata" : limit === 1 ? "1 agent" : `${limit} agenta`,
     free: { description: "Pun pristup 14 dana", cta: "Počnite besplatno", number: "1 broj telefona", support: "Podrška zajednice" },
     starter: { cta: "Izaberite Starter", number: "1 namenski poslovni broj", support: "Podrška putem e-pošte" },
@@ -113,6 +118,7 @@ function paidCard(slug: "starter" | "pro", c: Copy, name: string): PlanCard {
       { label: text.number },
       { label: c.agents(plan.includedAgents) },
       { label: c.calls },
+      { label: c.integrations },
       { label: text.support },
     ],
     featured: slug === "pro",
@@ -130,7 +136,7 @@ export function planCards(locale: string): PlanCard[] {
       period: "",
       description: { monthly: c.free.description, annual: c.free.description },
       cta: c.free.cta,
-      lines: [{ label: c.minutes(free.voiceSecondsIncluded / 60) }, { label: c.free.number }, { label: c.agents(free.includedAgents) }, { label: c.calls }, { label: c.free.support }],
+      lines: [{ label: c.minutes(free.voiceSecondsIncluded / 60) }, { label: c.free.number }, { label: c.agents(free.includedAgents) }, { label: c.calls }, { label: c.integrations }, { label: c.free.support }],
       featured: false,
     },
     paidCard("starter", c, "Starter"),
@@ -142,7 +148,7 @@ export function planCards(locale: string): PlanCard[] {
       period: "",
       description: { monthly: c.enterprise.description, annual: c.enterprise.description },
       cta: c.enterprise.cta,
-      lines: [{ label: c.enterprise.numbers }, { label: c.agents(billingPlanCatalog.enterprise.includedAgents) }, { label: c.calls }, { label: c.enterprise.limits }, { label: c.enterprise.support }],
+      lines: [{ label: c.enterprise.numbers }, { label: c.agents(billingPlanCatalog.enterprise.includedAgents) }, { label: c.calls }, { label: c.integrations }, { label: c.enterprise.limits }, { label: c.enterprise.support }],
       featured: false,
     },
   ];

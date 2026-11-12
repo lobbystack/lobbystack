@@ -205,7 +205,7 @@ Notre guide pour [choisir un réceptionniste IA](/fr/blog/how-to-choose-an-ai-re
 
 ## La place de LobbyStack
 
-LobbyStack est un réceptionniste IA pour les petites entreprises. Il réserve les rendez-vous dans Google Calendar à partir de vos horaires, de vos services et de votre personnel, puis envoie par SMS une confirmation et un rappel 24 heures avant le rendez-vous aux numéros américains et canadiens. Il transfère les appels vers un seul numéro selon les règles que vous fixez. Si vous n'avez pas défini de numéro de transfert ou si un transfert échoue, il prend un message et envoie une alerte par e-mail à votre équipe. Le tableau de bord garde un enregistrement, une transcription et un résumé d'une ligne pour chaque appel.
+LobbyStack est un réceptionniste IA pour les petites entreprises. Il réserve les rendez-vous dans Google Calendar, Cal.com ou Calendly à partir de vos horaires, de vos services et de votre personnel, puis envoie par SMS une confirmation et un rappel 24 heures avant le rendez-vous aux numéros américains et canadiens. Il transfère les appels vers un seul numéro selon les règles que vous fixez. Si vous n'avez pas défini de numéro de transfert ou si un transfert échoue, il prend un message et envoie une alerte par e-mail à votre équipe. Le tableau de bord garde un enregistrement, une transcription et un résumé d'une ligne pour chaque appel.
 
 Chaque appel commence dans la langue par défaut de l'entreprise : anglais, français, espagnol, serbe, allemand, portugais du Brésil, italien ou néerlandais. Le réceptionniste répond ensuite dans la langue de l'appelant. Il fonctionne avec GPT-Live d'OpenAI et prend en charge plus de 70 langues, dont l'espagnol et le serbe.
 
@@ -213,7 +213,7 @@ Chaque appel commence dans la langue par défaut de l'entreprise : anglais, fran
 
 Connaissez les limites avant de vous inscrire :
 
-- Google Calendar est le seul agenda qu'il connecte.
+- Il se connecte à Google Calendar, Cal.com et Calendly, et à aucun autre agenda.
 - Il n'offre aucune synchronisation directe avec les logiciels de gestion de cabinet ou d'interventions. Vous reliez d'autres outils avec les webhooks et l'API REST.
 - L'IA ne répond pas aux SMS. Votre équipe y répond depuis le tableau de bord.
 - Les transferts vont vers un seul numéro, et la personne qui décroche ne reçoit pas de présentation orale de l'appel.

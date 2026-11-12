@@ -4,7 +4,7 @@ export const plumberFaqs: FaqItem[] = [
   {
     question: "What does a plumbing answering service do?",
     answer:
-      "It answers the calls you can't pick up and decides what happens next under your rules. LobbyStack transfers burst pipes and sewage backups to your on-call plumber, books drain and water heater visits into Google Calendar, and saves a summary, transcript, and recording of every call.",
+      "It answers the calls you can't pick up and decides what happens next under your rules. LobbyStack transfers burst pipes and sewage backups to your on-call plumber, books drain and water heater visits into Google Calendar, Cal.com or Calendly, and saves a summary, transcript, and recording of every call.",
   },
   {
     question: "Can an AI receptionist for plumbers tell callers how to shut off the water?",
@@ -47,7 +47,7 @@ export const hvacFaqs: FaqItem[] = [
   {
     question: "What does an HVAC answering service do?",
     answer:
-      "It answers the calls your office misses and decides what happens next under your rules. LobbyStack transfers no-heat, no-AC, and gas-smell calls to your on-call tech, books tune-ups and estimate visits into Google Calendar, and saves a summary, transcript, and recording of each call.",
+      "It answers the calls your office misses and decides what happens next under your rules. LobbyStack transfers no-heat, no-AC, and gas-smell calls to your on-call tech, books tune-ups and estimate visits into Google Calendar, Cal.com or Calendly, and saves a summary, transcript, and recording of each call.",
   },
   {
     question: "Can it answer only when my office is busy?",
@@ -77,7 +77,7 @@ export const hvacFaqs: FaqItem[] = [
   {
     question: "Does it work with ServiceTitan, Housecall Pro, or Jobber?",
     answer:
-      "Not directly. Google Calendar is the only calendar LobbyStack connects to. It sends signed webhooks when a call ends, an appointment is booked, rescheduled, or cancelled, a message is taken, or a contact is created, and it has a REST API with scoped keys. Zapier connects through both. If you run your shop in Jobber or Housecall Pro, their own receptionists book jobs straight into that software, and LobbyStack can't.",
+      "Not directly. Google Calendar, Cal.com and Calendly are the only calendars LobbyStack connects to. It sends signed webhooks when a call ends, an appointment is booked, rescheduled, or cancelled, a message is taken, or a contact is created, and it has a REST API with scoped keys. Zapier connects through both. If you run your shop in Jobber or Housecall Pro, their own receptionists book jobs straight into that software, and LobbyStack can't.",
   },
   {
     question: "Does it work with my existing business number?",
@@ -105,7 +105,7 @@ export const electricianFaqs: FaqItem[] = [
   {
     question: "What does an electrician answering service need to handle?",
     answer:
-      "Two kinds of calls: hazards that need safety instructions and a fast transfer, and estimate requests that need the right questions. LobbyStack handles both with rules you write, and it books estimates into Google Calendar during the call.",
+      "Two kinds of calls: hazards that need safety instructions and a fast transfer, and estimate requests that need the right questions. LobbyStack handles both with rules you write, and it books estimates into Google Calendar, Cal.com or Calendly during the call.",
   },
   {
     question: "What does it say to someone reporting sparks or smoke?",
@@ -148,7 +148,7 @@ export const garageDoorFaqs: FaqItem[] = [
   {
     question: "What is an AI receptionist for garage door companies?",
     answer:
-      "It answers your calls while you're on a job or off the clock. LobbyStack asks what happened to the door, books repairs and estimates into Google Calendar, and transfers the calls your rules mark urgent, such as a door that won't close at night, to your on-call tech.",
+      "It answers your calls while you're on a job or off the clock. LobbyStack asks what happened to the door, books repairs and estimates into Google Calendar, Cal.com or Calendly, and transfers the calls your rules mark urgent, such as a door that won't close at night, to your on-call tech.",
   },
   {
     question: "What does it tell a caller with a broken spring?",
@@ -186,7 +186,7 @@ export const applianceRepairFaqs: FaqItem[] = [
   {
     question: "What is an AI receptionist for appliance repair?",
     answer:
-      "It answers your shop's calls while your techs are on repairs. LobbyStack asks for the appliance, brand, model, and symptoms, quotes the fees you set, and books the visit into Google Calendar during the call.",
+      "It answers your shop's calls while your techs are on repairs. LobbyStack asks for the appliance, brand, model, and symptoms, quotes the fees you set, and books the visit into Google Calendar, Cal.com or Calendly during the call.",
   },
   {
     question: "Can it check which brands I service?",
@@ -224,7 +224,7 @@ export const restorationFaqs: FaqItem[] = [
   {
     question: "What is an AI receptionist for restoration companies?",
     answer:
-      "It answers your calls when your crew is on site or asleep. LobbyStack transfers active flooding, sewage, and fire damage to your on-call crew, books mold inspections and moisture checks into Google Calendar, and saves the water source and insurance details with each call.",
+      "It answers your calls when your crew is on site or asleep. LobbyStack transfers active flooding, sewage, and fire damage to your on-call crew, books mold inspections and moisture checks into Google Calendar, Cal.com or Calendly, and saves the water source and insurance details with each call.",
   },
   {
     question: "Can it work as a water damage answering service at night?",
@@ -262,7 +262,7 @@ export const locksmithFaqs: FaqItem[] = [
   {
     question: "What does a locksmith answering service do?",
     answer:
-      "It answers your calls while you're on a job or off the clock. LobbyStack quotes your lockout fee, takes the car or address, and transfers lockouts to your on-call locksmith. Rekeys, key fobs, and installs get booked into Google Calendar.",
+      "It answers your calls while you're on a job or off the clock. LobbyStack quotes your lockout fee, takes the car or address, and transfers lockouts to your on-call locksmith. Rekeys, key fobs, and installs get booked into Google Calendar, Cal.com or Calendly.",
   },
   {
     question: "Can it quote my lockout fee?",
@@ -391,7 +391,7 @@ export const contractorFaqs: FaqItem[] = [
   {
     question: "Can it book consultations for the next business day?",
     answer:
-      "Yes. LobbyStack offers the open slots in your Google Calendar and books the consultation during the call, so new work is on the schedule when your team starts the day.",
+      "Yes. LobbyStack offers the open slots in your Google Calendar, Cal.com or Calendly and books the consultation during the call, so new work is on the schedule when your team starts the day.",
   },
   {
     question: "What happens when a caller asks for a quote after hours?",

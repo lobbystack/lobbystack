@@ -83,7 +83,7 @@ Večeri, nedelje i praznici su van tog radnog vremena. Ako Vas klijenti zovu zbo
 
 Za rutinske pozive, da: AI se javlja u svako doba, kaže radno vreme, prima poruku ili zakazuje termin, i košta manje po minutu. Ne zamenjuje operatera kada zove nezadovoljan klijent ili kada je zahtev osetljiv. Za firmu iz Francuske, LobbyStack ima i ograničenja oko broja i naplate, navedena ispod.
 
-Paket Starter kod LobbyStacka košta $30 mesečno za 150 minuta, zatim $0.20 po minutu. Pro košta $100 za 500 minuta, zatim $0.18 po minutu. Nijedan paket nema trošak uključenja. Recepcioner otvara poziv na francuskom ako izaberete francuski kao podrazumevani jezik, a zatim odgovara na jeziku pozivaoca: više od 70 jezika na OpenAI modelu GPT-Live. Zakazuje termine u Google kalendaru, prebacuje hitne pozive na Vaš broj i čuva rezime, transkript i snimak svakog poziva.
+Paket Starter kod LobbyStacka košta $30 mesečno za 150 minuta, zatim $0.20 po minutu. Pro košta $100 za 500 minuta, zatim $0.18 po minutu. Nijedan paket nema trošak uključenja. Recepcioner otvara poziv na francuskom ako izaberete francuski kao podrazumevani jezik, a zatim odgovara na jeziku pozivaoca: više od 70 jezika na OpenAI modelu GPT-Live. Zakazuje termine u Google kalendaru, Cal.com-u ili Calendly-ju, prebacuje hitne pozive na Vaš broj i čuva rezime, transkript i snimak svakog poziva.
 
 ### Šta treba da znate pre korišćenja iz Francuske
 

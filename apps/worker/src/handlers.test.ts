@@ -5,12 +5,12 @@ import { vi } from "vitest";
 
 import type { JobEnvelope } from "@lobbystack/contracts";
 import { billingCheckoutLeaseEndsAt, claimBillingCheckoutRequest, countPublishableOutboxMessages, deferBillingCheckoutRequest, deleteCallRecordingForRetention, deleteSentProductEventsBefore, deliverOutbound, expireProspectDemos, generateAffiliatePayoutRun, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, loadLiveCallForPricing, recordCallProviderPricing, recordProductEvent, recordSmsProviderPricing, reconcileBillingProviderEvent, runPrivacyRetentionSweep } from "@lobbystack/domain";
-import { queueDailyOperatorSummaries, queueWelcomeEmail } from "@lobbystack/domain";
+import { queueDailyOperatorSummaries, queuePlanReminderEmail, queueWelcomeEmail } from "@lobbystack/domain";
 import { NUMBER_ORDER_MAX_WAIT_MS, claimNumberProvisioning, completeNumberProvisioning, deferNumberProvisioning, failNumberProvisioning, numberProvisioningLeaseEndsAt } from "@lobbystack/domain";
 import { PolarRequestError } from "@lobbystack/providers/polar/polarBilling";
 import { NumberOrderPendingError } from "@lobbystack/providers/telephony/types";
-import { brandForEmail, businessExists, businessGetsHostEmails, forgetCachedBrands, loadNumberReleaseEmail, loadNumberTrialEmail, type Brand } from "@lobbystack/domain";
-import { advancePartnerLifecycles, claimPartnerCheckoutRequest, deferPartnerCheckoutRequest, keepPartnerTrialNumber, loadPartnerCheckoutRequest, loadPoolUsageEvent, markPartnerCheckoutCreated, markPartnerCheckoutFailed, partnerCheckoutLeaseEndsAt, PartnerLifecycleError, reconcilePartnerTier, settlePartnerNumberCharges } from "@lobbystack/domain";
+import { brandForEmail, businessExists, businessGetsHostEmails, forgetCachedBrands, marketingEmailRecipient, readMarketingUnsubscribeToken, loadNumberReleaseEmail, loadNumberTrialEmail, type Brand } from "@lobbystack/domain";
+import { advancePartnerLifecycles, claimPartnerCheckoutRequest, deferPartnerCheckoutRequest, keepPartnerTrialNumber, loadPartnerCheckoutRequest, loadPoolUsageEvent, markPartnerCheckoutCreated, markPartnerCheckoutFailed, partnerCheckoutLeaseEndsAt, PartnerLifecycleError, reconcilePartnerTier, settleExtraNumberCharges, settlePartnerNumberCharges, extraNumbersSubscriptionChange, loadExtraNumbersCheckoutRequest } from "@lobbystack/domain";
 import { checkPartnerCustomDomains, provisionPartnerCustomDomain, removePartnerCustomHostname, syncBusinessOverage } from "@lobbystack/domain";
 import { FakeCustomHostnames, FakeTxtRecords } from "@lobbystack/providers/customHostnames/fakeCustomHostnames";
 import { FakeStripeConnect } from "@lobbystack/providers/stripe/fakeStripeConnect";
@@ -34,6 +34,9 @@ vi.mock("@lobbystack/domain", async (importOriginal) => {
     reconcilePartnerTier: vi.fn(),
     keepPartnerTrialNumber: vi.fn(async () => false),
     settlePartnerNumberCharges: vi.fn(),
+    settleExtraNumberCharges: vi.fn(),
+    loadExtraNumbersCheckoutRequest: vi.fn(),
+    extraNumbersSubscriptionChange: vi.fn(),
     advancePartnerLifecycles: vi.fn(),
     provisionPartnerCustomDomain: vi.fn(),
     checkPartnerCustomDomains: vi.fn(),
@@ -52,6 +55,7 @@ vi.mock("@lobbystack/domain", async (importOriginal) => {
     markBillingCheckoutCreated: vi.fn(),
     markBillingCheckoutFailed: vi.fn(),
     queueWelcomeEmail: vi.fn(),
+    queuePlanReminderEmail: vi.fn(),
     claimNumberProvisioning: vi.fn(),
     numberProvisioningLeaseEndsAt: vi.fn(),
     countPublishableOutboxMessages: vi.fn(),
@@ -74,6 +78,8 @@ vi.mock("@lobbystack/domain", async (importOriginal) => {
     businessGetsHostEmails: vi.fn(async () => true),
     // And still exists.
     businessExists: vi.fn(async () => true),
+    // Every marketing email goes to someone who never unsubscribed unless a test says otherwise.
+    marketingEmailRecipient: vi.fn(async () => ({ userId: "7d0c2a51-1f7b-4bd4-9c43-2d1e3f4a5b6c", unsubscribed: false })),
   };
 });
 
@@ -161,6 +167,20 @@ describe("worker handlers", () => {
     expect(queueWelcomeEmail).toHaveBeenCalledWith(domain, { businessId });
     await expect(handleJob(job, { domain, email: { sendTemplate: vi.fn() } })).resolves.toEqual({ status: "skipped", entityId: businessId });
     await expect(handleJob(job, { domain, email: { sendTemplate: vi.fn() } })).resolves.toEqual({ status: "deferred", entityId: businessId, retryAt });
+  });
+  it("queues the plan reminder through the domain, and skips it without SMTP or when the domain does", async () => {
+    const businessId = randomUUID(); const domain = { db: undefined as never };
+    vi.mocked(queuePlanReminderEmail).mockResolvedValueOnce({ status: "queued" }).mockResolvedValueOnce({ status: "skipped" });
+    const job = { jobId: randomUUID(), type: "onboarding.sendPlanReminder" as const, queue: "default" as const, businessId, payload: {}, trace: {}, idempotencyKey: `onboarding-plan-reminder:${businessId}`, scheduled: false };
+    await expect(handleJob(job, { domain })).resolves.toEqual({ status: "skipped" });
+    expect(queuePlanReminderEmail).not.toHaveBeenCalled();
+    await expect(handleJob(job, { domain, email: { sendTemplate: vi.fn() } })).resolves.toEqual({ status: "completed", entityId: businessId });
+    expect(queuePlanReminderEmail).toHaveBeenCalledWith(domain, { businessId, reminder: "first" });
+    await expect(handleJob(job, { domain, email: { sendTemplate: vi.fn() } })).resolves.toEqual({ status: "skipped", entityId: businessId });
+    // The second job names itself in its payload.
+    vi.mocked(queuePlanReminderEmail).mockResolvedValueOnce({ status: "queued" });
+    await expect(handleJob({ ...job, payload: { reminder: "second" }, idempotencyKey: `onboarding-plan-reminder:${businessId}:second` }, { domain, email: { sendTemplate: vi.fn() } })).resolves.toEqual({ status: "completed", entityId: businessId });
+    expect(queuePlanReminderEmail).toHaveBeenLastCalledWith(domain, { businessId, reminder: "second" });
   });
   it("sends an email queued before payloads carried a brand exactly as one queued under a brand, LobbyStack included", async () => {
     vi.stubEnv("APP_BASE_URL", "https://app.example.test");
@@ -331,6 +351,57 @@ describe("worker handlers", () => {
     const payload = { template: "welcome", to: "owner@example.test", subject: "Welcome to LobbyStack, Ryan", variables: { locale: "en", firstName: "Ryan", businessName: "Metroprint", goal: "", number: "", url: "https://app.example.test/?setup=phoneNumber" }, brand: { kind: "host" }, replyTo: null };
     await handleJob({ jobId: randomUUID(), businessId: randomUUID(), type: "email.send", queue: "default", payload, trace: {}, idempotencyKey: "onboarding-welcome:x:email", scheduled: false }, { domain: { db: savedBranding("Saved Desk") }, email });
     expect(sendMail.mock.lastCall?.[0]).toMatchObject({ from: "LobbyStack <no-reply@example.test>", replyTo: "support@example.test", subject: "Welcome to LobbyStack, Ryan", text: expect.stringContaining("Answer my missed calls: https://app.example.test/?setup=phoneNumber") });
+  });
+
+  describe("marketing emails", () => {
+    const userId = "7d0c2a51-1f7b-4bd4-9c43-2d1e3f4a5b6c";
+    const workerDb = savedBranding(null);
+    const welcome = { template: "welcome", to: "Owner@Example.test", subject: "Welcome to LobbyStack", variables: { locale: "fr", firstName: "Ryan", businessName: "Metroprint", goal: "", number: "", url: "https://app.example.test/?setup=phoneNumber" }, brand: { kind: "host" }, replyTo: null };
+    const reminder = { template: "plan_reminder", to: "owner@example.test", variables: { locale: "en", kind: "second", firstName: "Ryan", businessName: "Metroprint", number: "+15550100123", url: "https://app.example.test/onboarding/plan" }, brand: { kind: "host" }, replyTo: null };
+    function provider() {
+      const sendMail = vi.fn().mockResolvedValue({ messageId: "provider-id" });
+      return { sendMail, email: new SmtpEmailProvider({ host: "localhost", port: 1025, secure: false, username: "", password: "", from: "LobbyStack <no-reply@example.test>" }, { sendMail } as never) };
+    }
+    const send = (payload: Record<string, unknown>, email: Pick<SmtpEmailProvider, "sendTemplate">, businessId = randomUUID()) => handleJob({ jobId: randomUUID(), businessId, type: "email.send", queue: "default", payload, trace: {}, idempotencyKey: randomUUID(), scheduled: false }, { domain: { db: workerDb }, email });
+
+    it("send the welcome and the plan reminders with the recipient's own one-click unsubscribe and footer link", async () => {
+      vi.stubEnv("APP_BASE_URL", "https://app.example.test");
+      const { sendMail, email } = provider();
+      await expect(send(welcome, email)).resolves.toEqual({ status: "completed" });
+      expect(marketingEmailRecipient).toHaveBeenLastCalledWith(workerDb, "Owner@Example.test");
+      const sent = sendMail.mock.lastCall?.[0] as { headers: Record<string, string>; text: string; html: string };
+      expect(sent.headers["List-Unsubscribe-Post"]).toBe("List-Unsubscribe=One-Click");
+      const oneClick = /^<(https:\/\/app\.example\.test\/api\/email\/unsubscribe\?token=(.+))>$/.exec(sent.headers["List-Unsubscribe"]!);
+      expect(oneClick).not.toBeNull();
+      expect(readMarketingUnsubscribeToken(decodeURIComponent(oneClick![2]!))).toEqual({ userId });
+      // The footer opens the page in the recipient's language.
+      expect(sent.text).toMatch(/\n\nSe désabonner : https:\/\/app\.example\.test\/fr\/unsubscribe\/v1\.[^\s]+$/);
+      expect(sent.html).toContain(">Se désabonner</a>");
+      await expect(send(reminder, email)).resolves.toEqual({ status: "completed" });
+      expect((sendMail.mock.lastCall?.[0] as { headers: Record<string, string> }).headers["List-Unsubscribe"]).toMatch(/^<https:\/\/app\.example\.test\/api\/email\/unsubscribe\?token=/);
+    });
+
+    it("skip a marketing email to someone who unsubscribed, or to an address nobody has, whenever it was queued", async () => {
+      const { sendMail, email } = provider();
+      const businessId = randomUUID();
+      vi.mocked(marketingEmailRecipient).mockResolvedValueOnce({ userId, unsubscribed: true });
+      await expect(send(welcome, email, businessId)).resolves.toEqual({ status: "skipped", entityId: businessId });
+      vi.mocked(marketingEmailRecipient).mockResolvedValueOnce({ userId, unsubscribed: true });
+      await expect(send(reminder, email, businessId)).resolves.toEqual({ status: "skipped", entityId: businessId });
+      vi.mocked(marketingEmailRecipient).mockResolvedValueOnce(null);
+      await expect(send(reminder, email, businessId)).resolves.toEqual({ status: "skipped", entityId: businessId });
+      expect(sendMail).not.toHaveBeenCalled();
+    });
+
+    it("leave every other email as it was: no unsubscribe, and no opt-out check", async () => {
+      const { sendMail, email } = provider();
+      vi.mocked(marketingEmailRecipient).mockClear();
+      await send({ template: "operator_alert", to: "owner@example.test", subject: "Missed call", variables: { message: "Call back +14165550100." }, brand: { kind: "host" }, replyTo: null }, email);
+      const sent = sendMail.mock.lastCall?.[0] as { headers?: unknown; text: string };
+      expect(sent.headers).toBeUndefined();
+      expect(sent.text).not.toContain("Unsubscribe");
+      expect(marketingEmailRecipient).not.toHaveBeenCalled();
+    });
   });
 
   it("never sends the welcome email to a partner's business, even one queued already, while its own emails still go", async () => {
@@ -1063,6 +1134,73 @@ describe("worker handlers", () => {
       expect(removePartnerCustomHostname).toHaveBeenCalledWith(domain, customDomains.hostnames, { hostname: "app.acme.example", providerHostnameId: "ch_1" });
       await expect(handleJob(domainJob("partnerDomain.remove", { ...payload, provider: "caddy" }), { domain, customDomains })).resolves.toEqual({ status: "skipped", entityId: "ch_1" });
       expect(removePartnerCustomHostname).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("the extra numbers add-on", () => {
+    const envelope = (type: JobEnvelope["type"], businessId: string, payload: Record<string, unknown> = {}): JobEnvelope => ({ jobId: randomUUID(), type, queue: "critical", businessId, payload, trace: {}, idempotencyKey: `test:${randomUUID()}`, scheduled: false });
+    afterEach(() => { vi.unstubAllEnvs(); });
+
+    it("opens a Polar checkout for the monthly add-on product that brings the payer back to the agent's phone page", async () => {
+      vi.stubEnv("POLAR_EXTRA_NUMBERS_PRODUCT_ID", "prod_extra");
+      vi.stubEnv("APP_BASE_URL", "https://app.example.test");
+      const businessId = randomUUID(); const requestId = randomUUID(); const agentId = randomUUID(); const domain = { db: undefined as never };
+      vi.mocked(claimBillingCheckoutRequest).mockResolvedValue(true);
+      vi.mocked(loadExtraNumbersCheckoutRequest).mockResolvedValue({ customerEmail: "sam@example.test", externalCustomerId: `business:${businessId}`, agentId });
+      const createCheckout = vi.fn().mockResolvedValue({ checkoutId: "co_1", checkoutUrl: "https://polar.test/co_1" });
+      await expect(handleJob(envelope("billing.createExtraNumbersCheckout", businessId, { requestId }), { domain, polar: { recordUsage: vi.fn(), createCheckout } })).resolves.toEqual({ status: "completed", entityId: requestId });
+      expect(createCheckout).toHaveBeenCalledWith({ productId: "prod_extra", customerEmail: "sam@example.test", externalCustomerId: `business:${businessId}`, successUrl: `https://app.example.test/agents/${agentId}/channels/phone?extraNumbersCheckout=${requestId}`, returnUrl: `https://app.example.test/agents/${agentId}/channels/phone`, idempotencyKey: `extra-numbers-checkout:${requestId}` });
+      expect(markBillingCheckoutCreated).toHaveBeenCalledWith(domain, { businessId, requestId, checkoutId: "co_1", checkoutUrl: "https://polar.test/co_1" });
+    });
+
+    it("fails the checkout when the add-on product isn't set", async () => {
+      vi.stubEnv("POLAR_EXTRA_NUMBERS_PRODUCT_ID", "");
+      const businessId = randomUUID(); const requestId = randomUUID(); const domain = { db: undefined as never };
+      vi.mocked(claimBillingCheckoutRequest).mockResolvedValue(true);
+      const createCheckout = vi.fn();
+      await expect(handleJob(envelope("billing.createExtraNumbersCheckout", businessId, { requestId }), { domain, polar: { recordUsage: vi.fn(), createCheckout } })).resolves.toEqual({ status: "skipped", entityId: requestId });
+      expect(markBillingCheckoutFailed).toHaveBeenCalledWith(domain, { businessId, requestId, error: "POLAR_EXTRA_NUMBERS_PRODUCT_ID is not set." });
+      expect(createCheckout).not.toHaveBeenCalled();
+    });
+
+    it("cancels the add-on at the end of its period when the plan ends, and does nothing when it's already as it should be", async () => {
+      const businessId = randomUUID(); const domain = { db: undefined as never };
+      const setCancelAtPeriodEnd = vi.fn().mockResolvedValue(undefined);
+      vi.mocked(extraNumbersSubscriptionChange).mockResolvedValueOnce({ subscriptionId: "sub_extra", cancelAtPeriodEnd: true }).mockResolvedValueOnce(null);
+      await expect(handleJob(envelope("billing.syncExtraNumbersSubscription", businessId), { domain, polar: { recordUsage: vi.fn(), setCancelAtPeriodEnd } })).resolves.toEqual({ status: "completed", entityId: businessId });
+      expect(setCancelAtPeriodEnd).toHaveBeenCalledWith({ subscriptionId: "sub_extra", cancelAtPeriodEnd: true });
+      await expect(handleJob(envelope("billing.syncExtraNumbersSubscription", businessId), { domain, polar: { recordUsage: vi.fn(), setCancelAtPeriodEnd } })).resolves.toEqual({ status: "skipped", entityId: businessId });
+      expect(setCancelAtPeriodEnd).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("a business's extra numbers", () => {
+    const job: JobEnvelope = { jobId: randomUUID(), type: "billing.chargeExtraNumbers", queue: "maintenance", businessId: null, payload: {}, trace: {}, idempotencyKey: "extra-number-charges", scheduled: true, recurring: true };
+
+    it("reports each month a business pays for to Polar, under the business's customer, at the number's price in cents", async () => {
+      const domain = { db: undefined as never };
+      const businessId = randomUUID(); const chargeId = randomUUID();
+      const periodStart = new Date("2026-11-03T12:00:00.000Z");
+      vi.mocked(settleExtraNumberCharges).mockImplementation(async (_domain, { report }) => {
+        await report({ chargeId, businessId, billingKey: `business:${businessId}`, countryCode: "CA", month: 1, periodStart, amountCents: 115, idempotencyKey: `extra-number:${chargeId}:1` });
+        return { settled: 2, charged: 1 };
+      });
+      const recordUsage = vi.fn().mockResolvedValue(undefined);
+
+      await expect(handleJob(job, { domain, polar: { recordUsage } })).resolves.toEqual({ status: "completed", entityId: "2:1" });
+      expect(recordUsage).toHaveBeenCalledWith({ eventName: "billing.extra_numbers", externalCustomerId: `business:${businessId}`, quantity: 115, timestamp: expect.not.stringMatching(/^2026-11-03T12:00:00/), idempotencyKey: `extra-number:${chargeId}:1`, businessId, usageKind: "extra_number" });
+    });
+
+    it("lets a failed report fail the job, and charges nothing without Polar", async () => {
+      const domain = { db: undefined as never };
+      vi.mocked(settleExtraNumberCharges).mockImplementation(async (_domain, { report }) => {
+        await report({ chargeId: randomUUID(), businessId: randomUUID(), billingKey: "business:x", countryCode: "US", month: 0, periodStart: new Date(), amountCents: 115, idempotencyKey: "extra-number:x:0" });
+        return { settled: 1, charged: 1 };
+      });
+      await expect(handleJob(job, { domain, polar: { recordUsage: vi.fn().mockRejectedValue(new Error("Polar request failed with status 503.")) } })).rejects.toThrow("status 503");
+      vi.mocked(settleExtraNumberCharges).mockClear();
+      await expect(handleJob(job, { domain })).resolves.toEqual({ status: "skipped" });
+      expect(settleExtraNumberCharges).not.toHaveBeenCalled();
     });
   });
 

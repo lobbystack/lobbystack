@@ -128,13 +128,13 @@ Pravilo podešavate kod operatera: prosleđivanje kada je zauzeto ili nema odgov
 Na primeru LobbyStack-a:
 
 - Dobijate LobbyStack broj (dostupan u SAD, Kanadi, Velikoj Britaniji, Australiji i na Novom Zelandu) i na njega prosleđujete poslovni broj. Može da se javlja na sve pozive ili samo na višak poziva i pozive posle radnog vremena.
-- Upisuje termine u Google Calendar. Uz pristanak pozivaoca šalje SMS potvrdu i podsetnik 24 sata pre termina na brojeve iz SAD i Kanade.
+- Upisuje termine u Google Calendar, Cal.com ili Calendly. Uz pristanak pozivaoca šalje SMS potvrdu i podsetnik 24 sata pre termina na brojeve iz SAD i Kanade.
 - Hitne pozive preusmerava na jedan broj po preduzeću. Preusmeravanje je slepo, pa osobu koja se javi ne upoznaje sa pozivom. Ako preusmeravanje ne uspe, kaže to pozivaocu, ponudi da primi poruku, a Vaš tim može da dobije upozorenje o neuspelom preusmeravanju.
 - Svaki poziv dobija rezime, transkript i snimak. Kada primi poruku, dobijate upozorenje e-poštom, a SMS upozorenja su opciona.
 - Pozivi počinju na podrazumevanom jeziku preduzeća (engleskom, francuskom, španskom, srpskom, nemačkom, brazilskom portugalskom, italijanskom ili holandskom), a zatim recepcioner odgovara na jeziku pozivaoca: više od 70 jezika, uključujući srpski i španski.
 - LobbyStack ne naplaćuje spam pozive ni pozive kraće od 10 sekundi.
 
-Upoznajte ograničenja pre nego što prosledite liniju: Google Calendar je jedini kalendar, AI ne odgovara na SMS poruke i nema sinhronizacije sa CRM-om ni softverom za terenski servis. Za potpunu pokrivenost posle radnog vremena pogledajte [javljanje posle radnog vremena](/sr/solutions/after-hours-answering-service/).
+Upoznajte ograničenja pre nego što prosledite liniju: od kalendara podržava samo Google Calendar, Cal.com i Calendly, AI ne odgovara na SMS poruke i nema sinhronizacije sa CRM-om ni softverom za terenski servis. Za potpunu pokrivenost posle radnog vremena pogledajte [javljanje posle radnog vremena](/sr/solutions/after-hours-answering-service/).
 
 ### 4. Testirajte sa svog profila
 
@@ -170,7 +170,7 @@ Da. Google prikazuje podatke o učinku samo za verifikovane profile preduzeća, 
 
 ### Može li AI recepcioner da se javlja na pozive sa mog Google Business Profile-a?
 
-Može. Zadržite broj u profilu i prosledite ga AI recepcioneru za propuštene pozive, pozive posle radnog vremena ili sve pozive. LobbyStack se javlja na prosleđene pozive, upisuje termine u Google Calendar, hitne pozive preusmerava na jedan broj i čuva rezime, transkript i snimak svakog poziva. Plaćeni paketi kreću od $30 mesečno, ili $24 uz godišnje plaćanje.
+Može. Zadržite broj u profilu i prosledite ga AI recepcioneru za propuštene pozive, pozive posle radnog vremena ili sve pozive. LobbyStack se javlja na prosleđene pozive, upisuje termine u Google Calendar, Cal.com ili Calendly, hitne pozive preusmerava na jedan broj i čuva rezime, transkript i snimak svakog poziva. Plaćeni paketi kreću od $30 mesečno, ili $24 uz godišnje plaćanje.
 
 ## Javite se na pozive koje Vam profil već šalje
 

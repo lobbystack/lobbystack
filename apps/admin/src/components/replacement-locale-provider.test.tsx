@@ -78,13 +78,35 @@ it("persists an explicit query locale instead of an older stored choice", () => 
   expect(document.cookie).toContain("lobbystack.locale=fr");
 });
 
-it("keeps a stored locale when the localized path uses a different locale", async () => {
-  mocks.pathname = "/en/signup";
+it("shows the localized path's locale over a stored one, and keeps the stored choice", async () => {
+  mocks.pathname = "/fr/unsubscribe/token";
+  window.localStorage.setItem("lobbystack.locale", "en");
+  document.cookie = "lobbystack.locale=en; path=/";
+  render(<QueryClientProvider client={new QueryClient()}><LocaleProvider initialLocale="fr" initialLocaleSource="path"><Controls /></LocaleProvider></QueryClientProvider>);
+
+  await act(async () => { await Promise.resolve(); });
+  expect(mocks.changeLanguage).not.toHaveBeenCalled();
+  expect(window.localStorage.getItem("lobbystack.locale")).toBe("en");
+  expect(document.cookie).toContain("lobbystack.locale=en");
+});
+
+it("remembers a localized path's locale when nothing is stored yet", () => {
+  mocks.pathname = "/sr/login";
+  render(<QueryClientProvider client={new QueryClient()}><LocaleProvider initialLocale="sr" initialLocaleSource="path"><Controls /></LocaleProvider></QueryClientProvider>);
+
+  expect(mocks.changeLanguage).not.toHaveBeenCalled();
+  expect(window.localStorage.getItem("lobbystack.locale")).toBe("sr");
+  expect(document.cookie).toContain("lobbystack.locale=sr");
+});
+
+it("still applies a stored locale on a page whose URL names no language", async () => {
+  mocks.pathname = "/";
   window.localStorage.setItem("lobbystack.locale", "fr");
-  render(<QueryClientProvider client={new QueryClient()}><LocaleProvider initialLocale="en" initialLocaleSource="path"><Controls /></LocaleProvider></QueryClientProvider>);
+  mocks.readSession.mockResolvedValue(null);
+  vi.stubGlobal("fetch", vi.fn());
+  renderProvider(<Controls />);
 
   await waitFor(() => expect(mocks.changeLanguage).toHaveBeenCalledWith("fr"));
-  expect(window.localStorage.getItem("lobbystack.locale")).toBe("fr");
   expect(document.cookie).toContain("lobbystack.locale=fr");
 });
 

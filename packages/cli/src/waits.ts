@@ -25,3 +25,10 @@ export const sourceWait: WaitSpec = {
   done: (data) => !["pending", "processing"].includes(String(data.status)),
   failed: (data) => (data.status === "error" ? `Reading it failed: ${reason(data)}.` : data.status === "cancelled" ? "Reading it was cancelled." : undefined),
 };
+
+export const extraNumbersCheckoutWait: WaitSpec = {
+  operation: "getExtraNumbersCheckout",
+  param: "checkout_id",
+  done: (data) => data.status === "ready" || data.status === "error",
+  failed: (data) => (data.status === "error" ? `Polar couldn't make the checkout page: ${reason(data)}. Start another checkout.` : undefined),
+};

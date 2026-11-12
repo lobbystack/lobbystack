@@ -97,7 +97,7 @@ You own the code and avoid platform fees. You still write the receptionist on to
 An open-source receptionist ships the parts that options 1 through 4 leave to you. [LobbyStack](/solutions/self-hosted-ai-receptionist/) runs every phone and browser call on `gpt-live-1`, and its agent already has tools for:
 
 - business hours, services and answers from your website, PDFs and FAQs
-- finding openings and booking into Google Calendar, or taking a booking request for your team
+- finding openings and booking into Google Calendar, Cal.com or Calendly, or taking a booking request for your team
 - moving or cancelling an appointment after verifying the caller
 - taking messages and transferring calls to a person
 
@@ -155,7 +155,7 @@ For phone calls on LobbyStack, yes: calls reach GPT-Live through a Twilio Elasti
 
 ### Can a receptionist built this way book appointments?
 
-Only if you give it a booking tool. GPT-Live talks, and your backend checks the calendar and writes the booking. LobbyStack books into Google Calendar, or takes requests for your team to confirm.
+Only if you give it a booking tool. GPT-Live talks, and your backend checks the calendar and writes the booking. LobbyStack books into Google Calendar, Cal.com or Calendly, or takes requests for your team to confirm.
 
 ## Hear the voice before you build
 

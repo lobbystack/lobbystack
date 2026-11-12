@@ -196,3 +196,14 @@ Sans fichier d'état, une clé de plateforme ne crée pas d'entreprise si vous e
 `lobbystack` a une commande pour chaque point de terminaison de l'API, regroupées comme l'API : `lobbystack services list`, `lobbystack knowledge upload`, `lobbystack numbers search`, etc. `lobbystack --help` liste les groupes, et `--help` après n'importe quelle commande liste ses options. Avec la clé d'un partenaire, huit autres groupes appellent les [points de terminaison partenaire](/fr/api/authentication#points-de-terminaison-partenaire) : `partner`, `demos`, `packages`, `brand`, `domain`, `templates`, `partner-team` et `payments`. Par exemple, `lobbystack demos list` liste vos démos pour prospects.
 
 `lobbystack agents list` liste les agents de l'entreprise. `lobbystack receptionist` et `lobbystack rules` modifient l'agent par défaut. `lobbystack rules add --channel sms` ajoute une règle pour les textos seulement, et `lobbystack rules list` montre le canal de chaque règle.
+
+### Acheter un numéro pour un autre agent
+
+`lobbystack numbers search-extra` liste les numéros que vous pouvez acheter pour un autre agent, chacun avec son prix mensuel. Les numéros supplémentaires demandent le module Numéros supplémentaires, facturé chaque mois en dehors du forfait. La première fois, lancez `lobbystack billing extra-numbers --wait` et envoyez la page affichée à la personne qui paie. Achetez ensuite un numéro au prix que la recherche a montré :
+
+```bash
+lobbystack numbers search-extra --country CA
+lobbystack numbers buy-extra <offer_token> --agent-id <agent_id> --accept-monthly-price-cents 115 --wait
+```
+
+`--accept-monthly-price-cents` doit correspondre au prix de l'offre, sinon l'API refuse l'achat. Envoyez `null` pour une offre sans prix, comme sur un serveur auto-hébergé. `lobbystack numbers list` montre l'agent et le prix mensuel de chaque numéro. `--kind toll_free` cherche des numéros sans frais aux États-Unis et au Canada, à 2,15 $ US par mois.

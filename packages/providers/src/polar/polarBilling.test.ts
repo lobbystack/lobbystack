@@ -65,6 +65,14 @@ describe("PolarBillingProvider", () => {
     await expect(provider.cancelSubscriptionAtPeriodEnd({ subscriptionId: "sub-1" })).resolves.toEqual({ endsAt: "2026-11-12T00:00:00Z" });
     expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1].body))).toEqual({ cancel_at_period_end: true });
   });
+  it("sets or takes back a cancellation at the period's end", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
+    vi.stubGlobal("fetch", fetchMock);
+    const provider = new PolarBillingProvider({ accessToken: "token", organizationId: "organization", baseUrl: "https://polar.example" });
+    await provider.setCancelAtPeriodEnd({ subscriptionId: "sub_extra", cancelAtPeriodEnd: false });
+    expect(fetchMock).toHaveBeenCalledWith("https://polar.example/v1/subscriptions/sub_extra", expect.objectContaining({ method: "PATCH" }));
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1].body))).toEqual({ cancel_at_period_end: false });
+  });
   describe("errors", () => {
     const provider = () => new PolarBillingProvider({ accessToken: "token", organizationId: "organization", baseUrl: "https://polar.example" });
     const answer = (status: number, body: unknown) => vi.fn().mockResolvedValue({ ok: false, status, text: async () => typeof body === "string" ? body : JSON.stringify(body) });

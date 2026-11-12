@@ -140,6 +140,7 @@ export const BILLING_EVENT_NAMES = [
   "billing.subscription_started",
   "billing.subscription_canceled",
   "billing.package_subscription_started",
+  "billing.extra_number_bought",
 ] as const;
 
 export const OPERATIONS_EVENT_NAMES = [
@@ -395,6 +396,8 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
   "billing.subscription_canceled": ["businessId", "plan", "reason"],
   // A partner's business started paying for its package on the partner's Stripe. currency: the package's. Never the price.
   "billing.package_subscription_started": ["businessId", "partnerId", "packageId", "currency"],
+  // The worker bought an extra number. charged: whether it costs the business each month, false on a plan with no number limit.
+  "billing.extra_number_bought": ["businessId", "countryCode", "charged"],
   "voice.call_started": [
     "businessId",
     "deploymentMode",

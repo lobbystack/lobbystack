@@ -4,6 +4,10 @@ import {
   cancelAppointmentForApi,
   cancelKnowledgeSourceForApi,
   claimPhoneNumberForApi,
+  claimExtraPhoneNumberForApi,
+  createExtraNumbersCheckoutForApi,
+  getExtraNumbersCheckoutForApi,
+  searchExtraPhoneNumbersForApi,
   completeOnboardingForApi,
   completeKnowledgeUploadForApi,
   createAppointmentForApi,
@@ -114,6 +118,10 @@ import {
   apiOnboardingCompleteSchema,
   apiOnboardingUpdateSchema,
   apiPhoneNumberClaimCreateSchema,
+  apiExtraNumbersCheckoutCreateSchema,
+  apiExtraPhoneNumberClaimCreateSchema,
+  apiExtraPhoneNumberSearchSchema,
+  extraNumbersProductId,
   apiPhoneNumberSearchSchema,
   apiBusinessUpdateSchema,
   apiContactCreateSchema,
@@ -423,6 +431,22 @@ export const v1 = {
     const userId = await resolveActingUserId(context, caller);
     return { body: { data: await searchPhoneNumbersForApi(context, caller, body, { userId, provider: guardedNumberSearch(getTelephony().numbers, () => requireNumberSearchAllowed(userId)), claimTokenSecret: getNumberClaimTokenSecret() }), next_cursor: null, has_more: false } };
   }),
+  searchExtraPhoneNumbers: (request: Request) => handleApiRequest(request, "searchExtraPhoneNumbers", async ({ context, caller }) => {
+    refusePartnerPlatformKey(caller, "extra_numbers");
+    if (!numbersConfigured()) throw new PublicApiError(503, "phone_numbers_unavailable", "Phone numbers aren't set up on this deployment.");
+    const body = await readApiBody(request, apiExtraPhoneNumberSearchSchema);
+    const userId = await resolveActingUserId(context, caller);
+    return { body: { data: await searchExtraPhoneNumbersForApi(context, caller, body, { provider: guardedNumberSearch(getTelephony().numbers, () => requireNumberSearchAllowed(userId)), claimTokenSecret: getNumberClaimTokenSecret() }), next_cursor: null, has_more: false } };
+  }),
+  createExtraPhoneNumberClaim: (request: Request) => handleApiRequest(request, "createExtraPhoneNumberClaim", async ({ context, caller }) => {
+    const body = await readApiBody(request, apiExtraPhoneNumberClaimCreateSchema);
+    return { body: data(await claimExtraPhoneNumberForApi(context, caller, body, { claimTokenSecret: getNumberClaimTokenSecret() })) };
+  }),
+  createExtraNumbersCheckout: (request: Request) => handleApiRequest(request, "createExtraNumbersCheckout", async ({ context, caller }) => {
+    const body = await readApiBody(request, apiExtraNumbersCheckoutCreateSchema);
+    return { body: data(await createExtraNumbersCheckoutForApi(context, caller, body, { available: Boolean(process.env.POLAR_ACCESS_TOKEN && process.env.POLAR_ORGANIZATION_ID && extraNumbersProductId(process.env)) })) };
+  }),
+  getExtraNumbersCheckout: (request: Request, { params }: Params<"checkout_id">) => handleApiRequest(request, "getExtraNumbersCheckout", async ({ context, caller }) => ({ body: data(await getExtraNumbersCheckoutForApi(context, caller, uuidParam((await params).checkout_id, "checkout_id"))) })),
   createPhoneNumberClaim: (request: Request) => handleApiRequest(request, "createPhoneNumberClaim", async ({ context, caller, credential }) => {
     const body = await readApiBody(request, apiPhoneNumberClaimCreateSchema);
     // No network hash: customers of one integration platform claim from its addresses, so a per-network limit would let only one of them have a trial.

@@ -97,7 +97,7 @@ El código es suyo y evita las tarifas de plataforma. Le queda escribir la recep
 Una recepcionista de código abierto trae lo que las opciones 1 a 4 le dejan a usted. [LobbyStack](/es/solutions/self-hosted-ai-receptionist/) atiende cada llamada, por teléfono o en el navegador, con `gpt-live-1`, y su agente ya tiene herramientas para:
 
 - horarios, servicios y respuestas sacadas de su sitio web, sus PDF y sus preguntas frecuentes
-- buscar espacios y reservar en Google Calendar, o tomar una solicitud de cita para su equipo
+- buscar espacios y reservar en Google Calendar, Cal.com o Calendly, o tomar una solicitud de cita para su equipo
 - mover o cancelar una cita después de verificar a quien llama
 - tomar mensajes y transferir la llamada a una persona
 
@@ -155,7 +155,7 @@ Para las llamadas telefónicas en LobbyStack, sí: las llamadas llegan a GPT-Liv
 
 ### ¿Una recepcionista hecha así puede agendar citas?
 
-Solo si le da una herramienta de reservas. GPT-Live habla; su servidor revisa el calendario y guarda la cita. LobbyStack reserva en Google Calendar, o toma solicitudes que su equipo confirma.
+Solo si le da una herramienta de reservas. GPT-Live habla; su servidor revisa el calendario y guarda la cita. LobbyStack reserva en Google Calendar, Cal.com o Calendly, o toma solicitudes que su equipo confirma.
 
 ## Escuche la voz antes de construir
 

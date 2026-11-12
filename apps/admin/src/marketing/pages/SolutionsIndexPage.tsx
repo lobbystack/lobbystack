@@ -98,7 +98,7 @@ const copyByLocale = {
         title: "AI receptionist in Quebec",
         href: "/solutions/ai-receptionist-quebec/",
         description:
-          "Answer Quebec customers in French on your number, book into Google Calendar and switch to English when the caller does.",
+          "Answer Quebec customers in French on your number, book into Google Calendar, Cal.com or Calendly and switch to English when the caller does.",
       },
       {
         title: "White-label AI receptionist",
@@ -240,7 +240,7 @@ const copyByLocale = {
         title: "Réceptionniste IA au Québec",
         href: "/solutions/ai-receptionist-quebec/",
         description:
-          "Répondez en français à vos clients du Québec sur votre numéro, réservez dans Google Calendar et passez à l’anglais au besoin.",
+          "Répondez en français à vos clients du Québec sur votre numéro, réservez dans Google Calendar, Cal.com ou Calendly et passez à l’anglais au besoin.",
       },
       {
         title: "Réceptionniste IA en marque blanche",
@@ -382,7 +382,7 @@ const copyByLocale = {
         title: "Recepcionista con IA en Quebec",
         href: "/solutions/ai-receptionist-quebec/",
         description:
-          "Atienda en francés a sus clientes de Quebec en su número, reserve en Google Calendar y cambie al inglés cuando el cliente lo hable.",
+          "Atienda en francés a sus clientes de Quebec en su número, reserve en Google Calendar, Cal.com o Calendly y cambie al inglés cuando el cliente lo hable.",
       },
       {
         title: "Recepcionista con IA de marca blanca",
@@ -524,7 +524,7 @@ const copyByLocale = {
         title: "AI recepcioner u Kvebeku",
         href: "/solutions/ai-receptionist-quebec/",
         description:
-          "Odgovarajte klijentima iz Kvebeka na francuskom na Vašem broju, zakazujte u Google Calendar i pređite na engleski kada klijent to zatraži.",
+          "Odgovarajte klijentima iz Kvebeka na francuskom na Vašem broju, zakazujte u Google Calendar, Cal.com ili Calendly i pređite na engleski kada klijent to zatraži.",
       },
       {
         title: "White-label AI recepcioner",

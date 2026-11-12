@@ -348,6 +348,20 @@
       },
       "continue": "Nastavite podešavanje",
       "dashboard": "Idi na kontrolnu tablu"
+    },
+    "addOns": {
+      "title": "Dodaci",
+      "active": "Aktivan",
+      "get": "Uzmi dodatak",
+      "checkoutFailed": "Plaćanje nije moglo da se otvori. Pokušajte ponovo.",
+      "extraNumbers": {
+        "title": "Dodatni brojevi",
+        "description": "Dajte agentu sopstveni broj.",
+        "price": "Od {{price}} po broju /mesečno",
+        "count_one": "{{count}} dodatni broj",
+        "count_few": "{{count}} dodatna broja",
+        "count_other": "{{count}} dodatnih brojeva"
+      }
     }
   },
   "subscription": {
@@ -394,7 +408,8 @@
     "reclaim": {
       "title": "Ovaj broj će biti oslobođen {{date}}",
       "description": "Free paket ne uključuje namenski poslovni broj. Pređite na Starter ili Pro pre tog datuma da biste zadržali {{number}}.",
-      "upgradeCta": "Nadogradite i zadržite broj"
+      "upgradeCta": "Nadogradite i zadržite broj",
+      "extraNumbersEnded": "Dodatak Dodatni brojevi je istekao. Uzmite ga ponovo pre tog datuma da biste zadržali {{number}}."
     },
     "freeTrial": {
       "description": "Još nemate broj. Isprobajte ga besplatno 14 dana.",
@@ -473,7 +488,18 @@
       "changed": "Broj telefona je promenjen. Prethodni broj ostaje aktivan još 30 dana.",
       "added": "Broj telefona je dodat."
     },
-    "numbersUnavailable": "Brojevi telefona još nisu podešeni na ovoj kontrolnoj tabli. Zamolite osobu koja njome upravlja da poveže telefonskog provajdera."
+    "numbersUnavailable": "Brojevi telefona još nisu podešeni na ovoj kontrolnoj tabli. Zamolite osobu koja njome upravlja da poveže telefonskog provajdera.",
+    "extra": {
+      "buy": "Kupi broj",
+      "select": "Kupi",
+      "monthly": "{{price}} mesečno",
+      "confirmTitle": "Kupiti {{number}}?",
+      "confirmDescription": "Košta {{price}} mesečno.",
+      "confirm": "Kupi broj",
+      "cancel": "Otkaži",
+      "priceChanged": "Cena se promenila. Pretražite ponovo da biste je videli.",
+      "unavailable": "Ovaj radni prostor ne može da kupi još brojeva."
+    }
   },
   "appearance": {
     "title": "Postavke",
@@ -1077,6 +1103,12 @@
         "unavailable": "Ovaj kod više ne važi. Zatražite novi.",
         "checkFailed": "Provera koda nije uspela. Pokušajte ponovo."
       }
+    },
+    "marketing": {
+      "title": "Marketinški imejlovi",
+      "label": "Saveti i podsetnici",
+      "description": "Saveti za podešavanje i podsetnici da izaberete paket.",
+      "saveFailed": "Nismo uspeli da sačuvamo Vaš izbor. Pokušajte ponovo."
     }
   },
   "secretReveal": {

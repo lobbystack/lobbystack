@@ -72,7 +72,7 @@ LobbyStack organizes business context, phone numbers, transfers, appointments, c
 
 Goodcall's workers give non-technical users a way to define what the agent collects and does. Native connections cover Google Calendar, Google Sheets, and HighLevel, and an API tool or MCP server reaches other systems. Zapier works with older Goodcall 3 agents. Escalation contacts let the agent transfer callers to people, retry busy lines, and try up to three contacts. That approach works for a business owner who wants to configure an agent in a browser and leave infrastructure to the vendor.
 
-LobbyStack also lets operators configure business knowledge and call behavior through the product. It books into Google Calendar and sends events to other tools through webhooks and its REST API. Its open repository adds another route for technical teams. They can inspect the implementation, add provider integrations, or deploy the system within their own environment.
+LobbyStack also lets operators configure business knowledge and call behavior through the product. It books into Google Calendar, Cal.com, or Calendly and sends events to other tools through webhooks and its REST API. Its open repository adds another route for technical teams. They can inspect the implementation, add provider integrations, or deploy the system within their own environment.
 
 Goodcall's reviewed pages do not advertise public source code or self-hosting. LobbyStack's control requires more technical ownership.
 

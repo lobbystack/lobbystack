@@ -3,14 +3,18 @@ import { sql } from "drizzle-orm";
 import type { Database, DatabaseTransaction } from "@lobbystack/db";
 
 // The host's own emails to the businesses it serves directly: the welcome
-// email after onboarding, and the number trial and release emails with the
-// host's prices. A partner's businesses never get them, since the host never
+// email after onboarding, the reminder to choose a plan, and the number trial
+// and release emails with the host's prices. A partner's businesses never get them, since the host never
 // contacts its partners' businesses. Each is checked when it's scheduled and
 // again when it's sent, so one queued before a check existed, or by a path
 // that missed it, still stays home.
 
-/** The email templates only a direct business gets. Marketing emails belong here when the host adds them. */
-export const HOST_ONLY_EMAIL_TEMPLATES = ["welcome", "number_trial", "number_release"] as const;
+/**
+ * The email templates only a direct business gets. A new marketing email
+ * belongs here, and in MARKETING_EMAIL_TEMPLATES (packages/providers), which
+ * gives it the unsubscribe link and header and skips it for anyone who unsubscribed.
+ */
+export const HOST_ONLY_EMAIL_TEMPLATES = ["welcome", "plan_reminder", "number_trial", "number_release"] as const;
 
 export function isHostOnlyEmailTemplate(template: unknown): boolean {
   return typeof template === "string" && (HOST_ONLY_EMAIL_TEMPLATES as readonly string[]).includes(template);

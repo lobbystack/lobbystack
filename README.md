@@ -45,7 +45,7 @@ LobbyStack saves texts sent to your business number and alerts your team. You re
 
 ### 📅 Appointment scheduling
 
-LobbyStack connects to Google Calendar, checks availability, offers time slots, books appointments, and sends a confirmation text and one reminder text 24 hours before, if the caller agrees. Callers can also reschedule or cancel during a later call.
+LobbyStack connects to Google Calendar, Cal.com or Calendly, checks availability, offers time slots, books appointments, and sends a confirmation text and one reminder text 24 hours before, if the caller agrees. Callers can also reschedule or cancel during a later call.
 
 ### 📚 Knowledge base
 
@@ -61,7 +61,7 @@ Review calls, SMS threads, transcripts, recordings, appointments, and customer d
 
 ### 🔌 Integrations
 
-LobbyStack connects to Google Calendar to check availability and book appointments. It doesn't connect to other calendars or CRMs yet.
+LobbyStack books into Google Calendar, Cal.com or Calendly. A REST API, signed webhooks, Zapier and an [MCP server](#mcp-server) connect it to your other tools. It doesn't sync with CRMs or practice-management software yet.
 
 ## Use cases
 
@@ -88,9 +88,45 @@ LobbyStack can be adapted for many local business workflows:
 | Human handoff | Live transfer and follow-up tasks for calls that need staff attention. |
 | Messages | Incoming texts with manual replies, connected to customer history. |
 | Website widget | Embeddable chat, lead capture, and browser calls with per-site access controls. Restricted: new widget keys are off unless you set `WIDGET_KEY_ISSUANCE_ENABLED=true`. |
+| MCP server | A Model Context Protocol server at `/api/mcp` that lets Claude, ChatGPT and other assistants read calls and book appointments. |
 | Dashboard | Calls, messages, contacts, appointments, recordings, transcripts, follow-ups, and analytics together. |
 | Usage and billing | Hosted plans, voice usage, alert SMS, transfer attempts, storage, and spending caps. |
 | Bring your own API keys | Self-hosted deployments can use your own Twilio or Telnyx, OpenAI-compatible AI, calendar, email, analytics, and billing provider credentials. |
+
+## MCP server
+
+LobbyStack runs a [Model Context Protocol](https://modelcontextprotocol.io) server, so you can connect Claude, ChatGPT, Claude Code, Cursor, VS Code or any other MCP client to a business and ask in plain language: "Who called yesterday and didn't book?" or "Book Dana Whitfield for a cleaning on Tuesday morning."
+
+| Setting | Value |
+| --- | --- |
+| Server URL | `https://app.lobbystack.com/api/mcp` (self-hosted: `https://<your-domain>/api/mcp`) |
+| Transport | Streamable HTTP |
+| Authentication | Sign in with LobbyStack (OAuth), or `Authorization: Bearer <API key>` |
+| Registry name | `io.github.lobbystack/lobbystack` in the [official MCP Registry](https://registry.modelcontextprotocol.io) |
+
+Add it to Claude Code:
+
+```bash
+claude mcp add --transport http lobbystack https://app.lobbystack.com/api/mcp
+```
+
+The server exposes 18 tools for one business. Each tool needs a scope, and every change lands in the business's audit log.
+
+| Tools | Scope |
+| --- | --- |
+| `get_business`, `list_services`, `list_staff` | `business:read` |
+| `update_business_hours` | `business:write` |
+| `list_calls`, `get_call` | `calls:read` |
+| `search_contacts`, `get_contact` | `contacts:read` |
+| `create_contact`, `update_contact` | `contacts:write` |
+| `list_appointments`, `get_appointment`, `check_availability` | `appointments:read` |
+| `book_appointment`, `cancel_appointment`, `reschedule_appointment` | `appointments:write` |
+| `list_messages` | `messages:read` |
+| `add_knowledge` | `knowledge:write` |
+
+Read-only tools carry `readOnlyHint`, and tools that cancel, move or replace data carry `destructiveHint`. White Label partners get extra tools for running their partner console.
+
+The implementation lives in [`apps/admin/src/lib/mcp/`](apps/admin/src/lib/mcp): `server.ts` builds the `McpServer` and registers the tools from `tools.ts` and `partner-tools.ts`, and [`apps/admin/app/api/mcp/route.ts`](apps/admin/app/api/mcp/route.ts) serves it. The [MCP server guide](https://docs.lobbystack.com/ai/mcp) covers scopes, errors and limits.
 
 ## Technology
 
@@ -100,6 +136,7 @@ LobbyStack can be adapted for many local business workflows:
 | Backend | PostgreSQL, Drizzle ORM, Redis, BullMQ |
 | Voice | OpenAI GPT-Live over SIP and WebRTC, through Twilio Elastic SIP Trunking or Telnyx SIP connections |
 | Agent | Vercel AI SDK, `gpt-6-luna` or any OpenAI-compatible model |
+| MCP | `@modelcontextprotocol/server` over Streamable HTTP, with OAuth or API keys |
 
 ## Hosted and open source
 

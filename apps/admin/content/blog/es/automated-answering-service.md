@@ -74,7 +74,7 @@ Con LobbyStack como ejemplo:
 
 - Usted escribe el saludo, el tono y las reglas de llamada en lenguaje sencillo, y la recepcionista sigue las reglas en el orden de prioridad que usted fije.
 - Responde con su base de conocimiento: páginas de su sitio web, archivos PDF, Word (.docx), de texto y Markdown, y las preguntas frecuentes que usted escriba.
-- Según el modo de reserva que elija, reserva en Google Calendar, toma una solicitud para que su equipo la confirme o toma un mensaje. Para reservar necesita su horario de atención.
+- Según el modo de reserva que elija, reserva en Google Calendar, Cal.com o Calendly, toma una solicitud para que su equipo la confirme o toma un mensaje. Para reservar necesita su horario de atención.
 - Envía por SMS una confirmación de la reserva y un recordatorio 24 horas antes de la cita a números de Estados Unidos y Canadá, si quien llama lo acepta.
 - Usted decide cuándo transfiere (nunca, siempre, a petición, en llamadas urgentes o solo en horario de atención), y las transferencias van a un solo número. Si una transferencia falla, ofrece tomar un mensaje y su equipo puede recibir un aviso.
 - Su equipo recibe un aviso por correo electrónico por cada mensaje y puede activar avisos por SMS a un móvil de Estados Unidos o Canadá.
@@ -84,7 +84,7 @@ Con LobbyStack como ejemplo:
 
 Conozca los límites de un producto antes de desviar una línea. Estos son los de LobbyStack:
 
-- Google Calendar es el único calendario que conecta.
+- Se conecta con Google Calendar, Cal.com y Calendly, y con ningún otro calendario.
 - La IA no responde mensajes de texto. Su equipo los contesta a mano desde el panel.
 - Las transferencias van a un solo número por negocio. Son transferencias ciegas, así que la recepcionista no pone al tanto a su personal antes de pasarle la llamada.
 - No hace llamadas salientes, como devoluciones de llamada o recordatorios por teléfono.
@@ -207,7 +207,7 @@ Las recepcionistas con IA encajan en negocios de servicios que viven de las rese
 - [Goodcall](https://www.goodcall.com/pricing) cobra por persona distinta que llama, así que las llamadas repetidas no cuestan más.
 - [RingCentral AIR](https://www.ringcentral.com/pricing/ai-receptionist.html) funciona con cualquier sistema telefónico y se conecta con Salesforce, HubSpot y Zoho.
 
-LobbyStack (nuestro producto) encaja con dueños que quieren reservas, transferencias y SMS de confirmación en un plan de $30 con 150 minutos. También sirve a negocios cuyos clientes hablan idiomas distintos del inglés y del español. Ofrece una prueba gratuita en el navegador y código con licencia MIT que puede autoalojar. Elija otro proveedor si necesita un calendario distinto de Google, sincronización con un software de gestión de consultorios, respuestas de IA a mensajes de texto o un menú de teclas.
+LobbyStack (nuestro producto) encaja con dueños que quieren reservas, transferencias y SMS de confirmación en un plan de $30 con 150 minutos. También sirve a negocios cuyos clientes hablan idiomas distintos del inglés y del español. Ofrece una prueba gratuita en el navegador y código con licencia MIT que puede autoalojar. Elija otro proveedor si reserva en Outlook o Acuity, o si necesita sincronización con un software de gestión de consultorios, respuestas de IA a mensajes de texto o un menú de teclas.
 
 ### Elija un servicio con personas si las llamadas exigen criterio
 

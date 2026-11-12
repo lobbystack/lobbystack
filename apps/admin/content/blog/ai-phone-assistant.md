@@ -52,7 +52,7 @@ Keep it short: the business name and a question. For example: "Plomberie Gagnon,
 
 ### 4. Connect your calendar
 
-Connect Google Calendar in the integrations and pick the calendar for bookings. The assistant then offers open times during the call and books. If you'd rather approve each appointment, request mode saves the time the caller wants and your team confirms it. Customers who agree get a confirmation text.
+Connect Google Calendar, Cal.com or Calendly in the integrations and pick where bookings go. The assistant then offers open times during the call and books. If you'd rather approve each appointment, request mode saves the time the caller wants and your team confirms it. Customers who agree get a confirmation text.
 
 ### 5. Write your rules in plain words
 

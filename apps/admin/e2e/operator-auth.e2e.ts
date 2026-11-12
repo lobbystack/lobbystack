@@ -51,10 +51,10 @@ async function cleanupFixtures(): Promise<void> {
   throw new Error("REPLACEMENT_E2E_DATABASE_URL is required for fixture cleanup.");
 }
 
-async function signUp(page: Page, identity: string, testInfo: TestInfo): Promise<void> {
+async function signUp(page: Page, identity: string, testInfo: TestInfo, locale = "en"): Promise<void> {
   const email = `${prefix}-${identity}@example.invalid`;
   await isolateAuthRateLimit(page, email, testInfo);
-  await page.goto("/en/signup");
+  await page.goto(`/${locale}/signup`);
   await page.locator('input[type="email"]').fill(email);
   await page.locator('input[type="password"]').fill(password);
   if (process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY) {
@@ -207,7 +207,8 @@ test("operator authentication, workspace access, isolation, and revocation", asy
 test("French signup retains the chosen locale through onboarding and reload", async ({ page }, testInfo) => {
   test.setTimeout(180_000);
   await page.addInitScript(() => localStorage.setItem("lobbystack.locale", "fr"));
-  await signUp(page, "french-owner", testInfo);
+  // A localized URL keeps its language over a stored one, so the French signup starts on /fr.
+  await signUp(page, "french-owner", testInfo, "fr");
   expect(await page.evaluate(async () => (await (await fetch("/api/preferences/locale")).json()).locale)).toBe("fr");
   await page.reload();
   await expect.poll(() => page.evaluate(() => localStorage.getItem("lobbystack.locale"))).toBe("fr");

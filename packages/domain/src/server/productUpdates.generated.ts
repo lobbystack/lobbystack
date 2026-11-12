@@ -110,5 +110,32 @@ export const PRODUCT_UPDATE_ENTRIES: readonly ProductUpdateEntry[] = [
         "href": "https://lobbystack.com/sr/changelog/#multiple-agents"
       }
     }
+  },
+  {
+    "slug": "extra-numbers",
+    "pubDate": "2026-11-12T00:00:00.000Z",
+    "dashboardHref": "/agents",
+    "copy": {
+      "en": {
+        "title": "Buy a second phone number for another agent",
+        "description": "Starter, Pro and Enterprise now sell extra numbers, each for one agent, at what the carrier charges us.",
+        "href": "https://lobbystack.com/changelog/#extra-numbers"
+      },
+      "fr": {
+        "title": "Un deuxième numéro de téléphone pour un autre agent",
+        "description": "Starter, Pro et Enterprise vendent maintenant des numéros supplémentaires, chacun pour un agent, au prix que nous facture l'opérateur.",
+        "href": "https://lobbystack.com/fr/changelog/#extra-numbers"
+      },
+      "es": {
+        "title": "Un segundo número de teléfono para otro agente",
+        "description": "Starter, Pro y Enterprise ahora venden números adicionales, cada uno para un agente, al precio que nos cobra el operador.",
+        "href": "https://lobbystack.com/es/changelog/#extra-numbers"
+      },
+      "sr": {
+        "title": "Drugi broj telefona za drugog agenta",
+        "description": "Starter, Pro i Enterprise sada prodaju dodatne brojeve, svaki za jednog agenta, po ceni koju nam naplaćuje operater.",
+        "href": "https://lobbystack.com/sr/changelog/#extra-numbers"
+      }
+    }
   }
 ];

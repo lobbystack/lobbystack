@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, asc, eq, inArray, isNull, lt, lte, ne, or, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, lt, lte, notInArray, or, sql } from "drizzle-orm";
 
 import type { TraceContextCarrier } from "@lobbystack/contracts";
 import { injectTraceContext, redactOtelExceptionText } from "@lobbystack/telemetry/node";
@@ -136,11 +136,14 @@ export async function markOutboxFailed(
   });
 }
 
+/** The jobs a business gets once ever, which pruning keeps so their dedupe keys keep holding. */
+const ONCE_PER_BUSINESS_TOPICS = ["onboarding.sendWelcome", "onboarding.sendPlanReminder"];
+
 /**
  * Deletes up to `limit` messages published before `publishedBefore` and returns
  * how many it removed. Unpublished and dead-lettered rows are never published,
- * so they stay. Welcome emails stay too: their dedupe key is what stops a
- * revisited last onboarding step from sending a second welcome.
+ * so they stay. Welcome emails and plan reminders stay too: their dedupe
+ * keys are what keep each to one per business.
  */
 export async function prunePublishedOutbox(
   db: Database,
@@ -150,7 +153,7 @@ export async function prunePublishedOutbox(
     const batch = tx
       .select({ id: outboxMessages.id })
       .from(outboxMessages)
-      .where(and(lt(outboxMessages.publishedAt, options.publishedBefore), ne(outboxMessages.topic, "onboarding.sendWelcome")))
+      .where(and(lt(outboxMessages.publishedAt, options.publishedBefore), notInArray(outboxMessages.topic, ONCE_PER_BUSINESS_TOPICS)))
       .limit(options.limit)
       .for("update", { skipLocked: true });
     const deleted = await tx.delete(outboxMessages).where(inArray(outboxMessages.id, batch)).returning({ id: outboxMessages.id });

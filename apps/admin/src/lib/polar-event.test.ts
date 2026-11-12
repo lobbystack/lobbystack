@@ -9,6 +9,15 @@ describe("Polar payload normalization", () => {
     expect(result.businessReference).toBe(businessId);
     expect(result.payload).toMatchObject({ billingKey: `business:${businessId}`, customerId: "cust_1", subscriptionId: "sub_1", subscriptionState: "active", plan: "pro", billingInterval: "monthly", subscriptionModifiedAt: "2026-09-01T12:00:00.000Z" });
   });
+  it("flags the extra numbers add-on's subscription and orders, which sell no plan", () => {
+    const env = { POLAR_EXTRA_NUMBERS_PRODUCT_ID: "extra_month", POLAR_PRO_MONTHLY_PRODUCT_ID: "pro_month" };
+    const subscription = normalizePolarEvent("subscription.active", { id: "sub_extra", status: "active", product_id: "extra_month", customer: { id: "cust_1", external_id: `business:${businessId}` } }, env);
+    expect(subscription.payload).toMatchObject({ extraNumbersAddon: true, subscriptionId: "sub_extra" });
+    expect(subscription.payload).not.toHaveProperty("plan");
+    const order = normalizePolarEvent("order.paid", { id: "order_1", status: "paid", subscription: { id: "sub_extra", product_id: "extra_month", status: "active" }, customer: { id: "cust_1", external_id: `business:${businessId}` } }, env);
+    expect(order.payload).toMatchObject({ extraNumbersAddon: true });
+    expect(normalizePolarEvent("subscription.active", { id: "sub_1", status: "active", product_id: "pro_month", customer: { external_id: `business:${businessId}` } }, env).payload).not.toHaveProperty("extraNumbersAddon");
+  });
   it("preserves prefixed legacy references without treating them as UUIDs", () => {
     const result = normalizePolarEvent("subscription.active", { customer: { external_id: "business:legacy-customer" } });
     expect(result.businessId).toBeUndefined();

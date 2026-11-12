@@ -93,7 +93,7 @@ describe("passkeys on the account page", () => {
     rows = [];
     stubServer();
     renderCard();
-    expect(await screen.findByText("account.passkeys.empty")).toBeTruthy();
+    expect((await screen.findByText("account.passkeys.empty")).closest("[data-slot=empty-state]")).toBeTruthy();
   });
 
   it("adds a passkey with the default name, confirms with a toast and reloads the list", async () => {

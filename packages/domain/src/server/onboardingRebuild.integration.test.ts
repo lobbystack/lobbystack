@@ -123,8 +123,8 @@ describe.skipIf(!testUrl)("the onboarding rebuild against dedicated PostgreSQL r
       await tx.insert(numberTrials).values({ businessId, userId, status: "active", startedAt: new Date(), endsAt: new Date(Date.now() + 14 * 86_400_000) });
       expect(await asApp(tx, (db) => advanceOnboardingStage({ db }, { userId, businessId, to: "complete" }))).toBe("choose_plan");
       expect((await business(tx, businessId)).stage).toBe("choose_plan");
-      // Leaving Meet your agent sends the welcome, once.
-      expect(await welcomes(tx, businessId)).toHaveLength(1);
+      // The welcome waits until onboarding finishes, after the plans.
+      expect(await welcomes(tx, businessId)).toHaveLength(0);
       expect(await asApp(tx, (db) => advanceOnboardingStage({ db }, { userId, businessId, to: "complete" }))).toBe("complete");
       expect(await welcomes(tx, businessId)).toHaveLength(1);
     });

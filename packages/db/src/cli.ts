@@ -225,6 +225,9 @@ async function main(): Promise<void> {
             ,('lobbystack_worker', 'partner_number_charges', 'SELECT')
             ,('lobbystack_worker', 'partner_number_charges', 'INSERT')
             ,('lobbystack_readonly', 'partner_number_charges', 'SELECT')
+            ,('lobbystack_app', 'business_number_charges', 'SELECT')
+            ,('lobbystack_worker', 'business_number_charges', 'SELECT')
+            ,('lobbystack_readonly', 'business_number_charges', 'SELECT')
             ,('lobbystack_app', 'partner_lifecycles', 'SELECT')
             ,('lobbystack_worker', 'partner_lifecycles', 'SELECT')
             ,('lobbystack_worker', 'partner_lifecycles', 'INSERT')
@@ -530,6 +533,37 @@ async function main(): Promise<void> {
         if (partnerNumberChargeGrantFailures.rows.length > 0) {
           throw new Error(`Partner number charge grant verification failed for: ${partnerNumberChargeGrantFailures.rows.map((row) => `${row.role_name}:${row.column_name}:${row.granted ? "missing" : "unexpected"}`).join(", ")}`);
         }
+        // The worker settles an extra number's months, and never changes its
+        // number, business or price. Only migration 0216's trigger records one,
+        // so nobody inserts or deletes them.
+        const businessNumberChargeGrantFailures = await migrator.db.execute<{ role_name: string; column_name: string; granted: boolean }>(sql`
+          select expected.role_name, expected.column_name, expected.granted
+          from (values
+            ('lobbystack_worker', 'months_settled', true),
+            ('lobbystack_worker', 'months_charged', true),
+            ('lobbystack_worker', 'updated_at', true),
+            ('lobbystack_worker', 'business_id', false),
+            ('lobbystack_worker', 'phone_number_id', false),
+            ('lobbystack_worker', 'monthly_price_cents', false),
+            ('lobbystack_worker', 'started_at', false),
+            ('lobbystack_app', 'months_settled', false),
+            ('lobbystack_app', 'monthly_price_cents', false)
+          ) as expected(role_name, column_name, granted)
+          where has_column_privilege(expected.role_name, 'public.business_number_charges', expected.column_name, 'UPDATE') <> expected.granted
+        `);
+        const businessNumberChargeTableFailures = await migrator.db.execute<{ role_name: string; privilege_type: string }>(sql`
+          select expected.role_name, expected.privilege_type
+          from (values
+            ('lobbystack_app', 'INSERT'),
+            ('lobbystack_app', 'DELETE'),
+            ('lobbystack_worker', 'INSERT'),
+            ('lobbystack_worker', 'DELETE')
+          ) as expected(role_name, privilege_type)
+          where has_table_privilege(expected.role_name, 'public.business_number_charges', expected.privilege_type)
+        `);
+        if (businessNumberChargeGrantFailures.rows.length > 0 || businessNumberChargeTableFailures.rows.length > 0) {
+          throw new Error(`Business number charge grant verification failed for: ${[...businessNumberChargeGrantFailures.rows.map((row) => `${row.role_name}:${row.column_name}:${row.granted ? "missing" : "unexpected"}`), ...businessNumberChargeTableFailures.rows.map((row) => `${row.role_name}:${row.privilege_type}:unexpected`)].join(", ")}`);
+        }
         // The worker moves a partner through its lifecycle, and never moves the
         // row to another partner.
         const partnerLifecycleWorkerGrantFailures = await migrator.db.execute<{ column_name: string; granted: boolean }>(sql`
@@ -670,6 +704,9 @@ async function main(): Promise<void> {
             ('lobbystack_app', 'app.partner_number_standing(uuid)'),
             ('lobbystack_worker', 'app.partner_number_standing(uuid)'),
             ('lobbystack_worker', 'app.due_partner_number_charges(timestamptz, integer, uuid[])'),
+            ('lobbystack_worker', 'app.due_business_number_charges(timestamptz, integer, uuid[])'),
+            ('lobbystack_app', 'app.reserve_extra_number_claim(uuid, uuid, uuid, text, jsonb, text, text, integer)'),
+            ('lobbystack_app', 'app.reserve_replacement_number_claim(uuid, uuid, text, jsonb, text, text, uuid)'),
             ('lobbystack_app', 'app.partner_business_answers(uuid)'),
             ('lobbystack_worker', 'app.partner_business_answers(uuid)'),
             ('lobbystack_worker', 'app.audit_partner_lifecycle_step(uuid, varchar, varchar, timestamptz, varchar)'),

@@ -78,7 +78,7 @@ Voice AI agenta ne možete da uvezete. Planirajte to kao kratko ponovno pravljen
 
 1. Kopirajte prompt agenta u LobbyStack pravila, a njegove činjenice u unose znanja.
 2. Dodajte sajt klijenta, da recepcioner pročita usluge i radno vreme.
-3. Dodajte usluge koje klijent zakazuje i povežite Google Calendar ili Cal.com.
+3. Dodajte usluge koje klijent zakazuje i povežite Google Calendar, Cal.com ili Calendly.
 4. Sačuvajte rezultat kao [šablon](https://docs.lobbystack.com/white-label/templates) za sledećeg klijenta iz te struke.
 5. Preusmerite liniju klijenta na novi broj, i zadržite starog agenta dok ne čujete prave pozive.
 

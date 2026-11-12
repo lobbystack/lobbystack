@@ -57,9 +57,9 @@ Une erreur réseau peut vous laisser dans le doute : la requête a-t-elle foncti
 - `POST /knowledge`
 - `POST /services`
 - `POST /rules`
-- `POST /billing/checkout`
+- `POST /billing/checkout` et `POST /billing/extra-numbers/checkout`
 - `POST /widget-keys`
-- `POST /phone-numbers/claims` et `POST /phone-numbers/{phone_number_id}/replace`, qui l'exigent
+- `POST /phone-numbers/claims`, `POST /phone-numbers/extra/claims` et `POST /phone-numbers/{phone_number_id}/replace`, qui l'exigent
 - `POST /team/invitations`, qui l'exige
 
 `POST /webhooks` ignore cet en-tête, pour que LobbyStack ne garde jamais de copie du secret de signature. Si une création échoue à cause d'une erreur réseau, vérifiez `GET /webhooks` avant de relancer.

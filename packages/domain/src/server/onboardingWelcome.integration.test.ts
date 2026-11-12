@@ -1,9 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
-import { businesses, createDatabaseClient, firstRealConversations, onboardingNumberClaimEvents, outboxMessages, phoneNumbers, users, type Database, type DatabaseTransaction, defaultAgentIdOf } from "@lobbystack/db";
+import { billingAccounts, businessMemberships, businesses, createDatabaseClient, enqueueOutbox, firstRealConversations, numberTrials, onboardingNumberClaimEvents, outboxMessages, partners, phoneNumbers, users, type Database, type DatabaseTransaction, defaultAgentIdOf } from "@lobbystack/db";
 import { createBusiness } from "./tenancy";
-import { advanceOnboardingStage, queueWelcomeEmail } from "./onboarding";
+import { advanceOnboardingStage, queueWelcomeEmail, welcomeEmailDedupeKey } from "./onboarding";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
 const testUrl = process.env.LOBBYSTACK_RELIABILITY_TEST_DATABASE_URL;
@@ -51,6 +51,33 @@ async function welcomeEmails(tx: DatabaseTransaction, businessId: string) {
   return await tx.select().from(outboxMessages).where(and(eq(outboxMessages.businessId, businessId), eq(outboxMessages.topic, "email.send")));
 }
 
+async function welcomeJobs(tx: DatabaseTransaction, businessId: string) {
+  return await tx.select({ dedupeKey: outboxMessages.dedupeKey }).from(outboxMessages).where(and(eq(outboxMessages.businessId, businessId), eq(outboxMessages.topic, "onboarding.sendWelcome")));
+}
+
+/** Runs every scheduled welcome job as the worker would, and returns the welcome emails queued. */
+async function sentWelcomes(tx: DatabaseTransaction, businessId: string) {
+  for (const _job of await welcomeJobs(tx, businessId)) await queueAsWorker(tx, businessId);
+  return (await welcomeEmails(tx, businessId)).filter((row) => (row.payload as { template?: string }).template === "welcome");
+}
+
+async function advance(tx: DatabaseTransaction, input: { userId: string; businessId: string }) {
+  await tx.execute(sql`set local role lobbystack_app`);
+  try {
+    return await advanceOnboardingStage({ db: tx as unknown as Database }, { ...input, to: "complete" });
+  } finally {
+    await tx.execute(sql`reset role`);
+  }
+}
+
+/** A direct cloud business on Meet your agent with a number trial nobody pays for yet, so the plans come next. */
+async function trialAtMeet(tx: DatabaseTransaction) {
+  const workspace = await completedWorkspace(tx);
+  await tx.update(businesses).set({ onboardingStage: "meet", deploymentMode: "cloud" }).where(eq(businesses.id, workspace.businessId));
+  await tx.insert(numberTrials).values({ businessId: workspace.businessId, userId: workspace.userId, status: "active", startedAt: new Date(), endsAt: new Date(Date.now() + 14 * 86_400_000) });
+  return workspace;
+}
+
 describe.skipIf(!testUrl)("welcome email against dedicated PostgreSQL roles", () => {
   it("schedules the welcome when onboarding completes, once, and no founder's check-in", async () => {
     await rollbackTest(async tx => {
@@ -64,6 +91,68 @@ describe.skipIf(!testUrl)("welcome email against dedicated PostgreSQL roles", ()
       const topics = await tx.select({ topic: outboxMessages.topic, availableAt: outboxMessages.availableAt }).from(outboxMessages).where(and(eq(outboxMessages.businessId, businessId), sql`${outboxMessages.topic} like 'onboarding.%'`));
       expect(topics.map((row) => row.topic)).toEqual(["onboarding.sendWelcome"]);
       expect(Math.abs(topics[0]!.availableAt.getTime() - before)).toBeLessThan(60_000);
+      expect(await sentWelcomes(tx, businessId)).toHaveLength(1);
+    });
+  });
+
+  it("waits for the plans: going from Meet your agent to them schedules nothing yet", async () => {
+    await rollbackTest(async tx => {
+      const workspace = await trialAtMeet(tx);
+      expect(await advance(tx, workspace)).toBe("choose_plan");
+      expect(await welcomeJobs(tx, workspace.businessId)).toEqual([]);
+      expect(await sentWelcomes(tx, workspace.businessId)).toEqual([]);
+    });
+  });
+
+  it("sends one welcome when the owner picks Free on the plans", async () => {
+    await rollbackTest(async tx => {
+      const workspace = await trialAtMeet(tx);
+      expect(await advance(tx, workspace)).toBe("choose_plan");
+      expect(await advance(tx, workspace)).toBe("complete");
+      expect(await advance(tx, workspace)).toBe("complete");
+      expect(await welcomeJobs(tx, workspace.businessId)).toEqual([{ dedupeKey: welcomeEmailDedupeKey(workspace.businessId) }]);
+      expect(await sentWelcomes(tx, workspace.businessId)).toHaveLength(1);
+    });
+  });
+
+  it("sends one welcome when the owner pays for a plan on the plans", async () => {
+    await rollbackTest(async tx => {
+      const workspace = await trialAtMeet(tx);
+      expect(await advance(tx, workspace)).toBe("choose_plan");
+      // The checkout's subscription syncs, then its return page finishes onboarding.
+      await tx.insert(billingAccounts).values({ businessId: workspace.businessId, billingKey: `business:${workspace.businessId}`, plan: "starter", subscriptionState: "active" }).onConflictDoUpdate({ target: billingAccounts.businessId, set: { plan: "starter", subscriptionState: "active" } });
+      expect(await advance(tx, workspace)).toBe("complete");
+      expect(await sentWelcomes(tx, workspace.businessId)).toHaveLength(1);
+    });
+  });
+
+  it("isn't blocked by the job an earlier release scheduled on the way to the plans, and still sends only one", async () => {
+    await rollbackTest(async tx => {
+      const workspace = await trialAtMeet(tx);
+      expect(await advance(tx, workspace)).toBe("choose_plan");
+      // The earlier release scheduled its job under the old key, and it skipped there.
+      await enqueueOutbox(tx, { topic: "onboarding.sendWelcome", businessId: workspace.businessId, aggregateType: "business", aggregateId: workspace.businessId, dedupeKey: `onboarding-welcome:${workspace.businessId}`, availableAt: new Date(), payload: {} });
+      expect(await queueAsWorker(tx, workspace.businessId)).toBe("skipped");
+      expect(await advance(tx, workspace)).toBe("complete");
+      // Both jobs run after completion, the old one late; the email's own key keeps it to one.
+      expect(await welcomeJobs(tx, workspace.businessId)).toHaveLength(2);
+      expect(await sentWelcomes(tx, workspace.businessId)).toHaveLength(1);
+    });
+  });
+
+  it("never schedules the welcome for a partner's business", async () => {
+    await rollbackTest(async tx => {
+      // A direct business can't join a partner later, so this one starts as the partner's.
+      const userId = randomUUID();
+      const email = `${userId}@example.invalid`;
+      await tx.insert(users).values({ id: userId, email, normalizedEmail: email, name: "Sam Owner" });
+      const [partner] = await tx.insert(partners).values({ name: "Acme Reception", slug: `acme-${randomUUID().slice(0, 8)}` }).returning({ id: partners.id });
+      const businessId = randomUUID();
+      await tx.insert(businesses).values({ id: businessId, slug: `harbor-${businessId.slice(0, 8)}`, name: "Harbor Dental", timezone: "UTC", businessType: "dental", partnerId: partner!.id, partnerAccessLevel: "full", onboardingStage: "meet" });
+      await tx.insert(businessMemberships).values({ businessId, userId, role: "business_owner", status: "active" });
+      expect(await advance(tx, { userId, businessId })).toBe("complete");
+      expect(await welcomeJobs(tx, businessId)).toEqual([]);
+      expect(await sentWelcomes(tx, businessId)).toEqual([]);
     });
   });
 

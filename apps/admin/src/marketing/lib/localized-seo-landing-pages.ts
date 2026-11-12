@@ -15,17 +15,17 @@ const bespokeSolutionPagesFr: Record<string, SeoLandingPage> = {
     path: "/solutions/ai-phone-answering/",
     title: "Service de réponse téléphonique IA pour petites entreprises | LobbyStack",
     description:
-      "Le service de réponse téléphonique IA de LobbyStack répond à vos appels, réserve les rendez-vous dans Google Calendar et transfère l’urgent. Essai gratuit.",
+      "Le service de réponse téléphonique IA de LobbyStack répond à vos appels, réserve dans Google Calendar, Cal.com ou Calendly et transfère l’urgent. Essai gratuit.",
     eyebrow: "Réponse téléphonique IA",
     h1: "Un service de réponse téléphonique IA pour les appels que vous ne pouvez pas prendre",
     intro:
-      "Quand vous êtes sur un chantier ou avec un client, l’appelant qui tombe sur votre boîte vocale compose le numéro suivant sur sa liste. LobbyStack décroche sur votre numéro, réserve la visite dans Google Calendar et fait sonner votre téléphone quand un appel est urgent.",
+      "Quand vous êtes sur un chantier ou avec un client, l’appelant qui tombe sur votre boîte vocale compose le numéro suivant sur sa liste. LobbyStack décroche sur votre numéro, réserve la visite dans Google Calendar, Cal.com ou Calendly et fait sonner votre téléphone quand un appel est urgent.",
     image: "/illustrations/call-capture.webp",
     imageAlt:
       "Le service de réponse téléphonique IA de LobbyStack prend un appel pendant que l’équipe est occupée",
     proofPoints: [
       "Fonctionne sur le numéro d’entreprise que vous avez déjà",
-      "Réserve dans Google Calendar pendant l’appel",
+      "Réserve dans Google Calendar, Cal.com ou Calendly pendant l’appel",
       "Transfère les appels urgents au numéro que vous choisissez",
       "Les appels indésirables et ceux de moins de 10 secondes ne consomment aucune minute",
     ],
@@ -36,7 +36,7 @@ const bespokeSolutionPagesFr: Record<string, SeoLandingPage> = {
         body: "Les appelants parlent comme ils le feraient à votre réception. LobbyStack répond aux questions à partir des services, des prix, des heures et des politiques que vous ajoutez, et réserve la visite avant que l’appelant raccroche.",
         points: [
           "Répond à partir de texte, de PDF ou de pages de votre site web",
-          "Propose les plages libres de votre Google Calendar et, si l’appelant accepte, envoie par texto une confirmation et un rappel",
+          "Propose les plages libres de votre Google Calendar, Cal.com ou Calendly et, si l’appelant accepte, envoie par texto une confirmation et un rappel",
         ],
       },
       {
@@ -78,7 +78,7 @@ const bespokeSolutionPagesFr: Record<string, SeoLandingPage> = {
       {
         question: "Qu’est-ce qu’un service de réponse téléphonique IA ?",
         answer:
-          "Un service de réponse téléphonique IA prend les appels de votre entreprise avec une IA vocale plutôt qu’avec une personne. LobbyStack parle avec l’appelant, répond aux questions à partir des renseignements que vous ajoutez, réserve les rendez-vous dans Google Calendar, prend des messages et transfère les appels urgents à votre équipe, en suivant les règles que vous écrivez.",
+          "Un service de réponse téléphonique IA prend les appels de votre entreprise avec une IA vocale plutôt qu’avec une personne. LobbyStack parle avec l’appelant, répond aux questions à partir des renseignements que vous ajoutez, réserve les rendez-vous dans Google Calendar, Cal.com ou Calendly, prend des messages et transfère les appels urgents à votre équipe, en suivant les règles que vous écrivez.",
       },
       {
         question:
@@ -105,7 +105,7 @@ const bespokeSolutionPagesFr: Record<string, SeoLandingPage> = {
       {
         question: "Peut-il réserver des rendez-vous pendant l’appel ?",
         answer:
-          "Oui. Connectez Google Calendar et ajoutez vos services. LobbyStack propose les plages libres pendant vos heures d’ouverture, réserve celle que l’appelant choisit et, si l’appelant accepte, envoie par texto une confirmation et un rappel 24 heures avant. Sur LobbyStack Cloud, les textos vont aux numéros américains et canadiens.",
+          "Oui. Connectez Google Calendar, Cal.com ou Calendly et ajoutez vos services. LobbyStack propose les plages libres pendant vos heures d’ouverture, réserve celle que l’appelant choisit et, si l’appelant accepte, envoie par texto une confirmation et un rappel 24 heures avant. Sur LobbyStack Cloud, les textos vont aux numéros américains et canadiens.",
       },
       {
         question:
@@ -166,16 +166,16 @@ const bespokeSolutionPagesFr: Record<string, SeoLandingPage> = {
     path: "/solutions/ai-appointment-scheduler/",
     title: "Agent de prise de rendez-vous IA pour appels entrants | LobbyStack",
     description:
-      "Un agent de prise de rendez-vous IA pour vos appels entrants : LobbyStack propose les plages libres de Google Calendar, réserve et confirme par texto.",
+      "Agent de rendez-vous IA pour appels entrants : LobbyStack propose les plages libres de Google Calendar, Cal.com ou Calendly, réserve et confirme par texto.",
     eyebrow: "Prise de rendez-vous par IA",
     h1: "Un agent de prise de rendez-vous IA qui réserve les appelants avant qu’ils raccrochent",
     intro:
-      "Si un appelant tombe sur votre boîte vocale, l’entreprise suivante qu’il appelle peut lui donner un rendez-vous avant que vous le rappeliez. LobbyStack répond, propose les plages libres de votre Google Calendar, réserve celle que la personne choisit et lui envoie une confirmation par texto.",
+      "Si un appelant tombe sur votre boîte vocale, l’entreprise suivante qu’il appelle peut lui donner un rendez-vous avant que vous le rappeliez. LobbyStack répond, propose les plages libres de votre Google Calendar, Cal.com ou Calendly, réserve celle que la personne choisit et lui envoie une confirmation par texto.",
     image: "/illustrations/booking-flow.webp",
     imageAlt:
       "L’agent de prise de rendez-vous IA de LobbyStack réserve une plage libre pour un appelant",
     proofPoints: [
-      "Réserve dans Google Calendar pendant l’appel",
+      "Réserve dans Google Calendar, Cal.com ou Calendly pendant l’appel",
       "Propose seulement des heures comprises dans vos heures d’ouverture",
       "Envoie par texto une confirmation et un rappel",
       "Déplace ou annule les rendez-vous si vous le permettez",
@@ -183,7 +183,7 @@ const bespokeSolutionPagesFr: Record<string, SeoLandingPage> = {
     sections: [
       {
         title: "Comment l’agent de prise de rendez-vous IA réserve un appel",
-        body: "Il détermine le service dont l’appelant a besoin, trouve des plages assez longues pour ce travail et lui laisse le choix. L’appelant en prend une, et le rendez-vous apparaît dans votre Google Calendar.",
+        body: "Il détermine le service dont l’appelant a besoin, trouve des plages assez longues pour ce travail et lui laisse le choix. L’appelant en prend une, et le rendez-vous apparaît dans votre Google Calendar ou Cal.com.",
         points: [
           "Si l’appelant accepte, il envoie tout de suite une confirmation par texto et un rappel 24 heures avant",
           "Sur LobbyStack Cloud, les textos vont aux numéros américains et canadiens",
@@ -211,7 +211,7 @@ const bespokeSolutionPagesFr: Record<string, SeoLandingPage> = {
         points: [
           "Le service et sa durée",
           "Vos heures d’ouverture et les heures de travail de chaque employé",
-          "Les périodes occupées dans votre Google Calendar",
+          "Les périodes occupées dans Google Calendar, Cal.com ou Calendly",
           "Les congés que vous ajoutez pour un employé",
         ],
       },
@@ -229,7 +229,7 @@ const bespokeSolutionPagesFr: Record<string, SeoLandingPage> = {
       {
         question: "Qu’est-ce qu’un agent de prise de rendez-vous IA ?",
         answer:
-          "Un agent de prise de rendez-vous IA est une IA vocale qui réserve des rendez-vous par téléphone. LobbyStack répond à vos appels entrants, demande ce dont l’appelant a besoin, propose les plages libres de votre Google Calendar et réserve celle qu’il choisit. Il ne fait pas d’appels de vente sortants.",
+          "Un agent de prise de rendez-vous IA est une IA vocale qui réserve des rendez-vous par téléphone. LobbyStack répond à vos appels entrants, demande ce dont l’appelant a besoin, propose les plages libres de votre Google Calendar, Cal.com ou Calendly et réserve celle qu’il choisit. Il ne fait pas d’appels de vente sortants.",
       },
       {
         question:
@@ -240,7 +240,7 @@ const bespokeSolutionPagesFr: Record<string, SeoLandingPage> = {
       {
         question: "Dans quel calendrier réserve-t-il ?",
         answer:
-          "Google Calendar. Vous connectez un compte Google et choisissez le calendrier qui reçoit les réservations. LobbyStack y lit vos périodes occupées, donc il ne propose pas une plage déjà prise.",
+          "Google Calendar, Cal.com ou Calendly. Vous connectez votre compte et choisissez le calendrier ou le type d’événement qui reçoit les réservations. LobbyStack y lit vos périodes occupées, donc il ne propose pas une plage déjà prise.",
       },
       {
         question:
@@ -303,7 +303,7 @@ const bespokeSolutionPagesFr: Record<string, SeoLandingPage> = {
     ctaHeading:
       "Réservez votre prochain appelant pendant qu’il est encore en ligne",
     ctaBody:
-      "Ajoutez vos services, connectez Google Calendar et appelez votre numéro pour réserver un rendez-vous test. Le forfait gratuit inclut 30 minutes vocales.",
+      "Ajoutez vos services, connectez Google Calendar ou Cal.com et appelez votre numéro pour réserver un rendez-vous test. Le forfait gratuit inclut 30 minutes vocales.",
     ctaPrimaryLabel: "Essayer gratuitement",
     ctaSecondaryLabel: "Voir les tarifs",
   },
@@ -313,11 +313,11 @@ const bespokeSolutionPagesFr: Record<string, SeoLandingPage> = {
     path: "/solutions/ai-receptionist-for-home-services/",
     title: "Réceptionniste IA pour services à domicile | LobbyStack",
     description:
-      "Réceptionniste IA pour services à domicile : LobbyStack répond pendant que votre équipe travaille, réserve dans Google Calendar et transfère les urgences.",
+      "Réceptionniste IA pour services à domicile : LobbyStack répond pendant vos travaux, réserve dans Google Calendar, Cal.com ou Calendly et transfère les urgences.",
     eyebrow: "Services à domicile",
     h1: "Un réceptionniste IA pour services à domicile qui réserve vos interventions pendant que vous travaillez",
     intro:
-      "Vous ne pouvez pas répondre quand vous êtes sous un évier ou sur un toit. LobbyStack décroche, recueille l’adresse et le problème, réserve la visite dans Google Calendar et transfère à votre téléphone de garde les urgences que vous avez définies.",
+      "Vous ne pouvez pas répondre quand vous êtes sous un évier ou sur un toit. LobbyStack décroche, recueille l’adresse et le problème, réserve la visite dans Google Calendar, Cal.com ou Calendly et transfère à votre téléphone de garde les urgences que vous avez définies.",
     image: "/illustrations/industry-bookings.webp",
     imageAlt:
       "Le réceptionniste IA pour services à domicile de LobbyStack réserve une intervention à partir d’un appel",
@@ -334,7 +334,7 @@ const bespokeSolutionPagesFr: Record<string, SeoLandingPage> = {
         body: "Vous décidez quels appels sont des urgences. Tout le reste est réservé ou résumé pour vous.",
         points: [
           "Les urgences, comme un tuyau éclaté ou une panne de chauffage en hiver, vont à votre technicien de garde, avec l’adresse et le problème dans la transcription",
-          "Les travaux qui peuvent attendre reçoivent une plage libre de votre Google Calendar et un résumé d’appel",
+          "Les travaux qui peuvent attendre reçoivent une plage libre de votre Google Calendar, Cal.com ou Calendly et un résumé d’appel",
         ],
       },
       {
@@ -369,7 +369,7 @@ const bespokeSolutionPagesFr: Record<string, SeoLandingPage> = {
         question:
           "Qu’est-ce qu’un réceptionniste IA pour services à domicile ?",
         answer:
-          "C’est une IA vocale qui répond au téléphone d’une entreprise de plomberie, de CVC, d’électricité, de toiture ou d’un autre métier. LobbyStack décroche quand votre équipe ne peut pas, recueille l’adresse et le problème, réserve les visites dans Google Calendar, répond aux questions à partir de vos renseignements et transfère les urgences à votre numéro de garde.",
+          "C’est une IA vocale qui répond au téléphone d’une entreprise de plomberie, de CVC, d’électricité, de toiture ou d’un autre métier. LobbyStack décroche quand votre équipe ne peut pas, recueille l’adresse et le problème, réserve les visites dans Google Calendar, Cal.com ou Calendly, répond aux questions à partir de vos renseignements et transfère les urgences à votre numéro de garde.",
       },
       {
         question:
@@ -386,7 +386,7 @@ const bespokeSolutionPagesFr: Record<string, SeoLandingPage> = {
         question:
           "Va-t-il réserver des interventions pendant que je suis sur un chantier ?",
         answer:
-          "Oui. Il propose les plages libres de votre Google Calendar pendant vos heures d’ouverture, réserve celle que l’appelant choisit et, si la personne accepte, envoie par texto une confirmation et un rappel la veille.",
+          "Oui. Il propose les plages libres de votre Google Calendar, Cal.com ou Calendly pendant vos heures d’ouverture, réserve celle que l’appelant choisit et, si la personne accepte, envoie par texto une confirmation et un rappel la veille.",
       },
       {
         question: "Que dit-il quand un appelant demande un prix ?",
@@ -406,7 +406,7 @@ const bespokeSolutionPagesFr: Record<string, SeoLandingPage> = {
       {
         question: "Mon équipe verra-t-elle ce qui a été réservé ?",
         answer:
-          "Oui. Les réservations apparaissent dans votre Google Calendar et dans le tableau de bord, à côté du résumé, de la transcription et de l’enregistrement de chaque appel. Quand le réceptionniste prend un message, votre équipe reçoit une alerte par courriel, ou par texto si vous activez ces alertes.",
+          "Oui. Les réservations apparaissent dans votre Google Calendar, Cal.com ou Calendly et dans le tableau de bord, à côté du résumé, de la transcription et de l’enregistrement de chaque appel. Quand le réceptionniste prend un message, votre équipe reçoit une alerte par courriel, ou par texto si vous activez ces alertes.",
       },
       {
         question:

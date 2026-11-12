@@ -925,3 +925,21 @@ export function NotificationListSkeleton({ label, rows = 3 }: { label: string; r
     </div>
   );
 }
+
+/** Stands in for the Marketing emails section of Account > Notifications: its title and its one switch row. */
+export function MarketingEmailsSkeleton({ labels }: { labels: { title: string; label: string; description: string } }) {
+  return (
+    <section aria-busy="true" className="flex flex-col gap-4">
+      <HiddenTextSkeleton className="type-title">{labels.title}</HiddenTextSkeleton>
+      <Surface className="flex flex-col">
+        <Item className="rounded-none border-0">
+          <ItemContent>
+            <HiddenTextSkeleton className="type-title">{labels.label}</HiddenTextSkeleton>
+            <HiddenTextSkeleton className="type-body">{labels.description}</HiddenTextSkeleton>
+          </ItemContent>
+          <ItemActions><Skeleton className="h-[18.4px] w-8 rounded-full" /></ItemActions>
+        </Item>
+      </Surface>
+    </section>
+  );
+}

@@ -72,7 +72,7 @@ LobbyStack organizuje poslovni kontekst, brojeve telefona, preusmeravanja, termi
 
 Goodcall workeri daju netehničkim korisnicima način da odrede šta agent prikuplja i radi. Ugrađene veze pokrivaju Google Calendar, Google Sheets i HighLevel, a API alat ili MCP server povezuje ostale sisteme. Zapier radi sa starijim Goodcall 3 agentima. Kontakti za eskalaciju omogućavaju agentu da preusmeri pozivaoca na ljude, ponovo pozove zauzetu liniju i proba do tri kontakta. Takav pristup odgovara vlasniku firme koji želi da podesi agenta u pregledaču, a infrastrukturu prepusti dobavljaču.
 
-LobbyStack takođe omogućava operaterima da kroz proizvod podese poslovno znanje i ponašanje tokom poziva. Zakazuje u Google Calendar i šalje događaje u druge alate preko webhookova i REST API-ja. Njegov otvoreni repozitorijum daje tehničkim timovima još jedan put. Oni mogu da pregledaju implementaciju, dodaju integracije sa provajderima ili postave sistem u sopstvenom okruženju.
+LobbyStack takođe omogućava operaterima da kroz proizvod podese poslovno znanje i ponašanje tokom poziva. Zakazuje u Google Calendar, Cal.com ili Calendly i šalje događaje u druge alate preko webhookova i REST API-ja. Njegov otvoreni repozitorijum daje tehničkim timovima još jedan put. Oni mogu da pregledaju implementaciju, dodaju integracije sa provajderima ili postave sistem u sopstvenom okruženju.
 
 Pregledane Goodcall stranice ne navode javni izvorni kod niti samostalno hostovanje. Kontrola koju daje LobbyStack traži više tehničke odgovornosti.
 
