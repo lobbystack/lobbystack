@@ -72,14 +72,10 @@ function ComboboxInput({
 }) {
   const inputRef = React.useRef<HTMLInputElement>(null)
   const [hasText, setHasText] = React.useState(false)
-  // Follows the input's real value, however it changes: typing, the clear button, or the combobox resetting it.
+  // A field that opens already holding text shows the clear button from the start. Later changes come through
+  // onChange, inside React's own event, so the re-render can't undo what was just typed.
   React.useEffect(() => {
-    const input = inputRef.current
-    if (!input) return
-    const sync = () => setHasText(input.value.length > 0)
-    sync()
-    input.addEventListener("input", sync)
-    return () => input.removeEventListener("input", sync)
+    setHasText((inputRef.current?.value.length ?? 0) > 0)
   }, [])
   function clearText() {
     const input = inputRef.current
@@ -95,7 +91,10 @@ function ComboboxInput({
       <ComboboxPrimitive.Input
         ref={inputRef}
         render={<InputGroupInput disabled={disabled} />}
-        {...(onChange ? { onChange } : {})}
+        onChange={(event) => {
+          setHasText(event.currentTarget.value.length > 0)
+          onChange?.(event)
+        }}
         {...props}
       />
       <InputGroupAddon align="inline-end">

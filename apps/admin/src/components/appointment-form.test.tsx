@@ -55,6 +55,20 @@ describe("AppointmentForm", () => {
     expect((await screen.findByRole("button", { name: "10:00 AM" })).getAttribute("aria-pressed")).toBe("true");
   });
 
+  it("types into the contact field letter by letter and clears it with delete", async () => {
+    await setup({ initialStartsAt: slot });
+    const input = screen.getByLabelText(copy.contact) as HTMLInputElement;
+    const user = userEvent.setup();
+    await user.click(input);
+    await user.keyboard("mi");
+    expect(input.value).toBe("mi");
+    await user.keyboard("l");
+    expect(input.value).toBe("mil");
+    await user.tripleClick(input);
+    await user.keyboard("{Delete}");
+    expect(input.value).toBe("");
+  });
+
   it("books with a custom length and both notes, and asks for openings of that length", async () => {
     const { fetchMock, onDone } = await setup({ initialStartsAt: slot });
     await userEvent.click(screen.getByLabelText(copy.contact));
