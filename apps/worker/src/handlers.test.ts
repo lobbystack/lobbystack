@@ -1081,7 +1081,7 @@ describe("worker handlers", () => {
   });
 
   describe("the extra numbers add-on", () => {
-    const envelope = (type: string, businessId: string, payload: Record<string, unknown> = {}): JobEnvelope => ({ jobId: randomUUID(), type, queue: "critical", businessId, payload, trace: {}, idempotencyKey: `test:${randomUUID()}`, scheduled: false });
+    const envelope = (type: JobEnvelope["type"], businessId: string, payload: Record<string, unknown> = {}): JobEnvelope => ({ jobId: randomUUID(), type, queue: "critical", businessId, payload, trace: {}, idempotencyKey: `test:${randomUUID()}`, scheduled: false });
     afterEach(() => { vi.unstubAllEnvs(); });
 
     it("opens a Polar checkout for the monthly add-on product that brings the payer back to the agent's phone page", async () => {

@@ -108,7 +108,7 @@ const pro = (capMinor: number | null): Entitlement => ({
 });
 const unlimitedAllowance = { voiceSeconds: null, chats: null, alertSms: null, outboundAttempts: null };
 const noRates = { voiceMinute: 0, chat: 0, alertSms: 0, outboundAttempt: 0 };
-const enterprise: Entitlement = { live: true, source: "plan", allowance: unlimitedAllowance, overage: { enabled: true, currency: "USD", rates: noRates, capMinor: null }, poolPartnerId: null, includedNumbers: null, includedAgents: null };
+const enterprise: Entitlement = { live: true, source: "plan", allowance: unlimitedAllowance, overage: { enabled: true, currency: "USD", rates: noRates, capMinor: null }, poolPartnerId: null, includedNumbers: 1, includedAgents: null };
 const selfHosted: Entitlement = { live: false, source: "unlimited", allowance: unlimitedAllowance, overage: { enabled: false, currency: "USD", rates: noRates, capMinor: null }, poolPartnerId: null, includedNumbers: null, includedAgents: null };
 
 const cloud = (account: Account | null): PlanCase => ({ deploymentMode: "cloud", account });
