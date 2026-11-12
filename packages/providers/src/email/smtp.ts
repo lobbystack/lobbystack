@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 
+import { parsePhoneNumberFromString } from "libphonenumber-js";
 import nodemailer, { type Transporter } from "nodemailer";
 import { DEFAULT_APP_NAME, assertCertificationRecipient, intlLocale, type CallSummaryEmailDetails, type EmailBrand } from "@lobbystack/shared";
 
@@ -12,7 +13,7 @@ export type SmtpConfig = {
   from: string;
 };
 
-type TemplateName = "existing_account" | "account_setup" | "verify_email" | "password_reset" | "passkey_added" | "invitation" | "operator_alert" | "feedback_submission" | "welcome" | "number_trial" | "number_release" | "partner_pool_alert" | "business_allowance_alert" | "partner_business_allowance_alert" | "business_released" | "business_deleted" | "call_summary";
+type TemplateName = "existing_account" | "account_setup" | "verify_email" | "password_reset" | "passkey_added" | "invitation" | "operator_alert" | "feedback_submission" | "welcome" | "plan_reminder" | "number_trial" | "number_release" | "partner_pool_alert" | "business_allowance_alert" | "partner_business_allowance_alert" | "business_released" | "business_deleted" | "call_summary";
 
 /**
  * Whether the mail provider refused the message for good. An SMTP 5xx
@@ -138,6 +139,8 @@ function templateSubject(template: TemplateName, variables: Record<string, strin
       return (PASSKEY_ADDED_SUBJECTS[variables.locale ?? "en"] ?? PASSKEY_ADDED_SUBJECTS.en!)(name);
     case "account_setup":
       return (SETUP_SUBJECTS[variables.locale ?? "en"] ?? SETUP_SUBJECTS.en!)(name);
+    case "plan_reminder":
+      return planReminderCopy(variables).subject;
     case "number_trial":
       return numberTrialEmailSubject(variables);
     case "number_release":
@@ -197,6 +200,10 @@ function templateHtml(template: TemplateName, subject: string, variables: Record
       return renderMessageHtml(brand, subject, variables.body ?? "LobbyStack dashboard feedback");
     case "number_trial": {
       const copy = numberTrialCopy(trialKind(variables.kind), variables.locale, variables);
+      return renderLetterHtml(brand, subject, variables, copy.lines, copy.button, variables.url, brand.name);
+    }
+    case "plan_reminder": {
+      const copy = planReminderCopy(variables);
       return renderLetterHtml(brand, subject, variables, copy.lines, copy.button, variables.url, brand.name);
     }
     case "number_release": {
@@ -488,8 +495,8 @@ function renderAccountSetupHtml(variables: Record<string, string>, brand: EmailB
 }
 
 // The account, invitation and alert emails a partner's client may get name the
-// brand. Feedback, the welcome email, and the trial and release emails with
-// the host's prices are the host's own, and keep LobbyStack.
+// brand. Feedback, the welcome email, the plan reminder, and the trial and
+// release emails with the host's prices are the host's own, and keep LobbyStack.
 function templateBody(template: TemplateName, variables: Record<string, string>, brand: EmailBrand): string {
   const name = brand.name;
   const url = dashboardLink(variables.url, brand) ?? "";
@@ -522,6 +529,8 @@ function templateBody(template: TemplateName, variables: Record<string, string>,
       return variables.body ?? "LobbyStack dashboard feedback";
     case "welcome":
       return welcomeBody(variables, brand);
+    case "plan_reminder":
+      return planReminderBody(variables, brand);
     case "number_trial":
       return numberTrialBody(variables, brand);
     case "number_release":
@@ -802,6 +811,45 @@ function numberReleaseBody(variables: Record<string, string>, brand: EmailBrand)
   const copy = numberReleaseCopy(variables);
   const greet = TRIAL_GREETINGS[variables.locale ?? "en"] ?? TRIAL_GREETINGS.en!;
   return [greet(variables.firstName ?? ""), "", ...copy.lines.flatMap((line) => [line, ""]), `${copy.button}: ${variables.url ?? ""}`, "", brand.name].join("\n");
+}
+
+/**
+ * A phone number as the dashboard shows it: a US or Canadian number in its
+ * national form, any other in its international one, and anything that
+ * doesn't parse as given.
+ */
+export function formatEmailPhoneNumber(value: string): string {
+  const parsed = parsePhoneNumberFromString(value.trim());
+  if (!parsed?.isValid()) return value;
+  return parsed.countryCallingCode === "1" ? parsed.formatNational() : parsed.formatInternational();
+}
+
+/**
+ * The reminder to an owner who reached the plans and left without choosing
+ * one: their number is live, and one click on the plans finishes setup with
+ * the free trial.
+ */
+function planReminderCopy(v: Record<string, string>): TrialCopy {
+  const num = formatEmailPhoneNumber(v.number ?? "");
+  const business = v.businessName?.trim() ?? "";
+  switch (v.locale) {
+    case "fr":
+      return { subject: `Votre numéro ${num} est actif`, lines: [business ? `Votre numéro ${num} est actif et votre agent répond à ses appels pour ${business}.` : `Votre numéro ${num} est actif et votre agent répond à ses appels.`, "Commencez votre essai gratuit de 14 jours pour terminer la configuration. Il suffit d'un clic, sans carte bancaire."], button: "Terminer la configuration" };
+    case "es":
+      return { subject: `Su número ${num} ya está activo`, lines: [business ? `Su número ${num} ya está activo y su agente contesta sus llamadas para ${business}.` : `Su número ${num} ya está activo y su agente contesta sus llamadas.`, "Empiece su prueba gratuita de 14 días para terminar la configuración. Es un solo clic y no necesita tarjeta."], button: "Terminar la configuración" };
+    case "sr":
+      return { subject: `Vaš broj ${num} je aktivan`, lines: [business ? `Vaš broj ${num} je aktivan i agent na njemu odgovara na pozive za ${business}.` : `Vaš broj ${num} je aktivan i agent na njemu odgovara na pozive.`, "Započnite besplatnu probu od 14 dana da biste završili podešavanje. Potreban je samo jedan klik, bez kartice."], button: "Završi podešavanje" };
+    default:
+      return { subject: `Your number ${num} is live`, lines: [business ? `Your number ${num} is live, and your agent answers its calls for ${business}.` : `Your number ${num} is live, and your agent answers its calls.`, "Start your 14-day free trial to finish setup. It takes one click, and you won't need a card."], button: "Finish setup" };
+  }
+}
+
+function planReminderBody(variables: Record<string, string>, brand: EmailBrand): string {
+  const copy = planReminderCopy(variables);
+  const greet = TRIAL_GREETINGS[variables.locale ?? "en"] ?? TRIAL_GREETINGS.en!;
+  // French puts a space before the colon that follows the button's words.
+  const colon = variables.locale === "fr" ? " : " : ": ";
+  return [greet(variables.firstName ?? ""), "", ...copy.lines.flatMap((line) => [line, ""]), `${copy.button}${colon}${variables.url ?? ""}`, "", brand.name].join("\n");
 }
 
 type TrialEmailKind = "day10" | "day13" | "ended" | "minutes_out";

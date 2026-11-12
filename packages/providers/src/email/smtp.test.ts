@@ -241,6 +241,56 @@ describe("SMTP delivery", () => {
     });
   });
 
+  describe("plan reminder", () => {
+    const reminder = { template: "plan_reminder" as const, to: "owner@example.test", variables: { locale: "en", firstName: "Ryan", businessName: "Metroprint", number: "+14388070285", url: "https://app.example.test/onboarding/plan" } };
+
+    it("names the live number, formatted, and its button opens the plans", async () => {
+      const { provider, sent } = capture();
+      await send(provider, reminder);
+      expect(sent().from).toBe("no-reply@example.test");
+      expect(sent().replyTo).toBe("support@example.test");
+      expect(sent().subject).toBe("Your number (438) 807-0285 is live");
+      expect(sent().text).toBe([
+        "Hi Ryan,",
+        "",
+        "Your number (438) 807-0285 is live, and your agent answers its calls for Metroprint.",
+        "",
+        "Start your 14-day free trial to finish setup. It takes one click, and you won't need a card.",
+        "",
+        "Finish setup: https://app.example.test/onboarding/plan",
+        "",
+        "LobbyStack",
+      ].join("\n"));
+      const html = sent().html as string;
+      expect(html).toContain('<td align="left" style="padding-bottom:32px;">');
+      const anchors = [...html.matchAll(/<a href="([^"]+)"[^>]*>([^<]+)<\/a>/g)].map(([, href, text]) => ({ href, text }));
+      expect(anchors).toEqual([{ href: "https://app.example.test/onboarding/plan", text: "Finish setup" }]);
+      // The paid plans stay on the page.
+      expect(sent().text).not.toMatch(/Starter|Pro\b|\$/);
+    });
+
+    it("greets an owner with no name, and shows a number outside North America in international form", async () => {
+      const { provider, sent } = capture();
+      await send(provider, { ...reminder, variables: { ...reminder.variables, firstName: "", number: "+33612345678" } });
+      expect(sent().subject).toBe("Your number +33 6 12 34 56 78 is live");
+      expect(sent().text).toMatch(/^Hi,\n/);
+    });
+
+    it("writes the reminder in French, Spanish and Serbian", async () => {
+      const { provider, sendMail } = capture();
+      for (const locale of ["fr", "es", "sr"]) await send(provider, { ...reminder, variables: { ...reminder.variables, locale } });
+      const [french, spanish, serbian] = sendMail.mock.calls.map((call) => call[0] as { subject: string; text: string });
+      expect(french!.subject).toBe("Votre numéro (438) 807-0285 est actif");
+      expect(french!.text).toMatch(/^Bonjour Ryan,\n/);
+      expect(french!.text).toContain("Terminer la configuration : https://app.example.test/onboarding/plan");
+      expect(spanish!.subject).toBe("Su número (438) 807-0285 ya está activo");
+      expect(spanish!.text).toContain("Terminar la configuración: https://app.example.test/onboarding/plan");
+      expect(serbian!.subject).toBe("Vaš broj (438) 807-0285 je aktivan");
+      expect(serbian!.text).toContain("Završi podešavanje: https://app.example.test/onboarding/plan");
+      expect(`${serbian!.subject}${serbian!.text}`).not.toMatch(/[Ѐ-ӿ]/);
+    });
+  });
+
   it("names no forward when a trial without a mobile runs out of minutes", async () => {
     const { provider, sent } = capture();
     await send(provider, { template: "number_trial", to: "owner@example.test", variables: { locale: "en", kind: "minutes_out", businessName: "Acme Dental", trialNumber: "+14165550123", forwardTo: "", url: "https://app.example.test/settings/plan" } });
