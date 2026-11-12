@@ -13,6 +13,19 @@ import { cn } from "@/lib/utils";
 const DrawerButtons = ({ children }: { children: ReactNode; className?: string }) => <DrawerFooter className="flex-row justify-end px-0">{children}</DrawerFooter>;
 const PopoverFooter = ({ children, className }: { children: ReactNode; className?: string }) => <div className={cn("flex justify-end gap-2 border-t pt-4", className)}>{children}</div>;
 
+// The popover's width, its gap to the draft and its margin from the window's edge, in pixels.
+const POPOVER_WIDTH = 384;
+const SIDE_OFFSET = 8;
+const EDGE = 16;
+
+/** Beside the draft when either side has room, else below it, as for a day's full-width draft. */
+function sideFor(anchor: Element | null): "right" | "bottom" {
+  if (!anchor || typeof window === "undefined") return "right";
+  const rect = anchor.getBoundingClientRect();
+  const room = POPOVER_WIDTH + SIDE_OFFSET + EDGE;
+  return window.innerWidth - rect.right >= room || rect.left >= room ? "right" : "bottom";
+}
+
 /** A calendar slot, which moves the booking rather than closing it. */
 function onSlot(event: Event | undefined): boolean {
   const target = (event instanceof FocusEvent ? event.relatedTarget : event?.target) as Element | null | undefined;
@@ -44,6 +57,7 @@ export function NewAppointmentPopover({ open, formKey, anchor, returnFocus, ...p
   returnFocus: HTMLElement | null;
 }) {
   const { t } = useTranslation("common");
+  const side = sideFor(anchor);
   return (
     <Popover onOpenChange={(next, details) => {
       if (next) return;
@@ -51,14 +65,14 @@ export function NewAppointmentPopover({ open, formKey, anchor, returnFocus, ...p
       props.onClose();
     }} open={open}>
       <PopoverContent
-        align="start"
+        align={side === "right" ? "start" : "center"}
         anchor={anchor}
         className="max-h-[min(var(--available-height),44rem)] w-[min(24rem,calc(100vw-2rem))] gap-4 p-4"
-        collisionAvoidance={{ side: "flip", align: "shift", fallbackAxisSide: "end" }}
-        collisionPadding={16}
+        collisionAvoidance={{ side: "flip", align: "shift", fallbackAxisSide: side === "right" ? "end" : "none" }}
+        collisionPadding={EDGE}
         finalFocus={() => (returnFocus?.isConnected ? returnFocus : true)}
-        side="right"
-        sideOffset={8}
+        side={side}
+        sideOffset={SIDE_OFFSET}
       >
         <AppointmentForm
           businessId={props.businessId}
