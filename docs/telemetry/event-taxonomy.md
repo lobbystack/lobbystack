@@ -153,9 +153,12 @@ The answer gap skips caller speech that ended while the agent was still talking,
 
 `billing.package_subscription_started` fires once, when a partner's business starts paying for its package on the partner's Stripe account. The Connect webhook records it in the transaction that writes the live subscription to the business's billing account. Redeliveries and later news of the same live subscription don't repeat it. It carries `partnerId`, `packageId` and `currency`, the package's, and never the price.
 
+`billing.extra_number_bought` fires once, when the worker finishes buying an extra number for one of a business's agents. It carries `countryCode` and `charged`, which is false on a plan with no number limit, and never the price.
+
 - `billing.subscription_started`
 - `billing.subscription_canceled`
 - `billing.package_subscription_started`
+- `billing.extra_number_bought`
 
 ### Operations events
 

@@ -466,7 +466,18 @@
       "changed": "Phone number changed. Your previous number will stay active for 30 days.",
       "added": "Phone number added."
     },
-    "numbersUnavailable": "Phone numbers aren't set up on this dashboard yet. Ask whoever runs it to connect a phone provider."
+    "numbersUnavailable": "Phone numbers aren't set up on this dashboard yet. Ask whoever runs it to connect a phone provider.",
+    "extra": {
+      "buy": "Buy a number",
+      "select": "Buy",
+      "monthly": "{{price}} a month",
+      "confirmTitle": "Buy {{number}}?",
+      "confirmDescription": "It costs {{price}} a month, billed with your plan.",
+      "confirm": "Buy number",
+      "cancel": "Cancel",
+      "priceChanged": "The price changed. Search again to see it.",
+      "unavailable": "This workspace can't buy more numbers."
+    }
   },
   "appearance": {
     "title": "Preferences",

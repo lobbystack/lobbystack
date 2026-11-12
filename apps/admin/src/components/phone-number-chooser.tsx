@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import { LoaderCircle } from "lucide-react";
 
@@ -113,6 +113,10 @@ type PhoneNumberChooserProps = {
   onClaimCompleted?: (number: AvailableNumberSummary) => void;
   /** A last country option for owners in a country we sell no numbers in. Picking it calls onSelect and keeps the country. */
   otherCountry?: { label: string; onSelect: () => void } | undefined;
+  /** A line under the search for the picked country, such as an extra number's price. */
+  countryNote?: ((country: SupportedOnboardingPhoneCountry) => ReactNode) | undefined;
+  /** Asked before a picked number is claimed, such as to confirm what it costs. Resolving false keeps the list. */
+  confirmClaim?: ((number: AvailableNumberSummary) => Promise<boolean>) | undefined;
 };
 
 const OTHER_COUNTRY = "other";
@@ -124,9 +128,15 @@ function toSummary(offer: NumberOffer, selectionContext: NumberSelectionContext)
   return { ...offer, e164: offer.phoneE164, display: formatPhoneNumberDisplay(offer.phoneE164), kind: "local", selectionContext };
 }
 
-/** The chooser's search and claim calls. A business replacing its number uses the replacement endpoints; a first number uses the onboarding ones. */
-export function phoneNumberChooserApi(replacement: boolean): Pick<PhoneNumberChooserProps, "getInitialNumberSuggestion" | "searchAvailableNumbers" | "claimNumber"> {
-  const prefix = replacement ? "/api/phone-numbers/replacement" : "/api/onboarding/phone-numbers";
+/**
+ * The chooser's search and claim calls. A business replacing a number uses the replacement endpoints and names the
+ * number; one buying an extra number for an agent uses the extra ones and names the agent; a first number uses the
+ * onboarding ones.
+ */
+export function phoneNumberChooserApi(replacement: boolean, target: { phoneNumberId?: string | undefined; extraForAgentId?: string | undefined } = {}): Pick<PhoneNumberChooserProps, "getInitialNumberSuggestion" | "searchAvailableNumbers" | "claimNumber"> {
+  const extra = Boolean(target.extraForAgentId);
+  const prefix = extra ? "/api/phone-numbers/extra" : replacement ? "/api/phone-numbers/replacement" : "/api/onboarding/phone-numbers";
+  const claimTarget = extra ? { agentId: target.extraForAgentId } : replacement && target.phoneNumberId ? { phoneNumberId: target.phoneNumberId } : {};
   const searchAvailableNumbers: PhoneNumberChooserProps["searchAvailableNumbers"] = async ({ businessId, mode, countryCode, areaCode, limit }) => {
     const selectionContext = { mode, countryCode, ...(areaCode ? { areaCode } : {}) };
     const result = await requestJson<OffersResponse>(`${prefix}/search?businessId=${encodeURIComponent(businessId)}`, { method: "POST", body: JSON.stringify({ selection: { countryCode, kind: "local", ...(areaCode ? { areaCode } : {}) }, limit }) });
@@ -135,7 +145,7 @@ export function phoneNumberChooserApi(replacement: boolean): Pick<PhoneNumberCho
   return {
     searchAvailableNumbers,
     async getInitialNumberSuggestion({ businessId }) {
-      const result = replacement
+      const result = replacement || extra
         ? await requestJson<OffersResponse>(`${prefix}/search?businessId=${encodeURIComponent(businessId)}`, { method: "POST", body: JSON.stringify({ limit: 10 }) })
         : await requestJson<OffersResponse>(`${prefix}/suggestion?businessId=${encodeURIComponent(businessId)}`);
       const countryCode = normalizeOnboardingPhoneCountry(result.market?.countryCode ?? result.numbers[0]?.countryCode);
@@ -143,7 +153,7 @@ export function phoneNumberChooserApi(replacement: boolean): Pick<PhoneNumberCho
       return { market: { ...result.market, countryCode }, suggestion: numbers[0] ?? null, alternatives: numbers.slice(1), countryFixed: Boolean(result.countryFixed) };
     },
     async claimNumber({ businessId, claimToken, selectionContext }) {
-      const { claimId } = await requestJson<{ claimId: string }>(`${prefix}/claim?businessId=${encodeURIComponent(businessId)}`, { method: "POST", body: JSON.stringify({ claimToken, idempotencyKey: crypto.randomUUID() }) });
+      const { claimId } = await requestJson<{ claimId: string }>(`${prefix}/claim?businessId=${encodeURIComponent(businessId)}`, { method: "POST", body: JSON.stringify({ claimToken, idempotencyKey: crypto.randomUUID(), ...claimTarget }) });
       const deadline = Date.now() + 120_000;
       while (Date.now() < deadline) {
         const { claim } = await requestJson<{ claim: { status: string; requestedE164: string; phoneNumberId: string | null } | null }>(`${prefix}/claim/${encodeURIComponent(claimId)}?businessId=${encodeURIComponent(businessId)}`);
@@ -206,6 +216,8 @@ export function PhoneNumberChooser({
   onClaimStarted,
   onClaimCompleted,
   otherCountry,
+  countryNote,
+  confirmClaim,
 }: PhoneNumberChooserProps) {
   const [country, setCountry] = useState<SupportedOnboardingPhoneCountry>("US");
   const [countryFixed, setCountryFixed] = useState(false);
@@ -310,6 +322,10 @@ export function PhoneNumberChooser({
     setIsClaiming(true);
     setError(null);
     try {
+      if (confirmClaim && !await confirmClaim(number)) {
+        setSelectedE164(null);
+        return;
+      }
       onClaimStarted?.(number);
       const result = await claimNumber({
         businessId,
@@ -411,6 +427,8 @@ export function PhoneNumberChooser({
           )}
         </Button>
       </div>
+
+      {countryNote ? <p className="type-body-muted" data-testid="number-country-note">{countryNote(country)}</p> : null}
 
       <Surface className="flex h-96 flex-col">
         <div className="flex h-14 shrink-0 items-center border-b border-border px-4 type-title text-muted-foreground">

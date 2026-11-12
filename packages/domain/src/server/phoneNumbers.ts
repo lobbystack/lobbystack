@@ -15,6 +15,8 @@ import { loadPartnerNumberStanding, newPartnerNumberRefusal, numberCountsForPart
 import { resolveBusinessNumberMarket, type BusinessNumberMarket } from "./phoneNumberMarket";
 import { isDisposableTrialEmail } from "./trialEligibility";
 import { postBusinessNotificationInTransaction, resolveBusinessNotificationsInTransaction } from "./businessNotifications";
+import { recordProductEventInTransaction } from "./productEvents";
+import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 
 export type NumberSelection = {
   countryCode: NumberCountry;
@@ -31,9 +33,11 @@ export type NumberSelection = {
   withoutSms?: boolean;
   /** The carrier that sells the number, so the worker buys it there. */
   carrier?: CarrierId;
+  /** An extra number's monthly price in US cents, signed so the operator pays what they saw. Absent on a plan with no number limit. */
+  monthlyPriceCents?: number;
 };
 export type NumberInventoryProvider = { listAvailablePhoneNumbers(input: NumberSelection & { limit: number }): Promise<Array<{ phoneE164: string; locality?: string; region?: string; countryCode: string; capabilities: { sms: boolean; voice: boolean }; carrier?: CarrierId }>> };
-export type NumberClaimPurpose = "onboarding" | "replacement";
+export type NumberClaimPurpose = "onboarding" | "replacement" | "extra";
 /** A searched number, signed for one business and one person, or for a partner's platform key as `platform:<id>` in `userId`, so a claim can trust it. */
 export type NumberOffer = { v: 1; purpose: NumberClaimPurpose; businessId: string; userId: string; e164: string; countryCode: string; kind: NumberSelection["kind"]; capabilities: { sms: boolean; voice: true }; selection: NumberSelection; exp: number };
 type Offer = NumberOffer;
@@ -53,7 +57,7 @@ export function readNumberOffer(token: string, secret: string): NumberOffer {
   const expected = Buffer.from(sign(encoded, secret)); const actual = Buffer.from(signature); if (expected.length !== actual.length || !timingSafeEqual(expected, actual)) throw invalid();
   const payload = JSON.parse(Buffer.from(encoded, "base64url").toString("utf8")) as Offer;
   // Hosted businesses text from LobbyStack's shared number, so a number only has to take calls.
-  if (payload.v !== 1 || !["onboarding", "replacement"].includes(payload.purpose) || !/^\+[1-9]\d{7,14}$/.test(payload.e164) || !payload.capabilities.voice) throw invalid();
+  if (payload.v !== 1 || !["onboarding", "replacement", "extra"].includes(payload.purpose) || !/^\+[1-9]\d{7,14}$/.test(payload.e164) || !payload.capabilities.voice) throw invalid();
   if (payload.exp < Date.now()) throw numberClaimError(409, "number_offer_expired", "This number offer expired. Search again and pick a number.");
   return payload;
 }
@@ -83,16 +87,22 @@ const claimRefusals: Record<string, [status: number, message: string]> = {
   partner_numbers_unavailable: [409, "Phone numbers aren't available for this business yet."],
   partner_number_limit_reached: [409, "This business's partner needs a paid tier for more phone numbers."],
   partner_trial_used: [409, "This business's partner already used its free trial number. A paid tier includes numbers."],
+  // app.reserve_extra_number_claim (migration 0216)
+  extra_numbers_unavailable: [409, "This workspace can't buy extra numbers."],
+  agent_not_found: [404, "Agent not found."],
+  business_number_required: [409, "Get this workspace's first number before you buy another."],
+  extra_number_price_changed: [409, "The price of this number changed. Search again to see the new price."],
 };
 
-function refused(reason: string): Error {
+/** The refusal the dashboard shows for a claim check's reason. */
+export function refused(reason: string): Error {
   const [status, text] = claimRefusals[reason]!;
   return numberClaimError(status, reason, text);
 }
 
 // Drizzle wraps the PostgreSQL error, and its message lists the query
 // parameters. Return only the raised reason.
-function claimRefusal(error: unknown): Error | undefined {
+export function claimRefusal(error: unknown): Error | undefined {
   for (let current: unknown = error, depth = 0; current && typeof current === "object" && depth < 4; current = (current as { cause?: unknown }).cause, depth += 1) {
     const message = (current as { message?: unknown }).message;
     if (typeof message === "string" && Object.hasOwn(claimRefusals, message)) return refused(message);
@@ -216,7 +226,7 @@ export async function numberEligibilityInTransaction(tx: DatabaseTransaction, in
 }
 
 /** Searches the provider where the business may pick a number and signs an offer for each, for this person and business only. */
-export async function offerBusinessNumbers(input: { userId: string; businessId: string; purpose: NumberClaimPurpose; eligibility: NumberEligibility; selection?: Partial<NumberSelection> | undefined; limit?: number | undefined; claimTokenSecret: string }, provider: NumberInventoryProvider) {
+export async function offerBusinessNumbers(input: { userId: string; businessId: string; purpose: NumberClaimPurpose; eligibility: NumberEligibility; selection?: Partial<NumberSelection> | undefined; limit?: number | undefined; claimTokenSecret: string; monthlyPriceCents?: number | undefined }, provider: NumberInventoryProvider) {
   const { market, trial, smsRequired } = input.eligibility;
   const countryCode = market.countryCode;
   if (!isNumberCountry(countryCode)) throw numberClaimError(400, "unsupported_country", "Phone numbers aren't available in this country yet.");
@@ -227,7 +237,7 @@ export async function offerBusinessNumbers(input: { userId: string; businessId: 
   const limit = Math.max(1, Math.min(20, Math.trunc(input.limit ?? 10)));
   const exp = Date.now() + offerLifetimeMs;
   return (await provider.listAvailablePhoneNumbers({ ...selection, limit, ...(smsRequired ? { sms: true } : {}) })).filter(number => number.capabilities.voice && (!smsRequired || number.capabilities.sms)).slice(0, limit).map(({ carrier, ...number }) => {
-    const offered: NumberSelection = { ...selection, sms: number.capabilities.sms, ...(trial ? { trial: true, ...(trial.verifiedPhone ? { verifiedPhone: trial.verifiedPhone } : { withoutSms: true }) } : {}), ...(carrier ? { carrier } : {}) };
+    const offered: NumberSelection = { ...selection, sms: number.capabilities.sms, ...(input.monthlyPriceCents !== undefined ? { monthlyPriceCents: input.monthlyPriceCents } : {}), ...(trial ? { trial: true, ...(trial.verifiedPhone ? { verifiedPhone: trial.verifiedPhone } : { withoutSms: true }) } : {}), ...(carrier ? { carrier } : {}) };
     return { ...number, kind, trial: Boolean(trial), claimToken: issueOffer({ v: 1, purpose: input.purpose, businessId: input.businessId, userId: input.userId, e164: number.phoneE164, countryCode: number.countryCode, kind, capabilities: { sms: number.capabilities.sms, voice: true }, selection: offered, exp }, input.claimTokenSecret), expiresAt: new Date(exp) };
   });
 }
@@ -281,13 +291,19 @@ export async function reserveOnboardingNumberClaim(context: DomainContext, input
   }).catch((error: unknown) => { throw claimRefusal(error) ?? error; });
 }
 
-export async function reserveReplacementNumberClaim(context: DomainContext, input: { userId: string; businessId: string; claimToken: string; claimTokenSecret: string; idempotencyKey: string }): Promise<string> {
+/**
+ * Reserves a replacement offer. With `phoneNumberId`, it replaces that number,
+ * which a business holding extra numbers needs; without, its newest.
+ */
+export async function reserveReplacementNumberClaim(context: DomainContext, input: { userId: string; businessId: string; claimToken: string; claimTokenSecret: string; idempotencyKey: string; phoneNumberId?: string | null | undefined }): Promise<string> {
   const offer = readNumberOffer(input.claimToken, input.claimTokenSecret);
   if (offer.purpose !== "replacement" || offer.businessId !== input.businessId || offer.userId !== input.userId) throw numberClaimError(400, "number_offer_invalid", "Number claim token does not belong to this replacement flow.");
   return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
     const tokenHash = createHash("sha256").update(input.claimToken).digest("hex");
-    const result = await tx.execute(sql`SELECT app.reserve_replacement_number_claim(${input.businessId}::uuid, ${input.userId}::uuid, ${offer.e164}, ${JSON.stringify(offer.selection)}::jsonb, ${tokenHash}, ${input.idempotencyKey}) AS id`);
+    const result = input.phoneNumberId
+      ? await tx.execute(sql`SELECT app.reserve_replacement_number_claim(${input.businessId}::uuid, ${input.userId}::uuid, ${offer.e164}, ${JSON.stringify(offer.selection)}::jsonb, ${tokenHash}, ${input.idempotencyKey}, ${input.phoneNumberId}::uuid) AS id`)
+      : await tx.execute(sql`SELECT app.reserve_replacement_number_claim(${input.businessId}::uuid, ${input.userId}::uuid, ${offer.e164}, ${JSON.stringify(offer.selection)}::jsonb, ${tokenHash}, ${input.idempotencyKey}) AS id`);
     const claimId = String((result.rows[0] as { id?: unknown } | undefined)?.id ?? "");
     if (!claimId) throw new Error("Number replacement could not be reserved.");
     await enqueueOutbox(tx, { topic: "phoneNumber.provision", businessId: input.businessId, aggregateType: "number_claim", aggregateId: claimId, dedupeKey: `phone-claim:${claimId}:provision`, payload: { claimId } });
@@ -312,7 +328,7 @@ export async function expireAbandonedNumberClaimsInTransaction(tx: DatabaseTrans
   const claims = onboardingNumberClaimEvents;
   const abandoned = or(and(eq(claims.status, "reserved"), lte(claims.reservedAt, sql`now() - interval '15 minutes'`)), and(eq(claims.status, "provisioning"), lte(claims.updatedAt, sql`now() - interval '30 minutes'`)));
   const expired: Array<{ id: string; purpose: string }> = [];
-  for (const [purpose, message] of [["onboarding", "Number claim reservation expired."], ["replacement", "Number replacement reservation expired."]] as const) {
+  for (const [purpose, message] of [["onboarding", "Number claim reservation expired."], ["replacement", "Number replacement reservation expired."], ["extra", "Number claim reservation expired."]] as const) {
     expired.push(...await tx.update(claims)
       .set({ status: "failed", completedAt: sql`now()`, lastError: sql`CASE WHEN ${claims.status} = 'reserved' THEN ${message}::text ELSE 'Number provisioning stalled.' END`, updatedAt: sql`now()` })
       .where(and(eq(claims.businessId, businessId), eq(claims.purpose, purpose), abandoned))
@@ -439,13 +455,17 @@ export async function completeNumberProvisioning(context: DomainContext, input: 
     const [number] = existing ? [existing] : await tx.insert(phoneNumbers).values({ businessId: input.businessId, agentId: defaultAgentIdOf(input.businessId), e164: input.e164, providerPhoneId: input.providerPhoneId, ...(input.carrier ? { carrier: input.carrier } : {}), ...(input.carrierConnectionId ? { carrierConnectionId: input.carrierConnectionId } : {}), status: "active", voiceEnabled: true, smsEnabled, voiceWebhookStatus: "synced", voiceWebhookTargetUrl: input.voiceUrl, voiceWebhookLastSyncedAt: new Date(), ...(input.smsUrl ? { smsWebhookStatus: "synced", smsWebhookTargetUrl: input.smsUrl, smsWebhookLastSyncedAt: new Date() } : {}) }).returning({ id: phoneNumbers.id });
     if (!number) throw new Error("Provisioned number could not be persisted.");
     if (input.monthlyCostCents !== undefined) await recordPartnerNumberCostInTransaction(tx, { businessId: input.businessId, phoneNumberId: number.id, monthlyCostCents: input.monthlyCostCents });
-    const claim = (await tx.update(onboardingNumberClaimEvents).set({ status: "claimed", phoneNumberId: number.id, providerPhoneId: input.providerPhoneId, purchasedAt: new Date(), completedAt: new Date(), updatedAt: new Date() }).where(and(eq(onboardingNumberClaimEvents.id, input.claimId), eq(onboardingNumberClaimEvents.businessId, input.businessId), eq(onboardingNumberClaimEvents.status, "provisioning"))).returning({ purpose: onboardingNumberClaimEvents.purpose, replacingPhoneNumberId: onboardingNumberClaimEvents.replacingPhoneNumberId }))[0];
+    const claim = (await tx.update(onboardingNumberClaimEvents).set({ status: "claimed", phoneNumberId: number.id, providerPhoneId: input.providerPhoneId, purchasedAt: new Date(), completedAt: new Date(), updatedAt: new Date() }).where(and(eq(onboardingNumberClaimEvents.id, input.claimId), eq(onboardingNumberClaimEvents.businessId, input.businessId), eq(onboardingNumberClaimEvents.status, "provisioning"))).returning({ purpose: onboardingNumberClaimEvents.purpose, replacingPhoneNumberId: onboardingNumberClaimEvents.replacingPhoneNumberId, selection: onboardingNumberClaimEvents.selectionContext, monthlyPriceCents: onboardingNumberClaimEvents.monthlyPriceCents }))[0];
     if (!claim) throw new Error("Number claim is no longer awaiting provisioning.");
+    // Migration 0216's trigger moved an extra number to its agent and started its months, and gave a replacement its old number's agent.
     if (claim.purpose === "replacement") {
       if (!claim.replacingPhoneNumberId) throw new Error("Replacement claim has no previous phone number.");
       const retired = await tx.update(phoneNumbers).set({ reclaimScheduledAt: sql`now() + interval '30 days'`, reclaimReason: "replacement", updatedAt: new Date() }).where(and(eq(phoneNumbers.id, claim.replacingPhoneNumberId), eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.status, "active"), isNull(phoneNumbers.reclaimScheduledAt))).returning({ id: phoneNumbers.id });
       const business = await tx.update(businesses).set({ phoneNumberReplacementReservedAt: null, phoneNumberReplacementUsedAt: new Date(), updatedAt: new Date() }).where(and(eq(businesses.id, input.businessId), isNull(businesses.phoneNumberReplacementUsedAt), sql`${businesses.phoneNumberReplacementReservedAt} = (SELECT reserved_at FROM onboarding_number_claim_events WHERE id = ${input.claimId}::uuid)`)).returning({ id: businesses.id });
       if (!retired.length || !business.length) throw new Error("Number replacement entitlement is no longer valid.");
+    } else if (claim.purpose === "extra") {
+      // An extra number changes nothing about onboarding or a trial.
+      await recordProductEventInTransaction(tx, { name: "billing.extra_number_bought", businessId: input.businessId, distinctId: getPostHogDistinctIdForBusinessSystem(input.businessId), actorType: "system", properties: { countryCode: typeof claim.selection.countryCode === "string" ? claim.selection.countryCode : "unknown", charged: claim.monthlyPriceCents !== null } });
     } else {
       const activated = await activateNumberTrialInTransaction(tx, { businessId: input.businessId, claimId: input.claimId, phoneNumberId: number.id });
       // The owner, or for a partner's trial the partner, may have paid while we bought the number: that payment found no trial to convert, so convert it now.
@@ -470,7 +490,7 @@ export async function failNumberProvisioning(context: DomainContext, input: { bu
     const claim = (await tx.update(onboardingNumberClaimEvents).set({ status: input.unavailable ? "unavailable" : "failed", lastError: input.unavailable ? "The selected number is no longer available." : "Number provisioning failed.", completedAt: new Date(), updatedAt: new Date() }).where(and(eq(onboardingNumberClaimEvents.id, input.claimId), eq(onboardingNumberClaimEvents.businessId, input.businessId))).returning({ purpose: onboardingNumberClaimEvents.purpose, e164: onboardingNumberClaimEvents.requestedE164 }))[0];
     if (claim) await postBusinessNotificationInTransaction(tx, { businessId: input.businessId, kind: "number_purchase_failed", key: `number_purchase_failed:${input.claimId}`, params: { number: claim.e164, unavailable: input.unavailable } });
     if (claim?.purpose === "replacement") await tx.update(businesses).set({ phoneNumberReplacementReservedAt: null, updatedAt: new Date() }).where(and(eq(businesses.id, input.businessId), sql`${businesses.phoneNumberReplacementReservedAt} = (SELECT reserved_at FROM onboarding_number_claim_events WHERE id = ${input.claimId}::uuid)`));
-    else if (claim) {
+    else if (claim && claim.purpose !== "extra") {
       // Back to picking a number, from claiming one only: an API claim leaves a business on an earlier step where it is.
       await tx.update(businesses).set({ onboardingStage: "phone_number", updatedAt: new Date() }).where(and(eq(businesses.id, input.businessId), eq(businesses.onboardingStage, "phone_number_claiming")));
       await failNumberTrialInTransaction(tx, { businessId: input.businessId, claimId: input.claimId });

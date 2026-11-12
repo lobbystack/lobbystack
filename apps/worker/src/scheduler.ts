@@ -46,6 +46,8 @@ export async function configureSchedulers(
     { queue: "maintenance", name: "calendar-retired-sweep", type: "calendar.sweepRetired", every: 24 * 60 * 60_000, businessId: null },
     // A number a partner's business buys is charged within the hour, and again each month it's held.
     { queue: "maintenance", name: "partner-number-charges", type: "billing.chargePartnerNumbers", every: 60 * 60_000, businessId: null },
+    // An extra number a business buys is charged within the hour, and again each month it's held.
+    { queue: "maintenance", name: "extra-number-charges", type: "billing.chargeExtraNumbers", every: 60 * 60_000, businessId: null },
     // A partner's businesses pause within the hour once their 30 days after its tier ended are up, and the host deletes them within the hour at 90.
     { queue: "maintenance", name: "partner-lifecycle", type: "partnerLifecycle.advance", every: 60 * 60_000, businessId: null },
     // A partner's new domain goes live within a minute of the provider activating it; older ones are checked less often.

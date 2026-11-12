@@ -245,6 +245,8 @@ export const queueForJobType = {
   "billing.reconcilePartner": "default",
   // Each month of a number a partner holds past its tier's included ones, charged to the partner in Polar.
   "billing.chargePartnerNumbers": "maintenance",
+  // Each month of a number a business on Starter or Pro holds past its plan's included one, charged to the business in Polar.
+  "billing.chargeExtraNumbers": "maintenance",
   // The hourly clock that pauses a partner's businesses 30 days after its tier ends, and deletes them at 90.
   "partnerLifecycle.advance": "maintenance",
   // A partner's own domain: registered with the custom hostname provider, checked until it's active, and removed.

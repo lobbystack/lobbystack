@@ -10,7 +10,7 @@ import { NUMBER_ORDER_MAX_WAIT_MS, claimNumberProvisioning, completeNumberProvis
 import { PolarRequestError } from "@lobbystack/providers/polar/polarBilling";
 import { NumberOrderPendingError } from "@lobbystack/providers/telephony/types";
 import { brandForEmail, businessExists, businessGetsHostEmails, forgetCachedBrands, loadNumberReleaseEmail, loadNumberTrialEmail, type Brand } from "@lobbystack/domain";
-import { advancePartnerLifecycles, claimPartnerCheckoutRequest, deferPartnerCheckoutRequest, keepPartnerTrialNumber, loadPartnerCheckoutRequest, loadPoolUsageEvent, markPartnerCheckoutCreated, markPartnerCheckoutFailed, partnerCheckoutLeaseEndsAt, PartnerLifecycleError, reconcilePartnerTier, settlePartnerNumberCharges } from "@lobbystack/domain";
+import { advancePartnerLifecycles, claimPartnerCheckoutRequest, deferPartnerCheckoutRequest, keepPartnerTrialNumber, loadPartnerCheckoutRequest, loadPoolUsageEvent, markPartnerCheckoutCreated, markPartnerCheckoutFailed, partnerCheckoutLeaseEndsAt, PartnerLifecycleError, reconcilePartnerTier, settleExtraNumberCharges, settlePartnerNumberCharges } from "@lobbystack/domain";
 import { checkPartnerCustomDomains, provisionPartnerCustomDomain, removePartnerCustomHostname, syncBusinessOverage } from "@lobbystack/domain";
 import { FakeCustomHostnames, FakeTxtRecords } from "@lobbystack/providers/customHostnames/fakeCustomHostnames";
 import { FakeStripeConnect } from "@lobbystack/providers/stripe/fakeStripeConnect";
@@ -34,6 +34,7 @@ vi.mock("@lobbystack/domain", async (importOriginal) => {
     reconcilePartnerTier: vi.fn(),
     keepPartnerTrialNumber: vi.fn(async () => false),
     settlePartnerNumberCharges: vi.fn(),
+    settleExtraNumberCharges: vi.fn(),
     advancePartnerLifecycles: vi.fn(),
     provisionPartnerCustomDomain: vi.fn(),
     checkPartnerCustomDomains: vi.fn(),
@@ -1063,6 +1064,36 @@ describe("worker handlers", () => {
       expect(removePartnerCustomHostname).toHaveBeenCalledWith(domain, customDomains.hostnames, { hostname: "app.acme.example", providerHostnameId: "ch_1" });
       await expect(handleJob(domainJob("partnerDomain.remove", { ...payload, provider: "caddy" }), { domain, customDomains })).resolves.toEqual({ status: "skipped", entityId: "ch_1" });
       expect(removePartnerCustomHostname).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("a business's extra numbers", () => {
+    const job: JobEnvelope = { jobId: randomUUID(), type: "billing.chargeExtraNumbers", queue: "maintenance", businessId: null, payload: {}, trace: {}, idempotencyKey: "extra-number-charges", scheduled: true, recurring: true };
+
+    it("reports each month a business pays for to Polar, under the business's customer, at the number's price in cents", async () => {
+      const domain = { db: undefined as never };
+      const businessId = randomUUID(); const chargeId = randomUUID();
+      const periodStart = new Date("2026-11-03T12:00:00.000Z");
+      vi.mocked(settleExtraNumberCharges).mockImplementation(async (_domain, { report }) => {
+        await report({ chargeId, businessId, billingKey: `business:${businessId}`, countryCode: "CA", month: 1, periodStart, amountCents: 115, idempotencyKey: `extra-number:${chargeId}:1` });
+        return { settled: 2, charged: 1 };
+      });
+      const recordUsage = vi.fn().mockResolvedValue(undefined);
+
+      await expect(handleJob(job, { domain, polar: { recordUsage } })).resolves.toEqual({ status: "completed", entityId: "2:1" });
+      expect(recordUsage).toHaveBeenCalledWith({ eventName: "billing.extra_numbers", externalCustomerId: `business:${businessId}`, quantity: 115, timestamp: "2026-11-03T12:00:00.000Z", idempotencyKey: `extra-number:${chargeId}:1`, businessId, usageKind: "extra_number" });
+    });
+
+    it("lets a failed report fail the job, and charges nothing without Polar", async () => {
+      const domain = { db: undefined as never };
+      vi.mocked(settleExtraNumberCharges).mockImplementation(async (_domain, { report }) => {
+        await report({ chargeId: randomUUID(), businessId: randomUUID(), billingKey: "business:x", countryCode: "US", month: 0, periodStart: new Date(), amountCents: 115, idempotencyKey: "extra-number:x:0" });
+        return { settled: 1, charged: 1 };
+      });
+      await expect(handleJob(job, { domain, polar: { recordUsage: vi.fn().mockRejectedValue(new Error("Polar request failed with status 503.")) } })).rejects.toThrow("status 503");
+      vi.mocked(settleExtraNumberCharges).mockClear();
+      await expect(handleJob(job, { domain })).resolves.toEqual({ status: "skipped" });
+      expect(settleExtraNumberCharges).not.toHaveBeenCalled();
     });
   });
 

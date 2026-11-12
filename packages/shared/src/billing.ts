@@ -247,7 +247,42 @@ export const billingMeterEventNames = {
   partnerPoolVoiceOverage: "billing.partner_pool_voice_overage",
   /** Website chats a partner's businesses used past its pool, priced at its tier's chat rate. The quantity is that price, in US cents. */
   partnerPoolChatOverage: "billing.partner_pool_chat_overage",
+  /** A month of a number a business on Starter or Pro holds past its plan's included one. The quantity is its price from extraNumberPrices, in US cents. */
+  extraNumbers: "billing.extra_numbers",
 } as const;
+
+/** The countries LobbyStack sells numbers in, as packages/domain's numberTrials lists them. */
+export const extraNumberCountries = ["US", "CA", "PR", "GB", "AU", "NZ"] as const;
+export type ExtraNumberCountry = (typeof extraNumberCountries)[number];
+
+/**
+ * What an extra number costs each month on Starter or Pro, in US cents: what
+ * the carrier charges the host for the kind of number we sell in that country,
+ * with no markup. The operator sees it before they buy, and it stays the
+ * number's price, so a subscription bills a stable amount. When a carrier
+ * changes its price, update it here; numbers already bought keep theirs.
+ */
+export const extraNumberPrices = {
+  US: { kind: "local", monthlyCents: 115 },
+  CA: { kind: "local", monthlyCents: 115 },
+  PR: { kind: "local", monthlyCents: 115 },
+  GB: { kind: "mobile", monthlyCents: 115 },
+  AU: { kind: "mobile", monthlyCents: 650 },
+  NZ: { kind: "local", monthlyCents: 315 },
+} as const satisfies Record<ExtraNumberCountry, { kind: "local" | "mobile"; monthlyCents: number }>;
+
+export function isExtraNumberCountry(value: string | null | undefined): value is ExtraNumberCountry {
+  return (extraNumberCountries as readonly (string | null | undefined)[]).includes(value);
+}
+
+/**
+ * Whether a direct business's plan sells extra numbers, which Starter and Pro
+ * do. A plan with no number limit, such as Enterprise or self-hosting, gets
+ * them free, and Free gets none.
+ */
+export function planSellsExtraNumbers(plan: string | null | undefined): boolean {
+  return plan === "starter" || plan === "pro";
+}
 
 export const billingPlanCatalog = {
   self_host: {

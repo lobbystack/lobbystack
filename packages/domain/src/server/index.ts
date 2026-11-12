@@ -58,6 +58,7 @@ export * from "./partnerStripe";
 export * from "./partnerBilling";
 export * from "./partnerDomains";
 export * from "./partnerNumbers";
+export * from "./extraNumbers";
 export * from "./partnerLifecycle";
 export * from "./outboundDelivery";
 export * from "./phoneVerification";

@@ -81,6 +81,22 @@ The worker reads a number's monthly price from Twilio's Pricing API before it bu
 
 A partner on Free gets no number past its included ones, and Free includes none. Without the meter and its prices, Polar ingests the events and charges nothing for them. When Polar refuses a partner's event, the job retries that partner's charges on its next run and still settles everyone else's.
 
+## Charge businesses for extra numbers
+
+Starter and Pro include one phone number. A business on either can buy more from an agent's **Channels**, each for that agent. An extra number costs what the carrier charges you for a number in its country, with no markup. `extraNumberPrices` in `packages/shared/src/billing.ts` holds the price for each country, and the operator sees it before they buy. When a carrier changes its price, update the catalog. Numbers already bought keep the price they were sold at. Set up Polar to bill them:
+
+1. Create a meter that counts the `billing.extra_numbers` event and sums its `quantity` metadata.
+2. Add a metered price for that meter to each of the four Starter and Pro products, at $0.01 a unit.
+
+When the worker buys an extra number, it stores the price in `business_number_charges`. Each hour, the `billing.chargeExtraNumbers` job sends Polar one event for each month of each extra number, under the business's customer:
+
+- **Which numbers are extra**: the business's oldest number is the included one. If it's released, the next one becomes included and stops costing extra.
+- **Quantity**: the number's monthly price, in US cents.
+- **`external_id`**: `extra-number:`, the charge's ID and the month, so Polar charges each month once.
+- **What it skips**: months after the plan ends, and months of a number scheduled for release.
+
+Enterprise and self-hosted servers have no number limit, so their extra numbers carry no price. A partner's businesses can't buy extra numbers, since their partner's tier sets their numbers. Without the meter and its prices, Polar ingests the events and charges nothing for them.
+
 ## Charge partners for pool overage
 
 A partner's tier includes a pool of minutes and chats that its businesses share each month. Past the pool, the businesses keep answering, and the partner pays its tier's overage rates, up to the monthly cap an owner sets on the console's **Billing** page. Owners can turn overage off there too. Free has no overage. Set up Polar to bill it:
@@ -219,6 +235,7 @@ Run these checks in the Polar sandbox before enabling production billing:
 - Confirm only business administrators can start checkout or open the portal.
 - Confirm only a partner's owners can start a tier checkout or open its portal, and that the partner's tier and pool follow each subscription change.
 - Give a partner on a paid tier one number more than its tier includes, and confirm Polar charges the partner that number's monthly price within the hour.
+- Buy a business on Starter an extra number, and confirm Polar charges the business the price the dashboard showed within the hour.
 - Revoke a partner's tier, and confirm its businesses still answer calls and chats, and that the console's **Businesses** page shows when they pause and when they're deleted.
 - Use a paid tier's pool up, then finish a call past it, and confirm Polar charges the partner the overage alone at the tier's minute rate. Set a cap the overage reaches, and confirm the next call forwards.
 - Confirm the partner's owners and admins get one email at 80% of the pool's minutes, one at 100%, and one at 80% and 100% of the cap.

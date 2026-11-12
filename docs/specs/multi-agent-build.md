@@ -181,6 +181,21 @@ Slice 9 and the next release should know:
 
 Ticket 14. The add-on costs what the carrier charges us each month for a number in that country, with no markup. The plan catalog holds a price per country, because a subscription needs a stable price, and someone updates it when a carrier's price changes. The operator sees the price for the country they pick before they buy. Until this ships, Starter and Pro include one number and a workspace has one Instagram account, so a second agent's only spare channel is a widget.
 
+Built, waiting on the open questions below:
+
+- **Catalog:** `extraNumberPrices` in `packages/shared/src/billing.ts` holds a monthly price for each country we sell numbers in, for the kind of number we sell there.
+- **Claims:** migration 0216 adds the `extra` claim purpose, with the agent and the price on the claim. `app.reserve_extra_number_claim` needs a direct business that holds a number, on a live plan, and a price that matches the plan: one on Starter or Pro, none on Enterprise or self-hosted. The signed offer carries the price, so the operator pays what they saw.
+- **Rollout:** a trigger on the claim, not the worker, moves the bought number to its agent and records its price in `business_number_charges`. The previous worker inserts every number on the default agent while it drains, and the trigger fixes that after its insert.
+- **Billing:** the hourly `billing.chargeExtraNumbers` job reports each month of each number past the plan's included one to Polar as `billing.extra_numbers`, priced in cents, as `billing.chargePartnerNumbers` does for partners. The business's oldest number is the included one. Months stop when the plan ends or the number's release is scheduled.
+- **Replacements:** a replacement now names the number it replaces, and the new number keeps that number's agent and price. The six-argument `app.reserve_replacement_number_claim`, which replaces the newest number, stays for the previous admin until the next release.
+- **Dashboard:** an agent without a number, in a workspace that has one, shows **Buy a number** on its Channels and phone page. The chooser shows the country's monthly price and asks before it buys.
+
+Open questions:
+
+1. Are the catalog's prices right? They're Twilio's published list prices as we last knew them, and the Telnyx ones differ.
+2. Polar bills metered usage at the end of the period, so an annual subscriber pays for a year of extra numbers at renewal. Is that acceptable, or should extra numbers need a monthly plan?
+3. Should a workspace have a cap on extra numbers beyond the claim quotas of 2 a day and 5 in 30 days?
+
 ## Decisions
 
 Raphael settled these:

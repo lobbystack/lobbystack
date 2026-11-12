@@ -23,7 +23,7 @@ import type { PhoneNumberViewModel } from "@/lib/page-view-models";
 import { formatPhoneNumberDisplay } from "@/lib/phone";
 import { requestJson } from "@/lib/request-json";
 
-type NumbersResponse = { phoneNumbers: PhoneNumberViewModel[] };
+type NumbersResponse = { phoneNumbers: PhoneNumberViewModel[]; extraNumbers?: { available: boolean } };
 type WidgetKey = { id: string; agentId: string | null; label: string | null; status: "active" | "disabled" | "revoked" };
 type KeysResponse = { keys: WidgetKey[]; issuanceEnabled?: boolean };
 
@@ -174,7 +174,7 @@ export function ChannelsSection({ agentId, widgetsEnabled }: { agentId: string; 
           {!mine.length ? (
             <ChannelRow
               actions={canManage ? <>
-                {/* Until each agent can get its own number, a second agent takes one over from another agent. */}
+                {/* An agent can take a number over from another agent, or get its own: the first from the plan, then extra ones. */}
                 {elsewhere.length ? (
                   <DropdownMenu>
                     <DropdownMenuTrigger render={<Button size="sm" type="button" variant={isDefault ? "ghost" : "outline"} />}>{t("nav:channels.moveHere")}<ChevronDown data-icon="inline-end" /></DropdownMenuTrigger>
@@ -192,7 +192,8 @@ export function ChannelsSection({ agentId, widgetsEnabled }: { agentId: string; 
                     </DropdownMenuContent>
                   </DropdownMenu>
                 ) : null}
-                {isDefault ? <Button nativeButton={false} render={<Link href={agentHref(agentId, "channels/phone")} />} size="sm">{t("nav:channels.getNumber")}</Button> : null}
+                {!liveNumbers.length && isDefault ? <Button nativeButton={false} render={<Link href={agentHref(agentId, "channels/phone")} />} size="sm">{t("nav:channels.getNumber")}</Button> : null}
+                {liveNumbers.length && numbers.data?.extraNumbers?.available ? <Button nativeButton={false} render={<Link href={agentHref(agentId, "channels/phone")} />} size="sm">{t("nav:channels.buyNumber")}</Button> : null}
               </> : null}
               icon={Phone}
               title={<span className="text-muted-foreground">{t("nav:channels.noNumber")}</span>}
