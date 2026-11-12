@@ -12,6 +12,7 @@ import { businessShowsOnBrand, readBusinessAccess, type BrandScope } from "./bus
 import { businessGetsHostEmails } from "./hostEmails";
 import { readActiveBusinessIdInTransaction } from "./tenancy";
 import { greetingName } from "./emailGreeting";
+import { schedulePlanReminderInTransaction } from "./planReminder";
 
 export { canVisitOnboardingStage, isOnboardingStage, normalizeOnboardingStage, onboardingSteps, resolveOnboardingRoute, type OnboardingBusiness, type OnboardingStage } from "@lobbystack/shared";
 
@@ -159,7 +160,8 @@ export async function advanceOnboardingStageInTransaction(
  * Moves a business to the next onboarding stage. The caller has already
  * checked who may do that. A direct business has no phone step, so a move
  * there, from an old tab, goes to the number step instead. Every move into
- * complete schedules the welcome email, whichever step it comes from.
+ * complete schedules the welcome email, whichever step it comes from, and a
+ * move into the plans schedules the reminder to choose one.
  */
 export async function moveOnboardingStageInTransaction(
   tx: DatabaseTransaction,
@@ -180,6 +182,7 @@ export async function moveOnboardingStageInTransaction(
     throw error;
   }
   if (to === "complete") await scheduleWelcomeEmailInTransaction(tx, input.businessId, new Date());
+  if (to === "choose_plan") await schedulePlanReminderInTransaction(tx, input.businessId, new Date());
 }
 
 /**
