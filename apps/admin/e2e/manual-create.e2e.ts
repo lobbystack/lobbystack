@@ -72,8 +72,8 @@ test("an owner creates a contact, books them an appointment, and both show in th
     const tomorrow = DateTime.now().setZone(timezone).plus({ days: 1 }).set({ hour: 14, minute: 0, second: 0, millisecond: 0 });
     await page.goto("/appointments?view=list");
     await page.getByRole("button", { name: common.appointments.create.action, exact: true }).click();
-    // The page books in a panel beside the list or calendar, not a dialog.
-    const dialog = page.getByRole("complementary", { name: common.appointments.create.title });
+    // New appointment books in a centered dialog.
+    const dialog = page.locator('[data-slot="dialog-content"]').filter({ has: page.getByText(common.appointments.create.title, { exact: true }) });
     await dialog.getByLabel(common.appointments.create.contact, { exact: true }).fill("Lea");
     await page.getByRole("option", { name: /Lea Novak/ }).click();
     await dialog.getByRole("combobox", { name: common.appointments.create.service }).click();
