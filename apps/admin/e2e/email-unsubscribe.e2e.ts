@@ -17,7 +17,7 @@ import { migrator, removeFixtures } from "./fixtures/full-stack";
 
 const copy = authCopy.unsubscribe;
 
-test("a person unsubscribes from marketing emails from the email's link, then resubscribes", async ({ browser, page }) => {
+test("a person unsubscribes from marketing emails from the email's link, then resubscribes", async ({ page }) => {
   const database = migrator();
   const email = `unsubscribe-${randomUUID()}@example.invalid`;
   const userId = randomUUID();
@@ -48,16 +48,11 @@ test("a person unsubscribes from marketing emails from the email's link, then re
     expect(oneClick.status()).toBe(200);
     expect(await unsubscribedAt()).not.toBeNull();
 
-    // In French, from the French link, in a browser that hasn't been on the English pages
-    // (a browser that has keeps English on the signed-out pages, check-in included).
-    const french = await browser.newPage();
-    try {
-      await french.goto(`/fr/unsubscribe/${token}`);
-      await expect(french.getByRole("heading", { name: frAuthCopy.unsubscribe.done.title })).toBeVisible();
-      await expect(french.getByRole("button", { name: frAuthCopy.unsubscribe.resubscribe })).toBeVisible();
-    } finally {
-      await french.close();
-    }
+    // In French, from the French link, in the browser that just saw the English page.
+    await page.goto(`/fr/unsubscribe/${token}`);
+    await expect(page.getByRole("heading", { name: frAuthCopy.unsubscribe.done.title })).toBeVisible();
+    await expect(page.getByRole("button", { name: frAuthCopy.unsubscribe.resubscribe })).toBeVisible();
+    await expect(page.locator("html")).toHaveAttribute("lang", "fr");
 
     // A link that was changed unsubscribes nobody.
     await page.goto(`/en/unsubscribe/${token.slice(0, -2)}xx`);
