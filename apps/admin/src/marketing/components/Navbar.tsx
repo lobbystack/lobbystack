@@ -403,11 +403,12 @@ export function Navbar({ locale = "en" }: NavbarProps) {
 
   return (
     <header className="site-header sticky top-0 z-50 w-full border-b border-border/60">
-      <div className="mx-auto flex h-16 max-w-site items-center justify-between px-6">
+      {/* On desktop the nav takes the middle column of three, so it stays centered whatever the side columns hold. */}
+      <div className="mx-auto flex h-16 max-w-site items-center justify-between px-6 lg:grid lg:grid-cols-[1fr_auto_1fr] lg:gap-6">
         {/* Logo */}
         <a
           href={localizePath(locale, "/")}
-          className="flex shrink-0 items-center focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          className="flex shrink-0 items-center justify-self-start focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         >
           <img
             src="/lobbystack-logo.svg"
@@ -531,21 +532,27 @@ export function Navbar({ locale = "en" }: NavbarProps) {
         </nav>
 
         {/* Desktop CTAs */}
-        <div className="hidden items-center gap-1 lg:flex">
-          <a
-            href="https://github.com/lobbystack/lobbystack"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={copy.github}
-            title={copy.github}
-            className="inline-flex size-9 items-center justify-center rounded-full text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-            data-ph-capture-attribute-section="navbar"
-            data-ph-capture-attribute-action="view_github"
-            data-ph-capture-attribute-destination="https://github.com/lobbystack/lobbystack"
-          >
-            <GithubIcon className="size-[18px]" />
-          </a>
-          <NavbarAuthLinks locale={locale} copy={copy} placement="navbar" />
+        <div className="hidden justify-self-end lg:block">
+          <NavbarAuthLinks
+            locale={locale}
+            copy={copy}
+            placement="navbar"
+            lead={
+              <a
+                href="https://github.com/lobbystack/lobbystack"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={copy.github}
+                title={copy.github}
+                className="inline-flex size-9 items-center justify-center rounded-full text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                data-ph-capture-attribute-section="navbar"
+                data-ph-capture-attribute-action="view_github"
+                data-ph-capture-attribute-destination="https://github.com/lobbystack/lobbystack"
+              >
+                <GithubIcon className="size-[18px]" />
+              </a>
+            }
+          />
         </div>
 
         <details className="group/mobile-menu lg:hidden">

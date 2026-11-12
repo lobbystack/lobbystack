@@ -47,7 +47,8 @@ test("a signed-in visitor gets one Dashboard link in their language", async ({ p
     expect(session).toBeTruthy();
     await context.addCookies([{ ...session!, sameSite: "None", secure: true }]);
 
-    const width = async () => (await page.locator("header.site-header .lg\\:flex").last().boundingBox())?.width;
+    // Where the desktop nav sits, which must not depend on the auth links.
+    const navBox = async () => page.locator("header.site-header nav").first().boundingBox();
     const checked = await openSite(page, "/fr/");
     expect(await checked.json()).toEqual({ signedIn: true });
 
@@ -57,7 +58,14 @@ test("a signed-in visitor gets one Dashboard link in their language", async ({ p
     await expect(dashboard).toHaveAttribute("href", `${app}/?lng=fr`);
     await expect(header.getByRole("link", { name: "Connexion" })).toHaveCount(0);
     await expect(header.getByRole("link", { name: "Essayer gratuitement" })).toHaveCount(0);
-    const signedInWidth = await width();
+    // The GitHub link sits right beside the Dashboard button, with no room
+    // left over for the signed-out links.
+    const github = await header.getByRole("link", { name: "LobbyStack sur GitHub" }).first().boundingBox();
+    const dashboardBox = await dashboard.boundingBox();
+    const gap = dashboardBox!.x - (github!.x + github!.width);
+    expect(gap).toBeGreaterThanOrEqual(0);
+    expect(gap).toBeLessThan(12);
+    const signedInNav = await navBox();
 
     // The phone menu offers the same single link.
     await page.setViewportSize({ width: 375, height: 812 });
@@ -69,13 +77,13 @@ test("a signed-in visitor gets one Dashboard link in their language", async ({ p
     await menu.getByRole("link", { name: "Tableau de bord" }).click();
     await expect(page).toHaveURL(new RegExp(`^${app.replaceAll(".", "\\.")}/`));
 
-    // Signed out, the desktop buttons take the same width, so nothing shifts.
+    // Signed out, the nav stays where it was, so nothing shifts.
     await page.setViewportSize({ width: 1280, height: 800 });
     await context.clearCookies();
     const signedOut = await openSite(page, "/fr/");
     expect(await signedOut.json()).toEqual({ signedIn: false });
     await expect(header.getByRole("link", { name: "Connexion" })).toBeVisible();
-    expect(await width()).toBe(signedInWidth);
+    expect(await navBox()).toEqual(signedInNav);
   } finally {
     await removeFixtures(database, { emails: [email], businessIds: [] });
     await database.pool.end();

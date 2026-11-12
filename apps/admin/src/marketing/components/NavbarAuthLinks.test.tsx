@@ -51,18 +51,21 @@ describe("navbar auth links", () => {
 
   it("replaces them with one Dashboard link for a signed-in visitor, in their language", async () => {
     answer({ signedIn: true })
-    const { mobile } = await renderNavbar("fr")
+    const { desktop, mobile } = await renderNavbar("fr")
 
     const dashboards = screen.getAllByRole("link", { name: "Tableau de bord" })
     expect(dashboards).toHaveLength(2)
     for (const link of dashboards) expect(link.getAttribute("href")).toBe("https://app.lobbystack.com/?lng=fr")
     expect(visibleLinks(mobile)).not.toContain("Connexion")
     expect(visibleLinks(mobile)).not.toContain("Essayer gratuitement")
-    // The desktop bar keeps the signed-out links hidden, so its width doesn't change.
+    // The desktop bar keeps the signed-out links' room, hidden and left of the
+    // GitHub link, so the nav doesn't move and GitHub stays beside Dashboard.
     expect(screen.queryByRole("link", { name: "Connexion" })).toBeNull()
     expect(screen.queryByRole("link", { name: "Essayer gratuitement" })).toBeNull()
-    const hidden = document.querySelector('[aria-hidden="true"][inert]')
+    const hidden = desktop.querySelector('[aria-hidden="true"][inert]')
     expect(hidden?.className).toContain("invisible")
     expect(hidden?.textContent).toContain("Connexion")
+    const github = within(desktop).getAllByRole("link", { name: "LobbyStack sur GitHub" })[0]!
+    expect(github.nextElementSibling).toBe(dashboards[0])
   })
 })
