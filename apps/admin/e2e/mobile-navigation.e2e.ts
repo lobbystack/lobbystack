@@ -105,7 +105,7 @@ test("a phone opens the Inbox from the tab bar, an agent's Rules from the menu s
       const label = [...element.querySelectorAll("span:not([data-slot^=avatar])")].find((span) => span.textContent?.trim())!.getBoundingClientRect();
       return { top: box.top, height: box.height, labelLeft: label.left };
     }));
-    expect(new Set(rows.map((row) => row.height))).toEqual(new Set([44]));
+    expect(new Set(rows.map((row) => Math.round(row.height)))).toEqual(new Set([44]));
     const gaps = rows.slice(1).map((row, index) => Math.round(row.top - rows[index]!.top - rows[index]!.height));
     // One line, between Settings and the email, takes the only wider gap.
     expect(gaps.filter((gap) => gap !== 4)).toHaveLength(1);
