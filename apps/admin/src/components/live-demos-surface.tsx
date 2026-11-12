@@ -221,9 +221,9 @@ export function LiveDemosSurface({ partner }: { partner?: PartnerDemosOptions } 
   const form = (
     <form className="flex flex-col gap-6" onSubmit={(event) => void create(event)}>
       <FieldGroup>
-        <Field><FieldLabel htmlFor="demo-name">{t("operator.businessName")}</FieldLabel><Input id="demo-name" name="name" required /></Field>
+        <Field><FieldLabel htmlFor="demo-name">{t("operator.businessName")}</FieldLabel><Input id="demo-name" name="name" placeholder={t("operator.businessNamePlaceholder")} required /></Field>
         <Field><FieldLabel htmlFor="demo-website">{t("operator.websiteUrl")}</FieldLabel><Input id="demo-website" name="websiteUrl" type="url" required placeholder="https://example.com" /></Field>
-        <Field><FieldLabel htmlFor="demo-greeting">{t("operator.greeting")}</FieldLabel><Input id="demo-greeting" name="greeting" /></Field>
+        <Field><FieldLabel htmlFor="demo-greeting">{t("operator.greeting")}</FieldLabel><Input id="demo-greeting" name="greeting" placeholder={t("operator.greetingPlaceholder")} /></Field>
         <Field><FieldLabel htmlFor="demo-prompts">{t("operator.suggestedPrompts")}</FieldLabel><Textarea aria-describedby="demo-prompts-hint" id="demo-prompts" name="prompts" required rows={4} placeholder={t("operator.promptsPlaceholder")} className="resize-y" /><FieldDescription id="demo-prompts-hint">{t("operator.promptsHint")}</FieldDescription></Field>
         {partnerId && canManage ? <Field><FieldLabel>{t("operator.partner.accessLabel")}</FieldLabel><AccessLevelOptions onChange={setAccessLevel} value={accessLevel} /></Field> : null}
       </FieldGroup>

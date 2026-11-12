@@ -329,6 +329,7 @@
     },
     "name": {
       "label": "Nom",
+      "placeholder": "ex. Léa",
       "hint": "Seule votre équipe le voit."
     },
     "greeting": {
@@ -446,11 +447,13 @@
     },
     "message": {
       "label": "Message avant la sonnerie",
+      "placeholder": "ex. Un instant, je vérifie qui est disponible.",
       "hint": "Facultatif. Les appelants l'entendent en premier.",
       "noSerbianVoice": "Les appelants ne l'entendront pas. Les messages ne peuvent pas encore être lus en serbe."
     },
     "handover": {
       "label": "Message avant la réponse de l'agent",
+      "placeholder": "ex. Désolé, personne n'est disponible pour le moment. Je peux vous aider.",
       "hint": "Facultatif. Les appelants l'entendent si personne ne répond."
     },
     "errors": {

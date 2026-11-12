@@ -199,14 +199,14 @@ export function StaffFirstDialog({ businessId, defaultLocale, onOpenChange, onSa
                       <FieldLabel htmlFor="agent-staff-first-message">{t("agent:staffFirst.message.label")}</FieldLabel>
                       <FieldDescription>{serbian ? t("agent:staffFirst.message.noSerbianVoice") : t("agent:staffFirst.message.hint")}</FieldDescription>
                     </FieldContent>
-                    <Textarea aria-label={t("agent:staffFirst.message.label")} id="agent-staff-first-message" maxLength={STAFF_FIRST_MESSAGE_MAX_LENGTH} onChange={(event) => update({ message: event.target.value })} rows={2} value={draft.message} />
+                    <Textarea aria-label={t("agent:staffFirst.message.label")} id="agent-staff-first-message" maxLength={STAFF_FIRST_MESSAGE_MAX_LENGTH} onChange={(event) => update({ message: event.target.value })} placeholder={t("agent:staffFirst.message.placeholder")} rows={2} value={draft.message} />
                   </Field>
                   <Field>
                     <FieldContent>
                       <FieldLabel htmlFor="agent-staff-first-handover">{t("agent:staffFirst.handover.label")}</FieldLabel>
                       <FieldDescription>{serbian ? t("agent:staffFirst.message.noSerbianVoice") : t("agent:staffFirst.handover.hint")}</FieldDescription>
                     </FieldContent>
-                    <Textarea aria-label={t("agent:staffFirst.handover.label")} id="agent-staff-first-handover" maxLength={STAFF_FIRST_MESSAGE_MAX_LENGTH} onChange={(event) => update({ handoverMessage: event.target.value })} rows={2} value={draft.handoverMessage} />
+                    <Textarea aria-label={t("agent:staffFirst.handover.label")} id="agent-staff-first-handover" maxLength={STAFF_FIRST_MESSAGE_MAX_LENGTH} onChange={(event) => update({ handoverMessage: event.target.value })} placeholder={t("agent:staffFirst.handover.placeholder")} rows={2} value={draft.handoverMessage} />
                   </Field>
                 </>
               )}

@@ -328,6 +328,7 @@
     },
     "name": {
       "label": "Name",
+      "placeholder": "e.g. Ava",
       "hint": "Only your team sees it."
     },
     "greeting": {
@@ -445,11 +446,13 @@
     },
     "message": {
       "label": "Message before ringing",
+      "placeholder": "e.g. One moment, I'll check who is free.",
       "hint": "Optional. Callers hear this first.",
       "noSerbianVoice": "Callers won't hear this. Messages can't be read in Serbian yet."
     },
     "handover": {
       "label": "Message before the agent answers",
+      "placeholder": "e.g. Sorry, nobody is free right now. I can help instead.",
       "hint": "Optional. Callers hear this if nobody picks up."
     },
     "errors": {

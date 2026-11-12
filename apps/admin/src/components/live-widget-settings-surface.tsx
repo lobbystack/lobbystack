@@ -375,7 +375,7 @@ function WidgetKeyForm({ editing, name, businessName, embedOrigin, pending, erro
                       <span className="sr-only">{t("widget:manage.pickColor")}</span>
                       <input className="absolute inset-0 cursor-pointer opacity-0" type="color" value={draft.color.length === 4 ? `#${[...draft.color.slice(1)].map((digit) => digit + digit).join("")}` : draft.color} onChange={(event) => { set({ color: event.target.value }); setColorText(event.target.value); }} />
                     </label>
-                    <Input id={`${id}-color`} className="font-mono" value={colorText} maxLength={7} spellCheck={false} dir="ltr" onChange={(event) => { setColorText(event.target.value); if (HEX_COLOR.test(event.target.value)) set({ color: event.target.value }); }} onBlur={() => setColorText(draft.color)} />
+                    <Input id={`${id}-color`} className="font-mono" placeholder="#4f46e5" value={colorText} maxLength={7} spellCheck={false} dir="ltr" onChange={(event) => { setColorText(event.target.value); if (HEX_COLOR.test(event.target.value)) set({ color: event.target.value }); }} onBlur={() => setColorText(draft.color)} />
                   </div>
                 </Field>
                 <Field>

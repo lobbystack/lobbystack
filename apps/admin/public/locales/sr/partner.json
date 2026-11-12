@@ -227,6 +227,7 @@
       "nameLabel": "Naziv",
       "namePlaceholder": "Recepcija",
       "priceLabel": "Mesečna cena",
+      "pricePlaceholder": "npr. 49",
       "setupFeeLabel": "Naknada za aktivaciju",
       "optional": "Opciono",
       "minutesLabel": "Minuti mesečno",
@@ -457,6 +458,7 @@
       "title": "Brend"
     },
     "nameLabel": "Naziv",
+    "namePlaceholder": "npr. Northwind Glas",
     "logoLabel": "Logo",
     "logoHelp": "PNG, JPEG, WebP ili SVG, do 256 KB.",
     "faviconLabel": "Favikon",
@@ -787,6 +789,7 @@
     "nameLabel": "Naziv firme",
     "namePlaceholder": "Acme Recepcija",
     "subdomainLabel": "Adresa kontrolne table",
+    "subdomainPlaceholder": "npr. northwind",
     "subdomainHelp": "Koristite od 3 do 40 malih slova, cifara i crtica.",
     "submit": "Napravi partnerski nalog",
     "submitting": "Pravljenje…",

@@ -189,7 +189,7 @@ export function PartnerPackagesSurface() {
               <Field data-invalid={createPriceError ? true : undefined}>
                 <FieldLabel htmlFor="partner-package-price">{t("packages.create.priceLabel")}</FieldLabel>
                 <InputGroup>
-                  <InputGroupInput aria-describedby={createPriceError ? "partner-package-price-error" : undefined} aria-invalid={createPriceError ? true : undefined} className="tabular-nums" id="partner-package-price" inputMode="decimal" onChange={(event) => setDraft({ ...draft, price: event.target.value })} value={draft.price} />
+                  <InputGroupInput aria-describedby={createPriceError ? "partner-package-price-error" : undefined} aria-invalid={createPriceError ? true : undefined} className="tabular-nums" id="partner-package-price" inputMode="decimal" onChange={(event) => setDraft({ ...draft, price: event.target.value })} placeholder={t("packages.create.pricePlaceholder")} value={draft.price} />
                   <InputGroupAddon align="inline-end"><InputGroupText>{currency}</InputGroupText></InputGroupAddon>
                 </InputGroup>
                 {createPriceError ? <FieldError id="partner-package-price-error">{createPriceError}</FieldError> : null}
@@ -296,7 +296,7 @@ export function PartnerPackagesSurface() {
             </DialogHeader>
             <Field data-invalid={renameNameError ? true : undefined}>
               <FieldLabel htmlFor="partner-package-rename">{t("packages.create.nameLabel")}</FieldLabel>
-              <Input aria-describedby={renameNameError ? "partner-package-rename-error" : undefined} aria-invalid={renameNameError ? true : undefined} autoComplete="off" id="partner-package-rename" maxLength={PARTNER_PACKAGE_NAME_MAX_LENGTH} onChange={(event) => setNewName(event.target.value)} value={newName} />
+              <Input aria-describedby={renameNameError ? "partner-package-rename-error" : undefined} aria-invalid={renameNameError ? true : undefined} autoComplete="off" id="partner-package-rename" maxLength={PARTNER_PACKAGE_NAME_MAX_LENGTH} onChange={(event) => setNewName(event.target.value)} placeholder={t("packages.create.namePlaceholder")} value={newName} />
               {renameNameError ? <FieldError id="partner-package-rename-error">{renameNameError}</FieldError> : null}
             </Field>
             {renameError ? <p className="type-body text-destructive" role="alert">{renameError}</p> : null}

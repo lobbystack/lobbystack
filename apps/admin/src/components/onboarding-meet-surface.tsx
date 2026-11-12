@@ -119,7 +119,7 @@ function MeetAgent() {
           <FieldGroup className="gap-4">
             <Field>
               <FieldLabel htmlFor="meet-name">{t("meet.name")}</FieldLabel>
-              <Input id="meet-name" maxLength={80} onBlur={saveTyped} onChange={(event) => setNameDraft(event.target.value)} value={name} />
+              <Input id="meet-name" maxLength={80} onBlur={saveTyped} onChange={(event) => setNameDraft(event.target.value)} placeholder={tAgent("fields.name.placeholder")} value={name} />
             </Field>
             <Field>
               <FieldLabel htmlFor="meet-voice">{tAgent("fields.voice.label")}</FieldLabel>
@@ -130,7 +130,7 @@ function MeetAgent() {
             </Field>
             <Field>
               <FieldLabel htmlFor="meet-greeting">{t("meet.greeting")}</FieldLabel>
-              <Textarea className="min-h-28" id="meet-greeting" onBlur={saveTyped} onChange={(event) => setGreetingDraft(event.target.value)} value={greeting} />
+              <Textarea className="min-h-28" id="meet-greeting" onBlur={saveTyped} onChange={(event) => setGreetingDraft(event.target.value)} placeholder={tAgent("fields.greeting.placeholder")} value={greeting} />
             </Field>
             <Field>
               <FieldLabel htmlFor="meet-language">{t("meet.language")}</FieldLabel>

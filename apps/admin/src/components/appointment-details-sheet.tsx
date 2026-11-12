@@ -117,12 +117,12 @@ function AppointmentNotes({ appointment }: { appointment: Appointment }) {
       <FieldGroup className="gap-4">
         <Field>
           <FieldLabel htmlFor={notesId}>{t("appointments.create.notes")}</FieldLabel>
-          <Textarea aria-describedby={`${notesId}-hint`} className="ph-mask" id={notesId} maxLength={2000} onChange={(event) => setNotes(event.target.value)} readOnly={!canEdit} rows={2} value={notes} />
+          <Textarea aria-describedby={`${notesId}-hint`} className="ph-mask" id={notesId} maxLength={2000} onChange={(event) => setNotes(event.target.value)} placeholder={canEdit ? t("appointments.create.notesPlaceholder") : undefined} readOnly={!canEdit} rows={2} value={notes} />
           <FieldDescription id={`${notesId}-hint`}>{t("appointments.create.notesHint")}</FieldDescription>
         </Field>
         <Field>
           <FieldLabel htmlFor={internalId}>{t("appointments.create.internalNotes")}</FieldLabel>
-          <Textarea aria-describedby={`${internalId}-hint`} className="ph-mask" id={internalId} maxLength={2000} onChange={(event) => setInternalNotes(event.target.value)} readOnly={!canEdit} rows={2} value={internalNotes} />
+          <Textarea aria-describedby={`${internalId}-hint`} className="ph-mask" id={internalId} maxLength={2000} onChange={(event) => setInternalNotes(event.target.value)} placeholder={canEdit ? t("appointments.create.internalNotesPlaceholder") : undefined} readOnly={!canEdit} rows={2} value={internalNotes} />
           <FieldDescription id={`${internalId}-hint`}>{t("appointments.create.internalNotesHint")}</FieldDescription>
         </Field>
       </FieldGroup>

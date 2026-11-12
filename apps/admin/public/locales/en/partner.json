@@ -225,6 +225,7 @@
       "nameLabel": "Name",
       "namePlaceholder": "Front desk",
       "priceLabel": "Monthly price",
+      "pricePlaceholder": "e.g. 49",
       "setupFeeLabel": "Setup fee",
       "optional": "Optional",
       "minutesLabel": "Minutes each month",
@@ -449,6 +450,7 @@
       "title": "Brand"
     },
     "nameLabel": "Name",
+    "namePlaceholder": "e.g. Northwind Voice",
     "logoLabel": "Logo",
     "logoHelp": "PNG, JPEG, WebP or SVG, up to 256 KB.",
     "faviconLabel": "Favicon",
@@ -775,6 +777,7 @@
     "nameLabel": "Company name",
     "namePlaceholder": "Acme Reception",
     "subdomainLabel": "Dashboard address",
+    "subdomainPlaceholder": "e.g. northwind",
     "subdomainHelp": "Use 3 to 40 lowercase letters, digits and hyphens.",
     "submit": "Create partner account",
     "submitting": "Creating…",

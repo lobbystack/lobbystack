@@ -179,7 +179,7 @@ export function TimeOffDialog({ businessId, timeZone, entry, day, onOpenChange }
                 {endBeforeStart ? <FieldError>{t("appointments.timeOff.endBeforeStart")}</FieldError> : datesMissing ? <FieldError>{t("appointments.timeOff.datesRequired")}</FieldError> : null}
                 <Field>
                   <FieldLabel htmlFor={ids.note}>{t("appointments.timeOff.reason")}</FieldLabel>
-                  <Textarea id={ids.note} maxLength={500} onChange={(event) => set({ note: event.target.value })} rows={2} value={values.note} />
+                  <Textarea id={ids.note} maxLength={500} onChange={(event) => set({ note: event.target.value })} placeholder={t("appointments.timeOff.reasonPlaceholder")} rows={2} value={values.note} />
                 </Field>
               </FieldGroup>
             </div>

@@ -309,6 +309,7 @@
         "other": "Autre chose"
       },
       "commentLabel": "Dites-nous-en plus (facultatif)",
+      "commentPlaceholder": "ex. Nous n'avons plus besoin d'autant d'appels",
       "keep": "Garder mon forfait",
       "confirm": "Annuler le forfait",
       "canceling": "Annulation du forfait...",

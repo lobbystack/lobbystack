@@ -329,6 +329,7 @@
     },
     "name": {
       "label": "Nombre",
+      "placeholder": "p. ej. Ava",
       "hint": "Solo tu equipo lo ve."
     },
     "greeting": {
@@ -446,11 +447,13 @@
     },
     "message": {
       "label": "Mensaje antes del timbre",
+      "placeholder": "p. ej. Un momento, voy a ver quién está disponible.",
       "hint": "Opcional. Quien llama lo oye primero.",
       "noSerbianVoice": "Quien llama no lo oirá. Los mensajes aún no se pueden leer en serbio."
     },
     "handover": {
       "label": "Mensaje antes de que responda el agente",
+      "placeholder": "p. ej. Lo siento, no hay nadie disponible ahora. Puedo ayudarle yo.",
       "hint": "Opcional. Quien llama lo oye si nadie contesta."
     },
     "errors": {

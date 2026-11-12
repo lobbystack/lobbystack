@@ -309,6 +309,7 @@
         "other": "Nešto drugo"
       },
       "commentLabel": "Recite nam više (opciono)",
+      "commentPlaceholder": "npr. Više nam ne treba toliki broj poziva",
       "keep": "Zadrži paket",
       "confirm": "Otkaži paket",
       "canceling": "Otkazivanje paketa...",

@@ -228,7 +228,7 @@ export function AppointmentForm({ businessId, timeZone: fallbackTimeZone, initia
                 <FieldLabel htmlFor={nameId}>{t("appointments.create.name")}</FieldLabel>
                 <Button onClick={() => { setNewContact(false); setSubmitted(false); }} size="xs" type="button" variant="ghost">{t("appointments.create.chooseContact")}</Button>
               </div>
-              <Input aria-describedby={nameMissing ? `${nameId}-error` : undefined} aria-invalid={nameMissing || undefined} autoComplete="off" className="ph-mask" id={nameId} maxLength={200} onChange={(event) => setName(event.target.value)} value={name} />
+              <Input aria-describedby={nameMissing ? `${nameId}-error` : undefined} aria-invalid={nameMissing || undefined} autoComplete="off" className="ph-mask" id={nameId} maxLength={200} onChange={(event) => setName(event.target.value)} placeholder={t("appointments.create.namePlaceholder")} value={name} />
               {nameMissing ? <FieldError id={`${nameId}-error`}>{t("appointments.create.nameRequired")}</FieldError> : null}
             </Field>
             <Field data-invalid={phoneProblem ? true : undefined}>
@@ -277,12 +277,12 @@ export function AppointmentForm({ businessId, timeZone: fallbackTimeZone, initia
           </Field>
           <Field>
             <FieldLabel htmlFor={notesId}>{t("appointments.create.notes")}</FieldLabel>
-            <Textarea aria-describedby={`${notesId}-hint`} id={notesId} maxLength={MAX_NOTES} onChange={(event) => setNotes(event.target.value)} rows={2} value={notes} />
+            <Textarea aria-describedby={`${notesId}-hint`} id={notesId} maxLength={MAX_NOTES} onChange={(event) => setNotes(event.target.value)} placeholder={t("appointments.create.notesPlaceholder")} rows={2} value={notes} />
             <FieldDescription id={`${notesId}-hint`}>{t("appointments.create.notesHint")}</FieldDescription>
           </Field>
           <Field>
             <FieldLabel htmlFor={internalId}>{t("appointments.create.internalNotes")}</FieldLabel>
-            <Textarea aria-describedby={`${internalId}-hint`} id={internalId} maxLength={MAX_NOTES} onChange={(event) => setInternalNotes(event.target.value)} rows={2} value={internalNotes} />
+            <Textarea aria-describedby={`${internalId}-hint`} id={internalId} maxLength={MAX_NOTES} onChange={(event) => setInternalNotes(event.target.value)} placeholder={t("appointments.create.internalNotesPlaceholder")} rows={2} value={internalNotes} />
             <FieldDescription id={`${internalId}-hint`}>{t("appointments.create.internalNotesHint")}</FieldDescription>
           </Field>
         </FieldGroup>

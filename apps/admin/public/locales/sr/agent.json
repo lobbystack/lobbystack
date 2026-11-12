@@ -329,6 +329,7 @@
     },
     "name": {
       "label": "Ime",
+      "placeholder": "npr. Ava",
       "hint": "Vidi ga samo vaš tim."
     },
     "greeting": {
@@ -446,11 +447,13 @@
     },
     "message": {
       "label": "Poruka pre zvonjenja",
+      "placeholder": "npr. Trenutak, proveriću ko je slobodan.",
       "hint": "Opciono. Pozivaoci je čuju prvu.",
       "noSerbianVoice": "Pozivaoci je neće čuti. Poruke još ne mogu da se čitaju na srpskom."
     },
     "handover": {
       "label": "Poruka pre nego što se agent javi",
+      "placeholder": "npr. Izvinite, trenutno niko nije slobodan. Ja mogu da pomognem.",
       "hint": "Opciono. Pozivaoci je čuju ako se niko ne javi."
     },
     "errors": {

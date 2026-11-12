@@ -67,8 +67,8 @@ export function EditContactDialog({ businessId, contact, onOpenChange }: { busin
             <DialogTitle>{t("edit.title")}</DialogTitle>
           </DialogHeader>
           <FieldGroup className="gap-4">
-            <Field><FieldLabel htmlFor="edit-contact-name">{t("edit.name")}</FieldLabel><Input autoComplete="off" className="ph-mask" id="edit-contact-name" maxLength={200} onChange={(event) => setName(event.target.value)} value={name} /></Field>
-            <Field><FieldLabel htmlFor="edit-contact-email">{t("edit.email")}</FieldLabel><Input autoComplete="off" className="ph-mask" id="edit-contact-email" maxLength={320} onChange={(event) => setEmail(event.target.value)} type="email" value={email} /></Field>
+            <Field><FieldLabel htmlFor="edit-contact-name">{t("edit.name")}</FieldLabel><Input autoComplete="off" className="ph-mask" id="edit-contact-name" maxLength={200} onChange={(event) => setName(event.target.value)} placeholder={t("edit.namePlaceholder")} value={name} /></Field>
+            <Field><FieldLabel htmlFor="edit-contact-email">{t("edit.email")}</FieldLabel><Input autoComplete="off" className="ph-mask" id="edit-contact-email" maxLength={320} onChange={(event) => setEmail(event.target.value)} placeholder={t("edit.emailPlaceholder")} type="email" value={email} /></Field>
             {error ? <FieldError>{error}</FieldError> : null}
           </FieldGroup>
           <DialogFooter>

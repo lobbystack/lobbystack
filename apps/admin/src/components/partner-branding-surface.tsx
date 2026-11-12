@@ -218,7 +218,7 @@ export function PartnerBrandingSurface() {
                 <FieldGroup className="gap-5">
                   <Field>
                     <FieldLabel htmlFor={field("name")}>{t("branding.nameLabel")}</FieldLabel>
-                    <Input disabled={working} id={field("name")} maxLength={PARTNER_NAME_MAX_LENGTH} onChange={(event) => set({ name: event.target.value })} required value={draft.name} />
+                    <Input disabled={working} id={field("name")} maxLength={PARTNER_NAME_MAX_LENGTH} onChange={(event) => set({ name: event.target.value })} placeholder={t("branding.namePlaceholder")} required value={draft.name} />
                   </Field>
                   <div className="grid gap-5 sm:grid-cols-2">
                     <ImageField choice={logo} disabled={working} help={t("branding.logoHelp")} id={`${id}-logo`} image="logo" label={t("branding.logoLabel")} onChange={setLogo} onError={setError} savedUrl={data.logoUrl} />
