@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -189,5 +189,17 @@ describe("contact detail loading state", () => {
     expect(await screen.findByRole("heading", { level: 1, name: "Ana" })).toBeTruthy();
     expect(skeletons()).toBe(0);
     expect(screen.getAllByRole("tab").length).toBe(3);
+  });
+});
+
+describe("contact detail edit", () => {
+  it("opens the edit dialog from the menu with the contact's phone filled in", async () => {
+    language.current = "en";
+    renderDetail("en");
+    await userEvent.click(await screen.findByRole("button", { name: "table.actions.moreOptions" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "table.actions.editContact" }));
+    const dialog = await screen.findByRole("dialog");
+    expect((await within(dialog).findByLabelText("edit.name") as HTMLInputElement).value).toBe("Ana");
+    expect((await within(dialog).findByLabelText("create.phone") as HTMLInputElement).value.replace(/\D/g, "")).toBe("4155550100");
   });
 });

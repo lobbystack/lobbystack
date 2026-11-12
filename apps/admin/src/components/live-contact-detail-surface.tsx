@@ -12,6 +12,7 @@ import {
   Ellipsis,
   Info,
   MessageSquare,
+  Pencil,
   Phone,
   ShieldBan,
   ShieldCheck,
@@ -38,6 +39,7 @@ import { formatDateTime, intlLocale, formatRelativeTime } from "@/lib/locale";
 import { requestJson } from "@/lib/request-json";
 import { getChannelLabel, getContactChannels, getContactDisplayName, hasDisplayablePhone, normalizeChannel } from "@/lib/contact-display";
 import { formatPhoneNumberDisplay } from "@/lib/phone";
+import { EditContactDialog } from "@/components/edit-contact-dialog";
 import { Status } from "@/components/ui/status";
 import { appointmentStatusVariant, callOutcomeVariant, CONTACT_STATUS_VARIANTS } from "@/lib/status-variants";
 
@@ -125,6 +127,7 @@ export function LiveContactDetailSurface({ contactId }: { contactId: string }) {
   const { copiedField, copy } = useCopiedField();
   const [blockDialogOpen, setBlockDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
   const { businesses, business } = useActiveBusiness();
   const canMutate = business ? ["business_owner", "business_admin"].includes(business.role) : false;
   const detail = useQuery({
@@ -163,6 +166,7 @@ export function LiveContactDetailSurface({ contactId }: { contactId: string }) {
         <DropdownMenu>
           <DropdownMenuTrigger render={<Button aria-label={t("table.actions.moreOptions")} size="icon-sm" variant="ghost" />}><Ellipsis /></DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem disabled={!canMutate} onClick={() => setEditing(true)}><Pencil />{t("table.actions.editContact")}</DropdownMenuItem>
             <DropdownMenuItem disabled={!canMutate} onClick={() => setBlockDialogOpen(true)}>{contact.operatorBlockedAt ? <ShieldCheck /> : <ShieldBan />}{contact.operatorBlockedAt ? t("detail.blocking.unblockAction") : t("detail.blocking.blockAction")}</DropdownMenuItem>
             <DropdownMenuItem disabled={!canMutate} onClick={() => setDeleteDialogOpen(true)} variant="destructive"><Trash2 />{t("table.actions.deleteContact")}</DropdownMenuItem>
           </DropdownMenuContent>
@@ -193,6 +197,7 @@ export function LiveContactDetailSurface({ contactId }: { contactId: string }) {
         <TabsContent value="details"><DetailsTab businessId={business!.businessId} canMutate={canMutate} contact={contact} copiedField={copiedField} locale={i18n.language} onCopy={copy} passcode={data.passcode} /></TabsContent>
       </Tabs>
 
+      <EditContactDialog businessId={business!.businessId} contact={editing ? contact : null} onOpenChange={(open) => { if (!open) setEditing(false); }} />
       <ConfirmActionDialog cancelLabel={t("detail.blocking.cancel")} confirmLabel={contact.operatorBlockedAt ? t("detail.blocking.unblockConfirm") : t("detail.blocking.blockConfirm")} confirmVariant={contact.operatorBlockedAt ? "default" : "destructive"} description={contact.operatorBlockedAt ? t("detail.blocking.unblockDescription") : t("detail.blocking.blockDescription")} onConfirm={async () => { await updateBlock.mutateAsync(!contact.operatorBlockedAt); }} onOpenChange={(open) => { if (!updateBlock.isPending) setBlockDialogOpen(open); }} open={blockDialogOpen} pending={updateBlock.isPending} title={contact.operatorBlockedAt ? t("detail.blocking.unblockTitle") : t("detail.blocking.blockTitle")} />
       <ConfirmActionDialog confirmVariant="destructive" cancelLabel={t("table.actions.deleteCancel")} confirmLabel={t("table.actions.deleteConfirm")} description={t("table.actions.deleteDescription")} onConfirm={async () => { await remove.mutateAsync(); }} onOpenChange={(open) => { if (!remove.isPending) setDeleteDialogOpen(open); }} open={deleteDialogOpen} pending={remove.isPending} title={t("table.actions.deleteTitle")} />
     </div>

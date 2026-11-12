@@ -54,6 +54,18 @@ describe("contact list parity and pagination", () => {
     await waitFor(() => expect(toast.success).toHaveBeenCalledWith("edit.saved"));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
+  it("edits a contact's phone and sends the new number in international format", async () => {
+    const { fetchMock } = setup();
+    await userEvent.click(await screen.findByRole("button", { name: "table.actions.moreOptions" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "table.actions.editContact" }));
+    const dialog = await screen.findByRole("dialog");
+    const phone = await within(dialog).findByLabelText("create.phone") as HTMLInputElement;
+    await waitFor(() => expect(phone.value.replace(/\D/g, "")).toBe("4155550100"));
+    await userEvent.clear(phone);
+    await userEvent.type(phone, "4155550111");
+    await userEvent.click(within(dialog).getByRole("button", { name: "edit.save" }));
+    await waitFor(() => expect(fetchMock.mock.calls.some(([url, init]) => init?.method === "PATCH" && String(url).startsWith("/api/contacts/contact-0?businessId=business") && init.body === JSON.stringify({ phone: "+14155550111" }))).toBe(true));
+  });
   it("keeps the edit dialog open and sends nothing when the email is not valid", async () => {
     const { fetchMock } = setup();
     await userEvent.click(await screen.findByRole("button", { name: "table.actions.moreOptions" }));

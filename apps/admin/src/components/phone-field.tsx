@@ -19,7 +19,7 @@ export function PhoneField({ id, countryLabel, value, onChange, errorId }: { id:
   const { i18n } = useTranslation();
   const locale = i18n.resolvedLanguage ?? i18n.language;
   const countries = useMemo(() => getPhoneCountryOptions(locale), [locale]);
-  const [country, setCountry] = useState<Country>(() => getDefaultPhoneCountry(locale) as Country);
+  const [country, setCountry] = useState<Country>(() => (value ? inferPhoneCountry(value, getDefaultPhoneCountry(locale)) : getDefaultPhoneCountry(locale)) as Country);
   // What was typed, read when the number changes, so a blank field can be told apart from an incomplete one.
   const draft = useRef("");
   return (
