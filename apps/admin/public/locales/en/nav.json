@@ -145,7 +145,7 @@
     "madeDefault": "{{name}} is now the default agent",
     "makeDefaultFailed": "We couldn't change the default agent.",
     "remove": "Remove agent",
-    "removeDefaultHint": "Make another agent the default first",
+    "removeDefaultHint": "Set another default first",
     "removeTitle": "Remove {{name}}?",
     "removeDescription": "Its channels and open conversations move to {{name}}.",
     "removeDescriptionPick": "Its channels and open conversations move to the agent you pick.",

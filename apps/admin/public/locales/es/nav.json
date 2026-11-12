@@ -148,7 +148,7 @@
     "madeDefault": "{{name}} es ahora el agente predeterminado",
     "makeDefaultFailed": "No pudimos cambiar el agente predeterminado.",
     "remove": "Eliminar agente",
-    "removeDefaultHint": "Primero elija otro agente predeterminado",
+    "removeDefaultHint": "Primero defina otro agente predeterminado",
     "removeTitle": "¿Eliminar a {{name}}?",
     "removeDescription": "Sus canales y conversaciones abiertas pasan a {{name}}.",
     "removeDescriptionPick": "Sus canales y conversaciones abiertas pasan al agente que elija.",
