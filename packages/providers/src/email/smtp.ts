@@ -814,13 +814,13 @@ function numberReleaseBody(variables: Record<string, string>, brand: EmailBrand)
 }
 
 /**
- * A phone number as the dashboard shows it: a US or Canadian number in its
+ * A phone number as the dashboard shows it: a North American number in its
  * national form, any other in its international one, and anything that
- * doesn't parse as given.
+ * can't be a phone number as given.
  */
 export function formatEmailPhoneNumber(value: string): string {
   const parsed = parsePhoneNumberFromString(value.trim());
-  if (!parsed?.isValid()) return value;
+  if (!parsed?.isPossible()) return value;
   return parsed.countryCallingCode === "1" ? parsed.formatNational() : parsed.formatInternational();
 }
 
@@ -834,13 +834,13 @@ function planReminderCopy(v: Record<string, string>): TrialCopy {
   const business = v.businessName?.trim() ?? "";
   switch (v.locale) {
     case "fr":
-      return { subject: `Votre numéro ${num} est actif`, lines: [business ? `Votre numéro ${num} est actif et votre agent répond à ses appels pour ${business}.` : `Votre numéro ${num} est actif et votre agent répond à ses appels.`, "Commencez votre essai gratuit de 14 jours pour terminer la configuration. Il suffit d'un clic, sans carte bancaire."], button: "Terminer la configuration" };
+      return { subject: `Votre numéro ${num} est actif`, lines: [business ? `Votre numéro ${num} est actif et votre agent répond à ses appels pour ${business}.` : `Votre numéro ${num} est actif et votre agent répond à ses appels.`, "Commencez votre essai gratuit de 14 jours pour terminer la configuration. Il suffit d'un clic, sans carte bancaire."], button: "Commencer l'essai gratuit de 14 jours" };
     case "es":
-      return { subject: `Su número ${num} ya está activo`, lines: [business ? `Su número ${num} ya está activo y su agente contesta sus llamadas para ${business}.` : `Su número ${num} ya está activo y su agente contesta sus llamadas.`, "Empiece su prueba gratuita de 14 días para terminar la configuración. Es un solo clic y no necesita tarjeta."], button: "Terminar la configuración" };
+      return { subject: `Su número ${num} ya está activo`, lines: [business ? `Su número ${num} ya está activo y su agente contesta sus llamadas para ${business}.` : `Su número ${num} ya está activo y su agente contesta sus llamadas.`, "Empiece su prueba gratuita de 14 días para terminar la configuración. Es un solo clic y no necesita tarjeta."], button: "Empezar la prueba gratuita de 14 días" };
     case "sr":
-      return { subject: `Vaš broj ${num} je aktivan`, lines: [business ? `Vaš broj ${num} je aktivan i agent na njemu odgovara na pozive za ${business}.` : `Vaš broj ${num} je aktivan i agent na njemu odgovara na pozive.`, "Započnite besplatnu probu od 14 dana da biste završili podešavanje. Potreban je samo jedan klik, bez kartice."], button: "Završi podešavanje" };
+      return { subject: `Vaš broj ${num} je aktivan`, lines: [business ? `Vaš broj ${num} je aktivan i agent na njemu odgovara na pozive za ${business}.` : `Vaš broj ${num} je aktivan i agent na njemu odgovara na pozive.`, "Započnite besplatnu probu od 14 dana da biste završili podešavanje. Potreban je samo jedan klik, bez kartice."], button: "Započnite besplatnu probu od 14 dana" };
     default:
-      return { subject: `Your number ${num} is live`, lines: [business ? `Your number ${num} is live, and your agent answers its calls for ${business}.` : `Your number ${num} is live, and your agent answers its calls.`, "Start your 14-day free trial to finish setup. It takes one click, and you won't need a card."], button: "Finish setup" };
+      return { subject: `Your number ${num} is live`, lines: [business ? `Your number ${num} is live, and your agent answers its calls for ${business}.` : `Your number ${num} is live, and your agent answers its calls.`, "Start your 14-day free trial to finish setup. It takes one click, and you won't need a card."], button: "Start your 14-day free trial" };
   }
 }
 

@@ -38,7 +38,7 @@ async function trialAtMeet(tx: DatabaseTransaction, options: { timezone?: string
   const { businessId } = await createBusiness({ db: tx as unknown as Database }, { userId, name: `Acme ${randomUUID()}`, timezone: options.timezone ?? "UTC", businessType: "test" });
   await tx.execute(sql`reset role`);
   await tx.update(businesses).set({ onboardingStage: "meet", deploymentMode: "cloud" }).where(eq(businesses.id, businessId));
-  const [number] = await tx.insert(phoneNumbers).values({ businessId, agentId: defaultAgentIdOf(businessId), e164: `+1438${String(Math.floor(Math.random() * 10_000_000)).padStart(7, "0")}`, carrier: "twilio", status: "active", voiceEnabled: true, smsEnabled: true }).returning({ id: phoneNumbers.id, e164: phoneNumbers.e164 });
+  const [number] = await tx.insert(phoneNumbers).values({ businessId, agentId: defaultAgentIdOf(businessId), e164: `+1555010${String(Math.floor(Math.random() * 10_000)).padStart(4, "0")}`, carrier: "twilio", status: "active", voiceEnabled: true, smsEnabled: true }).returning({ id: phoneNumbers.id, e164: phoneNumbers.e164 });
   await tx.insert(numberTrials).values({ businessId, userId, status: "active", phoneNumberId: number!.id, startedAt: new Date(), endsAt: new Date(Date.now() + 14 * 86_400_000) });
   return { userId, businessId, email, e164: number!.e164 };
 }
@@ -170,7 +170,7 @@ describe.skipIf(!testUrl)("plan reminder against dedicated PostgreSQL roles", ()
       const businessId = randomUUID();
       await tx.insert(businesses).values({ id: businessId, slug: `harbor-${businessId.slice(0, 8)}`, name: "Harbor Dental", timezone: "UTC", businessType: "dental", partnerId: partner!.id, partnerAccessLevel: "full", onboardingStage: "meet" });
       await tx.insert(businessMemberships).values({ businessId, userId, role: "business_owner", status: "active" });
-      const [number] = await tx.insert(phoneNumbers).values({ businessId, agentId: defaultAgentIdOf(businessId), e164: "+14388070286", carrier: "twilio", status: "active", voiceEnabled: true, smsEnabled: true }).returning({ id: phoneNumbers.id });
+      const [number] = await tx.insert(phoneNumbers).values({ businessId, agentId: defaultAgentIdOf(businessId), e164: "+15550100124", carrier: "twilio", status: "active", voiceEnabled: true, smsEnabled: true }).returning({ id: phoneNumbers.id });
       await tx.insert(numberTrials).values({ businessId, userId, status: "active", phoneNumberId: number!.id, startedAt: new Date(), endsAt: new Date(Date.now() + 14 * 86_400_000) });
       expect(await advance(tx, { userId, businessId })).toBe("complete");
       // Even put on the plans by hand, it gets neither the job nor the email.
