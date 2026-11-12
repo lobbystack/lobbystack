@@ -7,8 +7,15 @@ import { sql, type SQL } from "drizzle-orm";
 
 /** The outbox hands the crawl to the queue within seconds while the worker runs, so a minute without that means no worker. */
 export const WEBSITE_IMPORT_UNDISPATCHED_MS = 60_000;
-/** The bulk queue runs two jobs per worker, and a crawl or file read ahead of this one takes up to five minutes. */
-export const WEBSITE_IMPORT_QUEUED_MS = 5 * 60_000;
+/**
+ * Every business shares the bulk queue, two jobs per worker, with reembed,
+ * summary, hours and file reads. A crawl job ahead of this one gets five
+ * minutes of Firecrawl and then embeds up to 50 pages, so a healthy crawl can
+ * wait behind two of them for well over five minutes. A dead worker still
+ * shows within a minute while the outbox holds the crawl, since the
+ * dispatcher runs in the worker; this limit covers a worker that died after it.
+ */
+export const WEBSITE_IMPORT_QUEUED_MS = 15 * 60_000;
 /**
  * The worker writes nothing while the crawl provider reads the site: Firecrawl
  * gets five minutes, a provider outage defers the crawl up to two minutes

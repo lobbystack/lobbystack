@@ -16,11 +16,17 @@ describe("whether a website crawl stalled", () => {
     expect(isWebsiteImportStalled({ status: "queued", updatedAt: ago(90_000).toISOString(), dispatch: { createdAt: ago(90_000).toISOString(), publishedAt: null } }, now)).toBe(true);
   });
 
-  it("gives a crawl in the queue five minutes from when the dispatcher sent it on", () => {
+  it("gives a crawl in the queue fifteen minutes from when the dispatcher sent it on", () => {
     const queued = { status: "queued", updatedAt: ago(WEBSITE_IMPORT_QUEUED_MS + 60_000) };
     expect(isWebsiteImportStalled(queued, now)).toBe(true);
     expect(isWebsiteImportStalled({ ...queued, dispatch: { createdAt: queued.updatedAt, publishedAt: ago(60_000) } }, now)).toBe(false);
     expect(isWebsiteImportStalled({ ...queued, updatedAt: ago(WEBSITE_IMPORT_QUEUED_MS - 1_000) }, now)).toBe(false);
+  });
+
+  it("leaves a crawl waiting behind two full crawls in a busy queue alone", () => {
+    // Two crawls ahead, each with five minutes of Firecrawl and then indexing.
+    const sentAt = ago(12 * 60_000);
+    expect(isWebsiteImportStalled({ status: "queued", updatedAt: sentAt, dispatch: { createdAt: sentAt, publishedAt: sentAt } }, now)).toBe(false);
   });
 
   it("catches a crawl that started and then wrote nothing for longer than the provider allows", () => {

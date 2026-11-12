@@ -22,7 +22,7 @@ Nothing marks a crawl as stuck, because the worker that would mark it is often t
 | Status | Stalled after | Why |
 | --- | --- | --- |
 | `queued`, outbox message not yet sent | 1 minute | The dispatcher runs in the worker and sends messages within seconds. |
-| `queued`, outbox message sent | 5 minutes | The `bulk` queue runs two jobs per worker, and a job ahead can take five minutes. |
+| `queued`, outbox message sent | 15 minutes | Every business shares the `bulk` queue, two jobs per worker. A crawl ahead can take five minutes in Firecrawl and then index up to 50 pages. |
 | `crawling` | 15 minutes | Firecrawl gets five minutes, and a provider outage defers the crawl up to two minutes between tries. |
 | `indexing` | 5 minutes | The worker writes progress after each page. |
 
