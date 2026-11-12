@@ -89,6 +89,12 @@ export function LocaleProvider({
       writeStoredLocale(initialLocale);
       return;
     }
+    // A localized URL names its language, and the server rendered the page in
+    // it with only that language's bundles. A choice stored by an earlier page
+    // must not switch it away; it stays stored for unprefixed requests.
+    if (initialLocaleSource === "path" && storedLocale) {
+      return;
+    }
     if (storedLocale) {
       writeStoredLocaleCookie(storedLocale);
       if (storedLocale !== i18n.resolvedLanguage) {

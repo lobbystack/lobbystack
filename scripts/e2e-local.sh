@@ -63,6 +63,7 @@ TESTS=(
   e2e/performance-startup.e2e.ts
   e2e/rule-channels.e2e.ts
   e2e/setup-prompts.e2e.ts
+  e2e/signed-out-locale.e2e.ts
   e2e/supported-journeys.e2e.ts
   e2e/widget-settings.e2e.ts
 )

@@ -5,6 +5,11 @@ it("keeps login and embed startup independent of dashboard translations", () => 
   expect(routeNamespaces("/fr/login")).toEqual(["common", "auth", "onboarding"]);
   expect(routeNamespaces("/embed/key")).toEqual(["common", "widget"]);
 });
+it("gives the emailed links' pages and OAuth consent their own copy, not the dashboard's", () => {
+  expect(routeNamespaces("/fr/check-in/token")).toEqual(["common", "auth"]);
+  expect(routeNamespaces("/sr/unsubscribe/token")).toEqual(["common", "auth"]);
+  expect(routeNamespaces("/fr/oauth/consent")).toEqual(["common", "auth", "onboarding"]);
+});
 it("gives the checkout return page its shell and billing copy without the dashboard", () => {
   expect(routeNamespaces("/billing/success")).toEqual(["common", "auth", "onboarding", "settings"]);
 });
