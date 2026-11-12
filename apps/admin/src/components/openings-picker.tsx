@@ -15,6 +15,20 @@ import { cn } from "@/lib/utils";
 const DAY_PICKER_LOCALES = { en: enUS, fr, es, sr: srLatn } as const;
 
 // The day picker works in the browser's own days, so a key becomes that day's local midnight and back.
+/**
+ * Choosing a time adds a line under the list and moves focus, and on phones the form scrolled down with it.
+ * Every scrolled ancestor is put back where it was, now and after the next two frames.
+ */
+function holdScroll(from: HTMLElement): void {
+  const held: Array<[HTMLElement, number]> = [];
+  for (let node = from.parentElement; node; node = node.parentElement) {
+    if (node.scrollHeight > node.clientHeight && node.scrollTop > 0) held.push([node, node.scrollTop]);
+  }
+  if (!held.length) return;
+  const restore = () => { for (const [node, top] of held) node.scrollTop = top; };
+  requestAnimationFrame(() => { restore(); requestAnimationFrame(restore); });
+}
+
 const keyToLocalDate = (key: string) => {
   const [year, month, day] = key.split("-").map(Number);
   return new Date(year!, month! - 1, day!);
@@ -65,13 +79,13 @@ export function OpeningsPicker({ date, today, timeZone, times, loading, failed, 
           selected={keyToLocalDate(date)}
         />
       </section>}
-      <section aria-busy={loading} aria-label={t("appointments.openings.times")} className={cn("flex min-w-0 flex-col gap-2", compact ? "min-h-20" : "min-h-40")}>
+      <section aria-busy={loading} aria-label={t("appointments.openings.times")} className={cn("flex min-w-0 flex-col gap-2", compact ? "sm:min-h-20" : "sm:min-h-40", !waiting && (loading || times.length > 0) && (compact ? "min-h-20" : "min-h-40"))}>
         <h3 className="type-item-title">{t("appointments.openings.times")}</h3>
         {waiting ? <p className="type-body-muted">{waiting}</p>
           : loading ? <OpeningTimesSkeleton />
           : failed ? <p className="type-body-muted text-destructive">{t("appointments.openings.timesFailed")}</p>
           : times.length ? <div className={cn("grid grid-cols-3 gap-2 overflow-y-auto", compact ? "max-h-48 p-0.5" : "-m-1 max-h-72 p-1", !columns && "sm:grid-cols-2")}>
-            {times.map((value) => <Button aria-pressed={selected === value} className={cn("tabular-nums", selected === value && "ring-2 ring-ring")} key={value} onClick={() => onSelect(value)} type="button" variant={selected === value ? "default" : "outline"}>{time(value)}</Button>)}
+            {times.map((value) => <Button aria-pressed={selected === value} className={cn("tabular-nums", selected === value && "ring-2 ring-ring")} key={value} onClick={(event) => { holdScroll(event.currentTarget); onSelect(value); }} type="button" variant={selected === value ? "default" : "outline"}>{time(value)}</Button>)}
           </div>
           : <p className="type-body-muted">{t("appointments.openings.noTimes")}</p>}
       </section>
