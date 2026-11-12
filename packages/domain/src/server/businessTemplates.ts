@@ -48,6 +48,7 @@ import {
 import { listKnowledgeEntryResources, listKnowledgeSourceResources, listServiceResources, loadBusinessResource, serializeReceptionist, serializeRule, type Page } from "./publicApi/resources";
 import { listAgentRulesInTransaction } from "./rules";
 import { withLegacyInstructions } from "./channelRules";
+import { withBusinessSummary } from "./businessSummary";
 import { storageFileName, uploadObjectKey, type BinaryStorageProvider } from "./storage";
 
 // Business templates: a partner saves one of its businesses' setup in the
@@ -154,7 +155,7 @@ async function readBusinessSetup(tx: DatabaseTransaction, businessId: string): P
   if (!business) throw businessNotFound();
   const locale = normalizeRuntimeLocale(business.locale);
   const [agentRow] = await tx.select().from(agents).where(defaultAgentOf(businessId)).limit(1);
-  const profile = agentRow ? await withLegacyInstructions(tx, agentRow) : undefined;
+  const profile = agentRow ? await withBusinessSummary(tx, await withLegacyInstructions(tx, agentRow)) : undefined;
   const receptionist = profile ? serializeReceptionist(profile) : null;
   const demoOnly = profile ? prospectDemoSettingsIn(profile) : new Set();
   const services = await listServiceResources(tx, businessId, { includeInactive: true });
@@ -390,12 +391,12 @@ export function inProcessSetupPort(dependencies: BusinessSetupDependencies, call
   };
 }
 
-// The receptionist's settings that take one of a few values rather than words.
+// The agent's settings that take one of a few values rather than words.
 const RECEPTIONIST_CHOICES = new Set(["transfer_mode", "booking_mode", "voice", "appointment_change_policy"]);
 
 /**
  * The template's own words, with the business it was saved from renamed to
- * the one it sets up: the receptionist's text, and each service's, rule's,
+ * the one it sets up: the agent's text, and each service's, rule's,
  * FAQ's and text's. Only the whole name counts, so Harbor doesn't touch
  * Harborview, and the new name goes in as written, whatever it holds.
  */

@@ -34,7 +34,7 @@ describe("createTwilioCarrier", () => {
     await expect(carrier.inventory!.purchasePhoneNumber({ e164: "+447700900123", countryCode: "GB", kind: "mobile", label: "x" })).rejects.toThrow("TWILIO_GB_BUNDLE_SID is required to buy a number in GB");
   });
 
-  it("puts a number on the trunk for the receptionist and on the voice webhook for the fallback", async () => {
+  it("puts a number on the trunk for the agent and on the voice webhook for the fallback", async () => {
     const twilio = fakeTwilio();
     const routing = createTwilioCarrier(env, twilio as unknown as TwilioProvider)!.routing!;
     expect(routing.missingSetup()).toBeUndefined();
@@ -48,7 +48,7 @@ describe("createTwilioCarrier", () => {
     expect(untrunked.callCost!.findLiveCallCost).toBeUndefined();
   });
 
-  it("puts a staff-first number on the staff-first webhook, with a fallback to the receptionist", async () => {
+  it("puts a staff-first number on the staff-first webhook, with a fallback to the agent", async () => {
     const twilio = fakeTwilio();
     const routing = createTwilioCarrier({ ...env, OPENAI_PROJECT_ID: "proj_1" }, twilio as unknown as TwilioProvider)!.routing!;
     expect(await routing.routeNumber({ providerPhoneId: "PN1", mode: "staff_first" })).toEqual({ target: "https://app.example.test/api/webhooks/twilio/staff-first/incoming" });

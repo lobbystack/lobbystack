@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { test, expect } from "@playwright/test";
 import { eq } from "drizzle-orm";
-import { billingAccounts, businesses, businessMemberships, createDatabaseClient, onboardingNumberClaimEvents, phoneNumbers, users, withBusinessTransaction } from "@lobbystack/db";
+import { billingAccounts, businesses, businessMemberships, createDatabaseClient, onboardingNumberClaimEvents, phoneNumbers, users, withBusinessTransaction, defaultAgentIdOf } from "@lobbystack/db";
 import settings from "../public/locales/fr/settings.json" with { type: "json" };
 
 test("a reloaded phone claim finishes without another purchase and remains tenant scoped", async ({ browser, baseURL }) => {
@@ -34,7 +34,7 @@ test("a reloaded phone claim finishes without another purchase and remains tenan
     await expect(page.getByRole("button", { name: settings.phoneNumber.actions.getNumber, exact: true })).toBeDisabled();
     // Simulate only the provider completion; no provisioning job or paid number is created.
     await withBusinessTransaction(database.db, { businessId, actorType: "worker" }, async tx => {
-      const [phone] = await tx.insert(phoneNumbers).values({ businessId, e164: "+14165550991", status: "active", voiceEnabled: true, smsEnabled: true }).returning();
+      const [phone] = await tx.insert(phoneNumbers).values({ businessId, agentId: defaultAgentIdOf(businessId), e164: "+14165550991", status: "active", voiceEnabled: true, smsEnabled: true }).returning();
       await tx.update(onboardingNumberClaimEvents).set({ status: "claimed", phoneNumberId: phone!.id, completedAt: new Date() }).where(eq(onboardingNumberClaimEvents.id, claimId));
     });
     await expect(page.getByRole("main").getByText("+1 416 555 0991", { exact: true })).toBeVisible();

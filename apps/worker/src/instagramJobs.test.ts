@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ claim: vi.fn(), finish: vi.fn(), partSent: vi.fn(), release: vi.fn(), leaseEndsAt: vi.fn(), alert: vi.fn(), load: vi.fn(), reserve: vi.fn(), save: vi.fn(), snapshot: vi.fn(), usage: vi.fn(), createAgent: vi.fn() }));
 vi.mock("@lobbystack/domain", () => ({ alertUnansweredInstagram: mocks.alert, claimInstagramDelivery: mocks.claim, finishInstagramDelivery: mocks.finish, getBusinessSnapshotForAgent: mocks.snapshot, instagramDeliveryLeaseEndsAt: mocks.leaseEndsAt, loadInstagramReplyContext: mocks.load, recordAiGenerationEvent: mocks.usage, recordInstagramPartSent: mocks.partSent, releaseInstagramDelivery: mocks.release, reserveWidgetChatUsageInTransaction: mocks.reserve, saveInstagramReply: mocks.save }));
-vi.mock("@lobbystack/agent-core", () => ({ createAgentModel: () => ({}), createReceptionistAgent: mocks.createAgent, describeAgentUsage: () => ({ provider: "openai", model: "test" }) }));
+vi.mock("@lobbystack/agent-core", () => ({ createAgentModel: () => ({}), createConversationAgent: mocks.createAgent, describeAgentUsage: () => ({ provider: "openai", model: "test" }) }));
 vi.mock("@lobbystack/db", () => ({ withBusinessTransaction: async (_db: unknown, _scope: unknown, run: (tx: unknown) => Promise<unknown>) => await run({}) }));
 import { InstagramApiError } from "@lobbystack/providers/instagram/instagram";
 import { instagramReplyText, replyToInstagramMessage, sendInstagramMessage } from "./instagramJobs";

@@ -272,7 +272,7 @@ export function createTelnyxCarrier(env: Env = process.env, options: TelnyxCarri
       // Telnyx won't keep forwarding on a number assigned to an application, and TeXML must see the dialled number, not the project.
       await client.patch(`${path}/voice`, { translated_number: "", call_forwarding: { call_forwarding_enabled: false } });
       await client.patch(path, { connection_id: texmlApplicationId });
-      // The number's own connection stays, for when it comes back to the receptionist.
+      // The number's own connection stays, for when it comes back to the agent.
       return { target: fallbackUrl, ...(carrierConnectionId ? { carrierConnectionId } : {}) };
     },
   };

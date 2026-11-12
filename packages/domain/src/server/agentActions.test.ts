@@ -25,7 +25,7 @@ vi.mock("./productEvents", () => ({ recordProductEvent: mocks.recordProductEvent
 vi.mock("./callOutcome", () => ({ recordCallOutcomeInTransaction: mocks.recordCallOutcomeInTransaction }));
 
 import { BookingUnavailableError } from "../availability";
-import { bookForCaller, findOpenings } from "./receptionistActions";
+import { bookForCaller, findOpenings } from "./agentActions";
 
 const context = { db: {} as never };
 const haircut = { id: "svc_1", name: "Haircut", slug: "haircut", localizedNames: { fr: "Coupe de cheveux" } };

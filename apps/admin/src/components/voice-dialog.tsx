@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Check, Play, Square } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { receptionistVoices, receptionistVoiceTraits, type ReceptionistVoice, type RuntimeLocale } from "@lobbystack/shared";
+import { agentVoices, agentVoiceTraits, type AgentVoice, type RuntimeLocale } from "@lobbystack/shared";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,28 +11,28 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { cn } from "@/lib/utils";
 
 // Voice names are proper nouns, shown the same in every language.
-export function voiceName(voice: ReceptionistVoice): string {
+export function voiceName(voice: AgentVoice): string {
   return voice.charAt(0).toUpperCase() + voice.slice(1);
 }
 
-export function voicePreviewSrc(locale: RuntimeLocale, voice: ReceptionistVoice): string {
+export function voicePreviewSrc(locale: RuntimeLocale, voice: AgentVoice): string {
   return `/voice-previews/${locale}/${voice}.mp3`;
 }
 
 export function useVoiceTraits() {
   const { t } = useTranslation("agent");
-  return (voice: ReceptionistVoice) => {
-    const { pitch, pace } = receptionistVoiceTraits[voice];
+  return (voice: AgentVoice) => {
+    const { pitch, pace } = agentVoiceTraits[voice];
     return t("fields.voice.traits", { pitch: t(`fields.voice.pitch.${pitch}`), pace: t(`fields.voice.pace.${pace}`) });
   };
 }
 
 export type VoicePreview = {
-  playing: ReceptionistVoice | null;
+  playing: AgentVoice | null;
   progress: number;
   /** Voices whose clip failed to play; the dialog hides their play button. */
-  missing: ReadonlySet<ReceptionistVoice>;
-  play: (voice: ReceptionistVoice) => void;
+  missing: ReadonlySet<AgentVoice>;
+  play: (voice: AgentVoice) => void;
   /** Stops the clip playing and lets the browser free it. */
   stop: () => void;
 };
@@ -41,7 +41,7 @@ type CurrentClip = { audio: HTMLAudioElement; listeners: AbortController };
 
 /** One preview at a time: starting a voice stops the one before it. Each play loads its own clip. */
 export function useVoicePreview(locale: RuntimeLocale): VoicePreview {
-  const [playing, setPlaying] = useState<ReceptionistVoice | null>(null);
+  const [playing, setPlaying] = useState<AgentVoice | null>(null);
   const [progress, setProgress] = useState(0);
   // Clip URLs that failed, kept while the page is open so the voice doesn't offer a button that fails again.
   const [failed, setFailed] = useState<ReadonlySet<string>>(new Set());
@@ -59,7 +59,7 @@ export function useVoicePreview(locale: RuntimeLocale): VoicePreview {
     setPlaying(null);
     setProgress(0);
   }, []);
-  const play = useCallback((voice: ReceptionistVoice) => {
+  const play = useCallback((voice: AgentVoice) => {
     stop();
     const src = voicePreviewSrc(locale, voice);
     const clip: CurrentClip = { audio: new Audio(src), listeners: new AbortController() };
@@ -78,7 +78,7 @@ export function useVoicePreview(locale: RuntimeLocale): VoicePreview {
     audio.play().catch(fail);
   }, [locale, stop]);
 
-  const missing = useMemo(() => new Set(receptionistVoices.filter((voice) => failed.has(voicePreviewSrc(locale, voice)))), [failed, locale]);
+  const missing = useMemo(() => new Set(agentVoices.filter((voice) => failed.has(voicePreviewSrc(locale, voice)))), [failed, locale]);
   // A new language plays its own clips, and leaving the page frees the one playing.
   useEffect(() => stop, [locale, stop]);
   return { playing, progress, missing, play, stop };
@@ -88,7 +88,7 @@ const RING_RADIUS = 18;
 const RING_LENGTH = 2 * Math.PI * RING_RADIUS;
 
 /** A round play button that becomes stop, with a thin ring that fills as the clip plays. */
-export function VoicePlayButton({ voice, preview, className }: { voice: ReceptionistVoice; preview: VoicePreview; className?: string }) {
+export function VoicePlayButton({ voice, preview, className }: { voice: AgentVoice; preview: VoicePreview; className?: string }) {
   const { t } = useTranslation("agent");
   // Keeps the name where it is in the list when a clip is missing.
   if (preview.missing.has(voice)) return <span aria-hidden="true" className="size-10 shrink-0" />;
@@ -109,7 +109,7 @@ export function VoicePlayButton({ voice, preview, className }: { voice: Receptio
   );
 }
 
-function VoiceRow({ voice, picked, inUse, preview, onPick }: { voice: ReceptionistVoice; picked: boolean; inUse?: boolean; preview: VoicePreview; onPick: () => void }) {
+function VoiceRow({ voice, picked, inUse, preview, onPick }: { voice: AgentVoice; picked: boolean; inUse?: boolean; preview: VoicePreview; onPick: () => void }) {
   const { t } = useTranslation("agent");
   const traits = useVoiceTraits();
   return (
@@ -127,14 +127,14 @@ function VoiceRow({ voice, picked, inUse, preview, onPick }: { voice: Receptioni
   );
 }
 
-/** Pick the receptionist's voice. Playing a clip never picks it; "Use this voice" saves. */
+/** Pick the agent's voice. Playing a clip never picks it; "Use this voice" saves. */
 export function VoiceDialog({ open, onOpenChange, current, preview, saving, onSave }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  current: ReceptionistVoice;
+  current: AgentVoice;
   preview: VoicePreview;
   saving: boolean;
-  onSave: (voice: ReceptionistVoice) => Promise<boolean>;
+  onSave: (voice: AgentVoice) => Promise<boolean>;
 }) {
   const { t } = useTranslation("agent");
   const [picked, setPicked] = useState(current);
@@ -158,7 +158,7 @@ export function VoiceDialog({ open, onOpenChange, current, preview, saving, onSa
           </section>
           <section aria-labelledby="voice-all" className="flex flex-col gap-1">
             <h3 className="px-2 type-meta" id="voice-all">{t("fields.voice.dialog.all")}</h3>
-            <ul>{receptionistVoices.filter((voice) => voice !== current).map((voice) => <VoiceRow key={voice} onPick={() => setPicked(voice)} picked={picked === voice} preview={preview} voice={voice} />)}</ul>
+            <ul>{agentVoices.filter((voice) => voice !== current).map((voice) => <VoiceRow key={voice} onPick={() => setPicked(voice)} picked={picked === voice} preview={preview} voice={voice} />)}</ul>
           </section>
         </div>
         <DialogFooter>

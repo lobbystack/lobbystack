@@ -5,14 +5,14 @@ const mocks = vi.hoisted(() => ({
   getBusinessSnapshotForAgent: vi.fn(),
   recordAiGenerationEvent: vi.fn(),
   createAgentModel: vi.fn(),
-  createReceptionistAgent: vi.fn(),
+  createConversationAgent: vi.fn(),
   enforceTestChatRateLimits: vi.fn(),
 }));
 
 vi.mock("@/lib/operator-request", () => import("@/lib/operator-request.fake"));
 vi.mock("@/lib/domain-context", () => ({ createWorkerDomainContext: () => ({ db: "worker" }) }));
 vi.mock("@/lib/test-chat-policy", () => ({ enforceTestChatRateLimits: mocks.enforceTestChatRateLimits }));
-vi.mock("@lobbystack/agent-core/agent", () => ({ createReceptionistAgent: mocks.createReceptionistAgent }));
+vi.mock("@lobbystack/agent-core/agent", () => ({ createConversationAgent: mocks.createConversationAgent }));
 vi.mock("@lobbystack/agent-core/model", () => ({ createAgentModel: mocks.createAgentModel, describeAgentUsage: () => ({ provider: "test", model: "test", latencyMs: 1 }) }));
 // Only what a test chat may touch: a real chat's writers aren't here to call.
 vi.mock("@lobbystack/domain", () => ({
@@ -38,7 +38,7 @@ beforeEach(() => {
   mocks.getBusinessSnapshotForAgent.mockResolvedValue({ defaultLocale: "fr", agentId });
   mocks.recordAiGenerationEvent.mockResolvedValue(null);
   stream.mockResolvedValue({ totalUsage: Promise.resolve({}), toUIMessageStreamResponse: () => new Response("reply") });
-  mocks.createReceptionistAgent.mockReturnValue({ stream });
+  mocks.createConversationAgent.mockReturnValue({ stream });
 });
 
 describe("POST /api/agent/test-chat", () => {
@@ -47,7 +47,7 @@ describe("POST /api/agent/test-chat", () => {
 
     expect(response.status).toBe(200);
     expect(mocks.getBusinessSnapshotForAgent).toHaveBeenCalledWith({ db: "worker" }, { businessId: "business", agentId });
-    const { context, extraInstructions } = mocks.createReceptionistAgent.mock.calls[0]![0];
+    const { context, extraInstructions } = mocks.createConversationAgent.mock.calls[0]![0];
     expect(context).toMatchObject({ channel: "web_chat", testChat: true, snapshot: { agentId } });
     expect(context).not.toHaveProperty("conversationId");
     expect(context).not.toHaveProperty("liveChat");
@@ -79,7 +79,7 @@ describe("POST /api/agent/test-chat", () => {
     const response = await post({ agentId, ...turn });
     expect(response.status).toBe(404);
     expect(await response.json()).toMatchObject({ code: "agent_not_found" });
-    expect(mocks.createReceptionistAgent).not.toHaveBeenCalled();
+    expect(mocks.createConversationAgent).not.toHaveBeenCalled();
     expect(mocks.enforceTestChatRateLimits).not.toHaveBeenCalled();
   });
 
@@ -94,7 +94,7 @@ describe("POST /api/agent/test-chat", () => {
     [{ agentId: "not-a-uuid", messages: [{ role: "user", content: "Hi" }] }],
   ])("refuses a malformed chat: %j", async (body) => {
     expect((await post(body)).status).toBe(400);
-    expect(mocks.createReceptionistAgent).not.toHaveBeenCalled();
+    expect(mocks.createConversationAgent).not.toHaveBeenCalled();
   });
 
   it("stops at the rate limit before it reaches the model", async () => {

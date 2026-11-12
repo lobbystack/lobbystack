@@ -773,7 +773,7 @@ export type PartnerBusinessInput = {
  * A partner's platform key can leave the owner out, for a business that runs
  * on the partner's own product. Nobody is invited and nobody can own it, so it
  * can't be released, and it can't be sold a package, whose checkout opens from
- * the owner's invitation. With nobody on its team, a call the receptionist
+ * the owner's invitation. With nobody on its team, a call the agent
  * can't take forwards only to its transfer number and is refused without one.
  * Webhooks tell the partner about its calls and messages, and its other
  * alerts email the partner's owners and admins.
@@ -824,7 +824,7 @@ export async function createPartnerBusiness(
     // A partner that signed up while the deployment had no base domain gets its subdomain now, if it can.
     const domain = baseDomain ? await reserveSubdomainIn(tx, partnerId, baseDomain) : { subdomain: null, changed: false };
     if (!domain.subdomain && !await hasVerifiedCustomDomain(tx, partnerId)) throw failure("You need your own domain before you can create a business.", 409, "partner_domain_required");
-    // At the activity level the partner sets the receptionist up, so the owner's onboarding starts at their phone.
+    // At the activity level the partner sets the agent up, so the owner's onboarding starts at their phone.
     const partner = { partnerId, accessLevel };
     await insertOwnerlessBusinessInTransaction(tx, { businessId, name, slug: input.slug, timezone, businessType, defaultLocale: input.defaultLocale, websiteUrl: input.websiteUrl, partner, onboardingStage: firstOnboardingStage(partner) });
     if (packageId) await setBusinessPackageInTransaction(tx, { businessId, partnerId, packageId, stripeConnect: Boolean(context.stripeConnect) });

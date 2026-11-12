@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { createUIMessageStream, createUIMessageStreamResponse, type LanguageModelUsage } from "ai";
 import { NextResponse } from "next/server";
 
-import { createReceptionistAgent } from "@lobbystack/agent-core/agent";
+import { createConversationAgent } from "@lobbystack/agent-core/agent";
 import { createAgentModel, describeAgentUsage } from "@lobbystack/agent-core/model";
 import { announceLateWidgetReply, appendMessage, getBusinessSnapshotForAgent, getCachedBusinessSnapshot, getOrCreateWidgetConversation, loadWidgetChatHistory, recordAiGenerationEvent, reserveWidgetChatUsageInTransaction, returnQuietTeamChat } from "@lobbystack/domain";
 import { withBusinessTransaction } from "@lobbystack/db";
@@ -87,7 +87,7 @@ export async function POST(request: Request) {
     const conversation = await getOrCreateWidgetConversation(context, { businessId: session.businessId, widgetVisitorId: body.visitorId, ...(session.agentId ? { agentId: session.agentId } : {}) });
     const { conversationId } = conversation;
     // With live chat on, a chat the team joined after the visitor asked for a
-    // person goes back to the receptionist once the team goes quiet in it. A
+    // person goes back to the agent once the team goes quiet in it. A
     // chat the team took over itself stays paused until someone presses
     // Resume AI.
     const liveChatOn = session.config.liveChat?.enabled === true;
@@ -113,7 +113,7 @@ export async function POST(request: Request) {
     const assistantMessageId = randomUUID();
     const traceId = randomUUID();
     const generationStartedAt = performance.now();
-    // Set when the receptionist asks the team to join: the chat then waits for them.
+    // Set when the agent asks the team to join: the chat then waits for them.
     let teamRequested = false;
     const replyMetadata = () => teamRequested ? { automationState: "human_handoff", waitingForTeam: true } : { automationState: "ai_active" };
     const stream = createUIMessageStream({
@@ -158,7 +158,7 @@ export async function POST(request: Request) {
           // The widget's language answers; when it shows English, the widget's set language, else the business's caller language.
           // The widget's interface falls back to English for languages it lacks, so "en" says nothing about the visitor.
           const locale = normalizeRuntimeLocale(body.locale && body.locale !== "en" ? body.locale : session.config.localeOverride ?? session.defaultLocale);
-          const agent = createReceptionistAgent({
+          const agent = createConversationAgent({
             model: model!,
             context: {
               domain: context,

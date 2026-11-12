@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import type { AppointmentChangePolicy, BookingMode, ReceptionistVoice, RuntimeLocale } from "@lobbystack/shared";
+import type { AppointmentChangePolicy, BookingMode, AgentVoice, RuntimeLocale } from "@lobbystack/shared";
 
 import type { StaffFirstPatch, StaffFirstProfile } from "@/components/staff-first-section";
 import { useActiveBusiness } from "@/hooks/use-active-business";
@@ -31,7 +31,7 @@ export type AgentSettings = {
 export type AgentPatch = {
   name?: string;
   greeting?: string;
-  voice?: ReceptionistVoice;
+  voice?: AgentVoice;
   transferNumber?: string | null;
   transferMode?: string;
   appointmentChangePolicy?: AppointmentChangePolicy;

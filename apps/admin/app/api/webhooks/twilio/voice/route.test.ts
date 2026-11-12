@@ -15,7 +15,7 @@ beforeEach(() => {
   mocks.execute.mockResolvedValue({ rows: [{ business_id: "biz_1" }] });
 });
 
-it("forwards a call the receptionist refused at the plan's limit to where the business's fallback points", async () => {
+it("forwards a call the agent refused at the plan's limit to where the business's fallback points", async () => {
   mocks.fallback.mockResolvedValue({ action: "forward", to: "+14165550111" });
   const response = await POST(request({ To: NUMBER }));
   expect(await response.text()).toBe(twiml("<Dial>+14165550111</Dial>"));

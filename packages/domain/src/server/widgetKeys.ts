@@ -2,7 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 
 import { and, eq } from "drizzle-orm";
 
-import { widgetKeys, type DatabaseTransaction } from "@lobbystack/db";
+import { defaultAgentIdOf, widgetKeys, type DatabaseTransaction } from "@lobbystack/db";
 
 // Website chat widget keys. A key is public, since the widget's script tag
 // carries it. Its hash finds the business, and the key itself is kept so the
@@ -23,7 +23,7 @@ export async function insertWidgetKeyInTransaction(tx: DatabaseTransaction, inpu
     businessId: input.businessId,
     keyHash: hashWidgetKey(key),
     keyValue: key,
-    ...(input.agentId ? { agentId: input.agentId } : {}),
+    agentId: input.agentId ?? defaultAgentIdOf(input.businessId),
     ...(input.label ? { label: input.label } : {}),
     allowedOrigins: input.allowedOrigins,
     config: input.config,

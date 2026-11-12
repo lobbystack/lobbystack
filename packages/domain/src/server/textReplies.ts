@@ -31,7 +31,7 @@ export type TextReplyContext = {
 };
 
 /**
- * What the receptionist needs to answer a text, or null when it shouldn't: the
+ * What the agent needs to answer a text, or null when it shouldn't: the
  * team has the conversation, a newer text arrived (its own job answers them
  * together), the text can't go out, or a limit stopped it. The team hears
  * about any of these that leaves the customer waiting.
@@ -75,12 +75,12 @@ async function handOffToTeamInTransaction(tx: DatabaseTransaction, input: { busi
 }
 
 /**
- * Whether the receptionist still answers `messageId`: the conversation is an
+ * Whether the agent still answers `messageId`: the conversation is an
  * open text one it handles, the contact isn't blocked, and that message is
  * still the newest text. A STOP, START or HELP text and its fixed reply don't
  * count, so they can't strand a question waiting for its job. Locks the
  * conversation, so the answer holds until the transaction ends. Returns the
- * conversation's agent, or null when the receptionist doesn't answer.
+ * conversation's agent, or null when the agent doesn't answer.
  */
 async function stillAnsweringInTransaction(tx: DatabaseTransaction, input: { businessId: string; conversationId: string; messageId: string }): Promise<{ agentId: string | null } | null> {
   const [conversation] = await tx.select({ automationState: conversations.automationState, channel: conversations.channel, status: conversations.status, contactBlockedAt: contacts.operatorBlockedAt, agentId: conversations.agentId })
@@ -93,7 +93,7 @@ async function stillAnsweringInTransaction(tx: DatabaseTransaction, input: { bus
 }
 
 /**
- * Saves the receptionist's reply to `answeringMessageId` and queues it to send,
+ * Saves the agent's reply to `answeringMessageId` and queues it to send,
  * or returns null when, while the reply was written, the team took the
  * conversation over or a newer text arrived.
  */
@@ -104,7 +104,7 @@ export async function saveTextReply(context: DomainContext, input: { businessId:
   });
 }
 
-/** Alerts the team to a text the receptionist couldn't answer, such as after a failed reply or an empty allowance. */
+/** Alerts the team to a text the agent couldn't answer, such as after a failed reply or an empty allowance. */
 export async function alertUnansweredText(context: DomainContext, input: { businessId: string; conversationId: string }): Promise<void> {
   await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => await queueUnansweredTextAlertInTransaction(tx, input));
 }

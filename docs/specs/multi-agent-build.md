@@ -164,6 +164,19 @@ Raphael decided:
 
 Remove the assign-default triggers, `businesses_assign_agent_before_delete`, `backfillAgentLinks` and the onboarding alias, and rename the remaining `receptionist` code, about 1,500 lines in 250 files. Leave what slice 6 keeps stable.
 
+Done, except for the parts the previous release still needs. Main at PR 397 inserts phone numbers, widget keys and Instagram accounts without `agent_id`, and can insert a call whose conversation has none. Nobody has confirmed that the backfill reports 0 left in production. So:
+
+- **Removed:** migration 0214 drops the two-argument `resolve_onboarding_followup_recipient` alias, 0208's crawled page trigger, and the `agent_rules` trigger. It validates `*_agent_id_present` on `phone_numbers`, `widget_keys`, `instagram_accounts` and `agent_rules`, sets their `agent_id` NOT NULL, and drops those checks.
+- **Kept:** the assign-default triggers on `phone_numbers`, `widget_keys`, `instagram_accounts`, `calls` and `conversations`, `businesses_assign_agent_before_delete`, `backfillAgentLinks` and `db:backfill-agent-links`. New code names the agent on every insert into those tables, so the next release can drop the channel triggers.
+- **Summary:** migration 0215 moves the `summary*` columns to `businesses`, where the shared summary belongs. The agent columns stay for the previous release, and `agents_sync_summary` and `businesses_sync_summary` keep each business and its default agent in step. The Drizzle schema no longer has the agent columns, and `/api/agent` and `/v1/receptionist` return the same shape.
+- **Renamed:** identifiers, files, comments and test names now say agent. These keep `receptionist`: the `/receptionist` resource with its operations, serializers and schemas; the CLI, the manifest and template `receptionist` keys; Zapier; MCP tool and API descriptions; the transcript speaker; the `receptionist` number routing mode in job payloads; the Twilio `receptionist-result` step; locale keys; model prompts; and customer-facing copy.
+
+Slice 9 and the next release should know:
+
+- **Next release:** confirm that `db:backfill-agent-links` reports 0 left, then validate `calls_agent_id_present` and `conversations_agent_id_present` and set NOT NULL. Drop the five assign-default triggers, `app.assign_default_agent()`, `businesses_assign_agent_before_delete`, `backfillAgentLinks` and its CLI command, and update `db:check`.
+- **Same release:** drop the agent `summary*` columns, the two sync triggers and their functions. `app.default_agent_id` stops naming the summary in 0215.
+- **Later:** the deprecated instruction columns and 0203's `agents_copy_instructions_to_rules` trigger go together, once no running code selects the columns.
+
 ### 9. Sell extra numbers
 
 Ticket 14. The add-on costs what the carrier charges us each month for a number in that country, with no markup. The plan catalog holds a price per country, because a subscription needs a stable price, and someone updates it when a carrier's price changes. The operator sees the price for the country they pick before they buy. Until this ships, Starter and Pro include one number and a workspace has one Instagram account, so a second agent's only spare channel is a widget.

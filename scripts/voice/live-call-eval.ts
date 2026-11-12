@@ -1,6 +1,6 @@
 // Plays scripted callers to GPT-Live and reports how each call ended. Every run
 // opens a GPT-Live session over a WebSocket and drives it with the production
-// call controller, receptionist agent and caller check, so it tests the code
+// call controller, agent and caller check, so it tests the code
 // that runs on calls. Agent tools that need the database fail, as they would
 // with the database down. See docs/voice/testing.md.
 //
@@ -9,7 +9,7 @@
 import { readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 
-import { buildBrowserSessionConfig, buildPhoneSessionConfig, callerIsDone, callerIsLeaving, createAgentModel, createReceptionistAgent, LiveCallController, liveDelegationEnvironment, SILENCE_CHECK_IN_MS, SILENCE_TIMEOUT_MS, type CallControl, type LiveCallSummary } from "@lobbystack/agent-core";
+import { buildBrowserSessionConfig, buildPhoneSessionConfig, callerIsDone, callerIsLeaving, createAgentModel, createConversationAgent, LiveCallController, liveDelegationEnvironment, SILENCE_CHECK_IN_MS, SILENCE_TIMEOUT_MS, type CallControl, type LiveCallSummary } from "@lobbystack/agent-core";
 import { defaultGreeting, demoSnapshot, isRuntimeLocale, runtimeLocales, type BusinessContextSnapshot } from "@lobbystack/shared";
 import OpenAI from "openai";
 import type { SidebandWS } from "openai/resources/live/sideband/ws";
@@ -20,7 +20,7 @@ import { callerLine, END_SILENCE_MS, findScenarios, OPENING } from "./scenarios"
 const RATE = 24_000;
 const CHUNK_MS = 100;
 const CHUNK_BYTES = (RATE * 2 * CHUNK_MS) / 1000;
-// The receptionist has answered once it has been quiet this long after speaking.
+// The agent has answered once it has been quiet this long after speaking.
 const REPLY_QUIET_MS = 1_500;
 // How long the caller waits for a greeting before speaking: long enough for the worker's fallback and both retries.
 const GREETING_WAIT_MS = 15_000;
@@ -114,11 +114,11 @@ async function run(scenario: Scenario, audio: Map<string, Buffer>, agentModel: N
   let lastReplyEndMs = -1;
   let replied = false;
   let scenarioStartMs = Number.POSITIVE_INFINITY;
-  // When the receptionist first spoke, if it did before the caller.
+  // When the agent first spoke, if it did before the caller.
   let greetedAfterMs: number | undefined;
   let greetingCommands = 0;
   let callerSpoke = false;
-  // What the receptionist said before the scenario's lines: the greeting, then the answer to OPENING.
+  // What the agent said before the scenario's lines: the greeting, then the answer to OPENING.
   const opened = ["", ""];
   let reply = "";
   let replyEndMs = -1;
@@ -150,7 +150,7 @@ async function run(scenario: Scenario, audio: Map<string, Buffer>, agentModel: N
   const callControl: CallControl = {
     hangup: async (reason) => controller.end(reason),
   };
-  const agent = createReceptionistAgent({
+  const agent = createConversationAgent({
     model: agentModel,
     context: { domain: { db: {} as never }, snapshot, channel: values.browser ? "web_voice" : "voice", callId: "eval", callControl },
     directToolAnswers: true,
@@ -246,7 +246,7 @@ await Promise.all(Array.from({ length: Math.min(Number(values.concurrency), jobs
     results.push(result);
     const greeting = `${result.greetedAfterMs === undefined ? "no greeting in 15 s" : `greeted at ${(result.greetedAfterMs / 1000).toFixed(1)} s`}${result.greetingCommands ? ` after ${result.greetingCommands} command${result.greetingCommands > 1 ? "s" : ""}` : ""}`;
     const outcome = `${result.error ? `error: ${result.error}` : result.ended ? `ended ${((result.endedAfterMs ?? 0) / 1000).toFixed(1)} s after the caller` : "still open"}${result.forbidden ? ` | said what it mustn't: "${result.forbidden}"` : ""}`;
-    console.log(`${result.passed ? "PASS" : "FAIL"} ${result.scenario.name.padEnd(17)} ${greeting} | ${outcome} | hand-overs: ${result.handOvers.join(", ") || "none"} | checks: ${result.checks.map((done) => (done ? "done" : "continue")).join(", ") || "none"} | leaving: ${result.leaving.map((left) => (left ? "yes" : "no")).join(", ") || "none"} | goodbyes: ${result.goodbyes} | opened: ${result.opened.map((line) => `"${line.trim()}"`).join(" / ")} | receptionist: ${result.replies.map((line) => `"${line}"`).join(" / ")}`);
+    console.log(`${result.passed ? "PASS" : "FAIL"} ${result.scenario.name.padEnd(17)} ${greeting} | ${outcome} | hand-overs: ${result.handOvers.join(", ") || "none"} | checks: ${result.checks.map((done) => (done ? "done" : "continue")).join(", ") || "none"} | leaving: ${result.leaving.map((left) => (left ? "yes" : "no")).join(", ") || "none"} | goodbyes: ${result.goodbyes} | opened: ${result.opened.map((line) => `"${line.trim()}"`).join(" / ")} | agent: ${result.replies.map((line) => `"${line}"`).join(" / ")}`);
   }
 }));
 

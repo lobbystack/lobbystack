@@ -138,7 +138,7 @@ describe("analytics booked value", () => {
     expect(analyticsBookedValueMinor({ priceType: "range", priceMinor: 100_000, priceMaxMinor: 200_000, discountPercent: 12.5 })).toBe(87_500);
   });
 
-  it("adds up the receptionist's bookings per period and leaves out cancelled ones", () => {
+  it("adds up the agent's bookings per period and leaves out cancelled ones", () => {
     expect(summarizeAnalyticsBookedValue([
       group({ count: 3 }),
       group({ sourceChannel: "web_chat", priceType: "from", priceMinor: 2_000 }),

@@ -16,7 +16,7 @@ vi.mock("@lobbystack/domain", async () => ({
 }));
 
 import { cancelForCaller, getSmsConsentOnFile, recordTextConsentForCaller, verifyCallerChangeCode, verifyCallerForChange } from "@lobbystack/domain";
-import { createReceptionistTools, type AgentChannel } from "./tools";
+import { createAgentTools, type AgentChannel } from "./tools";
 
 type Execute = (input: object, options: object) => Promise<Record<string, unknown>>;
 
@@ -25,7 +25,7 @@ const callerPhone = "+14165550100";
 const tollFree = { contactChannels: { smsNumber: "+18445550100" } };
 
 function tools(options: { channel?: AgentChannel; callerPhone?: string | undefined; callId?: string | undefined; snapshot?: Partial<BusinessContextSnapshot> } = {}) {
-  const set = createReceptionistTools({
+  const set = createAgentTools({
     domain: { db: {} as never },
     channel: options.channel ?? "voice",
     ...("callId" in options ? (options.callId ? { callId: options.callId } : {}) : { callId: "call_1" }),

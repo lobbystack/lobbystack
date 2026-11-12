@@ -4,7 +4,7 @@ import { demoSnapshot, type BusinessContextSnapshot } from "@lobbystack/shared";
 import { MockLanguageModelV4 } from "ai/test";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Runs delegations through the real receptionist agent and tools, with a
+// Runs delegations through the real agent and tools, with a
 // scripted model in place of OpenAI and the domain writes stubbed.
 
 const sockets = vi.hoisted(() => [] as Array<EventEmitter & { sent: unknown[] }>);
@@ -33,7 +33,7 @@ vi.mock("@lobbystack/domain", async () => ({
   takeMessageForStaff: domain.takeMessageForStaff,
 }));
 
-import { createReceptionistAgent } from "../agent";
+import { createConversationAgent } from "../agent";
 import { LiveCallController, type DelegationTiming } from "./callController";
 
 type LanguageModelV4CallOptions = Parameters<MockLanguageModelV4["doGenerate"]>[0];
@@ -76,7 +76,7 @@ function scriptedModel(steps: LanguageModelV4GenerateResult[]) {
 
 async function delegate(steps: LanguageModelV4GenerateResult[], caller: string, options: { directToolAnswers?: boolean; hangup?: () => Promise<void> } = {}) {
   const { model, calls } = scriptedModel(steps);
-  const agent = createReceptionistAgent({
+  const agent = createConversationAgent({
     model,
     context: { domain: { db: {} as never }, snapshot, channel: "voice", callerPhone: "+14165550134", callId: "call_1", callControl: { hangup: options.hangup ?? vi.fn(async () => undefined) } },
     directToolAnswers: options.directToolAnswers ?? true,
@@ -173,7 +173,7 @@ describe("live delegation", () => {
 
   it("shows the next request what earlier requests already did, so a change doesn't repeat an action", async () => {
     const { model, calls } = scriptedModel([toolCall("takeMessage", { message: "Call back about billing." }), reply("Who should the team ask for?")]);
-    const agent = createReceptionistAgent({
+    const agent = createConversationAgent({
       model,
       context: { domain: { db: {} as never }, snapshot, channel: "voice", callerPhone: "+14165550134", callId: "call_1", callControl: { hangup: vi.fn(async () => undefined) } },
       directToolAnswers: true,

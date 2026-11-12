@@ -5,7 +5,7 @@ const mocks = vi.hoisted(() => ({ rescheduleAppointmentForCaller: vi.fn() }));
 vi.mock("./booking", () => ({ ...mocks, bookAppointment: vi.fn(), findOpeningsInTransaction: vi.fn(), cancelAppointmentForCaller: vi.fn() }));
 
 import { BookingUnavailableError } from "../availability";
-import { rescheduleForCaller } from "./receptionistActions";
+import { rescheduleForCaller } from "./agentActions";
 
 const context = { db: {} as never };
 const input = { businessId: "biz_1", callerPhone: "+14165550100", appointmentId: "apt_1", startsAt: "2030-01-08T15:00:00.000Z", verificationId: "ver_1", finalConfirmation: true };

@@ -95,7 +95,7 @@ export async function createBusiness(
 
 /**
  * Creates a business that has no owner yet, such as one a partner sets up
- * before it invites the owner. The business gets the staff member, receptionist
+ * before it invites the owner. The business gets the staff member, agent
  * profile and first snapshot every business gets. It counts toward no
  * account's cap and becomes no one's active business. No route calls this yet.
  */
@@ -128,7 +128,7 @@ type NewBusiness = {
 
 /**
  * Inserts a business with what every new business needs: its owner, the staff
- * member that stands for it, a receptionist profile, and its first snapshot.
+ * member that stands for it, an agent profile, and its first snapshot.
  * The transaction must be scoped to businessId, and timezone must already be
  * an IANA name. A generated slug gets a random suffix when taken; a taken slug
  * the caller chose fails with a unique violation.
@@ -147,8 +147,8 @@ export async function insertOwnerlessBusinessInTransaction(tx: DatabaseTransacti
   return { businessId: input.businessId };
 }
 
-/** How a new business's receptionist books, and answers calls and texts until someone changes them: the booking policy, and its first call and text rules. */
-export const NEW_BUSINESS_RECEPTIONIST_INSTRUCTIONS = {
+/** How a new business's agent books, and answers calls and texts until someone changes them: the booking policy, and its first call and text rules. */
+export const NEW_BUSINESS_AGENT_INSTRUCTIONS = {
   bookingPolicy: "Only confirm a booking after availability is checked.",
   voiceInstructions: "Sound calm, confident, and concise. Escalate urgent requests to a human when policy requires it.",
   smsInstructions: "Keep replies concise and friendly. Ask one follow-up question at a time.",
@@ -198,6 +198,7 @@ async function insertBusinessRowsInTransaction(tx: DatabaseTransaction, input: N
       slug: attempt === 0 ? baseSlug : `${baseSlug}-${randomBytes(6).toString("hex")}`,
       timezone,
       currency: defaultCurrencyForTimezone(timezone),
+      summary: `${name} uses LobbyStack to answer calls.`,
       businessType: input.businessType,
       // A self-hosted server's businesses get its unlimited plan, not the cloud's free one. Any other mode, development included, keeps them cloud, as before:
       // every mode but cloud skips billing and the paid-plan check on numbers.
@@ -234,20 +235,19 @@ async function insertBusinessRowsInTransaction(tx: DatabaseTransaction, input: N
   // manage a team get one hidden member that stands for the business itself.
   await tx.insert(staff).values({ businessId, name, timezone });
   const locale = normalizeRuntimeLocale(input.defaultLocale);
-  const { voiceInstructions, smsInstructions, bookingPolicy } = NEW_BUSINESS_RECEPTIONIST_INSTRUCTIONS;
+  const { voiceInstructions, smsInstructions, bookingPolicy } = NEW_BUSINESS_AGENT_INSTRUCTIONS;
   const [agent] = await tx.insert(agents).values({
     businessId,
     isDefault: true,
     name: defaultAgentName(locale),
     greeting: defaultGreeting(name, locale),
     tone: "warm and direct",
-    summary: `${name} uses LobbyStack to answer calls.`,
     bookingPolicy,
     transferMode: "on_request",
     appointmentChangePolicy: defaultAppointmentChangePolicy,
   }).returning({ id: agents.id });
   if (!agent) throw new Error("Default agent could not be created.");
-  // What a new receptionist is told on calls and in texts, as rules kept to
+  // What a new agent is told on calls and in texts, as rules kept to
   // those channels and titled in the business's language, as migration 0203
   // turned the old instruction columns into. Nothing reads those columns now.
   // The snapshot refresh below picks them up.
@@ -362,7 +362,7 @@ export async function updateBusiness(
   });
 }
 
-/** Updates basic business fields and refreshes the receptionist's snapshot. Callers authorize first. */
+/** Updates basic business fields and refreshes the agent's snapshot. Callers authorize first. */
 export async function updateBusinessInTransaction(
   tx: DatabaseTransaction,
   input: { businessId: string; name?: string; timezone?: string; businessType?: string; defaultLocale?: string; defaultLocaleDetected?: boolean; teamLocale?: string | null; websiteUrl?: string | null; currency?: string },

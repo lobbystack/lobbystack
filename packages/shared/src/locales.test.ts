@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import { interfaceLocaleTags, interfaceLocales, intlLocale, normalizeInterfaceLocale, normalizeRuntimeLocale, runtimeLocaleName } from "./locales";
 
-describe("receptionist languages", () => {
-  it("keeps the languages the receptionist speaks, from a full tag too, and falls back to English", () => {
+describe("agent languages", () => {
+  it("keeps the languages the agent speaks, from a full tag too, and falls back to English", () => {
     expect(["en", "fr-CA", "ES-mx", "sr_Latn_RS", "pt-BR"].map(normalizeRuntimeLocale)).toEqual(["en", "fr", "es", "sr", "pt"]);
     expect([null, undefined, "", "ja"].map(normalizeRuntimeLocale)).toEqual(["en", "en", "en", "en"]);
   });

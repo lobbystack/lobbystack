@@ -2,7 +2,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 
 /** The Graph API version this adapter is written against. */
 export const INSTAGRAM_GRAPH_VERSION = "v26.0";
-/** What the receptionist needs: the account's name and ID, and its direct messages. */
+/** What the agent needs: the account's name and ID, and its direct messages. */
 export const INSTAGRAM_SCOPES = ["instagram_business_basic", "instagram_business_manage_messages"] as const;
 /** Instagram rejects a text message longer than this many UTF-8 bytes. */
 export const INSTAGRAM_TEXT_LIMIT_BYTES = 1000;

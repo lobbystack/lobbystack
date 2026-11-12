@@ -203,7 +203,7 @@ export async function appendMessage(
       throw new Error("Message could not be persisted.");
     }
     if (input.operatorAlert) await queueOperatorAlertInTransaction(tx, { businessId: input.businessId, eventKey: `${input.operatorAlert.eventKind}:${id}`, ...input.operatorAlert });
-    // A team member who writes in a website or Instagram chat takes it over, so the AI stops answering alongside them. The same goes for a text once the receptionist answers texts.
+    // A team member who writes in a website or Instagram chat takes it over, so the AI stops answering alongside them. The same goes for a text once the agent answers texts.
     const takesOver = input.userId !== undefined && input.direction === "outbound" && (isTextChatChannel(input.channel) || (input.channel === "sms" && await textRepliesEnabledInTransaction(tx, input.businessId)));
     const takeOver = takesOver ? await takeOverChatInTransaction(tx, { businessId: input.businessId, conversationId: input.conversationId, userId: input.userId! }) : null;
     return { messageId: id, takeOver };
@@ -226,7 +226,7 @@ async function takeOverChatInTransaction(tx: DatabaseTransaction, input: { busin
   const pausedAi = current.automationState === "ai_active";
   if (!pausedAi && !current.teamRequestedAt) return null;
   const now = new Date();
-  // Answering a visitor who asked for a person joins their chat, which goes back to the receptionist once the team goes quiet in it.
+  // Answering a visitor who asked for a person joins their chat, which goes back to the agent once the team goes quiet in it.
   await tx.update(conversations).set({ automationState: "human_handoff", automationPausedAt: now, automationPausedByUserId: input.userId, teamRequestedAt: null, teamJoinedAt: current.teamRequestedAt ? now : null, updatedAt: now }).where(and(eq(conversations.id, input.conversationId), eq(conversations.businessId, input.businessId)));
   await enqueueOutbox(tx, {
     topic: "realtime.publish",
@@ -268,7 +268,7 @@ export async function setAutomationState(
     if (!current) return null;
     const now = new Date();
     // Either way, a visitor waiting for a person no longer waits: someone joined, or the AI has the chat back.
-    // Only joining a waiting visitor makes a chat that goes back to the receptionist once the team goes quiet; Take over and Resume AI don't.
+    // Only joining a waiting visitor makes a chat that goes back to the agent once the team goes quiet; Take over and Resume AI don't.
     const joined = input.state === "human_handoff" && current.teamRequestedAt !== null;
     await tx.update(conversations).set({ automationState: input.state, automationPausedAt: input.state === "human_handoff" ? now : null, automationPausedByUserId: input.state === "human_handoff" ? input.userId : null, teamRequestedAt: null, teamJoinedAt: joined ? now : null, updatedAt: now }).where(and(eq(conversations.id, input.conversationId), eq(conversations.businessId, input.businessId)));
     await enqueueOutbox(tx, {
@@ -361,7 +361,7 @@ export async function registerWidgetVisitor(
 /**
  * A website chat with no message for this long is over: the visitor's next
  * visit shows an empty chat, and their next message closes the old one and
- * starts a new one, which the receptionist answers.
+ * starts a new one, which the agent answers.
  */
 export const WIDGET_CHAT_IDLE_CLOSE_MS = 24 * 60 * 60_000;
 

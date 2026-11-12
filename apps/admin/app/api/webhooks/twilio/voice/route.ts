@@ -17,7 +17,7 @@ function twiml(verb: string): NextResponse {
 }
 
 /**
- * Twilio asks here what to do with a call the receptionist won't answer: a
+ * Twilio asks here what to do with a call the agent won't answer: a
  * call to a number that's off the SIP trunk, or, as the trunk's disaster
  * recovery URL, a call GPT-Live refused because the plan is out of minutes.
  * resolveNumberFallback picks where to forward it, with the caller's own

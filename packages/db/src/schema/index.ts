@@ -181,10 +181,19 @@ export const businesses = pgTable(
     legalName: text("legal_name"),
     timezone: varchar("timezone", { length: 80 }).notNull(),
     defaultLocale: varchar("default_locale", { length: 8 }).default("en").notNull(),
-    /** The language the team reads what the receptionist writes for it; null follows `defaultLocale`. */
+    /** The language the team reads what the agent writes for it; null follows `defaultLocale`. */
     teamLocale: varchar("team_locale", { length: 8 }),
     /** ISO 4217 code every service price is in. */
     currency: varchar("currency", { length: 3 }).default("USD").notNull(),
+    // What every agent says the business is (migration 0215). Who wrote it:
+    // "placeholder" (sign-up default), "generated" (AI, from the shared
+    // knowledge) or "operator". Generation never replaces an operator's summary.
+    summary: text("summary").default("").notNull(),
+    summarySource: varchar("summary_source", { length: 16 }).$type<"placeholder" | "generated" | "operator">().default("placeholder").notNull(),
+    summaryFingerprint: varchar("summary_fingerprint", { length: 64 }),
+    summaryGeneratedAt: timestamp("summary_generated_at", { withTimezone: true }),
+    // The outcome of the last "Rewrite with AI"; null when none was asked for.
+    summaryRegenerateStatus: varchar("summary_regenerate_status", { length: 16 }).$type<"pending" | "completed" | "empty" | "failed">(),
     businessType: varchar("business_type", { length: 64 }).notNull(),
     deploymentMode: varchar("deployment_mode", { length: 32 }).default("cloud").notNull(),
     status: varchar("status", { length: 32 }).default("active").notNull(),
@@ -204,7 +213,7 @@ export const businesses = pgTable(
     phoneNumberReplacementReservedAt: timestamp("phone_number_replacement_reserved_at", { withTimezone: true }),
     phoneNumberReplacementUsedAt: timestamp("phone_number_replacement_used_at", { withTimezone: true }),
     telemetryEnabled: boolean("telemetry_enabled").default(true).notNull(),
-    // Whether the receptionist answers texts to the business's own number. Only the host turns it on, with pnpm text-replies:set.
+    // Whether the agent answers texts to the business's own number. Only the host turns it on, with pnpm text-replies:set.
     textRepliesEnabled: boolean("text_replies_enabled").default(false).notNull(),
     // Who set the opening hours: none yet, AI from the knowledge sources, or a person.
     hoursSource: varchar("hours_source", { length: 16 }).$type<"none" | "generated" | "operator">().default("none").notNull(),
@@ -668,8 +677,8 @@ export const phoneNumbers = pgTable(
     refusedCallsForwardTo: varchar("refused_calls_forward_to", { length: 32 }),
     // The carrier connection that only this number uses, for carriers that route calls by it (migration 0172).
     carrierConnectionId: varchar("carrier_connection_id", { length: 64 }),
-    // The agent that answers this number. Migration 0184's trigger fills it with the default agent.
-    agentId: uuid("agent_id"),
+    // The agent that answers this number. Until the release after 0214, a trigger fills it for code that leaves it out.
+    agentId: uuid("agent_id").notNull(),
     // The owner's line that forwards to this number, from the first forwarded call we saw, and when (migration 0207).
     forwardedFromE164: varchar("forwarded_from_e164", { length: 32 }),
     forwardingDetectedAt: timestamp("forwarding_detected_at", { withTimezone: true }),
@@ -749,15 +758,9 @@ export const agents = pgTable(
     archivedAt: timestamp("archived_at", { withTimezone: true }),
     greeting: text("greeting").notNull(),
     tone: text("tone").notNull(),
-    summary: text("summary").notNull(),
-    // Who wrote the summary: "placeholder" (sign-up default), "generated" (AI,
-    // from the knowledge sources) or "operator". Generation never replaces an
-    // operator's summary.
-    summarySource: varchar("summary_source", { length: 16 }).$type<"placeholder" | "generated" | "operator">().default("placeholder").notNull(),
-    summaryFingerprint: varchar("summary_fingerprint", { length: 64 }),
-    summaryGeneratedAt: timestamp("summary_generated_at", { withTimezone: true }),
-    // The outcome of the last "Rewrite with AI"; null when none was asked for.
-    summaryRegenerateStatus: varchar("summary_regenerate_status", { length: 16 }).$type<"pending" | "completed" | "empty" | "failed">(),
+    // The summary columns moved to businesses in migration 0215. The table
+    // keeps them, in step with the business, until the previous release stops
+    // reading them, so no code here names them.
     bookingPolicy: text("booking_policy").notNull(),
     // Deprecated: migration 0203 moved them into rules kept to their channel,
     // and no code reads or writes them. A later release drops them.
@@ -771,7 +774,7 @@ export const agents = pgTable(
     // The GPT-Live voice calls speak in. No check constraint: a voice OpenAI
     // retires stays stored and calls fall back to marin.
     voice: varchar("voice", { length: 32 }).default("marin").notNull(),
-    // Staff answers first: when calls ring this phone before the receptionist answers.
+    // Staff answers first: when calls ring this phone before the agent answers.
     staffFirstMode: varchar("staff_first_mode", { length: 16 }).$type<"never" | "business_hours" | "always">().default("never").notNull(),
     staffFirstNumber: text("staff_first_number"),
     staffFirstRingSeconds: smallint("staff_first_ring_seconds").default(15).notNull(),
@@ -870,8 +873,8 @@ export const widgetKeys = pgTable(
     allowedOrigins: jsonb("allowed_origins").$type<string[]>().notNull().default([]),
     config: jsonb("config").$type<Record<string, unknown>>().notNull().default({}),
     lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
-    // The agent that answers this widget. Migration 0184's trigger fills it with the default agent.
-    agentId: uuid("agent_id"),
+    // The agent that answers this widget. Until the release after 0214, a trigger fills it for code that leaves it out.
+    agentId: uuid("agent_id").notNull(),
     ...timestamps,
   },
   (table) => [
@@ -934,7 +937,7 @@ export const conversations = pgTable(
     automationPausedByUserId: uuid("automation_paused_by_user_id").references(() => users.id, { onDelete: "set null" }),
     // A website visitor asked for a person and is waiting for someone from the team to join.
     teamRequestedAt: timestamp("team_requested_at", { withTimezone: true }),
-    // A team member joined the chat after the visitor asked for a person. Only such a chat goes back to the receptionist when the team goes quiet in it.
+    // A team member joined the chat after the visitor asked for a person. Only such a chat goes back to the agent when the team goes quiet in it.
     teamJoinedAt: timestamp("team_joined_at", { withTimezone: true }),
     summary: text("summary"),
     currentIntent: text("current_intent"),
@@ -1295,7 +1298,7 @@ export const businessNotificationReads = pgTable(
   (table) => [primaryKey({ columns: [table.notificationId, table.userId] }), index("business_notification_reads_business_user_idx").on(table.businessId, table.userId)],
 );
 
-// Questions the receptionist found no knowledge for (migration 0168). The same
+// Questions the agent found no knowledge for (migration 0168). The same
 // normalized question counts again on its open or dismissed row.
 export const unansweredQuestions = pgTable(
   "unanswered_questions",
@@ -1334,8 +1337,8 @@ export const agentRules = pgTable(
     content: text("content").notNull(),
     active: boolean("active").default(true).notNull(),
     sortOrder: integer("sort_order").default(0).notNull(),
-    // The agent this rule shapes. Migration 0184's trigger fills it with the default agent.
-    agentId: uuid("agent_id"),
+    // The agent this rule shapes.
+    agentId: uuid("agent_id").notNull(),
     // The one channel the rule applies on (voice covers browser calls too). Null: every channel.
     // agent_rules_channel_check holds it to ruleChannels in @lobbystack/shared.
     channel: varchar("channel", { length: 16 }).$type<"voice" | "sms" | "web_chat" | "instagram">(),
@@ -1431,7 +1434,7 @@ export const calendarConnections = pgTable(
   (table) => [uniqueIndex("calendar_connections_business_provider_account_unique").on(table.businessId, table.provider, table.externalAccountId), index("calendar_connections_business_idx").on(table.businessId, table.status)],
 );
 
-// A business's connected Instagram professional account, whose direct messages the receptionist answers.
+// A business's connected Instagram professional account, whose direct messages the agent answers.
 export const instagramAccounts = pgTable(
   "instagram_accounts",
   {
@@ -1445,8 +1448,8 @@ export const instagramAccounts = pgTable(
     tokenExpiresAt: timestamp("token_expires_at", { withTimezone: true }).notNull(),
     status: varchar("status", { length: 32 }).default("connected").notNull(),
     lastError: text("last_error"),
-    // The agent that answers this account. Migration 0184's trigger fills it with the default agent.
-    agentId: uuid("agent_id"),
+    // The agent that answers this account. Until the release after 0214, a trigger fills it for code that leaves it out.
+    agentId: uuid("agent_id").notNull(),
     ...timestamps,
   },
   (table) => [foreignKey({ name: "instagram_accounts_agent_fk", columns: [table.businessId, table.agentId], foreignColumns: [agents.businessId, agents.id] }), uniqueIndex("instagram_accounts_instagram_user_unique").on(table.instagramUserId), uniqueIndex("instagram_accounts_business_unique").on(table.businessId)],

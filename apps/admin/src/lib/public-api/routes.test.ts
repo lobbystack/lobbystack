@@ -1109,7 +1109,7 @@ describe("rules", () => {
   });
 });
 
-describe("receptionist settings", () => {
+describe("agent settings", () => {
   const receptionist = { greeting: "Hi", tone: "warm", summary: "Maple", summary_source: "operator", booking_policy: "Book", voice_instructions: null, sms_instructions: null, chat_instructions: null, transfer_mode: "never", transfer_number: null, booking_mode: "instant", voice: "marin", appointment_change_policy: { enabled: true, allow_cancel: true, allow_reschedule: true, verification_mode: "phone_match_and_facts" }, updated_at: "2026-10-11T12:00:00.000Z" };
 
   it("reads the settings", async () => {

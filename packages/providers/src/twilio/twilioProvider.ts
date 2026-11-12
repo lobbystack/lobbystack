@@ -169,7 +169,7 @@ export class TwilioProvider {
   }
 
   /**
-   * Puts a number on the SIP trunk, where the receptionist answers, or takes
+   * Puts a number on the SIP trunk, where the agent answers, or takes
    * it off so Twilio asks `fallbackUrl` what to do with each call. Twilio asks
    * `errorUrl` when that webhook fails; without one, it reads out an error.
    */

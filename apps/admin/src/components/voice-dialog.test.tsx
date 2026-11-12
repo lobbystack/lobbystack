@@ -3,7 +3,7 @@ import { act, cleanup, render, screen, waitFor, within } from "@testing-library/
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ReceptionistVoice } from "@lobbystack/shared";
+import type { AgentVoice } from "@lobbystack/shared";
 
 import { VoiceDialog, useVoicePreview } from "./voice-dialog";
 
@@ -43,7 +43,7 @@ const playing = () => FakeAudio.all.filter((audio) => !audio.paused);
 beforeEach(() => { FakeAudio.all = []; FakeAudio.rejects = new Set(); vi.stubGlobal("Audio", FakeAudio); });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
-function Harness({ onSave, onClose = () => {} }: { onSave: (voice: ReceptionistVoice) => Promise<boolean>; onClose?: () => void }) {
+function Harness({ onSave, onClose = () => {} }: { onSave: (voice: AgentVoice) => Promise<boolean>; onClose?: () => void }) {
   const [open, setOpen] = useState(true);
   const preview = useVoicePreview("en");
   return <>

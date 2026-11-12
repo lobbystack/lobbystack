@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { affiliateAttributions, affiliateProfiles, auditLogs, billingAccounts, businesses, businessInvitations, businessMemberships, createDatabaseClient, numberTrials, numberWaitlist, outboxMessages, phoneNumbers, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { affiliateAttributions, affiliateProfiles, auditLogs, billingAccounts, businesses, businessInvitations, businessMemberships, createDatabaseClient, numberTrials, numberWaitlist, outboxMessages, phoneNumbers, users, withBusinessTransaction, type Database, type DatabaseTransaction, defaultAgentIdOf } from "@lobbystack/db";
 import { billedOutsideEntitlement, type PartnerAccessLevel } from "@lobbystack/shared";
 
 import { attributeBusiness } from "./affiliates";
@@ -182,7 +182,7 @@ describe.skipIf(!client)("creating a partner's business", () => {
         email: (await tx.select({ payload: outboxMessages.payload }).from(outboxMessages).where(and(eq(outboxMessages.aggregateId, created.invitationId), eq(outboxMessages.topic, "email.send"))))[0]?.payload,
         audit: await tx.select({ eventType: auditLogs.eventType, actorUserId: auditLogs.actorUserId, payload: auditLogs.payload }).from(auditLogs).where(eq(auditLogs.businessId, created.businessId)),
       }));
-      // At the activity level the partner sets the receptionist up, so the owner's onboarding starts at their phone.
+      // At the activity level the partner sets the agent up, so the owner's onboarding starts at their phone.
       expect(stored.business).toEqual({ name: "Harbor Dental", timezone: "America/Halifax", partnerId: acme.partnerId, accessLevel: "activity", onboardingStage: "verify_phone" });
       expect(stored.memberships).toEqual([]);
       expect(stored.invitations).toEqual([{ email: client!.email, role: "business_owner", transfersOwnership: false, invitedByUserId: acme.owner.userId }]);
@@ -449,7 +449,7 @@ describe.skipIf(!client)("the host's own emails", () => {
 
       // Scheduled: the welcome email, a plan's cancel notice and the release reminder.
       const now = new Date();
-      const numbers = await asMigrator(tx, async () => await tx.insert(phoneNumbers).values([direct, businessId].map((id) => ({ businessId: id, e164: `+1416${String(Math.floor(Math.random() * 10_000_000)).padStart(7, "0")}`, status: "active" }))).returning({ id: phoneNumbers.id, businessId: phoneNumbers.businessId }));
+      const numbers = await asMigrator(tx, async () => await tx.insert(phoneNumbers).values([direct, businessId].map((id) => ({ businessId: id, agentId: defaultAgentIdOf(id), e164: `+1416${String(Math.floor(Math.random() * 10_000_000)).padStart(7, "0")}`, status: "active" }))).returning({ id: phoneNumbers.id, businessId: phoneNumbers.businessId }));
       const numberOf = (id: string) => numbers.find((number) => number.businessId === id)!.id;
       for (const id of [direct, businessId]) {
         await withBusinessTransaction(context.db, { businessId: id, actorType: "system" }, async (inner) => await scheduleWelcomeEmailInTransaction(inner, id, now));
@@ -506,7 +506,7 @@ describe.skipIf(!client)("the owner's onboarding", () => {
       const state = () => getActiveOnboardingState(context.db, owner!.userId, acme.brand);
       expect(await state()).toEqual({ businessId, stage: "website", steps: PARTNER_STEPS });
 
-      // The owner sets up the receptionist as a direct owner would.
+      // The owner sets up the agent as a direct owner would.
       await advanceOnboardingStage(context, { userId: owner!.userId, businessId, to: "verify_phone" });
       expect((await state()).stage).toBe("verify_phone");
       // The partner gives it numbers, so there's no number step and no trial to offer.

@@ -103,7 +103,7 @@ export async function trialTransferNumber(context: DomainContext, input: { busin
 const E164 = /^\+[1-9]\d{6,14}$/;
 
 /**
- * The rules for every number the receptionist transfers calls to, the
+ * The rules for every number the agent transfers calls to, the
  * business's and each employee's: an E.164 number in a country Twilio lets us
  * call and, during a free number trial, only the mobile its claimer verified.
  */
@@ -121,7 +121,7 @@ export async function failNumberTrialInTransaction(tx: DatabaseTransaction, inpu
 
 /**
  * The business paid: its trial number becomes its number. This clears the
- * release, and puts the number back on the receptionist if the trial had
+ * release, and puts the number back on the agent if the trial had
  * ended or run out of minutes.
  */
 export async function convertNumberTrialInTransaction(tx: DatabaseTransaction, input: { businessId: string; now?: Date }): Promise<boolean> {
@@ -276,7 +276,7 @@ export async function desiredNumberRouting(context: DomainContext, input: { busi
 }
 
 /**
- * Moves a number on or off its carrier's SIP path to the receptionist. Off
+ * Moves a number on or off its carrier's SIP path to the agent. Off
  * it, the carrier asks our voice webhook (/api/webhooks/<carrier>/voice)
  * what to do, which forwards the call to the owner or rejects it.
  */
@@ -333,7 +333,7 @@ export async function checkNumberTrialMinutes(context: DomainContext, input: { b
 }
 
 /**
- * Where a call goes when the receptionist doesn't take it: a trial number out
+ * Where a call goes when the agent doesn't take it: a trial number out
  * of minutes, or any number whose plan is out of minutes or at its overage cap
  * (the trunk fails the call over to /api/webhooks/twilio/voice). It forwards
  * to the transfer number of the number's agent, or else the owner's verified phone, and
@@ -667,7 +667,7 @@ export type NumberTrialEmailContent = {
   forwardTo: string | null;
   endsAt: Date | null;
   timezone: string;
-  /** Phone calls the receptionist answered since the trial started. */
+  /** Phone calls the agent answered since the trial started. */
   callsAnswered: number;
 };
 

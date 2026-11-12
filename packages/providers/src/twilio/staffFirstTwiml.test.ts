@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { dialReceptionistTwiml, emptyTwiml, hangupTwiml, receptionistDialOutcome, referTargetPhone, ringStaffTwiml, STAFF_CALL_LIMIT_SECONDS, staffDialOutcome, staffPressTwiml, staffPromptTwiml } from "./staffFirstTwiml";
+import { dialAgentTwiml, emptyTwiml, hangupTwiml, agentDialOutcome, referTargetPhone, ringStaffTwiml, STAFF_CALL_LIMIT_SECONDS, staffDialOutcome, staffPressTwiml, staffPromptTwiml } from "./staffFirstTwiml";
 
 const sip = "sip:proj_1@sip.api.openai.com;transport=tls;secure=true";
 
@@ -40,25 +40,25 @@ describe("ringStaffTwiml", () => {
   });
 });
 
-describe("dialReceptionistTwiml", () => {
+describe("dialAgentTwiml", () => {
   const dial = { sipAddress: sip, called: "+14165550123", locale: "en" as const, actionUrl: "https://app.test/result", referUrl: "https://app.test/refer" };
 
   it("sends the dialled number as a URI header over TLS and SRTP", () => {
-    expect(dialReceptionistTwiml(dial)).toContain(`<Sip>${sip}?X-LobbyStack-Called=tel:+14165550123</Sip>`);
+    expect(dialAgentTwiml(dial)).toContain(`<Sip>${sip}?X-LobbyStack-Called=tel:+14165550123</Sip>`);
   });
 
   it("never uses the secure attribute, which gets the call refused", () => {
-    expect(dialReceptionistTwiml(dial)).not.toMatch(/<Sip [^>]*secure/);
+    expect(dialAgentTwiml(dial)).not.toMatch(/<Sip [^>]*secure/);
   });
 
   it("names a referUrl and keeps the caller ringing", () => {
-    const xml = dialReceptionistTwiml(dial);
+    const xml = dialAgentTwiml(dial);
     expect(xml).toContain('referUrl="https://app.test/refer"');
     expect(xml).toContain('answerOnBridge="true"');
   });
 
   it("reads the handover message first", () => {
-    const xml = dialReceptionistTwiml({ ...dial, message: "Connecting you now." });
+    const xml = dialAgentTwiml({ ...dial, message: "Connecting you now." });
     expect(xml.indexOf("Connecting you now.")).toBeLessThan(xml.indexOf("<Dial"));
   });
 });
@@ -111,7 +111,7 @@ describe("staffDialOutcome", () => {
   });
 });
 
-describe("receptionistDialOutcome", () => {
+describe("agentDialOutcome", () => {
   it.each([
     [{ DialCallStatus: "completed", DialBridged: "true" }, "finished"],
     [{ DialCallStatus: "failed", DialBridged: "false", CallStatus: "completed" }, "finished"],
@@ -122,7 +122,7 @@ describe("receptionistDialOutcome", () => {
     [{ DialCallStatus: "failed", DialBridged: "false" }, "refused"],
     [{ DialCallStatus: "no-answer", DialBridged: "false" }, "refused"],
   ])("reads %j as %s", (params, outcome) => {
-    expect(receptionistDialOutcome(params)).toBe(outcome);
+    expect(agentDialOutcome(params)).toBe(outcome);
   });
 });
 

@@ -2,7 +2,7 @@ import { beforeEach, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ load: vi.fn(), save: vi.fn(), alert: vi.fn(), reserve: vi.fn(), snapshot: vi.fn(), usage: vi.fn(), generate: vi.fn(), createAgent: vi.fn() }));
 vi.mock("@lobbystack/domain", () => ({ alertUnansweredText: mocks.alert, getBusinessSnapshotForAgent: mocks.snapshot, loadTextReplyContext: mocks.load, recordAiGenerationEvent: mocks.usage, reserveTextReplyUsageInTransaction: mocks.reserve, saveTextReply: mocks.save }));
-vi.mock("@lobbystack/agent-core", () => ({ createAgentModel: () => ({}), createReceptionistAgent: mocks.createAgent, describeAgentUsage: () => ({ provider: "openai", model: "test" }) }));
+vi.mock("@lobbystack/agent-core", () => ({ createAgentModel: () => ({}), createConversationAgent: mocks.createAgent, describeAgentUsage: () => ({ provider: "openai", model: "test" }) }));
 vi.mock("@lobbystack/db", () => ({ withBusinessTransaction: async (_db: unknown, _scope: unknown, run: (tx: unknown) => Promise<unknown>) => await run({}) }));
 
 import { replyToTextMessage, TEXT_REPLY_MAX_CHARS, textReplyBody } from "./textReplyJobs";

@@ -8,7 +8,7 @@ describe("appointment fact verification", () => {
     expect(personNamesMatch(undefined, undefined)).toBe(false);
   });
 
-  // A booking saves the name as the receptionist heard it; on staging "Raphael Morency" was saved as "Rafael Morenzi".
+  // A booking saves the name as the agent heard it; on staging "Raphael Morency" was saved as "Rafael Morenzi".
   it("matches a caller's name against the spelling a transcript saved, and accented spellings", () => {
     expect(personNamesMatch("Rafael Morenzi", "Raphael Morency")).toBe(true);
     expect(personNamesMatch("Jonathan Lee", "Jonathon Lee")).toBe(true);

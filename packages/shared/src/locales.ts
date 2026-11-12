@@ -4,7 +4,7 @@
  * are the identifiers used in URLs, cookies, storage and locale folders.
  *
  * This is separate from {@link RuntimeLocale}, the business's caller language
- * that calls open in; the receptionist then follows the caller's language.
+ * that calls open in; the agent then follows the caller's language.
  */
 export const interfaceLocales = ["en", "fr", "es", "sr"] as const;
 
@@ -35,7 +35,7 @@ export function normalizeInterfaceLocale(value: string | null | undefined): Inte
 
 /**
  * Caller languages: the business's choice, which calls open in and the AI
- * receptionist speaks until the caller switches. `pt` is Brazilian Portuguese;
+ * agent speaks until the caller switches. `pt` is Brazilian Portuguese;
  * Serbian is written in Latin script.
  * Interface languages (dashboard, widget UI, email) are {@link InterfaceLocale}.
  */

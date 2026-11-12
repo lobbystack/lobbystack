@@ -93,7 +93,7 @@ test("an agent adds an FAQ of its own and turns a shared source off for itself",
     emails.push(owner.email);
     businessIds.push(owner.businessId);
     await setPlan(database, owner.businessId, "starter");
-    const [evening] = await database.db.insert(agents).values({ businessId: owner.businessId, isDefault: false, name: "Evening line", greeting: "Evening desk", tone: "warm", summary: "", bookingPolicy: "Book", transferMode: "on_request" }).returning({ id: agents.id });
+    const [evening] = await database.db.insert(agents).values({ businessId: owner.businessId, isDefault: false, name: "Evening line", greeting: "Evening desk", tone: "warm", bookingPolicy: "Book", transferMode: "on_request" }).returning({ id: agents.id });
     const prices = await document(database, owner.businessId, { title: "Price list", text: "A cleaning costs 120 dollars." });
     await website(database, owner.businessId);
 

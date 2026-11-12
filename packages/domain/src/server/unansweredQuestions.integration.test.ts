@@ -78,7 +78,7 @@ describe.skipIf(!testUrl)("unanswered questions against PostgreSQL under RLS", (
       const [answered] = await tx.select().from(unansweredQuestions).where(eq(unansweredQuestions.id, first!.id));
       expect(answered).toMatchObject({ status: "answered", knowledgeSnippetId: snippetId, resolvedByUserId: userId });
       expect(answered?.answeredAt).toBeInstanceOf(Date);
-      // The receptionist's snapshot picks the new entry up like any other.
+      // The agent's snapshot picks the new entry up like any other.
       const refreshes = await tx.select({ id: outboxMessages.id }).from(outboxMessages).where(and(eq(outboxMessages.topic, "snapshot.refresh"), eq(outboxMessages.aggregateId, snippetId)));
       expect(refreshes).toHaveLength(1);
     });

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { normalizeReceptionistVoice, RECEPTIONIST_TEXT_MAX_LENGTH, type ReceptionistVoice } from "@lobbystack/shared";
+import { normalizeAgentVoice, AGENT_TEXT_MAX_LENGTH, type AgentVoice } from "@lobbystack/shared";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 
@@ -27,14 +27,14 @@ export function AgentIdentitySection({ agentId, businessId, canManage }: AgentSe
   const save = useSaveAgent(businessId, agentId);
   const profile = query.data?.profile;
   const loading = !businessId || !agentId || query.isLoading;
-  const [voice, setVoice] = useState<ReceptionistVoice>(normalizeReceptionistVoice(undefined));
+  const [voice, setVoice] = useState<AgentVoice>(normalizeAgentVoice(undefined));
   const [voiceSaving, setVoiceSaving] = useState(false);
   const [voiceDialogOpen, setVoiceDialogOpen] = useState(false);
   const voiceTraits = useVoiceTraits();
   const voicePreview = useVoicePreview(query.data?.business?.defaultLocale ?? "en");
   const savedVoice = profile?.voice;
   // The row follows the saved voice when it loads or another agent opens.
-  useEffect(() => { setVoice(normalizeReceptionistVoice(savedVoice)); }, [agentId, savedVoice]);
+  useEffect(() => { setVoice(normalizeAgentVoice(savedVoice)); }, [agentId, savedVoice]);
 
   async function saveText(setting: "name" | "greeting", value: string): Promise<boolean> {
     if (!canManage || !profile) return false;
@@ -49,7 +49,7 @@ export function AgentIdentitySection({ agentId, businessId, canManage }: AgentSe
     }
   }
 
-  async function saveVoice(next: ReceptionistVoice): Promise<boolean> {
+  async function saveVoice(next: AgentVoice): Promise<boolean> {
     if (!canManage || !profile) return false;
     setVoiceSaving(true);
     try {
@@ -73,7 +73,7 @@ export function AgentIdentitySection({ agentId, businessId, canManage }: AgentSe
       <h2 className="type-title">{t("agent:identity.title")}</h2>
       <Surface className="flex flex-col">
         <TextSettingRow description={t("agent:fields.name.hint")} disabled={disabled} id="agent-name" label={t("agent:fields.name.label")} maxLength={AGENT_NAME_MAX_LENGTH} onSave={(value) => saveText("name", value)} singleLine value={profile?.name ?? ""} />
-        <TextSettingRow description={t("agent:fields.greeting.hint")} disabled={disabled} id="agent-greeting" label={t("agent:fields.greeting.label")} maxLength={RECEPTIONIST_TEXT_MAX_LENGTH} onSave={(value) => saveText("greeting", value)} placeholder={t("agent:fields.greeting.placeholder")} value={profile?.greeting ?? ""} />
+        <TextSettingRow description={t("agent:fields.greeting.hint")} disabled={disabled} id="agent-greeting" label={t("agent:fields.greeting.label")} maxLength={AGENT_TEXT_MAX_LENGTH} onSave={(value) => saveText("greeting", value)} placeholder={t("agent:fields.greeting.placeholder")} value={profile?.greeting ?? ""} />
         <Item className={settingRowClassName} variant="default">
           <ItemContent>
             <ItemTitle>{t("agent:fields.voice.label")}</ItemTitle>

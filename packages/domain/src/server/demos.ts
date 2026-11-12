@@ -17,13 +17,13 @@ import { actorUserId, partnerActorRole, partnerRls } from "./partnerActors";
 import { deletePartnerBusinessInTransaction, reserveSubdomainIn, type PartnerActor } from "./partners";
 import { recordProductEventBestEffort } from "./productEvents";
 import { PROSPECT_DEMO_BOOKING_POLICY, PROSPECT_DEMO_SMS_INSTRUCTIONS, prospectDemoSettingsIn, prospectDemoVoiceInstructions, type ProspectDemoSetting } from "./prospectDemoSettings";
-import { saveReceptionistProfileInTransaction } from "./receptionistProfile";
+import { saveAgentSettingsInTransaction } from "./agentSettings";
 import { withLegacyInstructions } from "./channelRules";
 import { insertAgentRuleInTransaction } from "./rules";
-import { NEW_BUSINESS_RECEPTIONIST_INSTRUCTIONS, partnerMemberNotOnTeam, rememberActiveBusinessInTransaction } from "./tenancy";
+import { NEW_BUSINESS_AGENT_INSTRUCTIONS, partnerMemberNotOnTeam, rememberActiveBusinessInTransaction } from "./tenancy";
 import { periodKeyFor } from "./usage";
 
-// Prospect demos: an expiring receptionist built from a prospect's website,
+// Prospect demos: an expiring agent built from a prospect's website,
 // which the prospect tries on a public page and claims to keep. The host's
 // demo operator makes the host's demos. Anyone on a partner's team makes the
 // partner's from its console, under its brand: the demo is one of the
@@ -261,7 +261,7 @@ function prepareDemo(input: ProspectDemoInput) {
 }
 
 /**
- * Inserts the demo's business, receptionist, staff, services and demo, and
+ * Inserts the demo's business, agent, staff, services and demo, and
  * queues the website read and the first snapshot. The transaction is the
  * system actor's, scoped to the new business. The host's operator prepares
  * the demo as the business's owner. A partner's demo is one of the
@@ -282,6 +282,7 @@ async function insertDemoInTransaction(
     timezone,
     currency: defaultCurrencyForTimezone(timezone),
     defaultLocale: locale,
+    summary: `${name} virtual receptionist`,
     websiteUrl: demo.websiteUrl,
     businessType: "general",
     deploymentMode: process.env.DEPLOYMENT_MODE === "cloud" ? "cloud" : "development",
@@ -298,12 +299,11 @@ async function insertDemoInTransaction(
     name: defaultAgentName(locale),
     greeting: input.greeting?.trim() || defaultGreeting(name, locale),
     tone: "professional and friendly",
-    summary: `${name} virtual receptionist`,
     bookingPolicy: PROSPECT_DEMO_BOOKING_POLICY,
     transferMode: "on_request",
   }).returning({ id: agents.id });
   if (!demoAgent) throw new Error("Demo agent could not be created.");
-  // What the demo's receptionist is told on calls and in texts, as rules kept to those channels.
+  // What the demo's agent is told on calls and in texts, as rules kept to those channels.
   for (const [channel, content] of [["voice", prospectDemoVoiceInstructions(owner.brandName)], ["sms", PROSPECT_DEMO_SMS_INSTRUCTIONS]] as const) {
     await insertAgentRuleInTransaction(tx, { businessId, agentId: demoAgent.id, title: channelRuleTitle(channel, locale), content, channel });
   }
@@ -493,7 +493,7 @@ async function partnerDemoOrigin(context: DomainContext, partnerId: string): Pro
 
 /**
  * Makes a prospect demo under the partner's brand. Anyone on the partner's
- * team can. The demo's receptionist names the partner, never the host, and
+ * team can. The demo's agent names the partner, never the host, and
  * its link opens on the partner's domain, so the partner needs a domain
  * first. The demo is one of the partner's businesses with no owner, at the
  * access level its own operators get once someone claims it: full access,
@@ -691,7 +691,7 @@ export async function claimProspectDemo(
       }
       const onboardingStage = partnerId ? firstOnboardingStage({ partnerId, accessLevel: business.accessLevel }) : "create_business";
       await tx.update(businesses).set({ onboardingStage, updatedAt: new Date() }).where(eq(businesses.id, businessId));
-      // From now on its calls and texts are real. At activity only its owner can't change what the demo told the receptionist, so a partner's demo gets back what a new business is told.
+      // From now on its calls and texts are real. At activity only its owner can't change what the demo told the agent, so a partner's demo gets back what a new business is told.
       if (partnerId) await endDemoSettingsInTransaction(tx, { businessId, businessName: business.name, locale: business.locale });
       await tx.update(prospectDemos).set({ status: "claimed", claimedAt: new Date(), claimedByUserId: input.userId, updatedAt: new Date() }).where(eq(prospectDemos.id, demo.id));
       // The operator's users row is outside this claimant's RLS scope; the
@@ -709,16 +709,16 @@ export async function claimProspectDemo(
   }
 }
 
-/** Puts back what a new business's receptionist is told wherever the demo's own settings are still in place. Settings someone changed during the demo stay. */
+/** Puts back what a new business's agent is told wherever the demo's own settings are still in place. Settings someone changed during the demo stay. */
 async function endDemoSettingsInTransaction(tx: DatabaseTransaction, input: { businessId: string; businessName: string; locale: string }): Promise<void> {
   const [agent] = await tx.select({ id: agents.id, businessId: agents.businessId, bookingPolicy: agents.bookingPolicy }).from(agents).where(defaultAgentOf(input.businessId)).limit(1);
   if (!agent) return;
   // The demo's call and text instructions are rules kept to those channels.
   const profile = await withLegacyInstructions(tx, agent);
   const patch: Partial<Record<ProspectDemoSetting, string>> = {};
-  for (const field of prospectDemoSettingsIn(profile)) patch[field] = NEW_BUSINESS_RECEPTIONIST_INSTRUCTIONS[field];
+  for (const field of prospectDemoSettingsIn(profile)) patch[field] = NEW_BUSINESS_AGENT_INSTRUCTIONS[field];
   if (!Object.keys(patch).length) return;
-  await saveReceptionistProfileInTransaction(tx, { businessId: input.businessId, businessName: input.businessName, locale: normalizeRuntimeLocale(input.locale), patch });
+  await saveAgentSettingsInTransaction(tx, { businessId: input.businessId, businessName: input.businessName, locale: normalizeRuntimeLocale(input.locale), patch });
 }
 
 function claimFailureReason(error: unknown): string {

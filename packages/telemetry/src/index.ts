@@ -380,7 +380,7 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
   ],
   "web.voice.test_call_started": ["businessId", "deploymentMode"],
   "web.voice.test_call_connected": ["businessId", "deploymentMode"],
-  // endedBy: "caller" when the caller hung up, "agent" when the receptionist's
+  // endedBy: "caller" when the caller hung up, "agent" when the agent's
   // side closed the session (its endCall tool or a time limit).
   "web.voice.test_call_ended": ["businessId", "deploymentMode", "endedBy"],
   "web.voice.test_call_error": ["businessId", "deploymentMode"],

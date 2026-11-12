@@ -14,12 +14,12 @@ vi.mock("@lobbystack/domain", async () => ({
 }));
 
 import { bookForCaller, employeeDoesService, findOpenings, rescheduleForCaller, resolveEmployee } from "@lobbystack/domain";
-import { createReceptionistTools, UNAVAILABLE_TOOL_MESSAGES } from "./tools";
+import { createAgentTools, UNAVAILABLE_TOOL_MESSAGES } from "./tools";
 
 type Execute = (input: object, options: object) => Promise<Record<string, unknown>>;
 
 function tools(snapshot: Partial<BusinessContextSnapshot> = {}) {
-  const set = createReceptionistTools({ domain: { db: {} as never }, channel: "voice", callerPhone: "+14165550100", snapshot: { ...demoSnapshot, timezone: "America/Toronto", appointmentChangePolicy: { enabled: true, allowCancel: true, allowReschedule: true, verificationMode: "phone_match_and_facts" }, ...snapshot } });
+  const set = createAgentTools({ domain: { db: {} as never }, channel: "voice", callerPhone: "+14165550100", snapshot: { ...demoSnapshot, timezone: "America/Toronto", appointmentChangePolicy: { enabled: true, allowCancel: true, allowReschedule: true, verificationMode: "phone_match_and_facts" }, ...snapshot } });
   const run = (name: string, input: object) => (set[name]!.execute! as Execute)(input, { toolCallId: "1", messages: [] });
   return { set, run };
 }

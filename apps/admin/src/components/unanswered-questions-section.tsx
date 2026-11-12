@@ -36,7 +36,7 @@ export function fetchUnansweredQuestions(businessId: string): Promise<Unanswered
 }
 
 /**
- * Open questions the receptionist found no knowledge for, most asked first. Owners and admins answer or dismiss them.
+ * Open questions the agent found no knowledge for, most asked first. Owners and admins answer or dismiss them.
  * Home links here by anchor, but the section renders after the page loads, so it scrolls itself into view once the
  * content above it (`layoutSettled`) and its own list have loaded.
  */

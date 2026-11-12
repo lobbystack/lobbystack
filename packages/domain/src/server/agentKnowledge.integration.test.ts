@@ -50,7 +50,7 @@ async function seed(tx: DatabaseTransaction) {
   // A paid plan, so the second agent answers as itself and isn't paused.
   await tx.insert(billingAccounts).values({ businessId, billingKey: `business:${businessId}`, plan: "starter", subscriptionState: "active" }).onConflictDoUpdate({ target: billingAccounts.businessId, set: { plan: "starter", subscriptionState: "active" } });
   const [front] = await tx.select({ id: agents.id }).from(agents).where(eq(agents.businessId, businessId));
-  const [evening] = await tx.insert(agents).values({ businessId, isDefault: false, name: "Evening", greeting: "Evening desk", tone: "warm", summary: "", bookingPolicy: "Book", transferMode: "on_request" }).returning({ id: agents.id });
+  const [evening] = await tx.insert(agents).values({ businessId, isDefault: false, name: "Evening", greeting: "Evening desk", tone: "warm", bookingPolicy: "Book", transferMode: "on_request" }).returning({ id: agents.id });
   const document = async (input: { title: string; text: string; sourceType?: string; sourceUrl?: string; agentId?: string; websiteDocumentId?: string }) => {
     const [row] = await tx.insert(knowledgeDocuments).values({ businessId, title: input.title, sourceType: input.sourceType ?? "upload", sourceUrl: input.sourceUrl ?? null, status: "indexed", agentId: input.agentId ?? null, websiteDocumentId: input.websiteDocumentId ?? null }).returning({ id: knowledgeDocuments.id });
     await tx.insert(knowledgeChunks).values({ businessId, documentId: row!.id, sequence: 0, content: input.text, contentHash: randomUUID() });
@@ -274,29 +274,6 @@ describe.skipIf(!testUrl)("knowledge scoped to agents", () => {
       expect(call?.agentId).toBe(evening);
       expect(call?.knowledgeSnippets?.map((snippet) => snippet.title).sort()).toEqual(["Hours", "Parking"]);
       await as(tx, null);
-    });
-  });
-
-  it("gives a page the previous worker crawls for an agent's website that agent and website", async () => {
-    await rollbackTest(async (tx) => {
-      const { context, businessId, evening } = await seed(tx);
-      const [night] = await tx.insert(knowledgeDocuments).values({ businessId, title: "Night", sourceType: "website", sourceUrl: "https://night.example/", status: "processing", agentId: evening }).returning({ id: knowledgeDocuments.id });
-      await tx.insert(websiteIngestionJobs).values({ businessId, rootDocumentId: night!.id, websiteUrl: "https://night.example/", provider: "firecrawl", status: "running" });
-      const [shared] = await tx.insert(knowledgeDocuments).values({ businessId, title: "Harbor", sourceType: "website", sourceUrl: "https://harbor.example/", status: "processing" }).returning({ id: knowledgeDocuments.id });
-      await tx.insert(websiteIngestionJobs).values({ businessId, rootDocumentId: shared!.id, websiteUrl: "https://harbor.example/", provider: "firecrawl", status: "running" });
-      // The previous worker's insert: no agent and no website.
-      const oldWorkerSaves = async (sourceUrl: string) => await withBusinessTransaction(context.db, { businessId, actorType: "worker" }, async (inner) => {
-        await inner.execute(sql`set local role lobbystack_worker`);
-        const [page] = await inner.insert(knowledgeDocuments).values({ businessId, sourceType: "website", title: sourceUrl, sourceUrl, status: "processing" }).returning({ agentId: knowledgeDocuments.agentId, websiteDocumentId: knowledgeDocuments.websiteDocumentId });
-        return page;
-      });
-
-      expect(await oldWorkerSaves("https://www.night.example/menu")).toEqual({ agentId: evening, websiteDocumentId: night!.id });
-      // A shared website's pages stay shared.
-      expect(await oldWorkerSaves("https://harbor.example/team")).toEqual({ agentId: null, websiteDocumentId: null });
-      // Once the agent's import is done, a page on its host is someone adding it, not its crawl.
-      await tx.update(knowledgeDocuments).set({ status: "indexed" }).where(eq(knowledgeDocuments.id, night!.id));
-      expect(await oldWorkerSaves("https://night.example/later")).toEqual({ agentId: null, websiteDocumentId: null });
     });
   });
 

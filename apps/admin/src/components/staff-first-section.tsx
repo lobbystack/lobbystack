@@ -18,7 +18,7 @@ export type { StaffFirstPatch, StaffFirstProfile } from "@/components/staff-firs
 export const STAFF_FIRST_ANCHOR = "staff-first";
 
 /**
- * Staff answers first: which phone rings before the receptionist answers, and for how long. The row says
+ * Staff answers first: which phone rings before the agent answers, and for how long. The row says
  * whether it's on and which phone rings; Set up or Edit opens the whole setting in a dialog.
  */
 export function StaffFirstSection({ businessId, block, canManage, defaultLocale, isLoading, onSave, profile }: {

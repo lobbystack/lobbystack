@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { randomBytes } from "node:crypto";
 import { and, eq, isNull } from "drizzle-orm";
 
-import { agents, widgetKeys } from "@lobbystack/db";
+import { agents, widgetKeys, defaultAgentIdOf } from "@lobbystack/db";
 
 import agentCopy from "../public/locales/en/agent.json" with { type: "json" };
 import navCopy from "../public/locales/en/nav.json" with { type: "json" };
@@ -58,7 +58,7 @@ test("a paid workspace adds an agent, changes its greeting, moves the widget to 
     await setPlan(database, owner.businessId, "starter");
     const [primary] = await database.db.select({ id: agents.id, name: agents.name, greeting: agents.greeting }).from(agents).where(and(eq(agents.businessId, owner.businessId), eq(agents.isDefault, true)));
     // A widget the default agent answers, as a finished install leaves it.
-    const [widget] = await database.db.insert(widgetKeys).values({ businessId: owner.businessId, keyHash: randomBytes(32).toString("hex"), label: "Main website", allowedOrigins: ["https://example.invalid"] }).returning({ id: widgetKeys.id });
+    const [widget] = await database.db.insert(widgetKeys).values({ businessId: owner.businessId, agentId: defaultAgentIdOf(owner.businessId), keyHash: randomBytes(32).toString("hex"), label: "Main website", allowedOrigins: ["https://example.invalid"] }).returning({ id: widgetKeys.id });
     const widgetAgent = async () => (await database.db.select({ agentId: widgetKeys.agentId }).from(widgetKeys).where(eq(widgetKeys.id, widget!.id)))[0]?.agentId;
     expect(await widgetAgent()).toBe(primary!.id);
 

@@ -7,7 +7,7 @@ import OpenAI from "openai";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { WebSocketServer, type WebSocket } from "ws";
 
-import { createReceptionistAgent } from "../agent";
+import { createConversationAgent } from "../agent";
 import { LiveCallController, type LiveCallControllerOptions, type LiveCallSummary } from "./callController";
 
 // Runs the controller on the SDK's real sideband connection, against a local
@@ -176,7 +176,7 @@ describe("LiveCallController sideband", () => {
         warnings: [],
       }),
     });
-    const agent = createReceptionistAgent({
+    const agent = createConversationAgent({
       model,
       context: { domain: { db: {} as never }, snapshot: demoSnapshot, channel: phone ? "voice" : "web_voice", callId: "call_1", callControl: { hangup: async (reason) => holder.controller!.end(reason) } },
       directToolAnswers: true,

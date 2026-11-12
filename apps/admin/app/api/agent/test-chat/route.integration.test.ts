@@ -97,7 +97,7 @@ beforeAll(async () => {
   await admin.db.insert(businesses).values([businessId, otherBusinessId, strangerBusinessId].map((id, index) => ({ id, slug: `test-chat-${id}`, name: ["Acme Dental", "Owner's second", "Stranger"][index]!, timezone: "America/Toronto", businessType: "dental" })));
   for (const [index, id] of [businessId, otherBusinessId, strangerBusinessId].entries()) {
     const name = ["Front desk", "Second desk", "Stranger desk"][index]!;
-    await admin.db.insert(agents).values({ businessId: id, name, greeting: "Hello", tone: "warm", summary: "A clinic", bookingPolicy: "Confirm first.", bookingMode: "instant", transferMode: "never", isDefault: true });
+    await admin.db.insert(agents).values({ businessId: id, name, greeting: "Hello", tone: "warm", bookingPolicy: "Confirm first.", bookingMode: "instant", transferMode: "never", isDefault: true });
   }
   await admin.db.insert(businessMemberships).values([businessId, otherBusinessId].map((id) => ({ businessId: id, userId, role: "business_owner" })));
 });

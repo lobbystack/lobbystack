@@ -12,15 +12,15 @@ import { recordProductEventBestEffort } from "./productEvents";
 // Live chat with the team in the website widget. A visitor who asks for a
 // person hands the chat to the team, which gets an alert, and waits. The first
 // team member to reply or press Join in Messages has the chat. If nobody does
-// in time, the receptionist takes it back and offers to take a message. A team
+// in time, the agent takes it back and offers to take a message. A team
 // that goes quiet in a chat it joined this way gives it back the same way, the
 // next time the visitor writes. A chat the team took over on its own stays with
 // the team until someone resumes the AI.
 
-/** How long a visitor waits for someone from the team before the receptionist takes the chat back. */
+/** How long a visitor waits for someone from the team before the agent takes the chat back. */
 export const TEAM_REQUEST_WAIT_MS = 3 * 60_000;
 
-/** How long the team can leave a chat it joined without a word before the receptionist answers the visitor again. */
+/** How long the team can leave a chat it joined without a word before the agent answers the visitor again. */
 export const TEAM_CHAT_QUIET_MS = 10 * 60_000;
 
 /**
@@ -36,7 +36,7 @@ export function teamChatWentQuiet(chat: { teamRequestedAt: Date | null; teamJoin
   return now.getTime() - lastActiveAt >= TEAM_CHAT_QUIET_MS;
 }
 
-/** What the receptionist says when nobody from the team joined in time. */
+/** What the agent says when nobody from the team joined in time. */
 const NOBODY_JOINED: Record<RuntimeLocale, string> = {
   en: "Sorry, nobody from the team is free to join right now. If you'd like, leave your name and the best number to reach you, and someone will get back to you.",
   fr: "Désolé, personne de l'équipe n'est disponible pour le moment. Si vous le souhaitez, laissez votre nom et le meilleur numéro pour vous joindre, et quelqu'un vous recontactera.",
@@ -86,7 +86,7 @@ export async function requestTeamForWidgetChat(
         reason ? `What they need: ${reason}` : "",
       ].filter(Boolean).join(" "),
     });
-    // The worker hands the chat back to the receptionist if this request is still open then.
+    // The worker hands the chat back to the agent if this request is still open then.
     await enqueueOutbox(tx, {
       topic: "conversation.expireTeamRequest",
       businessId: input.businessId,
@@ -111,7 +111,7 @@ export async function requestTeamForWidgetChat(
 }
 
 /**
- * Nobody from the team joined in time: the receptionist takes the chat back
+ * Nobody from the team joined in time: the agent takes the chat back
  * and offers to take a message. Does nothing when the request was answered,
  * the team handed the chat back, or the visitor asked again since.
  */
@@ -141,7 +141,7 @@ export async function expireTeamRequest(
 
 /**
  * A visitor wrote in a chat the team has. When the team joined it after the
- * visitor asked for a person and has gone quiet in it since, the receptionist
+ * visitor asked for a person and has gone quiet in it since, the agent
  * takes the chat back and answers, so a visitor who returns later isn't left
  * waiting for someone who left. Only a widget with live chat on asks. Returns
  * who answers now.
@@ -170,7 +170,7 @@ export async function returnQuietTeamChat(
 }
 
 /**
- * Tells the visitor's open widgets to reload the chat for a receptionist reply
+ * Tells the visitor's open widgets to reload the chat for an agent reply
  * saved after the visitor left the page that asked for it: a widget opened on
  * the next page may have loaded the chat before the reply was there.
  */
@@ -238,7 +238,7 @@ export async function loadWidgetChatView(context: DomainContext, input: { busine
       .limit(200);
     const handoff = conversation?.automationState === "human_handoff";
     const waitingForTeam = handoff && Boolean(conversation.teamRequestedAt);
-    // A team that went quiet in a chat it joined no longer has it: the receptionist answers the visitor's next message.
+    // A team that went quiet in a chat it joined no longer has it: the agent answers the visitor's next message.
     const lastTeamMessageAt = rows.find((row) => row.direction !== "inbound" && row.sentByUserId !== null)?.createdAt ?? null;
     const teamHasChat = handoff && !waitingForTeam && !(input.liveChatOn && teamChatWentQuiet({ teamRequestedAt: null, teamJoinedAt: conversation.teamJoinedAt, automationPausedAt: conversation.automationPausedAt, lastTeamMessageAt }, now));
     return {

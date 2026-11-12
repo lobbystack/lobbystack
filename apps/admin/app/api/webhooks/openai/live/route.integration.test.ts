@@ -47,7 +47,7 @@ vi.mock("@/lib/domain-context", async () => {
   return { createWorkerDomainContext: () => ({ db: getWorkerDatabase().db }) };
 });
 
-import { agents, businessContextSnapshots, businesses, businessNotifications, calls, createDatabaseClient, partnerLifecycles, partners, phoneNumbers, productEvents } from "@lobbystack/db";
+import { agents, businessContextSnapshots, businesses, businessNotifications, calls, createDatabaseClient, partnerLifecycles, partners, phoneNumbers, productEvents, defaultAgentIdOf } from "@lobbystack/db";
 
 import { POST as forwardCall } from "../../twilio/voice/route";
 import { POST as incomingCall } from "./route";
@@ -86,9 +86,9 @@ beforeAll(async () => {
   if (!admin) return;
   await admin.db.insert(partners).values({ id: partnerId, name: "Acme Reception", slug: `acme-${partnerId.slice(0, 8)}` });
   await admin.db.insert(businesses).values({ id: businessId, slug: `harbor-${businessId.slice(0, 8)}`, name: "Harbor Dental", timezone: "America/Toronto", businessType: "dental", partnerId });
-  await admin.db.insert(phoneNumbers).values({ businessId, e164: line, providerPhoneId: `PN${randomUUID().replaceAll("-", "")}`, status: "active" });
+  await admin.db.insert(phoneNumbers).values({ businessId, agentId: defaultAgentIdOf(businessId), e164: line, providerPhoneId: `PN${randomUUID().replaceAll("-", "")}`, status: "active" });
   // Adding the number gave the business its default agent.
-  await admin.db.update(agents).set({ greeting: "Hi", tone: "warm", summary: "Harbor Dental", bookingPolicy: "Book", transferMode: "never", transferNumber: transfer }).where(and(eq(agents.businessId, businessId), eq(agents.isDefault, true)));
+  await admin.db.update(agents).set({ greeting: "Hi", tone: "warm", bookingPolicy: "Book", transferMode: "never", transferNumber: transfer }).where(and(eq(agents.businessId, businessId), eq(agents.isDefault, true)));
   await admin.db.insert(businessContextSnapshots).values({ businessId, version: "v1", snapshot: { businessId, greeting: "Hi" } });
   // The partner's tier ended 31 days ago, so the hourly job paused its businesses a day ago.
   await admin.db.insert(partnerLifecycles).values({ partnerId, state: "paused", since: new Date(Date.now() - DAY) });

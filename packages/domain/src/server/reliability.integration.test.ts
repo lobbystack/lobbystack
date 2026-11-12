@@ -289,7 +289,7 @@ describe.skipIf(!testUrl)("reliability against dedicated PostgreSQL roles", () =
     await rollbackTest(async (tx) => {
       const businessId = randomUUID();
       await tx.insert(businesses).values({ id: businessId, slug: businessId, name: "Maple Family Clinic", timezone: "UTC", businessType: "test", deploymentMode: "cloud" });
-      await tx.insert(agents).values({ businessId, isDefault: true, greeting: "Hi", tone: "warm", summary: "Maple Family Clinic uses LobbyStack to answer calls.", bookingPolicy: "Confirm first.", transferMode: "never" });
+      await tx.insert(agents).values({ businessId, isDefault: true, greeting: "Hi", tone: "warm", bookingPolicy: "Confirm first.", transferMode: "never" });
       const [indexed, pending] = [randomUUID(), randomUUID()];
       await tx.insert(knowledgeDocuments).values([
         { id: indexed, businessId, sourceType: "website", title: "Home", status: "indexed" },
@@ -313,12 +313,12 @@ describe.skipIf(!testUrl)("reliability against dedicated PostgreSQL roles", () =
       expect(reloaded).toMatchObject({ summarySource: "generated", currentFingerprint: input!.fingerprint });
 
       await withBusinessTransaction(db, { businessId, actorType: "worker" }, async (workerTx) => {
-        await workerTx.update(agents).set({ summary: "Written by the owner.", summarySource: "operator" }).where(eq(agents.businessId, businessId));
+        await workerTx.update(businesses).set({ summary: "Written by the owner.", summarySource: "operator" }).where(eq(businesses.id, businessId));
       });
       expect(await saveGeneratedBusinessSummary({ db }, { businessId, summary: "An AI rewrite.", fingerprint: "other" })).toBe(false);
       await withBusinessTransaction(db, { businessId, actorType: "worker" }, async (workerTx) => {
-        const [profile] = await workerTx.select({ summary: agents.summary }).from(agents).where(eq(agents.businessId, businessId));
-        expect(profile?.summary).toBe("Written by the owner.");
+        const [business] = await workerTx.select({ summary: businesses.summary }).from(businesses).where(eq(businesses.id, businessId));
+        expect(business?.summary).toBe("Written by the owner.");
       });
     });
   });
@@ -571,8 +571,8 @@ describe.skipIf(!testUrl)("reliability against dedicated PostgreSQL roles", () =
       const embedding = Array.from({ length: 1536 }, () => 0.01);
       const business = async (summarySource: "placeholder" | "generated" | "operator", knowledge: { snippet?: boolean; document?: "indexed" | "processing"; chunk?: { embeddingFingerprint: string | null; embeddingStatus: string; embedded: boolean } }) => {
         const businessId = randomUUID();
-        await tx.insert(businesses).values({ id: businessId, slug: businessId, name: "Backfill listing", timezone: "UTC", businessType: "test" });
-        await tx.insert(agents).values({ businessId, isDefault: true, greeting: "Hi", tone: "warm", summary: "Placeholder.", summarySource, bookingPolicy: "Confirm first.", transferMode: "never" });
+        await tx.insert(businesses).values({ id: businessId, slug: businessId, name: "Backfill listing", timezone: "UTC", businessType: "test", summarySource });
+        await tx.insert(agents).values({ businessId, isDefault: true, greeting: "Hi", tone: "warm", bookingPolicy: "Confirm first.", transferMode: "never" });
         if (knowledge.snippet) await tx.insert(knowledgeSnippets).values({ businessId, title: "Services", content: "Checkups." });
         if (knowledge.document) {
           const documentId = randomUUID();
