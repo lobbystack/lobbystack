@@ -262,7 +262,7 @@ describe("appointments calendar", () => {
     expect(within(screen.getByTestId("calendar-draft")).getByText(/9:30\s–\s10:30\sAM/)).toBeTruthy();
     expect(within(popover).getByTestId("appointment-form-time").textContent).toMatch(/Thu, Sep 3, 9:30\s–\s10:30\sAM/);
     // A date field instead of a month.
-    expect((within(popover).getByLabelText(en.appointments.openings.date) as HTMLInputElement).value).toBe("2026-09-03");
+    expect(within(popover).getByLabelText(en.appointments.openings.date).textContent).toContain("Sep 3, 2026");
     await userEvent.type(within(popover).getByLabelText(en.appointments.create.notes), "Window seat");
 
     // Another slot moves the booking and keeps what's filled in.

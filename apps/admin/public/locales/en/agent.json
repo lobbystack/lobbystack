@@ -562,6 +562,8 @@
       "description": "Add holidays and other times you're closed. The agent won't book appointments during them. Times are in {{timezone}}.",
       "startsAt": "Closure {{number}}: closed from",
       "endsAt": "Closure {{number}}: closed until",
+      "startTime": "Closure {{number}}: start time",
+      "endTime": "Closure {{number}}: end time",
       "reason": "Closure {{number}}: reason",
       "reasonPlaceholder": "Reason (optional)",
       "add": "Add closure",

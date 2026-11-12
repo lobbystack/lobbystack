@@ -563,6 +563,8 @@
       "description": "Agregue los días festivos y otros períodos en que su negocio cierra. El agente no reserva citas durante esos períodos. Las horas están en la zona horaria {{timezone}}.",
       "startsAt": "Cierre {{number}}: cerrado desde",
       "endsAt": "Cierre {{number}}: cerrado hasta",
+      "startTime": "Cierre {{number}}: hora de inicio",
+      "endTime": "Cierre {{number}}: hora de fin",
       "reason": "Cierre {{number}}: motivo",
       "reasonPlaceholder": "Motivo (opcional)",
       "add": "Agregar cierre",

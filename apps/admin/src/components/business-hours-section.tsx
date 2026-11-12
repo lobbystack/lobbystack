@@ -9,6 +9,7 @@ import type { BookingMode, HoursWindow } from "@lobbystack/shared";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Item, ItemActions, ItemContent, ItemDescription, ItemTitle } from "@/components/ui/item";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -237,8 +238,8 @@ export function BusinessHoursSection({ businessId, canManage, bookingMode }: { b
                 return (
                   <div className="flex items-start gap-2" key={index}>
                     <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-2">
-                      <Input aria-describedby={describedBy} aria-invalid={invalid} aria-label={t("hours.closures.startsAt", { number })} disabled={disabled} onChange={(event) => edit({ startsAt: event.target.value })} type="datetime-local" value={closure.startsAt} />
-                      <Input aria-describedby={describedBy} aria-invalid={invalid} aria-label={t("hours.closures.endsAt", { number })} disabled={disabled} onChange={(event) => edit({ endsAt: event.target.value })} type="datetime-local" value={closure.endsAt} />
+                      <ClosureMoment dateLabel={t("hours.closures.startsAt", { number })} describedBy={describedBy} disabled={disabled} invalid={invalid} onChange={(startsAt) => edit({ startsAt })} timeLabel={t("hours.closures.startTime", { number })} value={closure.startsAt} />
+                      <ClosureMoment dateLabel={t("hours.closures.endsAt", { number })} describedBy={describedBy} disabled={disabled} invalid={invalid} min={closure.startsAt.slice(0, 10)} onChange={(endsAt) => edit({ endsAt })} timeLabel={t("hours.closures.endTime", { number })} value={closure.endsAt} />
                       <Input aria-label={t("hours.closures.reason", { number })} className="sm:col-span-2" disabled={disabled} maxLength={MAX_CLOSURE_REASON_LENGTH} onChange={(event) => edit({ reason: event.target.value })} placeholder={t("hours.closures.reasonPlaceholder")} value={closure.reason} />
                     </div>
                     <Button aria-label={t("hours.closures.remove", { number })} disabled={disabled} onClick={() => updateClosures(closures.filter((_, position) => position !== index))} size="icon-sm" type="button" variant="ghost"><X /></Button>
@@ -268,6 +269,24 @@ export function useDayNames(): [string[], string[]] {
     const format = new Intl.DateTimeFormat(intlLocale(i18n.language), { weekday, timeZone: "UTC" });
     return Array.from({ length: 7 }, (_, day) => format.format(new Date(SUNDAY + day * 86_400_000)));
   }), [i18n.language]) as [string[], string[]];
+}
+
+/**
+ * A closure's start or end: a date picker and a time picker for "YYYY-MM-DDTHH:mm".
+ * The time starts at midnight and stays disabled until a date is picked.
+ */
+function ClosureMoment({ value, onChange, dateLabel, timeLabel, describedBy, disabled, invalid, min }: { value: string; onChange: (value: string) => void; dateLabel: string; timeLabel: string; describedBy: string | undefined; disabled: boolean; invalid: true | undefined; min?: string }) {
+  const { i18n, t } = useTranslation("agent");
+  const hourCycle = useTimeFormatPreference() ?? "24h";
+  const [date = "", time = "00:00"] = value.split("T");
+  const pickerLabels = { hours: t("hours.picker.hours"), minutes: t("hours.picker.minutes"), period: t("hours.picker.period") };
+  const pickerTitles = { hours: t("hours.picker.hoursTitle"), minutes: t("hours.picker.minutesTitle") };
+  return (
+    <div className="flex min-w-0 gap-2">
+      <DatePicker aria-describedby={describedBy} aria-label={dateLabel} className="min-w-0 flex-1" disabled={disabled} invalid={Boolean(invalid)} language={i18n.language} locale={intlLocale(i18n.language)} {...(min ? { min } : {})} onChange={(day) => onChange(`${day}T${time || "00:00"}`)} value={date} />
+      <TimePicker aria-label={timeLabel} className="w-28 shrink-0" columnLabels={pickerLabels} columnTitles={pickerTitles} disabled={disabled || !date} hourCycle={hourCycle} locale={intlLocale(i18n.language)} onChange={(next) => onChange(`${date}T${next}`)} value={time} />
+    </div>
+  );
 }
 
 /** The week's windows, Monday first: a switch opens or closes each day, and a day can have up to four windows. Employees' hours use it too. */

@@ -90,7 +90,7 @@ test("an owner books from the calendar's week, sees the booking as a block, and 
     expect(box.x + box.width).toBeLessThanOrEqual(viewport.width);
     expect(box.y + box.height).toBeLessThanOrEqual(viewport.height);
     await expect(panel.getByRole("button", { name: copy.create.confirm, exact: true })).toBeInViewport();
-    await expect(panel.getByLabel(copy.openings.date, { exact: true })).toHaveValue(tomorrow.toISODate()!);
+    await expect(panel.getByLabel(copy.openings.date, { exact: true })).toContainText(tomorrow.toFormat("LLL d, yyyy"));
     // Escape drops it with its draft.
     await page.keyboard.press("Escape");
     await expect(panel).toBeHidden();
@@ -126,8 +126,11 @@ test("an owner books from the calendar's week, sees the booking as a block, and 
     await page.getByRole("button", { name: copy.timeOff.action, exact: true }).click();
     const timeOff = page.getByRole("dialog", { name: copy.timeOff.title });
     await timeOff.getByLabel(copy.timeOff.name, { exact: true }).fill("Staff training");
-    await timeOff.getByLabel(copy.timeOff.startDate, { exact: true }).fill(tomorrow.toISODate()!);
-    await timeOff.getByLabel(copy.timeOff.endDate, { exact: true }).fill(tomorrow.toISODate()!);
+    // Each date field opens a calendar; the day picker stamps each day with its US-order date.
+    await timeOff.getByLabel(copy.timeOff.startDate, { exact: true }).click();
+    await page.locator(`[data-day="${tomorrow.toFormat("M/d/yyyy")}"]`).click();
+    await timeOff.getByLabel(copy.timeOff.endDate, { exact: true }).click();
+    await page.locator(`[data-day="${tomorrow.toFormat("M/d/yyyy")}"]`).click();
     const added = page.waitForResponse((response) => new URL(response.url()).pathname === "/api/time-off" && response.request().method() === "POST");
     await timeOff.getByRole("button", { name: copy.timeOff.save, exact: true }).click();
     expect((await added).status()).toBe(201);

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createInstance } from "i18next";
@@ -31,6 +31,8 @@ async function setup(entry?: Parameters<typeof TimeOffDialog>[0]["entry"], respo
   render(<I18nextProvider i18n={i18n}><QueryClientProvider client={client}><TimeOffDialog businessId="business" day="2026-12-24" entry={entry} onOpenChange={onOpenChange} timeZone="America/Toronto" /></QueryClientProvider></I18nextProvider>);
   return { fetchMock, onOpenChange, invalidate, dialog: await screen.findByRole("dialog") };
 }
+/** A day in the open calendar, by the date the day picker stamps on it (US order for English). */
+const calendarDay = (usDate: string) => document.querySelector<HTMLElement>(`[data-day="${usDate}"]`)!;
 const sent = (fetchMock: ReturnType<typeof vi.fn>, method: string) => fetchMock.mock.calls.find(([, init]) => (init as RequestInit | undefined)?.method === method) as [string, RequestInit] | undefined;
 
 describe("timeOffWindow and timeOffValues", () => {
@@ -70,9 +72,18 @@ describe("TimeOffDialog", () => {
     await userEvent.click(await screen.findByRole("option", { name: "Ana" }));
     await userEvent.type(within(dialog).getByLabelText(copy.name), "Half day");
     await userEvent.click(within(dialog).getByRole("tab", { name: copy.partDay }));
-    fireEvent.change(within(dialog).getByLabelText(copy.endDate), { target: { value: "2026-12-23" } });
+    // The end date's calendar won't offer a day before the start.
+    await userEvent.click(within(dialog).getByLabelText(copy.endDate));
+    expect(calendarDay("12/23/2026").hasAttribute("disabled")).toBe(true);
+    expect(calendarDay("12/25/2026").hasAttribute("disabled")).toBe(false);
+    await userEvent.keyboard("{Escape}");
+    // On the same day, an end time at or before the start time can't be saved.
+    await userEvent.click(within(dialog).getByRole("button", { name: copy.endTime }));
+    // 1:00 PM becomes 1:00 AM, before the 9:00 AM start.
+    await userEvent.click(within(await screen.findByRole("listbox", { name: copy.picker.period })).getByRole("option", { name: "AM" }));
     expect(within(dialog).getByText(copy.endBeforeStart)).toBeTruthy();
-    fireEvent.change(within(dialog).getByLabelText(copy.endDate), { target: { value: "2026-12-24" } });
+    await userEvent.click(within(screen.getByRole("listbox", { name: copy.picker.period })).getByRole("option", { name: "PM" }));
+    await userEvent.keyboard("{Escape}");
     await userEvent.type(within(dialog).getByLabelText(copy.reason), "Dentist");
     await userEvent.click(within(dialog).getByRole("button", { name: copy.save }));
     await waitFor(() => expect(sent(fetchMock, "POST")).toBeTruthy());
@@ -90,7 +101,7 @@ describe("TimeOffDialog", () => {
     const entry = { id: "closure", staffId: null, staffName: null, startsAt: "2026-12-25T05:00:00.000Z", endsAt: "2026-12-26T05:00:00.000Z", name: "Christmas Day", note: null };
     const { fetchMock, onOpenChange, dialog } = await setup(entry);
     expect(within(dialog).getByRole("heading", { name: copy.editTitle })).toBeTruthy();
-    expect((within(dialog).getByLabelText(copy.startDate) as HTMLInputElement).value).toBe("2026-12-25");
+    expect(within(dialog).getByLabelText(copy.startDate).textContent).toContain("Dec 25, 2026");
     await userEvent.click(within(dialog).getByRole("button", { name: copy.delete }));
     const confirm = await screen.findByRole("alertdialog", { name: copy.deleteTitle });
     expect(sent(fetchMock, "DELETE")).toBeUndefined();

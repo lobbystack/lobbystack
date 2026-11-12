@@ -12,6 +12,7 @@ import { FieldControlSkeleton } from "@/components/loading-skeletons";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -155,11 +156,11 @@ export function TimeOffDialog({ businessId, timeZone, entry, day, onOpenChange }
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field data-invalid={datesMissing || undefined}>
                     <FieldLabel htmlFor={ids.start}>{t("appointments.timeOff.startDate")}</FieldLabel>
-                    <Input id={ids.start} onChange={(event) => set({ startDate: event.target.value, ...(values.endDate < event.target.value ? { endDate: event.target.value } : {}) })} type="date" value={values.startDate} />
+                    <DatePicker id={ids.start} invalid={datesMissing} language={i18n.language} locale={intlLocale(i18n.language)} onChange={(startDate) => set({ startDate, ...(values.endDate < startDate ? { endDate: startDate } : {}) })} value={values.startDate} />
                   </Field>
                   <Field data-invalid={endBeforeStart || datesMissing || undefined}>
                     <FieldLabel htmlFor={ids.end}>{t("appointments.timeOff.endDate")}</FieldLabel>
-                    <Input aria-invalid={endBeforeStart || undefined} id={ids.end} min={values.startDate} onChange={(event) => set({ endDate: event.target.value })} type="date" value={values.endDate} />
+                    <DatePicker id={ids.end} invalid={endBeforeStart || datesMissing} language={i18n.language} locale={intlLocale(i18n.language)} min={values.startDate} onChange={(endDate) => set({ endDate })} value={values.endDate} />
                   </Field>
                   {values.span === "part" ? <>
                     <Field>

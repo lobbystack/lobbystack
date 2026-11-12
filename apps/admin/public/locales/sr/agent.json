@@ -563,6 +563,8 @@
       "description": "Dodajte praznike i druge periode kada ne radite. Agent tada ne zakazuje termine. Vreme je prema vremenskoj zoni {{timezone}}.",
       "startsAt": "Neradni period {{number}}: zatvoreno od",
       "endsAt": "Neradni period {{number}}: zatvoreno do",
+      "startTime": "Neradni period {{number}}: vreme početka",
+      "endTime": "Neradni period {{number}}: vreme završetka",
       "reason": "Neradni period {{number}}: razlog",
       "reasonPlaceholder": "Razlog (opciono)",
       "add": "Dodaj neradni period",
