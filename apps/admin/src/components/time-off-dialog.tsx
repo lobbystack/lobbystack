@@ -116,7 +116,7 @@ export function TimeOffDialog({ businessId, timeZone, entry, day, onOpenChange }
   return (
     <>
       <Dialog onOpenChange={(open) => { if (!pending) onOpenChange(open); }} open={!confirmDelete}>
-        <DialogContent size="sm" className="max-h-[calc(100svh-2rem)] grid-rows-[auto_minmax(0,1fr)]">
+        <DialogContent className="max-h-[calc(100svh-2rem)] grid-rows-[auto_minmax(0,1fr)]">
           <DialogHeader><DialogTitle>{t(entry ? "appointments.timeOff.editTitle" : "appointments.timeOff.title")}</DialogTitle></DialogHeader>
           <form className="flex min-h-0 flex-col gap-6" noValidate onSubmit={(event) => { event.preventDefault(); setSubmitted(true); if (ready && !pending) save.mutate(); }}>
             <div className="-m-1 min-h-0 overflow-x-hidden overflow-y-auto p-1">

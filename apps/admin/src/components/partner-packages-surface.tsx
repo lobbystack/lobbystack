@@ -172,7 +172,7 @@ export function PartnerPackagesSurface() {
   const createDialog = currency ? (
     <Dialog onOpenChange={(next) => { setCreateOpen(next); if (!next) { setDraft(EMPTY_DRAFT); setCreateError(null); setCreateSubmitted(false); } }} open={createOpen}>
       <DialogTrigger render={<Button size="sm" />}>{t("packages.create.action")}</DialogTrigger>
-      <DialogContent size="sm">
+      <DialogContent>
         <form className="flex flex-col gap-6" noValidate onSubmit={(event) => { event.preventDefault(); setCreateSubmitted(true); if (!create.isPending && draft.name.trim() && draft.price.trim()) { setCreateError(null); create.mutate(); } }}>
           <DialogHeader>
             <DialogTitle>{t("packages.create.title")}</DialogTitle>

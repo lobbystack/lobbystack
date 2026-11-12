@@ -238,7 +238,7 @@ export function SearchDialog({ businessId }: { businessId: string | undefined })
   const close = useCallback(() => setOpen(false), []);
   return (
     <Dialog onOpenChange={setOpen} open={open}>
-      <DialogContent className="top-[12%] translate-y-0 gap-0 overflow-hidden p-0 sm:max-w-xl" showCloseButton={false}>
+      <DialogContent className="top-[12%] translate-y-0 gap-0 overflow-hidden p-0" showCloseButton={false}>
         <DialogHeader className="sr-only"><DialogTitle>{t("search.title")}</DialogTitle><DialogDescription>{t("search.description")}</DialogDescription></DialogHeader>
         {open ? <SearchPanel businessId={businessId} onClose={close} /> : null}
       </DialogContent>
