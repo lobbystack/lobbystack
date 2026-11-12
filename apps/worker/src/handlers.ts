@@ -16,7 +16,7 @@ import { createWebhookSender, processWebhookDelivery, pruneApiHistory, prunePart
 import { LIVE_RECORDING_ATTEMPTS, listBusinessesWithOpenLiveCalls, listOpenLiveCalls, liveCallHasRecording, persistCallRecording, retryLiveCallRecording, type OpenLiveCall } from "@lobbystack/domain";
 import { applySiteLanguageInTransaction, closePassedAppointmentRequests, expireTeamRequest, postWebsiteImportFinishedInTransaction } from "@lobbystack/domain";
 import { syncBusinessOverage, PROVIDER_RETRY_WINDOW_MS, providerRetryDelayMs } from "@lobbystack/domain";
-import { advancePartnerLifecycles, claimPartnerCheckoutRequest, deferPartnerCheckoutRequest, keepPartnerTrialNumber, loadPartnerCheckoutRequest, loadPoolUsageEvent, markPartnerCheckoutCreated, markPartnerCheckoutFailed, partnerBillingKey, partnerCheckoutLeaseEndsAt, reconcilePartnerTier, settlePartnerNumberCharges } from "@lobbystack/domain";
+import { advancePartnerLifecycles, claimPartnerCheckoutRequest, deferPartnerCheckoutRequest, keepPartnerTrialNumber, loadPartnerCheckoutRequest, loadPoolUsageEvent, markPartnerCheckoutCreated, markPartnerCheckoutFailed, partnerBillingKey, partnerCheckoutLeaseEndsAt, reconcilePartnerTier, settleExtraNumberCharges, settlePartnerNumberCharges } from "@lobbystack/domain";
 import { checkPartnerCustomDomains, provisionPartnerCustomDomain, removePartnerCustomHostname, type CustomDomainProviders } from "@lobbystack/domain";
 import { brandForEmail, businessExists, businessGetsHostEmails, hostBrandFromEnvironment, isHostOnlyEmailTemplate } from "@lobbystack/domain";
 import type { DomainContext } from "@lobbystack/domain";
@@ -990,6 +990,26 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
             idempotencyKey: charge.idempotencyKey,
             businessId: charge.businessId,
             usageKind: "partner_extra_number",
+          });
+        },
+      });
+      return { status: result.settled > 0 ? "completed" : "skipped", entityId: `${result.settled}:${result.charged}` };
+    }
+    case "billing.chargeExtraNumbers": {
+      // Polar charges a business on Starter or Pro, under its own customer, each month of each number past its plan's included one.
+      // Only a cloud business on a live plan has such months, so without Polar there's nothing to charge.
+      const polar = dependencies.polar;
+      if (!polar) return { status: "skipped" };
+      const result = await settleExtraNumberCharges(dependencies.domain, {
+        report: async (charge) => {
+          await polar.recordUsage({
+            eventName: billingMeterEventNames.extraNumbers,
+            externalCustomerId: charge.billingKey,
+            quantity: charge.amountCents,
+            timestamp: charge.periodStart.toISOString(),
+            idempotencyKey: charge.idempotencyKey,
+            businessId: charge.businessId,
+            usageKind: "extra_number",
           });
         },
       });
