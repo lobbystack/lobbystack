@@ -1085,7 +1085,6 @@
   },
   "apiKeys": {
     "title": "API ključevi",
-    "description": "Koristite ključ da povežete sopstveni kod ili drugu aplikaciju sa {{appName}} API-jem.",
     "empty": "Još nema API ključeva.",
     "createdOn": "Kreiran {{date}}",
     "lastUsed": "Poslednji put korišćen {{date}}",
@@ -1245,7 +1244,6 @@
   },
   "connectedApps": {
     "title": "MCP veze",
-    "description": "AI asistenti, kao što su Claude ili ChatGPT, koje je neko povezao prijavom.",
     "empty": "Još nema MCP veza. Da biste dodali vezu, dodajte {{appName}} u podešavanjima asistenta i prijavite se.",
     "neverUsed": "Nikad korišćena",
     "unnamed": "Aplikacija bez naziva",

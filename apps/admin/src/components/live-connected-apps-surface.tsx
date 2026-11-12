@@ -65,14 +65,14 @@ export function LiveConnectedAppsSurface() {
   });
 
   // Whether the section exists depends on the person's role, so it holds its place for anyone whose plan has MCP and goes away if the role can't manage it.
-  if (businesses.isLoading) return can("mcp") ? <SectionSkeleton description={t("connectedApps.description")} title={t("connectedApps.title")}><CredentialRowsSkeleton actions={1} /></SectionSkeleton> : null;
+  if (businesses.isLoading) return can("mcp") ? <SectionSkeleton title={t("connectedApps.title")}><CredentialRowsSkeleton actions={1} /></SectionSkeleton> : null;
   if (!canManage) return null;
-  if (grants.isLoading) return <SectionSkeleton description={t("connectedApps.description")} title={t("connectedApps.title")}><CredentialRowsSkeleton actions={1} /></SectionSkeleton>;
+  if (grants.isLoading) return <SectionSkeleton title={t("connectedApps.title")}><CredentialRowsSkeleton actions={1} /></SectionSkeleton>;
 
   const rows = grants.data?.grants ?? [];
   return (
     <>
-      <SectionBlock description={t("connectedApps.description")} title={t("connectedApps.title")}>
+      <SectionBlock title={t("connectedApps.title")}>
         <Surface>
           {rows.length === 0 ? (
             <p className="type-body-muted p-6 text-center">{t("connectedApps.empty")}</p>

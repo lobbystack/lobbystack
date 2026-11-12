@@ -27,10 +27,9 @@ describe("connected apps loading states", () => {
   it.each([["the workspace", false], ["the connections", true]])("shows the section as a placeholder while %s load", (_, workspace) => {
     renderSurface({ workspace });
     expect(screen.getByText("connectedApps.title").className).toContain("invisible");
-    expect(screen.getByText("connectedApps.description").className).toContain("invisible");
     expect(document.querySelectorAll("li").length).toBe(2);
-    // A title and a description, then a name, a line and one button for each of two rows.
-    expect(skeletons()).toBe(2 + 2 * 3);
+    // A title, then a name, a line and one button for each of two rows.
+    expect(skeletons()).toBe(1 + 2 * 3);
     expect(screen.queryByRole("heading")).toBeNull();
   });
 

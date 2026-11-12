@@ -1085,7 +1085,6 @@
   },
   "apiKeys": {
     "title": "Claves de API",
-    "description": "Use una clave para conectar su propio código u otra aplicación a la API de {{appName}}.",
     "empty": "Aún no hay claves de API.",
     "createdOn": "Creada el {{date}}",
     "lastUsed": "Último uso el {{date}}",
@@ -1245,7 +1244,6 @@
   },
   "connectedApps": {
     "title": "Conexiones MCP",
-    "description": "Asistentes de IA, como Claude o ChatGPT, que alguien conectó al iniciar sesión.",
     "empty": "Aún no hay conexiones MCP. Para agregar una, agregue {{appName}} en la configuración del asistente e inicie sesión.",
     "neverUsed": "Nunca usada",
     "unnamed": "Aplicación sin nombre",

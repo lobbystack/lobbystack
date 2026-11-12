@@ -1078,7 +1078,6 @@
   },
   "apiKeys": {
     "title": "API keys",
-    "description": "Use a key to connect your own code or another app to the {{appName}} API.",
     "empty": "No API keys yet.",
     "createdOn": "Created {{date}}",
     "lastUsed": "Last used {{date}}",
@@ -1238,7 +1237,6 @@
   },
   "connectedApps": {
     "title": "MCP connections",
-    "description": "AI assistants such as Claude or ChatGPT that someone connected by signing in.",
     "empty": "No MCP connections yet. To add one, add {{appName}} in the assistant's settings and sign in.",
     "neverUsed": "Never used",
     "unnamed": "Unnamed app",

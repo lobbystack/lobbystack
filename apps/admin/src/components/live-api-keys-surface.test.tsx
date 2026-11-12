@@ -139,14 +139,13 @@ describe("API keys loading state", () => {
     render(<QueryClientProvider client={client}><LiveApiKeysSurface /></QueryClientProvider>);
   }
 
-  it.each([["the workspace", false], ["the keys", true]])("shows the section as a placeholder, its description included, while %s load", (_, workspace) => {
+  it.each([["the workspace", false], ["the keys", true]])("shows the section as a placeholder while %s load", (_, workspace) => {
     renderPending(workspace);
     // The page header names the page and holds the Create button's placeholder, so the section repeats neither.
     expect(screen.queryByText("apiKeys.title")).toBeNull();
-    expect(screen.getByText("apiKeys.description").className).toContain("invisible");
     expect(document.querySelectorAll("li").length).toBe(2);
-    // The description, then a name, a line and two buttons for each of two keys.
-    expect(skeletons()).toBe(1 + 2 * 4);
+    // A name, a line and two buttons for each of two keys.
+    expect(skeletons()).toBe(2 * 4);
     expect(screen.queryByRole("heading")).toBeNull();
     expect(screen.queryByRole("button")).toBeNull();
     expect(screen.queryByText("apiKeys.empty")).toBeNull();
