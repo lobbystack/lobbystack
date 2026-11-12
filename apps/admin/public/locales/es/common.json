@@ -414,7 +414,15 @@
     "retrying": "Reintentando...",
     "testing": "Probando...",
     "connecting": "Conectando...",
-    "disconnecting": "Desconectando..."
+    "disconnecting": "Desconectando...",
+    "cancelling": "Cancelando...",
+    "rescheduling": "Reprogramando...",
+    "blocking": "Bloqueando...",
+    "unblocking": "Desbloqueando...",
+    "revoking": "Revocando...",
+    "rotating": "Rotando...",
+    "archiving": "Archivando...",
+    "releasing": "Liberando..."
   },
   "tableSearch": {
     "contacts": "Buscar contactos",

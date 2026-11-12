@@ -256,7 +256,7 @@ export function LiveWebhooksSurface() {
         </DialogContent>
       </Dialog>
 
-      <ConfirmActionDialog
+      <ConfirmActionDialog pendingLabel={t(confirm?.kind === "delete" ? "common:pending.deleting" : "common:pending.rotating")}
         cancelLabel={t("webhooks.form.cancel")}
         confirmLabel={confirm?.kind === "delete" ? t("webhooks.delete.confirm") : t("webhooks.rotate.confirm")}
         confirmVariant={confirm?.kind === "delete" ? "destructive" : "default"}

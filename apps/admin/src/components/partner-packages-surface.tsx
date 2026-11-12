@@ -307,7 +307,7 @@ export function PartnerPackagesSurface() {
           </form>
         </DialogContent>
       </Dialog>
-      <ConfirmActionDialog
+      <ConfirmActionDialog pendingLabel={t("common:pending.archiving")}
         cancelLabel={t("packages.archive.cancel")}
         confirmLabel={t("packages.archive.confirm")}
         confirmVariant="destructive"

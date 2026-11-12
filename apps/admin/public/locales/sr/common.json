@@ -414,7 +414,15 @@
     "retrying": "Ponovni pokušaj...",
     "testing": "Testiranje...",
     "connecting": "Povezivanje...",
-    "disconnecting": "Prekidanje veze..."
+    "disconnecting": "Prekidanje veze...",
+    "cancelling": "Otkazivanje...",
+    "rescheduling": "Pomeranje termina...",
+    "blocking": "Blokiranje...",
+    "unblocking": "Odblokiranje...",
+    "revoking": "Opozivanje...",
+    "rotating": "Rotiranje...",
+    "archiving": "Arhiviranje...",
+    "releasing": "Oslobađanje..."
   },
   "tableSearch": {
     "contacts": "Pretraži kontakte",

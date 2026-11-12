@@ -414,7 +414,15 @@
     "retrying": "Nouvelle tentative...",
     "testing": "Test en cours...",
     "connecting": "Connexion...",
-    "disconnecting": "Déconnexion..."
+    "disconnecting": "Déconnexion...",
+    "cancelling": "Annulation...",
+    "rescheduling": "Reprogrammation...",
+    "blocking": "Blocage...",
+    "unblocking": "Déblocage...",
+    "revoking": "Révocation...",
+    "rotating": "Renouvellement...",
+    "archiving": "Archivage...",
+    "releasing": "Libération..."
   },
   "tableSearch": {
     "contacts": "Rechercher des contacts",

@@ -82,7 +82,7 @@ export function WebsitePagesDialog({ businessId, documentId, onOpenChange, canMa
             </ul>
           ) : <p className="py-6 text-center type-body-muted">{pages.isError ? t("sections.knowledge.previewError") : t("sections.knowledge.websiteImport.previewPending")}</p>}
         </div>
-        <ConfirmActionDialog
+        <ConfirmActionDialog pendingLabel={t("common:pending.removing")}
           cancelLabel={t("actions.deleteCancel")}
           confirmLabel={t("sections.knowledge.pagesDialog.removeConfirm")}
           confirmVariant="destructive"

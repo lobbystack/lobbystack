@@ -266,7 +266,7 @@ export function ApiKeysSurface({ namespace, layout, loading, canManage, scopes: 
         </DialogContent>
       </Dialog>
 
-      <ConfirmActionDialog
+      <ConfirmActionDialog pendingLabel={t("common:pending.revoking")}
         cancelLabel={t("apiKeys.revoke.cancel")}
         confirmLabel={t("apiKeys.revoke.confirm")}
         confirmVariant="destructive"

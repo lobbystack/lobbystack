@@ -92,7 +92,7 @@ export function LiveConnectedAppsSurface() {
         )}
       </SectionBlock>
 
-      <ConfirmActionDialog
+      <ConfirmActionDialog pendingLabel={t("common:pending.revoking")}
         cancelLabel={t("connectedApps.revoke.cancel")}
         confirmLabel={t("connectedApps.revoke.confirm")}
         confirmVariant="destructive"

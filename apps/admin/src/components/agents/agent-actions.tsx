@@ -28,7 +28,7 @@ export function RemoveAgentDialog({ agent, onOpenChange, open }: { agent: AgentL
   const [chosen, setChosen] = useState<string | null>(null);
   const destination = others.find((item) => item.id === chosen) ?? others.find((item) => item.id === primary?.id) ?? others[0];
   return (
-    <ConfirmActionDialog
+    <ConfirmActionDialog pendingLabel={t("common:pending.removing")}
       cancelLabel={t("agents.cancel")}
       confirmLabel={t("agents.remove")}
       confirmVariant="destructive"

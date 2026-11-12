@@ -236,7 +236,7 @@ export function LiveWidgetSettingsSurface({ agentId, startAdding = false }: { ag
         </DialogContent>
       </Dialog>
 
-      <ConfirmActionDialog
+      <ConfirmActionDialog pendingLabel={t("common:pending.revoking")}
         cancelLabel={t("widget:manage.cancel")}
         confirmLabel={t("widget.keys.revoke")}
         confirmVariant="destructive"

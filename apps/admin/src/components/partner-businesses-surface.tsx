@@ -511,7 +511,7 @@ export function PartnerBusinessesSurface() {
       )}
       {canCreate && templateSource.business ? <SaveTemplateDialog business={templateSource.business} onOpenChange={(next) => setTemplateSource((current) => ({ ...current, open: next }))} open={templateSource.open} /> : null}
       {confirming ? (
-        <ConfirmActionDialog
+        <ConfirmActionDialog pendingLabel={t(confirming.action === "release" ? "common:pending.releasing" : "common:pending.deleting")}
           cancelLabel={t("businesses.confirm.cancel")}
           confirmLabel={t(`businesses.${confirming.action}.confirm`)}
           confirmVariant={confirming.action === "delete" ? "destructive" : "default"}

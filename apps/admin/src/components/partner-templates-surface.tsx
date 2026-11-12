@@ -229,7 +229,7 @@ export function PartnerTemplatesSurface() {
       )}
       {canManage ? <SaveTemplateDialog onOpenChange={setSaving} open={saving} /> : null}
       {deleting ? (
-        <ConfirmActionDialog
+        <ConfirmActionDialog pendingLabel={t("common:pending.deleting")}
           cancelLabel={t("businesses.confirm.cancel")}
           confirmLabel={t("templates.delete.confirm")}
           confirmVariant="destructive"

@@ -174,7 +174,7 @@ export function LiveContactsSurface() {
       </TableCard>
       {loading ? <DataTablePaginationSkeleton rowsPerPage={paginationLabels.rowsPerPage} /> : <DataTablePagination labels={paginationLabels} table={table} />}
       {business ? <EditContactDialog businessId={business.businessId} contact={editing} onOpenChange={(open) => { if (!open) setEditing(null); }} /> : null}
-      <ConfirmActionDialog
+      <ConfirmActionDialog pendingLabel={t(pendingBlock?.nextBlocked ? "common:pending.blocking" : "common:pending.unblocking")}
         cancelLabel={t("table.actions.blockCancel")}
         confirmLabel={pendingBlock?.nextBlocked ? t("table.actions.blockConfirm") : t("table.actions.unblockConfirm")}
         confirmVariant={pendingBlock?.nextBlocked ? "destructive" : "default"}
@@ -185,7 +185,7 @@ export function LiveContactsSurface() {
         pending={updateBlock.isPending}
         title={pendingBlock?.nextBlocked ? t("table.actions.blockTitle") : t("table.actions.unblockTitle")}
       />
-      <ConfirmActionDialog confirmVariant="destructive" cancelLabel={t("table.actions.deleteCancel")} confirmLabel={t("table.actions.deleteConfirm")} description={t("table.actions.deleteDescription")} onConfirm={async () => { if (pendingDelete) await remove.mutateAsync(pendingDelete); }} onOpenChange={(open) => { if (!open && !remove.isPending) setPendingDelete(null); }} open={Boolean(pendingDelete)} pending={remove.isPending} title={t("table.actions.deleteTitle")} />
+      <ConfirmActionDialog pendingLabel={t("common:pending.deleting")} confirmVariant="destructive" cancelLabel={t("table.actions.deleteCancel")} confirmLabel={t("table.actions.deleteConfirm")} description={t("table.actions.deleteDescription")} onConfirm={async () => { if (pendingDelete) await remove.mutateAsync(pendingDelete); }} onOpenChange={(open) => { if (!open && !remove.isPending) setPendingDelete(null); }} open={Boolean(pendingDelete)} pending={remove.isPending} title={t("table.actions.deleteTitle")} />
     </div>
   );
 }
