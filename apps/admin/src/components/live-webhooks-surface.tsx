@@ -196,7 +196,7 @@ export function LiveWebhooksSurface() {
       {businesses.isLoading ? <Skeleton className="h-40 w-full rounded-xl" /> : !canManage ? (
         <Alert><AlertTitle>{t("webhooks.restricted.title")}</AlertTitle><AlertDescription>{t("webhooks.restricted.description")}</AlertDescription></Alert>
       ) : endpoints.isLoading ? <Skeleton className="h-40 w-full rounded-xl" /> : rows.length === 0 ? (
-        <Surface className="p-8 text-center"><p className="type-body-muted">{t("webhooks.empty")}</p></Surface>
+        <div className="rounded-xl border border-dashed p-12 text-center"><p className="type-empty-title">{t("webhooks.empty")}</p></div>
       ) : (
         <ul className="flex flex-col gap-4">
           {rows.map((endpoint) => (

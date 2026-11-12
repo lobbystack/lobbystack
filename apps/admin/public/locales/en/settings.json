@@ -1078,7 +1078,7 @@
   },
   "apiKeys": {
     "title": "API keys",
-    "empty": "No API keys yet.",
+    "empty": "No API keys yet",
     "createdOn": "Created {{date}}",
     "lastUsed": "Last used {{date}}",
     "neverUsed": "Never used",
@@ -1145,7 +1145,7 @@
   "webhooks": {
     "title": "Webhooks",
     "description": "{{appName}} sends an HTTPS POST to your URL when something happens, such as a finished call or a new booking.",
-    "empty": "No webhook endpoints yet.",
+    "empty": "No webhook endpoints yet",
     "enabledLabel": "Send events to this endpoint",
     "restricted": {
       "title": "Only owners and admins can manage webhooks",
@@ -1237,7 +1237,8 @@
   },
   "connectedApps": {
     "title": "MCP connections",
-    "empty": "No MCP connections yet. To add one, add {{appName}} in the assistant's settings and sign in.",
+    "emptyTitle": "No MCP connections yet",
+    "emptyDescription": "To add one, add {{appName}} in the assistant's settings and sign in.",
     "neverUsed": "Never used",
     "unnamed": "Unnamed app",
     "connectedOn": "Connected {{date}}",

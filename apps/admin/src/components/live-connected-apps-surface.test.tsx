@@ -46,7 +46,8 @@ describe("connected apps loading states", () => {
   it("turns the section real together once the connections have loaded", () => {
     renderSurface({ grants: { grants: [] } });
     expect(screen.getByRole("heading", { name: "connectedApps.title" })).toBeTruthy();
-    expect(screen.getByText("connectedApps.empty")).toBeTruthy();
+    expect(screen.getByText("connectedApps.emptyTitle")).toBeTruthy();
+    expect(screen.getByText("connectedApps.emptyDescription")).toBeTruthy();
     expect(skeletons()).toBe(0);
   });
 });

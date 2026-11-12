@@ -180,14 +180,10 @@ export function ApiKeysSurface({ namespace, layout, loading, canManage, scopes: 
         layout={layout}
         title={t("apiKeys.title")}
       >
-        <Surface>
-          {rows.length === 0 ? (
-            layout === "page" ? (
-            <div className="flex flex-col items-center gap-3 px-6 py-16 text-center">
-              <h2 className="type-card-title">{t("apiKeys.empty")}</h2>
-            </div>
-          ) : <p className="type-body-muted p-6 text-center">{t("apiKeys.empty")}</p>
-          ) : (
+        {rows.length === 0 ? (
+          <div className="rounded-xl border border-dashed p-12 text-center"><p className="type-empty-title">{t("apiKeys.empty")}</p></div>
+        ) : (
+          <Surface>
             <CredentialList label={t("apiKeys.title")}>
               {rows.map((row) => {
                 const locked = !canUpdate(row);
@@ -207,8 +203,8 @@ export function ApiKeysSurface({ namespace, layout, loading, canManage, scopes: 
                 );
               })}
             </CredentialList>
-          )}
-        </Surface>
+          </Surface>
+        )}
       </ApiKeysFrame>
 
       <Dialog onOpenChange={closeDialog} open={dialog !== null}>

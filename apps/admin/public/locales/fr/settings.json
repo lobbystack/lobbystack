@@ -1085,7 +1085,7 @@
   },
   "apiKeys": {
     "title": "Clés API",
-    "empty": "Aucune clé API pour l'instant.",
+    "empty": "Aucune clé API pour l'instant",
     "createdOn": "Créée le {{date}}",
     "lastUsed": "Dernière utilisation le {{date}}",
     "neverUsed": "Jamais utilisée",
@@ -1152,7 +1152,7 @@
   "webhooks": {
     "title": "Webhooks",
     "description": "{{appName}} envoie une requête HTTPS POST à votre URL quand quelque chose se produit, par exemple un appel terminé ou une nouvelle réservation.",
-    "empty": "Aucun point de terminaison webhook pour l'instant.",
+    "empty": "Aucun point de terminaison webhook pour l'instant",
     "enabledLabel": "Envoyer les événements à ce point de terminaison",
     "restricted": {
       "title": "Seuls les propriétaires et les administrateurs gèrent les webhooks",
@@ -1244,7 +1244,8 @@
   },
   "connectedApps": {
     "title": "Connexions MCP",
-    "empty": "Aucune connexion MCP pour l'instant. Pour en ajouter une, ajoutez {{appName}} dans les réglages de l'assistant et connectez-vous.",
+    "emptyTitle": "Aucune connexion MCP pour l'instant",
+    "emptyDescription": "Pour en ajouter une, ajoutez {{appName}} dans les réglages de l'assistant et connectez-vous.",
     "neverUsed": "Jamais utilisée",
     "unnamed": "Application sans nom",
     "connectedOn": "Connectée le {{date}}",

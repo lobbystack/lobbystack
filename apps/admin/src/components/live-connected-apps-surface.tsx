@@ -73,10 +73,10 @@ export function LiveConnectedAppsSurface() {
   return (
     <>
       <SectionBlock title={t("connectedApps.title")}>
-        <Surface>
-          {rows.length === 0 ? (
-            <p className="type-body-muted p-6 text-center">{t("connectedApps.empty")}</p>
-          ) : (
+        {rows.length === 0 ? (
+          <div className="rounded-xl border border-dashed p-12 text-center"><p className="type-empty-title">{t("connectedApps.emptyTitle")}</p><p className="type-empty-description mt-2">{t("connectedApps.emptyDescription")}</p></div>
+        ) : (
+          <Surface>
             <CredentialList label={t("connectedApps.title")}>
               {rows.map((grant) => (
                 <CredentialRow
@@ -87,8 +87,8 @@ export function LiveConnectedAppsSurface() {
                 />
               ))}
             </CredentialList>
-          )}
-        </Surface>
+          </Surface>
+        )}
       </SectionBlock>
 
       <ConfirmActionDialog
