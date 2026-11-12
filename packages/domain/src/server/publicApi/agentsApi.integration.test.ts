@@ -31,7 +31,7 @@ function roleUrl(role: string): string {
 const admin = testUrl ? createDatabaseClient("lobbystack_migrator", { DATABASE_URL: testUrl }) : undefined;
 const worker = testUrl ? createDatabaseClient("lobbystack_worker", { DATABASE_URL: roleUrl("lobbystack_worker") }) : undefined;
 
-const agentRow = (businessId: string, extra: Partial<typeof agents.$inferInsert> = {}) => ({ businessId, greeting: "Hi", tone: "warm", summary: "Shared summary", bookingPolicy: "Book", transferMode: "never", bookingMode: "instant", ...extra });
+const agentRow = (businessId: string, extra: Partial<typeof agents.$inferInsert> = {}) => ({ businessId, greeting: "Hi", tone: "warm", bookingPolicy: "Book", transferMode: "never", bookingMode: "instant", ...extra });
 
 async function expectNotFound(promise: Promise<unknown>) {
   const error = await promise.then(() => null, (value: unknown) => value);
@@ -52,7 +52,7 @@ describe.skipIf(!testUrl)("agents in the public API, with two agents", () => {
 
   beforeAll(async () => {
     await admin!.db.insert(businesses).values([
-      { id: businessId, slug: `api-agents-${businessId}`, name: "Agents Clinic", timezone: "UTC", businessType: "test" },
+      { id: businessId, slug: `api-agents-${businessId}`, name: "Agents Clinic", timezone: "UTC", businessType: "test", summary: "Shared summary" },
       { id: otherBusinessId, slug: `api-agents-${otherBusinessId}`, name: "Other Clinic", timezone: "UTC", businessType: "test" },
     ]);
     await admin!.db.insert(billingAccounts).values({ businessId, billingKey: `business:${businessId}`, plan: "starter", subscriptionState: "active" });

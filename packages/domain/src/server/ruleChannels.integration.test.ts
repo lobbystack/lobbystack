@@ -37,7 +37,7 @@ async function rollbackTest(run: (tx: DatabaseTransaction) => Promise<void>) {
 }
 
 const migration = readFileSync(new URL("../../../db/migrations/0203_rule_channels.sql", import.meta.url), "utf8");
-const agentFields = { tone: "warm", summary: "A clinic", bookingPolicy: "Book", transferMode: "on_request", greeting: "Hello" };
+const agentFields = { tone: "warm", bookingPolicy: "Book", transferMode: "on_request", greeting: "Hello" };
 
 async function business(tx: DatabaseTransaction, defaultLocale: string): Promise<string> {
   const id = randomUUID();

@@ -164,7 +164,7 @@ describe.skipIf(!testUrl)("each channel answers as its own agent", () => {
       expect(await desiredNumberRouting({ db }, { businessId, phoneNumberId: numberA })).toMatchObject({ mode: "receptionist" });
       expect(await desiredNumberRouting({ db }, { businessId, phoneNumberId: numberB })).toMatchObject({ mode: "staff_first" });
       expect(await decideStaffFirstCall({ db }, { businessId, e164: LINE_B, providerCallId: `CA${randomUUID()}`, from: CALLER })).toMatchObject({ action: "ring", phone: STAFF_B });
-      expect(await decideStaffFirstCall({ db }, { businessId, e164: LINE_A, providerCallId: `CA${randomUUID()}`, from: CALLER })).toMatchObject({ action: "receptionist" });
+      expect(await decideStaffFirstCall({ db }, { businessId, e164: LINE_A, providerCallId: `CA${randomUUID()}`, from: CALLER })).toMatchObject({ action: "agent" });
       expect(await loadStaffFirstHandover({ db }, { businessId, e164: LINE_B })).toMatchObject({ message: "Evening handover" });
       expect(await loadStaffFirstHandover({ db }, { businessId, e164: LINE_A })).not.toHaveProperty("message");
 

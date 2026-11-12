@@ -709,7 +709,7 @@ describe.skipIf(!testUrl)("public API against PostgreSQL with RLS", () => {
     const rows = async () => await admin!.db.select({ greeting: agents.greeting, tone: agents.tone }).from(agents).where(eq(agents.businessId, businessId));
     try {
       const context = { db: worker!.db };
-      expect(await getReceptionistForApi(context, caller)).toMatchObject({ greeting: defaultGreeting("Bare Clinic"), summary: "Bare Clinic", summary_source: "placeholder", transfer_mode: "on_request", booking_mode: "instant" });
+      expect(await getReceptionistForApi(context, caller)).toMatchObject({ greeting: defaultGreeting("Bare Clinic"), summary: "", summary_source: "placeholder", transfer_mode: "on_request", booking_mode: "instant" });
       expect(await rows()).toEqual([]);
       expect(await updateReceptionistForApi(context, caller, { tone: "warm" })).toMatchObject({ greeting: defaultGreeting("Bare Clinic"), tone: "warm", summary_source: "placeholder" });
       expect(await rows()).toEqual([{ greeting: defaultGreeting("Bare Clinic"), tone: "warm" }]);
