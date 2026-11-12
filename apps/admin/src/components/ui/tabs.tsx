@@ -104,14 +104,14 @@ function SegmentedControl<Value>({ className, ref, value, ...props }: RadioGroup
   )
 }
 
-/** One choice in a SegmentedControl, drawn as a tab trigger and raised while chosen. Each sizes to its label, so a long label takes more room before it wraps. */
+/** One choice in a SegmentedControl, drawn as a tab trigger and raised while chosen. Choices share the row equally; on a phone each starts at its label's width, so a long label gets the room before it wraps. */
 function SegmentedControlItem<Value>({ className, value, ...props }: Radio.Root.Props<Value>) {
   const chosen = React.useContext(SegmentedControlValue) === value
   return (
     <Radio.Root
       data-slot="segmented-control-item"
       data-active={chosen ? "" : undefined}
-      className={cn(tabsTriggerClassName, "min-h-8 flex-auto cursor-pointer text-center leading-tight whitespace-normal", className)}
+      className={cn(tabsTriggerClassName, "min-h-8 cursor-pointer max-sm:flex-auto text-center leading-tight whitespace-normal", className)}
       value={value}
       {...props}
     />

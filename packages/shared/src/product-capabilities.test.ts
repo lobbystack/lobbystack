@@ -51,7 +51,7 @@ describe("cloud plan fact sheets", () => {
   it("keeps Enterprise allowances null instead of inventing values", () => {
     const enterprise = getCloudPlanFactSheet("enterprise");
     expect(enterprise.voiceMinutesIncluded).toBeNull();
-    expect(enterprise.dedicatedBusinessNumbers).toBeNull();
+    expect(enterprise.dedicatedBusinessNumbers).toBe(1);
     expect(enterprise.browserVoiceOnly).toBe(false);
   });
 

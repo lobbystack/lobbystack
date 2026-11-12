@@ -37,6 +37,20 @@ async function rollbackTest(run: (tx: DatabaseTransaction) => Promise<void>) {
 }
 
 const migration = readFileSync(new URL("../../../db/migrations/0203_rule_channels.sql", import.meta.url), "utf8");
+
+// The migration's copy of instructions into rules, run on the test's own businesses only. The rest of the
+// file is schema the test database already has, and replaying its DDL locked agent_rules and then agents
+// while other files read them in the opposite order, so parallel runs deadlocked. Left unscoped, the copy
+// also reads and locks every other file's agents.
+const copyStart = migration.indexOf("WITH wanted AS");
+const copy = migration.slice(copyStart, migration.indexOf("FROM wanted;", copyStart) + "FROM wanted".length);
+const contentFilter = "WHERE btrim(coalesce(item.content, '')) <> ''";
+if (copyStart < 0 || copy.split(contentFilter).length !== 2) throw new Error("Migration 0203's copy changed; update copyInstructions.");
+async function copyInstructions(tx: DatabaseTransaction, businessIds: string[]) {
+  const [before, after] = copy.split(contentFilter) as [string, string];
+  const ids = sql.join(businessIds.map((id) => sql`${id}::uuid`), sql`, `);
+  await tx.execute(sql`${sql.raw(before)}${sql.raw(contentFilter)} AND agent.business_id IN (${ids})${sql.raw(after)}`);
+}
 const agentFields = { tone: "warm", bookingPolicy: "Book", transferMode: "on_request", greeting: "Hello" };
 
 async function business(tx: DatabaseTransaction, defaultLocale: string): Promise<string> {
@@ -68,9 +82,7 @@ describe.skipIf(!testUrl)("migration 0203 on sample rows", () => {
         { businessId: unknown, agentId: fallback!.id, title: "Mine", content: "My call rule", sortOrder: 5, channel: "voice" },
       ]);
 
-      // The migration alters the table, which PostgreSQL refuses while deferred checks from these inserts wait.
-      await tx.execute(sql`set constraints all immediate`);
-      await tx.execute(sql.raw(migration));
+      await copyInstructions(tx, [french, filipino, unknown]);
 
       expect(await rulesOf(tx, full!.id)).toEqual([
         { title: "Pendant les appels", content: "Parlez lentement.", channel: "voice", active: true, sortOrder: 0 },
@@ -91,7 +103,7 @@ describe.skipIf(!testUrl)("migration 0203 on sample rows", () => {
       expect(refreshes).toEqual([]);
 
       // A second run adds nothing.
-      await tx.execute(sql.raw(migration));
+      await copyInstructions(tx, [french, filipino, unknown]);
       expect(await rulesOf(tx, full!.id)).toHaveLength(4);
       expect(await rulesOf(tx, fallback!.id)).toHaveLength(3);
       // A savepoint keeps the refused insert from aborting the test's transaction.
@@ -121,8 +133,7 @@ describe.skipIf(!testUrl)("instructions the previous admin saves after the migra
       const businessId = await business(tx, "fr");
       const [agent] = await tx.insert(agents).values({ ...agentFields, businessId, isDefault: true, voiceInstructions: "Parlez lentement." }).returning({ id: agents.id });
       await tx.insert(agentRules).values({ businessId, agentId: agent!.id, title: "Parking", content: "Rear lot", sortOrder: 0 });
-      await tx.execute(sql`set constraints all immediate`);
-      await tx.execute(sql.raw(migration));
+      await copyInstructions(tx, [businessId]);
       // The old admin saves as the app role, inside the business's RLS context.
       const oldAdminSaves = async (values: Partial<typeof agents.$inferInsert>) => await withBusinessTransaction(tx as unknown as Database, { businessId, actorType: "system" }, async (inner) => {
         await inner.execute(sql`set local role lobbystack_app`);

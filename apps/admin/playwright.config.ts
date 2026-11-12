@@ -20,6 +20,9 @@ function replacementEnvironment(): Record<string, string> {
 
 const replacement = replacementEnvironment();
 const testSecrets = playwrightTestSecrets(process.env);
+// Specs sign links as the worker does, such as an email's unsubscribe link, so
+// they need the server's key. Test workers inherit this process's environment.
+process.env.ENCRYPTION_KEY = testSecrets.ENCRYPTION_KEY;
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:13000";
 const localDatabaseUrl = Object.keys(replacement).length > 0
   ? `postgres://postgres:${process.env.POSTGRES_PASSWORD ?? replacement.POSTGRES_PASSWORD ?? "postgres"}@127.0.0.1:${process.env.POSTGRES_PORT ?? replacement.POSTGRES_PORT ?? "15433"}/lobbystack`

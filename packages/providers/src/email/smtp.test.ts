@@ -2,9 +2,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { emailSender, hostBrand, resolveBrandLinks, type Brand } from "@lobbystack/shared";
 
 import hostEmails from "./__fixtures__/host-emails.json";
-import { SmtpEmailProvider, isPermanentSmtpRejection } from "./smtp";
+import { MARKETING_EMAIL_TEMPLATES, SmtpEmailProvider, isMarketingEmailTemplate, isPermanentSmtpRejection } from "./smtp";
 
 afterEach(() => vi.unstubAllEnvs());
+
+/** The links the worker signs for a marketing email's recipient. */
+const unsubscribe = { pageUrl: "https://app.example.test/en/unsubscribe/v1.token.sig", oneClickUrl: "https://app.example.test/api/email/unsubscribe?token=v1.token.sig" };
 
 type SendInput = Parameters<SmtpEmailProvider["sendTemplate"]>[0];
 type FixtureInput = Omit<SendInput, "brand">;
@@ -182,7 +185,7 @@ describe("SMTP delivery", () => {
     expect(sendMail).toHaveBeenCalledOnce();
   });
   describe("welcome", () => {
-    const welcome = { template: "welcome" as const, to: "owner@example.test", subject: "Welcome to LobbyStack, Ryan", variables: { locale: "en", firstName: "Ryan", businessName: "Metroprint", goal: "answer_calls", number: "+14388070285", url: "https://app.example.test/?setup=phoneNumber" } };
+    const welcome = { template: "welcome" as const, to: "owner@example.test", subject: "Welcome to LobbyStack, Ryan", unsubscribe, variables: { locale: "en", firstName: "Ryan", businessName: "Metroprint", goal: "answer_calls", number: "+14388070285", url: "https://app.example.test/?setup=phoneNumber" } };
 
     it("welcomes an owner who took a number, and its button forwards their missed calls", async () => {
       const { provider, sent } = capture();
@@ -202,7 +205,7 @@ describe("SMTP delivery", () => {
         "2. Teach it your business",
         "Add your hours, prices and FAQs so it answers the way your team does.",
         "",
-        "3. Forward your calls to +14388070285",
+        "3. Forward your calls to (438) 807-0285",
         "Your phone rings first. When you miss a call, your agent picks up.",
         "",
         "Forward my missed calls: https://app.example.test/?setup=phoneNumber",
@@ -210,12 +213,14 @@ describe("SMTP delivery", () => {
         "Questions or stuck on a step? Reply to this email and we'll help.",
         "",
         "The LobbyStack team",
+        "",
+        `Unsubscribe: ${unsubscribe.pageUrl}`,
       ].join("\n"));
       const html = sent().html as string;
       expect(html).toContain(">Welcome to LobbyStack, Ryan</h1>");
       expect(html).toContain('<td align="left" style="padding-bottom:32px;">');
       const anchors = [...html.matchAll(/<a href="([^"]+)"[^>]*>([^<]+)<\/a>/g)].map(([, href, text]) => ({ href, text }));
-      expect(anchors).toEqual([{ href: "https://app.example.test/?setup=phoneNumber", text: "Forward my missed calls" }]);
+      expect(anchors).toEqual([{ href: "https://app.example.test/?setup=phoneNumber", text: "Forward my missed calls" }, { href: unsubscribe.pageUrl, text: "Unsubscribe" }]);
     });
 
     it("asks an owner without a number to get one, and fits the steps to booking", async () => {
@@ -233,11 +238,121 @@ describe("SMTP delivery", () => {
       for (const locale of ["fr", "es", "sr"]) await send(provider, { ...welcome, variables: { ...welcome.variables, locale } });
       const [french, spanish, serbian] = sendMail.mock.calls.map((call) => call[0].text as string);
       expect(french).toMatch(/^Bienvenue chez LobbyStack, Ryan\n/);
+      expect(french).toContain("3. Transférez vos appels vers le (438) 807-0285\n");
       expect(french).toContain("Transférer mes appels manqués : https://app.example.test/?setup=phoneNumber");
       expect(spanish).toMatch(/^Le damos la bienvenida a LobbyStack, Ryan\n/);
-      expect(spanish).toContain("Desvíe sus llamadas al +14388070285");
+      expect(spanish).toContain("3. Desvíe sus llamadas al (438) 807-0285\n");
       expect(serbian).toMatch(/^Dobro došli u LobbyStack, Ryan\n/);
+      expect(serbian).toContain("3. Preusmerite pozive na (438) 807-0285\n");
       expect(serbian).not.toMatch(/[Ѐ-ӿ]/);
+    });
+  });
+
+  describe("plan reminder", () => {
+    const reminder = { template: "plan_reminder" as const, to: "owner@example.test", unsubscribe, variables: { locale: "en", firstName: "Ryan", businessName: "Metroprint", number: "+15550100123", url: "https://app.example.test/onboarding/plan" } };
+
+    it("names the live number, formatted, and its button opens the plans", async () => {
+      const { provider, sent } = capture();
+      await send(provider, reminder);
+      expect(sent().from).toBe("no-reply@example.test");
+      expect(sent().replyTo).toBe("support@example.test");
+      expect(sent().subject).toBe("Your number (555) 010-0123 is live");
+      expect(sent().text).toBe([
+        "Hi Ryan,",
+        "",
+        "Your number (555) 010-0123 is live, and your agent answers its calls for Metroprint.",
+        "",
+        "Start your 14-day free trial to finish setup. It takes one click, and you won't need a card.",
+        "",
+        "Start your 14-day free trial: https://app.example.test/onboarding/plan",
+        "",
+        `Unsubscribe: ${unsubscribe.pageUrl}`,
+      ].join("\n"));
+      const html = sent().html as string;
+      expect(html).toContain('<td align="left" style="padding-bottom:32px;">');
+      const anchors = [...html.matchAll(/<a href="([^"]+)"[^>]*>([^<]+)<\/a>/g)].map(([, href, text]) => ({ href, text }));
+      expect(anchors).toEqual([{ href: "https://app.example.test/onboarding/plan", text: "Start your 14-day free trial" }, { href: unsubscribe.pageUrl, text: "Unsubscribe" }]);
+      // The reminders end on their button, with no signature.
+      expect(html).not.toContain(">LobbyStack</p>");
+      // The paid plans stay on the page.
+      expect(sent().text).not.toMatch(/Starter|Pro\b|\$/);
+    });
+
+    it("greets an owner with no name, and shows a number outside North America in international form", async () => {
+      const { provider, sent } = capture();
+      await send(provider, { ...reminder, variables: { ...reminder.variables, firstName: "", number: "+33612345678" } });
+      expect(sent().subject).toBe("Your number +33 6 12 34 56 78 is live");
+      expect(sent().text).toMatch(/^Hi,\n/);
+    });
+
+    it("writes the reminder in French, Spanish and Serbian", async () => {
+      const { provider, sendMail } = capture();
+      for (const locale of ["fr", "es", "sr"]) await send(provider, { ...reminder, variables: { ...reminder.variables, locale } });
+      const [french, spanish, serbian] = sendMail.mock.calls.map((call) => call[0] as { subject: string; text: string });
+      expect(french!.subject).toBe("Votre numéro (555) 010-0123 est actif");
+      expect(french!.text).toMatch(/^Bonjour Ryan,\n/);
+      expect(french!.text).toContain("Commencer l'essai gratuit de 14 jours : https://app.example.test/onboarding/plan");
+      expect(spanish!.subject).toBe("Su número (555) 010-0123 ya está activo");
+      expect(spanish!.text).toContain("Empezar la prueba gratuita de 14 días: https://app.example.test/onboarding/plan");
+      expect(serbian!.subject).toBe("Vaš broj (555) 010-0123 je aktivan");
+      expect(serbian!.text).toContain("Započnite besplatnu probu od 14 dana: https://app.example.test/onboarding/plan");
+      expect(`${serbian!.subject}${serbian!.text}`).not.toMatch(/[Ѐ-ӿ]/);
+    });
+
+    it("writes the second reminder with its own subject and lines, and the first's button", async () => {
+      const { provider, sendMail } = capture();
+      for (const locale of ["en", "fr", "es", "sr"]) await send(provider, { ...reminder, variables: { ...reminder.variables, locale, kind: "second" } });
+      const [english, french, spanish, serbian] = sendMail.mock.calls.map((call) => call[0] as { subject: string; text: string; html: string });
+      expect(english!.subject).toBe("Finish setting up (555) 010-0123");
+      expect(english!.text).toBe([
+        "Hi Ryan,",
+        "",
+        "You haven't chosen a plan for Metroprint yet, so setup isn't finished.",
+        "",
+        "The free trial gives you 14 days to see how your agent handles calls to (555) 010-0123. You won't need a card.",
+        "",
+        "Start your 14-day free trial: https://app.example.test/onboarding/plan",
+        "",
+        `Unsubscribe: ${unsubscribe.pageUrl}`,
+      ].join("\n"));
+      expect(french!.subject).toBe("Terminez la configuration du (555) 010-0123");
+      expect(french!.text).toContain("Commencer l'essai gratuit de 14 jours : https://app.example.test/onboarding/plan");
+      expect(french!.text).toContain("Se désabonner : ");
+      expect(spanish!.subject).toBe("Termine de configurar el (555) 010-0123");
+      expect(spanish!.text).toContain("Empezar la prueba gratuita de 14 días: https://app.example.test/onboarding/plan");
+      expect(serbian!.subject).toBe("Završite podešavanje broja (555) 010-0123");
+      expect(serbian!.text).toContain("Započnite besplatnu probu od 14 dana: https://app.example.test/onboarding/plan");
+      expect(`${serbian!.subject}${serbian!.text}`).not.toMatch(/[Ѐ-ӿ]/);
+      for (const sent of [english, french, spanish, serbian]) expect(sent!.html).not.toContain(">LobbyStack</p>");
+    });
+  });
+
+  describe("unsubscribe", () => {
+    const welcome = { template: "welcome" as const, to: "owner@example.test", variables: { locale: "en", firstName: "Ryan", businessName: "Metroprint", url: "https://app.example.test/" } };
+
+    it("lists the marketing emails, and only them", () => {
+      expect(MARKETING_EMAIL_TEMPLATES).toEqual(["welcome", "plan_reminder"]);
+      for (const template of ["number_trial", "number_release", "verify_email", "password_reset", "invitation", "passkey_added", "operator_alert", "call_summary", "partner_pool_alert", "business_allowance_alert", "partner_business_allowance_alert"]) expect(isMarketingEmailTemplate(template)).toBe(false);
+    });
+
+    it("gives a marketing email the one-click unsubscribe headers (RFC 8058), with no mailto", async () => {
+      const { provider, sent } = capture();
+      await send(provider, { ...welcome, unsubscribe });
+      expect(sent().headers).toEqual({ "List-Unsubscribe": `<${unsubscribe.oneClickUrl}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" });
+    });
+
+    it("refuses to send a marketing email without its recipient's links", async () => {
+      const { provider, sendMail } = capture();
+      await expect(send(provider, welcome)).rejects.toThrow(/unsubscribe/);
+      expect(sendMail).not.toHaveBeenCalled();
+    });
+
+    it("leaves a transactional email without headers or footer, even when handed links", async () => {
+      const { provider, sent } = capture();
+      await send(provider, { template: "number_trial", to: "owner@example.test", unsubscribe, variables: { locale: "en", kind: "day10", businessName: "Acme", trialNumber: "+14165550123", endDate: "November 20", url: "https://app.example.test/settings/plan" } });
+      expect(sent().headers).toBeUndefined();
+      expect(sent().text).not.toContain("Unsubscribe");
+      expect(sent().html).not.toContain(unsubscribe.pageUrl);
     });
   });
 

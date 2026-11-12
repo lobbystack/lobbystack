@@ -46,6 +46,7 @@ TESTS=(
   e2e/auth-return-to.e2e.ts
   e2e/billing-return-cap.e2e.ts
   e2e/business-timezone.e2e.ts
+  e2e/email-unsubscribe.e2e.ts
   e2e/getting-started.e2e.ts
   e2e/home-analytics-metrics.e2e.ts
   e2e/manual-create.e2e.ts
@@ -62,6 +63,7 @@ TESTS=(
   e2e/performance-startup.e2e.ts
   e2e/rule-channels.e2e.ts
   e2e/setup-prompts.e2e.ts
+  e2e/signed-out-locale.e2e.ts
   e2e/supported-journeys.e2e.ts
   e2e/widget-settings.e2e.ts
 )

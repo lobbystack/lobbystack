@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const domain = vi.hoisted(() => ({ partnerNumberAvailabilityInTransaction: vi.fn(), verifiedPhone: vi.fn(), schedulePhoneNumberRelease: vi.fn() }));
+const domain = vi.hoisted(() => ({ partnerNumberAvailabilityInTransaction: vi.fn(), verifiedPhone: vi.fn(), schedulePhoneNumberRelease: vi.fn(), extraNumberAvailabilityInTransaction: vi.fn(), extraNumberPricesInTransaction: vi.fn() }));
 vi.mock("@/lib/operator-request", () => import("@/lib/operator-request.fake"));
 vi.mock("@lobbystack/domain", async (original) => ({ ...await original<typeof import("@lobbystack/domain")>(), ...domain }));
 
@@ -29,6 +29,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   resetFakeOperator();
   domain.partnerNumberAvailabilityInTransaction.mockResolvedValue(null);
+  domain.extraNumberAvailabilityInTransaction.mockResolvedValue({ available: true, priced: true, refusal: null });
+  domain.extraNumberPricesInTransaction.mockResolvedValue(new Map());
   fakeOperator.tx = fakeTx(new Map<unknown, unknown[]>([[businesses, [{ replacementReservedAt: null, replacementUsedAt: null }]], [onboardingNumberClaimEvents, []], [phoneNumbers, [number]]]));
 });
 
@@ -36,5 +38,15 @@ describe("GET /api/phone-numbers", () => {
   it("names the agent each number reaches", async () => {
     const body = await (await GET(new Request("http://localhost:3000/api/phone-numbers"))).json() as { phoneNumbers: Array<{ id: string; agentId: string | null }> };
     expect(body.phoneNumbers).toEqual([expect.objectContaining({ id: number.id, agentId: AGENT })]);
+  });
+
+  it("gives each extra number its monthly price and says whether the business can buy another", async () => {
+    const extra = { ...number, id: "00000000-0000-4000-8000-000000000002", e164: "+15145550112" };
+    fakeOperator.tx = fakeTx(new Map<unknown, unknown[]>([[businesses, [{ replacementReservedAt: null, replacementUsedAt: null }]], [onboardingNumberClaimEvents, [{ id: "claim", status: "provisioning", purpose: "extra" }]], [phoneNumbers, [number, extra]]]));
+    domain.extraNumberPricesInTransaction.mockResolvedValue(new Map([[extra.id, 115]]));
+    const body = await (await GET(new Request("http://localhost:3000/api/phone-numbers"))).json() as { phoneNumbers: Array<{ id: string; monthlyPriceCents: number | null }>; extraNumbers: unknown; extraClaim: unknown };
+    expect(body.phoneNumbers.map((item) => [item.id, item.monthlyPriceCents])).toEqual([[number.id, null], [extra.id, 115]]);
+    expect(body.extraNumbers).toEqual({ available: true, priced: true, refusal: null, checkoutAvailable: false });
+    expect(body.extraClaim).toEqual({ id: "claim", status: "provisioning", purpose: "extra" });
   });
 });

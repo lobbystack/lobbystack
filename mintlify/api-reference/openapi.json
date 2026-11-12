@@ -2379,6 +2379,264 @@
         }
       }
     },
+    "/billing/extra-numbers/checkout": {
+      "post": {
+        "operationId": "createExtraNumbersCheckout",
+        "summary": "Get the extra phone numbers add-on",
+        "description": "Asks Polar for a page where the customer pays for the extra phone numbers add-on, which bills extra numbers every month apart from the plan, on an annual plan too. Poll GET /billing/extra-numbers/checkout/{checkout_id} until status is ready, send them checkout_url, then poll until add_on_active is true. Only a business that can buy a priced extra number and doesn't have the add-on gets one; an active add-on, a business that can't buy extra numbers, someone else's open checkout and a deployment that doesn't sell extra numbers are a 409. With a platform key the checkout is made out to the business's owner.",
+        "tags": [
+          "Billing"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-required-scope": "billing:manage",
+        "parameters": [
+          {
+            "name": "LobbyStack-Business",
+            "in": "header",
+            "description": "The business a platform key acts on. Required with a platform key. A per-business key may leave it out; if it sends one, it must be the key's own business.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "A unique value, up to 255 characters, that makes retries of this request safe for 24 hours.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExtraNumbersCheckoutCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ExtraNumbersCheckout"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The request is invalid (invalid_request), or a platform key sent no LobbyStack-Business header (business_required).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The API key is missing, invalid, or revoked (unauthorized).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refused. insufficient_scope: the key lacks the billing:manage scope. forbidden: a per-business key named another business in LobbyStack-Business. key_owner_inactive: the person the key acts for can't any more: a per-business key's creator is no longer an owner or admin, or a platform key's owner_email has no verified LobbyStack account.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "A platform key named a business it cannot act on (not_found).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with the current state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The Idempotency-Key was already used with a different request body (idempotency_key_reused).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests (rate_limited). Wait for the Retry-After header's number of seconds.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Seconds to wait."
+              }
+            }
+          }
+        }
+      }
+    },
+    "/billing/extra-numbers/checkout/{checkout_id}": {
+      "get": {
+        "operationId": "getExtraNumbersCheckout",
+        "summary": "Check an add-on checkout",
+        "tags": [
+          "Billing"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-required-scope": "billing:manage",
+        "parameters": [
+          {
+            "name": "checkout_id",
+            "in": "path",
+            "required": true,
+            "description": "The checkout id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "LobbyStack-Business",
+            "in": "header",
+            "description": "The business a platform key acts on. Required with a platform key. A per-business key may leave it out; if it sends one, it must be the key's own business.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ExtraNumbersCheckout"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The request is invalid (invalid_request), or a platform key sent no LobbyStack-Business header (business_required).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The API key is missing, invalid, or revoked (unauthorized).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refused. insufficient_scope: the key lacks the billing:manage scope. forbidden: a per-business key named another business in LobbyStack-Business. key_owner_inactive: the person the key acts for can't any more: a per-business key's creator is no longer an owner or admin, or a platform key's owner_email has no verified LobbyStack account.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (not_found), including a business a platform key cannot act on.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests (rate_limited). Wait for the Retry-After header's number of seconds.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Seconds to wait."
+              }
+            }
+          }
+        }
+      }
+    },
     "/billing/managed-plan": {
       "post": {
         "operationId": "setManagedPlan",
@@ -2918,6 +3176,291 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/PhoneNumberClaimCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/PhoneNumberClaim"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The request is invalid (invalid_request), including a missing Idempotency-Key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The API key is missing, invalid, or revoked (unauthorized).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refused. insufficient_scope: the key lacks the phone_numbers:manage scope. forbidden: a per-business key named another business in LobbyStack-Business. key_owner_inactive: the person the key acts for can't any more: a per-business key's creator is no longer an owner or admin, or a platform key's owner_email has no verified LobbyStack account.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "A platform key named a business it cannot act on (not_found).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with the current state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The Idempotency-Key was already used with a different request body (idempotency_key_reused).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests (rate_limited). Wait for the Retry-After header's number of seconds.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Seconds to wait."
+              }
+            }
+          }
+        }
+      }
+    },
+    "/phone-numbers/extra/search": {
+      "post": {
+        "operationId": "searchExtraPhoneNumbers",
+        "summary": "Find extra numbers to buy",
+        "description": "Searches the carrier for numbers a business that has its first number can buy for another of its agents. Starter, Pro and Enterprise sell them, each at the carrier's monthly price for its country and kind with no markup, billed monthly through the extra phone numbers add-on; monthly_price says what each costs. A self-hosted server's cost nothing extra. A business without a paid plan, without a number yet, or a partner's business is a 409. Each offer expires after 5 minutes, and searches count against the same limit as POST /phone-numbers/search. Partner platform keys can't buy extra numbers.",
+        "tags": [
+          "Phone numbers"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-required-scope": "phone_numbers:manage",
+        "parameters": [
+          {
+            "name": "LobbyStack-Business",
+            "in": "header",
+            "description": "The business a platform key acts on. Required with a platform key. A per-business key may leave it out; if it sends one, it must be the key's own business.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExtraPhoneNumberSearch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "next_cursor",
+                    "has_more"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ExtraPhoneNumberOffer"
+                      }
+                    },
+                    "next_cursor": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "Pass as cursor to get the next page. Null on the last page."
+                    },
+                    "has_more": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The request is invalid (invalid_request), or a platform key sent no LobbyStack-Business header (business_required).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The API key is missing, invalid, or revoked (unauthorized).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refused. insufficient_scope: the key lacks the phone_numbers:manage scope. forbidden: a per-business key named another business in LobbyStack-Business. key_owner_inactive: the person the key acts for can't any more: a per-business key's creator is no longer an owner or admin, or a platform key's owner_email has no verified LobbyStack account.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "A platform key named a business it cannot act on (not_found).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with the current state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests (rate_limited). Wait for the Retry-After header's number of seconds.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Seconds to wait."
+              }
+            }
+          }
+        }
+      }
+    },
+    "/phone-numbers/extra/claims": {
+      "post": {
+        "operationId": "createExtraPhoneNumberClaim",
+        "summary": "Buy an extra number",
+        "description": "Buys the offered number for the agent and adds its monthly price to the business's bill, with the same checks as the dashboard. It costs money every month, so Idempotency-Key is required and accept_monthly_price_cents must repeat the offer's price, or null for a free offer: anything else is a 400. Without the extra phone numbers add-on, from POST /billing/extra-numbers/checkout, a priced offer is a 409. A price that changed since the search is a 409 too; search again. Returns the claim at once; poll GET /phone-numbers/claims/{claim_id} until its status is claimed or failed. Claims are limited to 3 an hour, 2 a day and 5 in 30 days, past which they are a 429.",
+        "tags": [
+          "Phone numbers"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-required-scope": "phone_numbers:manage",
+        "parameters": [
+          {
+            "name": "LobbyStack-Business",
+            "in": "header",
+            "description": "The business a platform key acts on. Required with a platform key. A per-business key may leave it out; if it sends one, it must be the key's own business.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "Required. A unique value, up to 255 characters, that makes retries of this request safe.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExtraPhoneNumberClaimCreate"
               }
             }
           }
@@ -19120,7 +19663,46 @@
                 "type": "null"
               }
             ],
-            "description": "When LobbyStack releases an active number: when DELETE asked for it, or 30 days after a replacement went live. Null when no release is planned."
+            "description": "When LobbyStack releases an active number: when DELETE asked for it, 30 days after a replacement went live, or 30 days after the extra phone numbers add-on ended. Null when no release is planned."
+          },
+          "agent_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The agent whose calls the number takes."
+          },
+          "monthly_price": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "amount_cents": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "currency": {
+                    "type": "string",
+                    "const": "USD"
+                  }
+                },
+                "required": [
+                  "amount_cents",
+                  "currency"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What an extra number costs each month, billed monthly apart from the plan. Null for the number the plan includes and for numbers that cost nothing extra."
           },
           "created_at": {
             "type": "string",
@@ -19138,6 +19720,8 @@
           "phone_number",
           "status",
           "release_scheduled_at",
+          "agent_id",
+          "monthly_price",
           "created_at",
           "updated_at"
         ],
@@ -19377,6 +19961,275 @@
           "offer_token"
         ],
         "additionalProperties": false
+      },
+      "ExtraPhoneNumberSearch": {
+        "type": "object",
+        "properties": {
+          "country": {
+            "description": "Defaults to the country of the business's time zone, or US.",
+            "type": "string",
+            "enum": [
+              "US",
+              "CA",
+              "PR",
+              "GB",
+              "AU",
+              "NZ"
+            ]
+          },
+          "kind": {
+            "description": "Defaults to local. GB and AU numbers are always mobile, and NZ numbers local. A kind a country doesn't sell as an extra number is a 400.",
+            "type": "string",
+            "enum": [
+              "local",
+              "mobile",
+              "toll_free"
+            ]
+          },
+          "area_code": {
+            "type": "string",
+            "pattern": "^\\d{1,6}$"
+          },
+          "city": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "region": {
+            "description": "A state or province, such as ON or NY.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "postal_code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 16
+          },
+          "limit": {
+            "description": "How many offers to return. Defaults to 10.",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          }
+        },
+        "additionalProperties": false
+      },
+      "ExtraPhoneNumberOffer": {
+        "type": "object",
+        "properties": {
+          "phone_number": {
+            "type": "string",
+            "pattern": "^\\+[1-9]\\d{6,14}$",
+            "description": "Phone number in E.164 format."
+          },
+          "country": {
+            "type": "string",
+            "enum": [
+              "US",
+              "CA",
+              "PR",
+              "GB",
+              "AU",
+              "NZ"
+            ]
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "local",
+              "mobile",
+              "toll_free"
+            ]
+          },
+          "locality": {
+            "description": "The city or area the number belongs to, when the carrier says.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "region": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "capabilities": {
+            "type": "object",
+            "properties": {
+              "voice": {
+                "type": "boolean"
+              },
+              "sms": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "voice",
+              "sms"
+            ],
+            "additionalProperties": false
+          },
+          "monthly_price": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "amount_cents": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "currency": {
+                    "type": "string",
+                    "const": "USD"
+                  }
+                },
+                "required": [
+                  "amount_cents",
+                  "currency"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the number costs each month, the carrier's price for its country and kind with no markup. Null on a self-hosted server, where extra numbers cost nothing extra."
+          },
+          "add_on_active": {
+            "type": "boolean",
+            "description": "Whether the business has the extra phone numbers add-on, which bills its extra numbers monthly. A priced number can't be bought without it: get it with POST /billing/extra-numbers/checkout."
+          },
+          "offer_token": {
+            "type": "string",
+            "description": "Buy the number with this before expires_at. Only this business and the account the key acts as can use it."
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 timestamp in UTC."
+          }
+        },
+        "required": [
+          "phone_number",
+          "country",
+          "kind",
+          "locality",
+          "region",
+          "capabilities",
+          "monthly_price",
+          "add_on_active",
+          "offer_token",
+          "expires_at"
+        ],
+        "additionalProperties": false,
+        "description": "A number the business can buy for one of its agents, on top of the one its plan includes."
+      },
+      "ExtraPhoneNumberClaimCreate": {
+        "type": "object",
+        "properties": {
+          "offer_token": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000,
+            "description": "An offer_token from POST /phone-numbers/extra/search."
+          },
+          "agent_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The agent whose calls the number takes."
+          },
+          "accept_monthly_price_cents": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The offer's monthly_price.amount_cents, or null when its monthly_price is null. Anything else is a 400, so a script can't buy a number at a price it didn't read."
+          }
+        },
+        "required": [
+          "offer_token",
+          "agent_id",
+          "accept_monthly_price_cents"
+        ],
+        "additionalProperties": false
+      },
+      "ExtraNumbersCheckoutCreate": {
+        "type": "object",
+        "properties": {
+          "agent_id": {
+            "description": "The agent whose phone page Polar sends the payer back to. Left out, they land on the billing page.",
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ExtraNumbersCheckout": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Stable identifier (UUID)."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "processing",
+              "ready",
+              "error"
+            ],
+            "description": "pending or processing: Polar is making the page. ready: checkout_url is set. error: making the page failed; start another checkout."
+          },
+          "checkout_url": {
+            "description": "The Polar page where the customer pays for the extra phone numbers add-on. Send it to them.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "add_on_active": {
+            "type": "boolean",
+            "description": "true once Polar confirmed the payment and the add-on is active."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 timestamp in UTC."
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 timestamp in UTC."
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "checkout_url",
+          "error",
+          "add_on_active",
+          "created_at",
+          "updated_at"
+        ],
+        "additionalProperties": false,
+        "description": "A Polar checkout for the extra phone numbers add-on."
       },
       "Receptionist": {
         "type": "object",

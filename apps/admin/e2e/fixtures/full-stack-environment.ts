@@ -6,6 +6,8 @@ export const THIRD_PARTY_PORT = 18092;
 export const THIRD_PARTY_ORIGIN = `http://127.0.0.1:${THIRD_PARTY_PORT}`;
 export const TWILIO_AUTH_TOKEN = "full-stack-e2e-twilio-auth-token";
 export const TWILIO_TRUNK_SID = `TK${"e2e0".repeat(8)}`;
+export const POLAR_WEBHOOK_SECRET = "full-stack-e2e-polar-webhook-secret";
+export const POLAR_EXTRA_NUMBERS_PRODUCT_ID = "e2e-extra-numbers-monthly";
 
 const polarProductIds = Object.fromEntries(["STARTER", "GROWTH", "SCALE"].flatMap((tier) => ["MONTHLY", "ANNUAL"].map((interval) => [`POLAR_PARTNER_${tier}_${interval}_PRODUCT_ID`, `e2e-${tier.toLowerCase()}-${interval.toLowerCase()}`])));
 
@@ -20,6 +22,12 @@ export function fullStackEnvironment(baseURL: string, carrierRedirect: string): 
     SMTP_USERNAME: "full-stack-e2e",
     SMTP_PASSWORD: "full-stack-e2e",
     ...polarProductIds,
+    // Polar is the fake in third-parties.ts. Only the extra numbers add-on's product is set, so no plan checkout opens.
+    POLAR_ACCESS_TOKEN: "full-stack-e2e-polar-token",
+    POLAR_ORGANIZATION_ID: "full-stack-e2e-polar-organization",
+    POLAR_API_BASE_URL: `${THIRD_PARTY_ORIGIN}/polar`,
+    POLAR_WEBHOOK_SECRET: POLAR_WEBHOOK_SECRET,
+    POLAR_EXTRA_NUMBERS_PRODUCT_ID: POLAR_EXTRA_NUMBERS_PRODUCT_ID,
     OPENAI_PROJECT_ID: "proj_full_stack_e2e",
     NUMBER_CLAIM_TOKEN_SECRET: "full-stack-e2e-number-claim-secret-0123456789",
     TWILIO_ACCOUNT_SID: `AC${"e2e0".repeat(8)}`,

@@ -18,7 +18,7 @@ const WEEKEND = agent("a2", "Weekend");
 const NUMBER = { id: "n1", e164: "+15145550100", agentId: null, voiceEnabled: true, smsEnabled: true, status: "active", reclaimScheduledAt: null, reclaimReason: null };
 const RELEASED = { ...NUMBER, id: "n2", e164: "+15145550199", status: "released" };
 
-type Data = { numbers?: unknown[]; keys?: unknown[]; issuanceEnabled?: boolean; instagram?: unknown };
+type Data = { numbers?: unknown[]; keys?: unknown[]; issuanceEnabled?: boolean; instagram?: unknown; extraNumbers?: unknown };
 let fetchMock: ReturnType<typeof vi.fn>;
 let assign: ReturnType<typeof vi.fn>;
 
@@ -26,7 +26,7 @@ function setup(agentId: string, data: Data = {}, { widgetsEnabled = true, pendin
   fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
     if (pending) return await new Promise<Response>(() => undefined);
     if (url.startsWith("/api/businesses")) return Response.json({ businesses: [{ businessId: "business", active: true, role: fixture.role }] });
-    if (url.startsWith("/api/phone-numbers")) return Response.json({ phoneNumbers: data.numbers ?? [] });
+    if (url.startsWith("/api/phone-numbers")) return Response.json({ phoneNumbers: data.numbers ?? [], extraNumbers: data.extraNumbers });
     if (url.startsWith("/api/widget-keys") && !init?.method) return Response.json({ keys: data.keys ?? [], issuanceEnabled: data.issuanceEnabled ?? true });
     if (url.startsWith("/api/widget-keys")) return Response.json({ ok: true, key: { id: "k9", key: "pk" } });
     if (url.startsWith("/api/integrations/instagram/start")) return Response.json({ url: "https://instagram.example/oauth" });
@@ -85,6 +85,12 @@ it("lets a second agent take over a number, and offers no number of its own", as
   fireEvent.click(await screen.findByRole("menuitem", { name: /\(514\) 555-0100/u }));
   fireEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "nav:channels.move" }));
   await waitFor(() => expect(JSON.parse(calls("PUT", "/api/agents/channels")[0]![1].body as string)).toEqual({ kind: "phone_number", id: "n1", agentId: "a2" }));
+});
+
+it("sends a second agent to buy a number of its own when the plan sells extra numbers", async () => {
+  setup("a2", { numbers: [NUMBER], extraNumbers: { available: true, priced: true, refusal: null } });
+  expect((await screen.findByText("nav:channels.buyNumber")).closest("a")?.getAttribute("href")).toBe("/agents/a2/channels/phone");
+  expect(screen.queryByText("nav:channels.getNumber")).toBeNull();
 });
 
 it("sends the default agent with no number to get one", async () => {

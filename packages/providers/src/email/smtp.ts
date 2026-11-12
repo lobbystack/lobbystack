@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 
+import { parsePhoneNumberFromString } from "libphonenumber-js";
 import nodemailer, { type Transporter } from "nodemailer";
 import { DEFAULT_APP_NAME, assertCertificationRecipient, intlLocale, type CallSummaryEmailDetails, type EmailBrand } from "@lobbystack/shared";
 
@@ -12,7 +13,32 @@ export type SmtpConfig = {
   from: string;
 };
 
-type TemplateName = "existing_account" | "account_setup" | "verify_email" | "password_reset" | "passkey_added" | "invitation" | "operator_alert" | "feedback_submission" | "welcome" | "number_trial" | "number_release" | "partner_pool_alert" | "business_allowance_alert" | "partner_business_allowance_alert" | "business_released" | "business_deleted" | "call_summary";
+export type TemplateName = "existing_account" | "account_setup" | "verify_email" | "password_reset" | "passkey_added" | "invitation" | "operator_alert" | "feedback_submission" | "welcome" | "plan_reminder" | "number_trial" | "number_release" | "partner_pool_alert" | "business_allowance_alert" | "partner_business_allowance_alert" | "business_released" | "business_deleted" | "call_summary";
+
+/**
+ * The marketing emails: the host's lifecycle emails that sell or nudge, which
+ * the law and the mailbox providers say a person must be able to stop. Each
+ * carries a List-Unsubscribe header with one-click unsubscribe (RFC 8058) and
+ * an Unsubscribe link in its footer, and the worker skips one to a person who
+ * unsubscribed. A new lifecycle email joins this list to get all three.
+ *
+ * - Marketing: `welcome` (after onboarding) and `plan_reminder` (both reminders to choose a plan).
+ * - Transactional, always sent: the number trial emails (day10, day13, ended,
+ *   minutes_out) and `number_release`, which tell an owner what happens to a
+ *   number they hold; sign-in and account emails (`verify_email`,
+ *   `password_reset`, `existing_account`, `account_setup`, `passkey_added`);
+ *   `invitation`; `operator_alert` and `call_summary`, which the business's
+ *   notification settings control; `feedback_submission`; the pool and
+ *   allowance alerts; and the notices that a business was released or deleted.
+ */
+export const MARKETING_EMAIL_TEMPLATES = ["welcome", "plan_reminder"] as const satisfies readonly TemplateName[];
+
+export function isMarketingEmailTemplate(template: unknown): template is (typeof MARKETING_EMAIL_TEMPLATES)[number] {
+  return typeof template === "string" && (MARKETING_EMAIL_TEMPLATES as readonly string[]).includes(template);
+}
+
+/** Where a marketing email's recipient unsubscribes: the page its footer links to, and the URL mail apps POST to for one-click unsubscribe. */
+export type EmailUnsubscribeLinks = { pageUrl: string; oneClickUrl: string };
 
 /**
  * Whether the mail provider refused the message for good. An SMTP 5xx
@@ -48,13 +74,17 @@ export class SmtpEmailProvider {
    * Sends one email under `brand`: the template writes the brand's name, logo
    * and links, and the subject when the caller gives none. The caller picks
    * the sender and Reply-To (emailSender in @lobbystack/shared); with no
-   * sender, the email goes out from EMAIL_FROM.
+   * sender, the email goes out from EMAIL_FROM. A marketing email needs its
+   * recipient's unsubscribe links, and goes out with them in its headers and
+   * footer; any other email ignores them.
    */
-  async sendTemplate(input: { template: TemplateName; to: string; subject?: string; variables: Record<string, string>; brand: EmailBrand; idempotencyKey?: string; from?: string; replyTo?: string }): Promise<{ messageId: string }> {
+  async sendTemplate(input: { template: TemplateName; to: string; subject?: string; variables: Record<string, string>; brand: EmailBrand; idempotencyKey?: string; from?: string; replyTo?: string; unsubscribe?: EmailUnsubscribeLinks }): Promise<{ messageId: string }> {
     assertCertificationRecipient("email", input.to);
+    const unsubscribe = isMarketingEmailTemplate(input.template) ? input.unsubscribe : undefined;
+    if (isMarketingEmailTemplate(input.template) && !unsubscribe) throw new Error(`The ${input.template} email needs its recipient's unsubscribe links.`);
     const brand = shownBrand(input.brand);
     const subject = input.subject ?? templateSubject(input.template, input.variables, brand);
-    const email = renderTemplate(input.template, subject, input.variables, brand);
+    const email = renderTemplate(input.template, subject, input.variables, brand, unsubscribe);
     const result = await this.transporter.sendMail({
       from: input.from ?? this.config.from,
       ...(input.replyTo ? { replyTo: input.replyTo } : {}),
@@ -62,6 +92,7 @@ export class SmtpEmailProvider {
       subject,
       text: email.text,
       ...(email.html ? { html: email.html } : {}),
+      ...(unsubscribe ? { headers: unsubscribeHeaders(unsubscribe) } : {}),
       ...(input.idempotencyKey ? { messageId: `<${createHash("sha256").update(input.idempotencyKey).digest("hex")}@mail.lobbystack.internal>` } : {}),
     });
     return { messageId: result.messageId };
@@ -138,6 +169,8 @@ function templateSubject(template: TemplateName, variables: Record<string, strin
       return (PASSKEY_ADDED_SUBJECTS[variables.locale ?? "en"] ?? PASSKEY_ADDED_SUBJECTS.en!)(name);
     case "account_setup":
       return (SETUP_SUBJECTS[variables.locale ?? "en"] ?? SETUP_SUBJECTS.en!)(name);
+    case "plan_reminder":
+      return planReminderCopy(variables).subject;
     case "number_trial":
       return numberTrialEmailSubject(variables);
     case "number_release":
@@ -161,10 +194,37 @@ function templateSubject(template: TemplateName, variables: Record<string, strin
   }
 }
 
-function renderTemplate(template: TemplateName, subject: string, variables: Record<string, string>, brand: EmailBrand): { text: string; html?: string } {
-  const text = templateBody(template, variables, brand);
-  const html = templateHtml(template, subject, variables, brand);
+function renderTemplate(template: TemplateName, subject: string, variables: Record<string, string>, brand: EmailBrand, unsubscribe?: EmailUnsubscribeLinks): { text: string; html?: string } {
+  const label = UNSUBSCRIBE_LABELS[emailCopyLocale(variables.locale)];
+  const body = templateBody(template, variables, brand);
+  // French puts a space before the colon.
+  const text = unsubscribe ? `${body}\n\n${label}${variables.locale === "fr" ? " : " : ": "}${unsubscribe.pageUrl}` : body;
+  const html = templateHtml(template, subject, variables, brand)?.replace(EMAIL_FOOTER_SLOT, unsubscribe ? renderUnsubscribeFooter(label, unsubscribe.pageUrl) : "");
   return html ? { text, html } : { text };
+}
+
+/** The footer link of a marketing email, in the recipient's language. */
+const UNSUBSCRIBE_LABELS: Record<"en" | "fr" | "es" | "sr", string> = {
+  en: "Unsubscribe",
+  fr: "Se désabonner",
+  es: "Cancelar la suscripción",
+  sr: "Odjavi se",
+};
+
+/**
+ * The headers mail apps read to offer their own unsubscribe button. A POST of
+ * `List-Unsubscribe=One-Click` to the URL unsubscribes at once (RFC 8058).
+ * The host has no inbound address, so there is no mailto.
+ */
+export function unsubscribeHeaders(links: EmailUnsubscribeLinks): Record<string, string> {
+  return { "List-Unsubscribe": `<${links.oneClickUrl}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" };
+}
+
+/** Where renderEmailLayout leaves room for a footer under the card. */
+const EMAIL_FOOTER_SLOT = "<!--email-footer-->";
+
+function renderUnsubscribeFooter(label: string, url: string): string {
+  return `<p style="margin:24px 0 0;font-size:13px;line-height:1.5;color:#6B7280;text-align:center;"><a href="${escapeHtml(url)}" style="color:#6B7280;text-decoration:underline;">${escapeHtml(label)}</a></p>`;
 }
 
 /** The HTML of an email, in the shared layout. */
@@ -198,6 +258,11 @@ function templateHtml(template: TemplateName, subject: string, variables: Record
     case "number_trial": {
       const copy = numberTrialCopy(trialKind(variables.kind), variables.locale, variables);
       return renderLetterHtml(brand, subject, variables, copy.lines, copy.button, variables.url, brand.name);
+    }
+    case "plan_reminder": {
+      const copy = planReminderCopy(variables);
+      // The plan reminders end on their button, with no signature.
+      return renderLetterHtml(brand, subject, variables, copy.lines, copy.button, variables.url, null);
     }
     case "number_release": {
       const copy = numberReleaseCopy(variables);
@@ -236,8 +301,8 @@ function renderCodeHtml(brand: EmailBrand, subject: string, heading: string, int
 
 const ACTION_BUTTON_STYLE = "display:inline-block;padding:12px 24px;background-color:#0B0B0D;border-radius:9999px;color:#FFFFFF;font-size:16px;font-weight:600;text-decoration:none;";
 
-/** A greeting, the copy, a button and a signature, left-aligned like a letter: the trial, release and allowance emails. */
-function renderLetterHtml(brand: EmailBrand, subject: string, variables: Record<string, string>, lines: string[], action: string, url: string | undefined, signature: string): string {
+/** A greeting, the copy, a button and a signature, left-aligned like a letter: the trial, release and allowance emails. A null signature leaves it out. */
+function renderLetterHtml(brand: EmailBrand, subject: string, variables: Record<string, string>, lines: string[], action: string, url: string | undefined, signature: string | null): string {
   const greet = TRIAL_GREETINGS[variables.locale ?? "en"] ?? TRIAL_GREETINGS.en!;
   return renderEmailLayout({
     brand,
@@ -246,8 +311,8 @@ function renderLetterHtml(brand: EmailBrand, subject: string, variables: Record<
     content: [
       `<p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#3D3D3D;">${escapeHtml(greet(variables.firstName ?? ""))}</p>`,
       ...lines.map((line) => `<p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#3D3D3D;">${escapeHtml(line)}</p>`),
-      ...(url ? [`<p style="margin:24px 0 32px;"><a href="${escapeHtml(url)}" style="${ACTION_BUTTON_STYLE}">${escapeHtml(action)}</a></p>`] : []),
-      `<p style="margin:0;font-size:16px;line-height:1.6;color:#3D3D3D;">${escapeHtml(signature)}</p>`,
+      ...(url ? [`<p style="margin:24px 0 ${signature === null ? 0 : 32}px;"><a href="${escapeHtml(url)}" style="${ACTION_BUTTON_STYLE}">${escapeHtml(action)}</a></p>`] : []),
+      ...(signature === null ? [] : [`<p style="margin:0;font-size:16px;line-height:1.6;color:#3D3D3D;">${escapeHtml(signature)}</p>`]),
     ].join(""),
   });
 }
@@ -488,8 +553,8 @@ function renderAccountSetupHtml(variables: Record<string, string>, brand: EmailB
 }
 
 // The account, invitation and alert emails a partner's client may get name the
-// brand. Feedback, the welcome email, and the trial and release emails with
-// the host's prices are the host's own, and keep LobbyStack.
+// brand. Feedback, the welcome email, the plan reminder, and the trial and
+// release emails with the host's prices are the host's own, and keep LobbyStack.
 function templateBody(template: TemplateName, variables: Record<string, string>, brand: EmailBrand): string {
   const name = brand.name;
   const url = dashboardLink(variables.url, brand) ?? "";
@@ -522,6 +587,8 @@ function templateBody(template: TemplateName, variables: Record<string, string>,
       return variables.body ?? "LobbyStack dashboard feedback";
     case "welcome":
       return welcomeBody(variables, brand);
+    case "plan_reminder":
+      return planReminderBody(variables);
     case "number_trial":
       return numberTrialBody(variables, brand);
     case "number_release":
@@ -804,6 +871,63 @@ function numberReleaseBody(variables: Record<string, string>, brand: EmailBrand)
   return [greet(variables.firstName ?? ""), "", ...copy.lines.flatMap((line) => [line, ""]), `${copy.button}: ${variables.url ?? ""}`, "", brand.name].join("\n");
 }
 
+/**
+ * A phone number as the dashboard shows it: a North American number in its
+ * national form, any other in its international one, and anything that
+ * can't be a phone number as given.
+ */
+export function formatEmailPhoneNumber(value: string): string {
+  const parsed = parsePhoneNumberFromString(value.trim());
+  if (!parsed?.isPossible()) return value;
+  return parsed.countryCallingCode === "1" ? parsed.formatNational() : parsed.formatInternational();
+}
+
+/**
+ * The reminder to an owner who reached the plans and left without choosing
+ * one: their number is live, and one click on the plans finishes setup with
+ * the free trial.
+ */
+function planReminderCopy(v: Record<string, string>): TrialCopy {
+  const num = formatEmailPhoneNumber(v.number ?? "");
+  const business = v.businessName?.trim() ?? "";
+  if (v.kind === "second") return secondPlanReminderCopy(v.locale, num, business);
+  switch (v.locale) {
+    case "fr":
+      return { subject: `Votre numéro ${num} est actif`, lines: [business ? `Votre numéro ${num} est actif et votre agent répond à ses appels pour ${business}.` : `Votre numéro ${num} est actif et votre agent répond à ses appels.`, "Commencez votre essai gratuit de 14 jours pour terminer la configuration. Il suffit d'un clic, sans carte bancaire."], button: "Commencer l'essai gratuit de 14 jours" };
+    case "es":
+      return { subject: `Su número ${num} ya está activo`, lines: [business ? `Su número ${num} ya está activo y su agente contesta sus llamadas para ${business}.` : `Su número ${num} ya está activo y su agente contesta sus llamadas.`, "Empiece su prueba gratuita de 14 días para terminar la configuración. Es un solo clic y no necesita tarjeta."], button: "Empezar la prueba gratuita de 14 días" };
+    case "sr":
+      return { subject: `Vaš broj ${num} je aktivan`, lines: [business ? `Vaš broj ${num} je aktivan i agent na njemu odgovara na pozive za ${business}.` : `Vaš broj ${num} je aktivan i agent na njemu odgovara na pozive.`, "Započnite besplatnu probu od 14 dana da biste završili podešavanje. Potreban je samo jedan klik, bez kartice."], button: "Započnite besplatnu probu od 14 dana" };
+    default:
+      return { subject: `Your number ${num} is live`, lines: [business ? `Your number ${num} is live, and your agent answers its calls for ${business}.` : `Your number ${num} is live, and your agent answers its calls.`, "Start your 14-day free trial to finish setup. It takes one click, and you won't need a card."], button: "Start your 14-day free trial" };
+  }
+}
+
+/**
+ * The second and last reminder, a day after the owner reached the plans and
+ * still on them. Its button is the first reminder's.
+ */
+function secondPlanReminderCopy(locale: string | undefined, num: string, business: string): TrialCopy {
+  switch (locale) {
+    case "fr":
+      return { subject: `Terminez la configuration du ${num}`, lines: [business ? `Vous n'avez pas encore choisi de forfait pour ${business}, donc la configuration n'est pas terminée.` : "Vous n'avez pas encore choisi de forfait, donc la configuration n'est pas terminée.", `L'essai gratuit vous donne 14 jours pour voir comment votre agent répond aux appels au ${num}. Aucune carte bancaire n'est nécessaire.`], button: "Commencer l'essai gratuit de 14 jours" };
+    case "es":
+      return { subject: `Termine de configurar el ${num}`, lines: [business ? `Todavía no eligió un plan para ${business}, así que la configuración no está terminada.` : "Todavía no eligió un plan, así que la configuración no está terminada.", `La prueba gratuita le da 14 días para ver cómo su agente contesta las llamadas al ${num}. No necesita tarjeta.`], button: "Empezar la prueba gratuita de 14 días" };
+    case "sr":
+      return { subject: `Završite podešavanje broja ${num}`, lines: [business ? `Još niste izabrali paket za ${business}, pa podešavanje nije završeno.` : "Još niste izabrali paket, pa podešavanje nije završeno.", `Besplatna proba Vam daje 14 dana da vidite kako agent odgovara na pozive na ${num}. Kartica nije potrebna.`], button: "Započnite besplatnu probu od 14 dana" };
+    default:
+      return { subject: `Finish setting up ${num}`, lines: [business ? `You haven't chosen a plan for ${business} yet, so setup isn't finished.` : "You haven't chosen a plan yet, so setup isn't finished.", `The free trial gives you 14 days to see how your agent handles calls to ${num}. You won't need a card.`], button: "Start your 14-day free trial" };
+  }
+}
+
+function planReminderBody(variables: Record<string, string>): string {
+  const copy = planReminderCopy(variables);
+  const greet = TRIAL_GREETINGS[variables.locale ?? "en"] ?? TRIAL_GREETINGS.en!;
+  // French puts a space before the colon that follows the button's words.
+  const colon = variables.locale === "fr" ? " : " : ": ";
+  return [greet(variables.firstName ?? ""), "", ...copy.lines.flatMap((line) => [line, ""]), `${copy.button}${colon}${variables.url ?? ""}`].join("\n");
+}
+
 type TrialEmailKind = "day10" | "day13" | "ended" | "minutes_out";
 type TrialCopy = { subject: string; lines: string[]; button: string };
 
@@ -1070,7 +1194,7 @@ function welcomeCopy(variables: Record<string, string>) {
   const copy = WELCOME_COPY[locale];
   const goal: WelcomeGoal = variables.goal === "answer_calls" || variables.goal === "book_appointments" || variables.goal === "answer_website_visitors" || variables.goal === "answer_instagram_messages" ? variables.goal : "none";
   const number = variables.number?.trim() ?? "";
-  const phone = number ? { title: copy.forward.title(number), text: copy.forward.text, action: copy.forward.action } : copy.claim;
+  const phone = number ? { title: copy.forward.title(formatEmailPhoneNumber(number)), text: copy.forward.text, action: copy.forward.action } : copy.claim;
   return {
     heading: copy.heading(variables.firstName?.trim() ?? ""),
     lines: [copy.intro(variables.businessName ?? ""), copy.lead],
@@ -1218,7 +1342,7 @@ function renderEmailLayout({ brand, previewText, content, align = "center" }: { 
                 ${content}
               </td>
             </tr>
-          </table>
+          </table>${EMAIL_FOOTER_SLOT}
         </td>
       </tr>
     </table>

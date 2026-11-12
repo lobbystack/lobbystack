@@ -9,6 +9,7 @@ import { ConfirmActionDialog } from "./confirm-action-dialog";
 import { PasskeyRowsSkeleton, PasskeysCardSkeleton } from "./loading-skeletons";
 import { Button } from "./ui/button";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
+import { EmptyState } from "./ui/empty-state";
 import { Field, FieldError, FieldLabel } from "./ui/field";
 import { Input } from "./ui/input";
 import { Item, ItemActions, ItemContent, ItemDescription, ItemTitle } from "./ui/item";
@@ -110,7 +111,7 @@ export function AccountPasskeys() {
       <div className="flex w-full basis-full flex-col">
         {passkeys.isLoading ? <PasskeyRowsSkeleton /> : null}
         {passkeys.isError ? <p className="type-body text-destructive">{t("account.passkeys.errors.loadFailed")}</p> : null}
-        {passkeys.data?.length === 0 ? <p className="type-body-muted">{t("account.passkeys.empty")}</p> : null}
+        {passkeys.data?.length === 0 ? <EmptyState title={t("account.passkeys.empty")} /> : null}
         {passkeys.data?.length ? <ul className="flex flex-col divide-y divide-border">{passkeys.data.map((passkey) => (
           <li className="flex flex-wrap items-center justify-between gap-3 py-3 first:pt-0 last:pb-0" key={passkey.id}>
             <div className="flex min-w-0 flex-col">

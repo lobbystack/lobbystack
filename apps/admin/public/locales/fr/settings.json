@@ -348,6 +348,20 @@
       },
       "continue": "Continuer la configuration",
       "dashboard": "Aller au tableau de bord"
+    },
+    "addOns": {
+      "title": "Modules complémentaires",
+      "active": "Actif",
+      "get": "Ajouter le module",
+      "checkoutFailed": "Impossible d'ouvrir le paiement. Réessayez.",
+      "extraNumbers": {
+        "title": "Numéros supplémentaires",
+        "description": "Donnez à un agent son propre numéro.",
+        "price": "À partir de {{price}} par numéro /mois",
+        "count_one": "{{count}} numéro supplémentaire",
+        "count_other": "{{count}} numéros supplémentaires",
+        "count_many": "{{count}} numéros supplémentaires"
+      }
     }
   },
   "subscription": {
@@ -394,7 +408,8 @@
     "reclaim": {
       "title": "Ce numéro sera libéré le {{date}}",
       "description": "Les forfaits gratuits n'incluent pas de numéro d'entreprise dédié. Passez à Starter ou Pro avant cette date pour conserver {{number}}.",
-      "upgradeCta": "Mettre à niveau pour conserver ce numéro"
+      "upgradeCta": "Mettre à niveau pour conserver ce numéro",
+      "extraNumbersEnded": "Le module Numéros supplémentaires a pris fin. Reprenez-le avant cette date pour conserver {{number}}."
     },
     "freeTrial": {
       "description": "Vous n'avez pas encore de numéro. Essayez-en un gratuitement pendant 14 jours.",
@@ -473,7 +488,18 @@
       "changed": "Numéro de téléphone modifié. Votre ancien numéro restera actif pendant 30 jours.",
       "added": "Numéro de téléphone ajouté."
     },
-    "numbersUnavailable": "Les numéros de téléphone ne sont pas encore configurés sur ce tableau de bord. Demandez à la personne qui le gère de connecter un fournisseur de téléphonie."
+    "numbersUnavailable": "Les numéros de téléphone ne sont pas encore configurés sur ce tableau de bord. Demandez à la personne qui le gère de connecter un fournisseur de téléphonie.",
+    "extra": {
+      "buy": "Acheter un numéro",
+      "select": "Acheter",
+      "monthly": "{{price}} par mois",
+      "confirmTitle": "Acheter le {{number}}?",
+      "confirmDescription": "Il coûte {{price}} par mois.",
+      "confirm": "Acheter le numéro",
+      "cancel": "Annuler",
+      "priceChanged": "Le prix a changé. Relancez la recherche pour le voir.",
+      "unavailable": "Cet espace de travail ne peut pas acheter d'autres numéros."
+    }
   },
   "appearance": {
     "title": "Préférences",
@@ -1077,6 +1103,12 @@
         "unavailable": "Ce code ne fonctionne plus. Demandez-en un nouveau.",
         "checkFailed": "Impossible de vérifier le code. Réessayez."
       }
+    },
+    "marketing": {
+      "title": "Courriels marketing",
+      "label": "Conseils et rappels",
+      "description": "Conseils de configuration et rappels pour choisir un forfait.",
+      "saveFailed": "Nous n'avons pas pu enregistrer votre choix. Réessayez."
     }
   },
   "secretReveal": {

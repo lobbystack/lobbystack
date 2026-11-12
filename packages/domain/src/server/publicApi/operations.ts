@@ -44,6 +44,11 @@ import {
   type ApiCall,
   type ApiCallDetail,
   type ApiCheckout,
+  type ApiExtraNumbersCheckout,
+  type ApiExtraNumbersCheckoutCreate,
+  type ApiExtraPhoneNumberClaimCreate,
+  type ApiExtraPhoneNumberOffer,
+  type ApiExtraPhoneNumberSearch,
   type ApiCheckoutCreate,
   type ApiClaimLink,
   type ApiClaimLinkCreate,
@@ -120,6 +125,7 @@ import { bookForCaller } from "../agentActions";
 import { expireAbandonedNumberClaimsInTransaction, lockBusinessNumberClaims, numberEligibilityInTransaction, offerBusinessNumbers, readNumberOffer, reserveApiNumberClaimInTransaction, reservePartnerKeyNumberClaimInTransaction, type NumberInventoryProvider, type NumberOffer, type NumberSelection } from "../phoneNumbers";
 import { isSharedSmsSender, resolveSmsSender } from "../smsSender";
 import { loadBillingContext } from "../usage";
+import { createExtraNumbersCheckoutRequestInTransaction, extraNumberSearchInTransaction, loadExtraNumbersCheckoutInTransaction, offerExtraNumbers, reserveApiExtraNumberClaimInTransaction, type ExtraNumbersCheckout } from "../extraNumbers";
 import { defaultAgentSettings, saveAgentSettingsInTransaction, type AgentSettingsPatch } from "../agentSettings";
 import { loadLegacyInstructions, withLegacyInstructions } from "../channelRules";
 import { loadBusinessSummaryInTransaction } from "../businessSummary";
@@ -688,6 +694,136 @@ export async function releasePhoneNumberForApi(context: DomainContext, caller: A
     if (outcome === "scheduled") await audit(tx, caller, { eventType: "api.phone_number.release_scheduled", entityType: "phone_number", entityId: phoneNumberId, payload: { phoneNumber: number.phone_number } });
     return (await loadPhoneNumberResource(tx, caller.businessId, phoneNumberId)) ?? number;
   });
+}
+
+// Extra numbers: a number for another of the business's agents, past the one
+// its plan includes, with the dashboard's checks and price. They bill monthly
+// through their own Polar subscription, which a checkout sets up first.
+
+/** The API's wording for the extra number refusals that differ from the dashboard's. */
+const extraNumberRefusalMessages: Record<string, string> = {
+  extra_numbers_subscription_required: "This number needs the extra phone numbers add-on first: POST /billing/extra-numbers/checkout, then send the customer its checkout_url.",
+  extra_numbers_unavailable: "This business can't buy extra numbers. A partner's business gets its numbers from its partner's tier.",
+  business_number_required: "This business needs its first number before it buys another. Claim it with POST /phone-numbers/claims.",
+  dedicated_number_requires_paid_plan: `Extra numbers need a Starter, Pro or Enterprise plan. ${checkout}`,
+  unsupported_number_kind: "This country doesn't sell extra numbers of this kind.",
+};
+
+function extraNumberRefusal(error: unknown): unknown {
+  const code = error instanceof Error ? (error as { code?: unknown }).code : undefined;
+  if (typeof code === "string" && extraNumberRefusalMessages[code]) {
+    const status = (error as { status?: unknown }).status;
+    if (code === "unsupported_number_kind") return invalidRequest(extraNumberRefusalMessages[code]!, [{ path: "kind", message: "Not sold in this country." }]);
+    if (status === 409) return conflict(extraNumberRefusalMessages[code]!);
+  }
+  return numberRefusal(error);
+}
+
+/** Who buys an extra number: the account the key acts as. A partner's key buys none. */
+async function extraNumberBuyer(context: DomainContext, caller: ApiCaller): Promise<string> {
+  refusePartnerPlatformKey(caller, "extra_numbers");
+  return await resolveActingUserId(context, caller);
+}
+
+/**
+ * Finds numbers the business can buy for another agent, each with its monthly
+ * price, as the dashboard's Buy a number does.
+ */
+export async function searchExtraPhoneNumbersForApi(context: DomainContext, caller: ApiCaller, input: ApiExtraPhoneNumberSearch, options: { provider: NumberInventoryProvider; claimTokenSecret: string }): Promise<ApiExtraPhoneNumberOffer[]> {
+  const userId = await extraNumberBuyer(context, caller);
+  const selection: Partial<NumberSelection> = {
+    ...(input.country ? { countryCode: input.country } : {}),
+    ...(input.kind ? { kind: input.kind } : {}),
+    ...(input.area_code ? { areaCode: input.area_code } : {}),
+    ...(input.city ? { city: input.city } : {}),
+    ...(input.region ? { regionCode: input.region } : {}),
+    ...(input.postal_code ? { postalCode: input.postal_code } : {}),
+  };
+  let result: Awaited<ReturnType<typeof offerExtraNumbers>>;
+  try {
+    const found = await inBusiness(context, caller, async (tx) => await extraNumberSearchInTransaction(tx, caller.businessId));
+    result = await offerExtraNumbers({ userId, businessId: caller.businessId, ...found, selection, limit: input.limit, claimTokenSecret: options.claimTokenSecret }, options.provider);
+  } catch (error) {
+    const refusal = extraNumberRefusal(error);
+    throw refusal instanceof PublicApiError ? refusal : numberSearchError(error);
+  }
+  const monthlyPrice = result.price ? { amount_cents: result.price.monthlyCents, currency: "USD" as const } : null;
+  return result.numbers.map((offer) => ({
+    phone_number: offer.phoneE164,
+    country: offer.countryCode as ApiExtraPhoneNumberOffer["country"],
+    kind: offer.kind,
+    locality: offer.locality ?? null,
+    region: offer.region ?? null,
+    capabilities: { voice: offer.capabilities.voice, sms: offer.capabilities.sms },
+    monthly_price: monthlyPrice,
+    add_on_active: result.subscribed,
+    offer_token: offer.claimToken,
+    expires_at: offer.expiresAt.toISOString(),
+  }));
+}
+
+/**
+ * Buys an extra number offer for one of the business's agents. The caller
+ * repeats the offer's monthly price, so nothing is bought at a price it
+ * didn't read, and the dashboard's checks then decide.
+ */
+export async function claimExtraPhoneNumberForApi(context: DomainContext, caller: ApiCaller, input: ApiExtraPhoneNumberClaimCreate, options: { claimTokenSecret: string }): Promise<ApiPhoneNumberClaim> {
+  const userId = await extraNumberBuyer(context, caller);
+  let offer: NumberOffer;
+  try {
+    offer = readNumberOffer(input.offer_token, options.claimTokenSecret);
+  } catch (error) {
+    throw numberRefusal(error);
+  }
+  if (offer.purpose !== "extra") throw invalidRequest("This offer isn't for an extra number. Search with POST /phone-numbers/extra/search.", [{ path: "offer_token", message: "The wrong kind of offer." }]);
+  if (offer.businessId !== caller.businessId || offer.userId !== userId) throw invalidRequest("This offer was made for another business or account. Search again with this key.", [{ path: "offer_token", message: "Made for another business or account." }]);
+  const price = offer.selection.monthlyPriceCents ?? null;
+  if (input.accept_monthly_price_cents !== price) throw invalidRequest(price === null ? "This number costs nothing extra. Send accept_monthly_price_cents as null." : `This number costs ${price} cents a month. Send accept_monthly_price_cents as ${price} to buy it.`, [{ path: "accept_monthly_price_cents", message: "Doesn't match the offer's monthly price." }]);
+  return await inBusiness(context, caller, async (tx) => {
+    let claimId: string;
+    try {
+      claimId = await reserveApiExtraNumberClaimInTransaction(tx, { businessId: caller.businessId, userId, agentId: input.agent_id, offer, claimToken: input.offer_token, quotaByBusiness: caller.platformKeyId !== undefined, requestKey: randomUUID() });
+    } catch (error) {
+      if ((error as { code?: unknown }).code === "agent_not_found") throw notFound("Agent");
+      throw extraNumberRefusal(error);
+    }
+    await audit(tx, caller, { eventType: "api.phone_number.extra_claim_started", entityType: "number_claim", entityId: claimId, payload: { phoneNumber: offer.e164, agentId: input.agent_id, monthlyPriceCents: price } });
+    const claim = await loadPhoneNumberClaimResource(tx, caller.businessId, claimId);
+    if (!claim) throw new Error("The number claim could not be read back.");
+    return claim;
+  });
+}
+
+function serializeExtraNumbersCheckout(checkout: ExtraNumbersCheckout): ApiExtraNumbersCheckout {
+  return { id: checkout.id, status: checkout.status, checkout_url: checkout.checkoutUrl, error: checkout.status === "error" ? checkout.error ?? "The checkout could not be created." : null, add_on_active: checkout.subscribed, created_at: checkout.createdAt.toISOString(), updated_at: checkout.updatedAt.toISOString() };
+}
+
+/** Asks Polar for the page where the customer pays for the extra phone numbers add-on. Callers say whether this deployment sells it. */
+export async function createExtraNumbersCheckoutForApi(context: DomainContext, caller: ApiCaller, input: ApiExtraNumbersCheckoutCreate, options: { available: boolean }): Promise<ApiExtraNumbersCheckout> {
+  refusePartnerPlatformKey(caller, "extra_numbers");
+  if (!options.available) throw conflict("This deployment doesn't sell extra numbers.");
+  const userId = await checkoutPayerId(context, caller);
+  return await inBusiness(context, caller, async (tx) => {
+    let checkoutId: string;
+    try {
+      checkoutId = await createExtraNumbersCheckoutRequestInTransaction(tx, { userId, businessId: caller.businessId, agentId: input.agent_id ?? null });
+    } catch (error) {
+      if ((error as { code?: unknown }).code === "agent_not_found") throw notFound("Agent");
+      const status = (error as { status?: unknown }).status;
+      if (status === 409 && !extraNumberRefusalMessages[(error as { code?: string }).code ?? ""]) throw conflict((error as Error).message);
+      throw extraNumberRefusal(error);
+    }
+    await audit(tx, caller, { eventType: "api.billing.extra_numbers_checkout_started", entityType: "billing_checkout_request", entityId: checkoutId, payload: { payerUserId: userId, ...(input.agent_id ? { agentId: input.agent_id } : {}) } });
+    const checkout = await loadExtraNumbersCheckoutInTransaction(tx, { businessId: caller.businessId, requestId: checkoutId });
+    if (!checkout) throw new Error("The checkout could not be read back.");
+    return serializeExtraNumbersCheckout(checkout);
+  });
+}
+
+export async function getExtraNumbersCheckoutForApi(context: DomainContext, caller: ApiCaller, checkoutId: string): Promise<ApiExtraNumbersCheckout> {
+  const checkout = await inBusiness(context, caller, async (tx) => await loadExtraNumbersCheckoutInTransaction(tx, { businessId: caller.businessId, requestId: checkoutId }));
+  if (!checkout) throw notFound("Checkout");
+  return serializeExtraNumbersCheckout(checkout);
 }
 
 // Onboarding. The API ignores the dashboard's step order: it reports what the

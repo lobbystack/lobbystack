@@ -181,6 +181,19 @@ Slice 9 and the next release should know:
 
 Ticket 14. The add-on costs what the carrier charges us each month for a number in that country, with no markup. The plan catalog holds a price per country, because a subscription needs a stable price, and someone updates it when a carrier's price changes. The operator sees the price for the country they pick before they buy. Until this ships, Starter and Pro include one number and a workspace has one Instagram account, so a second agent's only spare channel is a widget.
 
+Built:
+
+- **Catalog:** `extraNumberPrices` in `packages/shared/src/billing.ts` holds Twilio's monthly price, from its Pricing API, for each country and kind of number we sell. A search returns mobile numbers in GB and AU, local ones in NZ, and the kind asked for elsewhere, local by default.
+- **Plans:** Starter, Pro and Enterprise each include one number and sell more at the same prices. A self-hosted server's extra numbers are free.
+- **Claims:** migration 0216 adds the `extra` claim purpose, with the agent and the price on the claim. `app.reserve_extra_number_claim` needs a direct business that holds a number, on a live plan, a price that matches the plan, and since 0217, a live add-on for a priced number. The signed offer carries the price, so the operator pays what they saw.
+- **Rollout:** a trigger on the claim, not the worker, moves the bought number to its agent and records its price in `business_number_charges`.
+- **Billing:** extra numbers bill monthly, apart from the plan, through the extra numbers add-on: a monthly Polar product whose only price is metered on `billing.extra_numbers` (`POLAR_EXTRA_NUMBERS_PRODUCT_ID`). The first purchase sends the operator through a Polar checkout for it, because Polar creates paid subscriptions only through a checkout. The hourly `billing.chargeExtraNumbers` job reports each month of each number past the included one, and Polar bills them at the end of the add-on's monthly period. A month waits while the add-on isn't live. When the plan ends, the worker sets the add-on to cancel at the end of its period, and the numbers go 30 days later as before. When the add-on ends while the plan is live, the extra numbers go 30 days later unless it's set up again. `docs/providers/polar.md` has the details.
+- **Replacements:** a replacement names the number it replaces, and the new number keeps that number's agent and price. The six-argument `app.reserve_replacement_number_claim`, which replaces the newest number, stays for the previous admin until the next release.
+- **Dashboard:** an agent without a number, in a workspace that has one, shows **Buy a number** on its Channels and phone page. Before the first one, it opens the add-on's checkout and comes back with the picker open. **Plan and billing** lists the add-on under **Add-ons**, with its starting price and **Get add-on**, or **Active** and the count of extra numbers. The chooser shows the monthly price and asks before it buys.
+- **API and CLI:** `POST /phone-numbers/extra/search`, `POST /phone-numbers/extra/claims` with `accept_monthly_price_cents`, and `POST /billing/extra-numbers/checkout` with its `GET`. `GET /phone-numbers` now gives each number's `agent_id` and `monthly_price`. The CLI runs them as `numbers search-extra`, `numbers buy-extra`, `billing extra-numbers` and `billing extra-numbers-status`.
+
+Raphael answered the open questions: extra numbers bill monthly on every plan interval, a workspace has no cap beyond the claim quotas, the API and CLI sell them, Enterprise pays the same prices, and the prices come from Twilio.
+
 ## Decisions
 
 Raphael settled these:
@@ -196,6 +209,10 @@ Raphael settled these:
 | 7 | How much of `/agents` ships in the public API first? | Read endpoints and `agent_id`, with writes later. | 6 |
 | 8 | How do we hold slice 7 for one release? | One integration branch. | 7 |
 | 9 | What does the number add-on cost? | The carrier's monthly cost for that country, with no markup. | 9 |
+| 10 | How often do extra numbers bill? | Every month, apart from the plan, on an annual plan too. | 9 |
+| 11 | Is there a cap on extra numbers? | No. The claim quotas of 2 a day and 5 in 30 days stay. | 9 |
+| 12 | Can the API and CLI buy extra numbers? | Yes, with the dashboard's checks and a price the caller repeats. | 9 |
+| 13 | What does Enterprise pay for extra numbers? | The same prices as Starter and Pro, through the same add-on. | 9 |
 
 ## After slice 7: agent-specific knowledge
 

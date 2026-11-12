@@ -348,6 +348,20 @@
       },
       "continue": "Continuar la configuración",
       "dashboard": "Ir al panel"
+    },
+    "addOns": {
+      "title": "Complementos",
+      "active": "Activo",
+      "get": "Contratar complemento",
+      "checkoutFailed": "No se pudo abrir el pago. Inténtelo de nuevo.",
+      "extraNumbers": {
+        "title": "Números adicionales",
+        "description": "Dé a un agente su propio número.",
+        "price": "Desde {{price}} por número /mes",
+        "count_one": "{{count}} número adicional",
+        "count_other": "{{count}} números adicionales",
+        "count_many": "{{count}} números adicionales"
+      }
     }
   },
   "subscription": {
@@ -394,7 +408,8 @@
     "reclaim": {
       "title": "Este número se liberará el {{date}}",
       "description": "Los planes gratuitos no incluyen un número del negocio dedicado. Cambie a Starter o Pro antes de esa fecha para conservar {{number}}.",
-      "upgradeCta": "Mejorar el plan para conservar este número"
+      "upgradeCta": "Mejorar el plan para conservar este número",
+      "extraNumbersEnded": "El complemento Números adicionales terminó. Vuelva a contratarlo antes de esa fecha para conservar {{number}}."
     },
     "freeTrial": {
       "description": "Todavía no tiene un número. Pruebe uno gratis durante 14 días.",
@@ -473,7 +488,18 @@
       "changed": "Número de teléfono cambiado. Su número anterior seguirá activo durante 30 días.",
       "added": "Número de teléfono agregado."
     },
-    "numbersUnavailable": "Los números de teléfono aún no están configurados en este panel. Pida a quien lo administra que conecte un proveedor de telefonía."
+    "numbersUnavailable": "Los números de teléfono aún no están configurados en este panel. Pida a quien lo administra que conecte un proveedor de telefonía.",
+    "extra": {
+      "buy": "Comprar un número",
+      "select": "Comprar",
+      "monthly": "{{price}} al mes",
+      "confirmTitle": "¿Comprar el {{number}}?",
+      "confirmDescription": "Cuesta {{price}} al mes.",
+      "confirm": "Comprar número",
+      "cancel": "Cancelar",
+      "priceChanged": "El precio cambió. Busque de nuevo para verlo.",
+      "unavailable": "Este espacio de trabajo no puede comprar más números."
+    }
   },
   "appearance": {
     "title": "Preferencias",
@@ -1077,6 +1103,12 @@
         "unavailable": "Este código ya no funciona. Pida uno nuevo.",
         "checkFailed": "No se pudo comprobar el código. Vuelva a intentarlo."
       }
+    },
+    "marketing": {
+      "title": "Correos de marketing",
+      "label": "Consejos y recordatorios",
+      "description": "Consejos de configuración y recordatorios para elegir un plan.",
+      "saveFailed": "No pudimos guardar su elección. Inténtelo de nuevo."
     }
   },
   "secretReveal": {

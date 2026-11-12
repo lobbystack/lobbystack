@@ -64,6 +64,8 @@ export const users = pgTable(
     platformRole: varchar("platform_role", { length: 32 }).default("operator").notNull(),
     activeBusinessId: uuid("active_business_id"),
     preferredLocale: varchar("preferred_locale", { length: 8 }).default("en").notNull(),
+    /** When the person unsubscribed from the host's marketing emails; null while they get them. */
+    marketingEmailsUnsubscribedAt: timestamp("marketing_emails_unsubscribed_at", { withTimezone: true }),
     ...legacyId,
     ...timestamps,
   },
@@ -707,8 +709,11 @@ export const onboardingNumberClaimEvents = pgTable("onboarding_number_claim_even
   // The partner's platform key that made the claim, which has no user (migration 0178).
   platformKeyId: uuid("platform_key_id"),
   // The carrier that sells the number, from the signed offer (migration 0170).
-  carrier: varchar("carrier", { length: 32 }).default("twilio").notNull(), ...timestamps,
-}, (table) => [uniqueIndex("onboarding_number_claim_events_business_key_unique").on(table.businessId, table.idempotencyKey), uniqueIndex("onboarding_number_claim_events_provider_unique").on(table.providerPhoneId), index("onboarding_number_claim_events_user_purchased_idx").on(table.userId, table.purchasedAt), index("onboarding_number_claim_events_business_status_idx").on(table.businessId, table.status, table.reservedAt)]);
+  carrier: varchar("carrier", { length: 32 }).default("twilio").notNull(),
+  // An extra number's agent, and the monthly price in US cents the operator saw, or null on a plan with no number limit (migration 0216).
+  agentId: uuid("agent_id"),
+  monthlyPriceCents: integer("monthly_price_cents"), ...timestamps,
+}, (table) => [foreignKey({ name: "onboarding_number_claim_events_agent_fk", columns: [table.businessId, table.agentId], foreignColumns: [agents.businessId, agents.id] }), uniqueIndex("onboarding_number_claim_events_business_key_unique").on(table.businessId, table.idempotencyKey), uniqueIndex("onboarding_number_claim_events_provider_unique").on(table.providerPhoneId), index("onboarding_number_claim_events_user_purchased_idx").on(table.userId, table.purchasedAt), index("onboarding_number_claim_events_business_status_idx").on(table.businessId, table.status, table.reservedAt)]);
 
 export const numberTrials = pgTable("number_trials", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -1580,6 +1585,14 @@ export const billingAccounts = pgTable(
     // partner's Stripe, one per meter, for the subscription they name
     // (migration 0156). Only the worker and the system actor write them.
     stripeOverageItems: jsonb("stripe_overage_items").$type<StripeOverageItems>(),
+    // The business's monthly Polar subscription for extra numbers, beside its
+    // plan's, which bills their metered months (migration 0217). Only the
+    // worker writes these, from Polar's webhooks.
+    extraNumbersSubscriptionId: text("extra_numbers_subscription_id"),
+    extraNumbersSubscriptionState: varchar("extra_numbers_subscription_state", { length: 32 }),
+    extraNumbersCurrentPeriodEnd: timestamp("extra_numbers_current_period_end", { withTimezone: true }),
+    extraNumbersCancelAtPeriodEnd: boolean("extra_numbers_cancel_at_period_end").default(false).notNull(),
+    extraNumbersModifiedAt: timestamp("extra_numbers_modified_at", { withTimezone: true }),
     ...legacyId,
     ...timestamps,
   },
@@ -1602,6 +1615,8 @@ export const billingCheckoutRequests = pgTable(
     firstFailedAt: timestamp("first_failed_at", { withTimezone: true }),
     // When the worker tries the provider again, while the request stays processing.
     retryAt: timestamp("retry_at", { withTimezone: true }),
+    // For an extra numbers checkout (target extra_numbers, migration 0217), the agent whose page Polar sends the payer back to.
+    agentId: uuid("agent_id"),
     ...timestamps,
   },
   (table) => [uniqueIndex("billing_checkout_requests_id_unique").on(table.id), index("billing_checkout_requests_business_status_idx").on(table.businessId, table.status, table.createdAt)],
@@ -1770,6 +1785,35 @@ export const partnerNumberCharges = pgTable(
     uniqueIndex("partner_number_charges_phone_number_unique").on(table.phoneNumberId),
     index("partner_number_charges_partner_idx").on(table.partnerId),
     index("partner_number_charges_business_idx").on(table.businessId),
+  ],
+);
+
+/**
+ * What a business pays each month for a number past its plan's included one,
+ * at the price the operator saw when they bought it, and the months the
+ * worker has settled since (migration 0216). A trigger records it when the
+ * extra number's claim is bought.
+ */
+export const businessNumberCharges = pgTable(
+  "business_number_charges",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
+    phoneNumberId: uuid("phone_number_id").notNull().references(() => phoneNumbers.id, { onDelete: "cascade" }),
+    claimId: uuid("claim_id").references(() => onboardingNumberClaimEvents.id, { onDelete: "set null" }),
+    countryCode: varchar("country_code", { length: 2 }).notNull(),
+    // US cents a month.
+    monthlyPriceCents: integer("monthly_price_cents").notNull(),
+    // The number's months run from here.
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
+    monthsSettled: integer("months_settled").default(0).notNull(),
+    monthsCharged: integer("months_charged").default(0).notNull(),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("business_number_charges_phone_number_unique").on(table.phoneNumberId),
+    index("business_number_charges_business_idx").on(table.businessId),
+    index("business_number_charges_claim_idx").on(table.claimId),
   ],
 );
 

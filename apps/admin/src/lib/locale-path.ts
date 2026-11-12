@@ -10,6 +10,7 @@ const publicRouteSections = new Set([
   "login",
   "reset-password",
   "signup",
+  "unsubscribe",
   "verify-email",
 ]);
 
@@ -44,6 +45,6 @@ export function isLegacyPublicRoutePath(pathname: string): boolean {
 export function isTokenBearingRoute(pathname: string, searchParams: URLSearchParams): boolean {
   if (searchParams.has("token") || searchParams.has("prospect_demo_token")) return true;
   const stripped = stripLocalePrefix(pathname);
-  if (/^\/(?:check-in|demo|reset-password)\/[^/]+(?:\/|$)/.test(stripped)) return true;
+  if (/^\/(?:check-in|demo|reset-password|unsubscribe)\/[^/]+(?:\/|$)/.test(stripped)) return true;
   return false;
 }

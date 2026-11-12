@@ -835,6 +835,9 @@ importers:
       ai:
         specifier: ^7.0.159
         version: 7.0.159(zod@4.6.7)
+      libphonenumber-js:
+        specifier: ^1.13.15
+        version: 1.13.15
       luxon:
         specifier: ^3.7.2
         version: 3.7.2

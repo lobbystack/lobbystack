@@ -502,11 +502,12 @@ describe.skipIf(!testUrl)("reliability against dedicated PostgreSQL roles", () =
         row("realtime.publish", { availableAt: old }),
         row("realtime.publish", { deadLetteredAt: old }),
         row("onboarding.sendWelcome", { publishedAt: old }),
+        row("onboarding.sendPlanReminder", { publishedAt: old }),
       ]).returning({ id: outboxMessages.id });
       const ids = inserted.map((message) => message.id);
       expect(await prunePublishedOutbox(tx as unknown as Database, { publishedBefore: new Date("2001-01-01"), limit: 1_000_000 })).toBeGreaterThanOrEqual(1);
       const left = new Set((await tx.select({ id: outboxMessages.id }).from(outboxMessages).where(inArray(outboxMessages.id, ids))).map((message) => message.id));
-      expect(ids.map((id) => left.has(id))).toEqual([false, true, true, true, true]);
+      expect(ids.map((id) => left.has(id))).toEqual([false, true, true, true, true, true]);
     });
   });
 

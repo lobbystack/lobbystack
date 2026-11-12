@@ -81,6 +81,52 @@ The worker reads a number's monthly price from Twilio's Pricing API before it bu
 
 A partner on Free gets no number past its included ones, and Free includes none. Without the meter and its prices, Polar ingests the events and charges nothing for them. When Polar refuses a partner's event, the job retries that partner's charges on its next run and still settles everyone else's.
 
+## Charge businesses for extra numbers
+
+Starter, Pro and Enterprise include one phone number. A business on any of them can buy more from an agent's **Channels**, each for that agent. An extra number costs what Twilio charges you for that country and kind of number, with no markup, and bills every month, apart from the plan, even when the plan bills yearly. Self-hosted servers have no hosted billing, so their extra numbers cost nothing.
+
+### Prices
+
+`extraNumberPrices` in `packages/shared/src/billing.ts` holds the monthly price for each country and kind of number, in US cents, from Twilio's Pricing API. The operator sees the price before they buy, and each number keeps the price it was sold at. When Twilio changes a price, update the catalog there.
+
+| Country | Kind the dashboard sells | Monthly price | Other kinds the API sells |
+| --- | --- | --- | --- |
+| US, Canada | Local | $1.15 | Toll-free, $2.15 |
+| Puerto Rico | Local | $3.25 | None |
+| United Kingdom | Mobile | $2.50 | None |
+| Australia | Mobile | $8.25 | None |
+| New Zealand | Local | $3.15 | None |
+
+The UK and Australia sell mobile numbers only, and New Zealand local ones, so a search there ignores the kind asked for. The catalog also holds Twilio's UK local and toll-free, Australian local and toll-free, and New Zealand toll-free prices, which no search returns today.
+
+### Set up the add-on product
+
+Extra numbers bill through a subscription of their own, the extra numbers add-on, beside the plan's. Turn on **Allow multiple subscriptions**, as for support plans, then:
+
+1. Create a meter that counts the `billing.extra_numbers` event and sums its `quantity` metadata.
+2. Create a recurring product that bills monthly, with one metered price for that meter at $0.01 a unit and no other price.
+3. Copy its ID into `POLAR_EXTRA_NUMBERS_PRODUCT_ID` for the admin and the worker.
+4. Remove any `billing.extra_numbers` metered price from the four Starter and Pro products. The add-on is the only product that bills the meter, so an annual plan doesn't bill the same months at renewal.
+
+Until `POLAR_EXTRA_NUMBERS_PRODUCT_ID` is set, the dashboard tells a priced business that it can't buy more numbers, and the API answers a 409.
+
+### How a business pays
+
+1. **First purchase.** The billing page lists the add-on under **Add-ons**, and **Get add-on** starts its checkout. On an agent's phone page, **Buy a number** starts it too while the add-on isn't live. The admin queues `billing.createExtraNumbersCheckout`, and the worker creates a Polar checkout for the add-on product under the business's own customer, `business:<business ID>`. Polar sends the payer back to the page they started from. The agent's phone page opens the number list once the webhook arrives. Polar's create-subscription endpoint only takes free products, so a checkout is the one way to start a paid add-on and save its card.
+2. **Webhooks.** The webhook route flags events for the add-on's product, and `billing.reconcile` stores the add-on's subscription ID, state, period end and cancellation in `billing_accounts.extra_numbers_*`. They never change the plan. Its orders go to `billing_transactions` and earn no affiliate commission.
+3. **Buying numbers.** With the add-on live, the business buys numbers as before. When the worker buys one, it stores the price in `business_number_charges`.
+4. **Monthly charges.** Each hour, `billing.chargeExtraNumbers` sends Polar one event for each month of each extra number, under the business's customer, timestamped when it's sent. Polar bills the month's events at the end of the add-on's monthly period. A number bought mid-period costs its full first month at the next renewal. Months stop when the number's release is scheduled. There's no proration, because the carrier charges a full month too.
+5. **Which numbers are extra.** The business's oldest number is the included one. If it's released, the next one becomes included and stops costing extra.
+6. **`external_id`.** `extra-number:`, the charge's ID and the month, so Polar charges each month once.
+
+### When billing stops
+
+- **The plan ends.** As before, the business keeps its numbers for 30 days, then LobbyStack releases them, and their months stop when the plan ends. Reconcile queues `billing.syncExtraNumbersSubscription`, which sets the add-on to cancel at the end of its period, so Polar still bills the months already reported. If the plan starts again before then, the same job takes the cancellation back.
+- **The add-on ends while the plan is live**, such as when the customer cancels it in Polar's portal or a payment fails for good. The extra numbers are scheduled for release 30 days later, with the reclaim reason `extra_numbers_ended`, and their months wait instead of settling. If the business sets up the add-on again first, the release is called off and the waiting months are charged on the new add-on.
+- **A managed plan** starts and ends the same way, and the worker keeps the add-on in step with it.
+
+Without the meter and its price, Polar ingests the events and charges nothing for them.
+
 ## Charge partners for pool overage
 
 A partner's tier includes a pool of minutes and chats that its businesses share each month. Past the pool, the businesses keep answering, and the partner pays its tier's overage rates, up to the monthly cap an owner sets on the console's **Billing** page. Owners can turn overage off there too. Free has no overage. Set up Polar to bill it:
@@ -139,6 +185,7 @@ POLAR_STARTER_MONTHLY_PRODUCT_ID=your_starter_monthly_product_id
 POLAR_STARTER_ANNUAL_PRODUCT_ID=your_starter_annual_product_id
 POLAR_PRO_MONTHLY_PRODUCT_ID=your_pro_monthly_product_id
 POLAR_PRO_ANNUAL_PRODUCT_ID=your_pro_annual_product_id
+POLAR_EXTRA_NUMBERS_PRODUCT_ID=your_extra_numbers_product_id
 
 POLAR_PARTNER_STARTER_MONTHLY_PRODUCT_ID=your_partner_starter_monthly_product_id
 POLAR_PARTNER_STARTER_ANNUAL_PRODUCT_ID=your_partner_starter_annual_product_id
@@ -159,12 +206,13 @@ The Next.js app exposes these billing entry points:
 | `POST /api/billing/checkout` | Queue a Starter or Pro checkout request. Returns HTTP 409 while the business has a live paid plan or a checkout from the last 30 minutes. |
 | `POST /api/billing/portal` | Create a customer portal session for an active paid subscription. |
 | `POST /api/billing/cancel` | Cancel an active Starter or Pro subscription at the end of its billing period. |
+| `POST /api/billing/extra-numbers/checkout` | Queue a checkout for the extra numbers add-on. Returns HTTP 409 while the add-on is live, when the business can't buy priced extra numbers, or when `POLAR_EXTRA_NUMBERS_PRODUCT_ID` isn't set. `GET` with `requestId` polls it. |
 | `POST /api/partner/billing/checkout` | Queue a partner tier checkout for one of the partner's owners. Returns HTTP 409 while the partner's tier is live, while another owner's checkout from the last 30 minutes is open, or when the tier products aren't all set. |
 | `POST /api/partner/billing/portal` | Create a customer portal session for a partner's owner, to change or cancel the tier and update the card. |
 | `POST /api/partner/billing/overage` | Turn a partner's pool overage on or off, and set or clear its monthly cap in US cents, for one of the partner's owners. Returns HTTP 409 when the tier products aren't all set. |
 | `POST /api/webhooks/polar` | Verify and store Polar events for worker reconciliation. |
 
-Grant your token `subscriptions:write` access for the cancel route, which calls `PATCH /v1/subscriptions/{id}`.
+Grant your token `subscriptions:write` access for the cancel route and the `billing.syncExtraNumbersSubscription` job, which both call `PATCH /v1/subscriptions/{id}`.
 
 Configure Polar to send subscription and order webhooks to `https://app.example.com/api/webhooks/polar`. Replace `app.example.com` with your admin application’s public host.
 
@@ -219,6 +267,7 @@ Run these checks in the Polar sandbox before enabling production billing:
 - Confirm only business administrators can start checkout or open the portal.
 - Confirm only a partner's owners can start a tier checkout or open its portal, and that the partner's tier and pool follow each subscription change.
 - Give a partner on a paid tier one number more than its tier includes, and confirm Polar charges the partner that number's monthly price within the hour.
+- On an annual Starter plan, get the extra phone numbers add-on, buy a number, and confirm the add-on's next monthly invoice charges the price the dashboard showed. End the plan, and confirm the add-on is set to cancel at the end of its period.
 - Revoke a partner's tier, and confirm its businesses still answer calls and chats, and that the console's **Businesses** page shows when they pause and when they're deleted.
 - Use a paid tier's pool up, then finish a call past it, and confirm Polar charges the partner the overage alone at the tier's minute rate. Set a cap the overage reaches, and confirm the next call forwards.
 - Confirm the partner's owners and admins get one email at 80% of the pool's minutes, one at 100%, and one at 80% and 100% of the cap.

@@ -196,3 +196,14 @@ Sin un archivo de estado, una clave de plataforma no crea un negocio si ya incor
 `lobbystack` tiene un comando para cada endpoint de la API, agrupados como la API: `lobbystack services list`, `lobbystack knowledge upload`, `lobbystack numbers search`, etc. `lobbystack --help` enumera los grupos, y `--help` después de cualquier comando enumera sus opciones. Con la clave de un socio, ocho grupos más llaman a los [endpoints de socio](/es/api/authentication#endpoints-de-socio): `partner`, `demos`, `packages`, `brand`, `domain`, `templates`, `partner-team` y `payments`. Por ejemplo, `lobbystack demos list` enumera sus demos para prospectos.
 
 `lobbystack agents list` enumera los agentes del negocio. `lobbystack receptionist` y `lobbystack rules` cambian el agente predeterminado. `lobbystack rules add --channel sms` añade una regla solo para los SMS, y `lobbystack rules list` muestra el canal de cada regla.
+
+### Compre un número para otro agente
+
+`lobbystack numbers search-extra` enumera los números que puede comprar para otro agente, cada uno con su precio mensual. Los números adicionales necesitan el complemento Números adicionales, que se factura cada mes aparte del plan. La primera vez, ejecute `lobbystack billing extra-numbers --wait` y envíe la página que muestra a quien paga. Después compre un número al precio que mostró la búsqueda:
+
+```bash
+lobbystack numbers search-extra --country CA
+lobbystack numbers buy-extra <offer_token> --agent-id <agent_id> --accept-monthly-price-cents 115 --wait
+```
+
+`--accept-monthly-price-cents` tiene que coincidir con el precio de la oferta, o la API rechaza la compra. Envíe `null` para una oferta sin precio, como en un servidor autoalojado. `lobbystack numbers list` muestra el agente y el precio mensual de cada número. `--kind toll_free` busca números gratuitos en Estados Unidos y Canadá, que cuestan 2,15 USD al mes.
