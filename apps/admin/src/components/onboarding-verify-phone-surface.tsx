@@ -111,7 +111,7 @@ export function OnboardingVerifyPhoneSurface() {
     return (
       <div className="flex flex-col items-center gap-4">
         <p className="type-heading-xxs">{formatPhoneNumberDisplay(verified)}</p>
-        <Button className="w-full" disabled={passOn.isPending || navigating} onClick={() => passOn.mutate()} type="button">{t("verifyPhone.continue")}</Button>
+        <Button className="w-full" disabled={navigating} loading={passOn.isPending} loadingLabel={t("common:pending.continuing")} onClick={() => passOn.mutate()} type="button">{t("verifyPhone.continue")}</Button>
         <button className="type-body-muted hover:text-foreground" onClick={() => setChanging(true)} type="button">{t("verifyPhone.code.changeNumber")}</button>
       </div>
     );
@@ -153,9 +153,9 @@ export function OnboardingVerifyPhoneSurface() {
         )}
         {error ? <FieldError>{error}</FieldError> : null}
         {sellsNumbers ? (
-          <Button className="mt-2 w-full" disabled={!business || phone.trim().length === 0 || send.isPending || navigating} type="submit">{send.isPending ? <><LoaderCircle className="size-4 animate-spin" />{t("verifyPhone.sending")}</> : t("verifyPhone.sendCode")}</Button>
+          <Button className="mt-2 w-full" disabled={!business || phone.trim().length === 0 || navigating} loading={send.isPending} loadingLabel={t("verifyPhone.sending")} type="submit">{t("verifyPhone.sendCode")}</Button>
         ) : (
-          <Button className="mt-2 w-full" disabled={!business || skip.isPending || navigating} onClick={() => skip.mutate()} type="button">{t("verifyPhone.unavailable.partnerContinue")}</Button>
+          <Button className="mt-2 w-full" disabled={!business || navigating} loading={skip.isPending} loadingLabel={t("common:pending.continuing")} onClick={() => skip.mutate()} type="button">{t("verifyPhone.unavailable.partnerContinue")}</Button>
         )}
       </FieldGroup>
     </form>

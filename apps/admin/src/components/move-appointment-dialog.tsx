@@ -113,7 +113,7 @@ function MoveAppointmentDialog({ appointment, requested: requestedTime, onOpenCh
         <OpeningsPicker date={date} failed={openings.isError} loading={openings.isLoading} onDateChange={(day) => { setDate(day); setChosen(null); }} onSelect={setChosen} selected={selected} timeZone={timeZone} times={times} today={today} />
         <DialogFooter>
           <DialogClose render={<Button disabled={move.isPending} type="button" variant="outline" />}>{t("appointments.move.keep")}</DialogClose>
-          <Button disabled={!selected || move.isPending} onClick={() => { if (selected) move.mutate(selected); }} type="button">{move.isPending ? <Spinner data-icon="inline-start" /> : null}{t(move.isPending ? "appointments.move.moving" : "appointments.move.confirm")}</Button>
+          <Button disabled={!selected} loading={move.isPending} loadingLabel={t("pending.moving")} onClick={() => { if (selected) move.mutate(selected); }} type="button">{t("appointments.move.confirm")}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

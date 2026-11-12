@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { DEFAULT_AGENT_VOICE, normalizeAgentVoice, normalizeRuntimeLocale, resolveOnboardingRoute, runtimeLocales, type AgentVoice, type RuntimeLocale } from "@lobbystack/shared";
-import { LoaderCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
 
@@ -142,8 +141,8 @@ function MeetAgent() {
           </FieldGroup>
         ) : <MeetFormSkeleton labels={{ name: t("meet.name"), voice: tAgent("fields.voice.label"), greeting: t("meet.greeting"), language: t("meet.language") }} />}
         {error ? <FieldError>{error}</FieldError> : null}
-        <Button className="mt-2 w-full" disabled={!business || !profile || !greeting.trim() || !name.trim() || finish.isPending} onClick={() => { setError(null); finish.mutate(); }} type="button">
-          {finish.isPending ? <><LoaderCircle className="size-4 animate-spin" />{t("meet.finishing")}</> : t("meet.finish")}
+        <Button className="mt-2 w-full" disabled={!business || !profile || !greeting.trim() || !name.trim()} loading={finish.isPending} loadingLabel={t("meet.finishing")} onClick={() => { setError(null); finish.mutate(); }} type="button">
+          {t("meet.finish")}
         </Button>
       </div>
       <VoiceDialog current={voice} onOpenChange={setVoiceOpen} onSave={async (next) => { try { await save.mutateAsync({ voice: next }); return true; } catch { return false; } }} open={voiceOpen} preview={voicePreview} saving={save.isPending} />

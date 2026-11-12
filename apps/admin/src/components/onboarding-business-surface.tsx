@@ -6,7 +6,7 @@ import { useActiveBusiness } from "@/hooks/use-active-business";
 import { useStepNavigation } from "@/lib/use-step-navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { normalizeRuntimeLocale } from "@lobbystack/shared";
-import { Building2, LoaderCircle } from "lucide-react";
+import { Building2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { getStoredAffiliateReferralCode } from "@/lib/affiliate-referral";
@@ -103,7 +103,7 @@ export function OnboardingBusinessSurface({ createNew = false }: { createNew?: b
           </div>
         </Field>
         {error || businesses.isError ? <FieldError>{error ?? t("businessName.unavailable")}</FieldError> : null}
-        <Button className="mt-2 w-full" disabled={businesses.isLoading || create.isPending || update.isPending || navigating || name.trim().length === 0} type="submit">{create.isPending || update.isPending || navigating ? <><LoaderCircle className="size-4 animate-spin" />{t("businessName.submitting")}</> : t("businessName.continue")}</Button>
+        <Button className="mt-2 w-full" disabled={businesses.isLoading || name.trim().length === 0} loading={create.isPending || update.isPending || navigating} loadingLabel={t("businessName.submitting")} type="submit">{t("businessName.continue")}</Button>
       </FieldGroup>
     </form>
   );

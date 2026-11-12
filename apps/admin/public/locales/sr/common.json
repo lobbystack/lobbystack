@@ -397,5 +397,23 @@
     "failedHint": "Unesite podatke o firmi ručno ili ponovo pokrenite uvoz sa kontrolne table.",
     "inlineRunning": "Čitanje sajta {{host}}. Pročitano stranica: {{count}}",
     "stalledTitle": "Nismo uspeli da završimo čitanje sajta {{host}}"
+  },
+  "pending": {
+    "saving": "Čuvanje...",
+    "updating": "Ažuriranje...",
+    "adding": "Dodavanje...",
+    "creating": "Kreiranje...",
+    "deleting": "Brisanje...",
+    "removing": "Uklanjanje...",
+    "sending": "Slanje...",
+    "inviting": "Pozivanje...",
+    "continuing": "Učitavanje...",
+    "finishing": "Završavanje...",
+    "confirming": "Potvrđivanje...",
+    "moving": "Premeštanje...",
+    "retrying": "Ponovni pokušaj...",
+    "testing": "Testiranje...",
+    "connecting": "Povezivanje...",
+    "disconnecting": "Prekidanje veze..."
   }
 }

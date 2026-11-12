@@ -193,7 +193,7 @@ export function TimeOffDialog({ businessId, timeZone, entry, day, onOpenChange }
           </form>
         </DialogContent>
       </Dialog>
-      {entry ? <ConfirmActionDialog cancelLabel={t("appointments.timeOff.keep")} confirmLabel={t("appointments.timeOff.delete")} confirmVariant="destructive" description={t("appointments.timeOff.deleteDescription", { name: entry.name })} onConfirm={async () => { await remove.mutateAsync(); }} onOpenChange={setConfirmDelete} open={confirmDelete} pending={remove.isPending} title={t("appointments.timeOff.deleteTitle")} /> : null}
+      {entry ? <ConfirmActionDialog cancelLabel={t("appointments.timeOff.keep")} confirmLabel={t("appointments.timeOff.delete")} confirmVariant="destructive" description={t("appointments.timeOff.deleteDescription", { name: entry.name })} onConfirm={async () => { await remove.mutateAsync(); }} onOpenChange={setConfirmDelete} open={confirmDelete} pending={remove.isPending} pendingLabel={t("pending.deleting")} title={t("appointments.timeOff.deleteTitle")} /> : null}
     </>
   );
 }

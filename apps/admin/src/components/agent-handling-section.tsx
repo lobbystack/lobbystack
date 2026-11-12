@@ -244,8 +244,8 @@ export function AgentHandlingSection({ agentId, businessId, canManage }: AgentSe
               {transferStatus ? <ItemDescription className="text-destructive">{transferStatus}</ItemDescription> : null}
             </ItemContent>
             <ItemActions className="w-full justify-end self-center sm:w-auto">
-              <Button disabled={isLoadingConfiguration || isTransferSaving || !persistedProfile || !canManage} onClick={() => void saveTransferNumber()} size="sm" type="button" variant="outline">
-                {isTransferSaving ? t("agent:actions.saving") : t("agent:actions.save")}
+              <Button disabled={isLoadingConfiguration || !persistedProfile || !canManage} loading={isTransferSaving} loadingLabel={t("agent:actions.saving")} onClick={() => void saveTransferNumber()} size="sm" type="button" variant="outline">
+                {t("agent:actions.save")}
               </Button>
             </ItemActions>
           </Item>

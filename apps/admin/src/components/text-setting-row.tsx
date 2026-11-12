@@ -62,8 +62,8 @@ export function TextSettingRow({ allowEmpty = false, description, disabled, id, 
           {singleLine ? <Input aria-label={label} {...field} /> : <Textarea aria-label={label} rows={rows} {...field} />}
           <DialogFooter>
             <Button disabled={saving} onClick={() => setOpen(false)} type="button" variant="outline">{t("agent:actions.cancel")}</Button>
-            <Button disabled={saving || (!allowEmpty && !draft.trim())} onClick={() => void save()} type="button">
-              {saving ? t("agent:actions.saving") : t("agent:actions.save")}
+            <Button disabled={!allowEmpty && !draft.trim()} loading={saving} loadingLabel={t("agent:actions.saving")} onClick={() => void save()} type="button">
+              {t("agent:actions.save")}
             </Button>
           </DialogFooter>
         </DialogContent>

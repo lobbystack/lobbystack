@@ -106,7 +106,7 @@ export function AccountPasskeys() {
         <ItemDescription>{t("account.passkeys.description")}</ItemDescription>
       </ItemContent>
       <ItemActions>
-        <Button loading={add.isPending} onClick={() => add.mutate()} size="sm" type="button" variant="outline">{t("account.passkeys.add")}</Button>
+        <Button loading={add.isPending} loadingLabel={t("common:pending.adding")} onClick={() => add.mutate()} size="sm" type="button" variant="outline">{t("account.passkeys.add")}</Button>
       </ItemActions>
       <div className="flex w-full basis-full flex-col">
         {passkeys.isLoading ? <PasskeyRowsSkeleton /> : null}
@@ -136,7 +136,7 @@ export function AccountPasskeys() {
             </Field>
             <DialogFooter>
               <DialogClose render={<Button disabled={rename.isPending} type="button" variant="outline" />}>{t("account.actions.cancel")}</DialogClose>
-              <Button disabled={rename.isPending} type="submit">{t("account.passkeys.rename.save")}</Button>
+              <Button loading={rename.isPending} loadingLabel={t("common:pending.saving")} type="submit">{t("account.passkeys.rename.save")}</Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -150,6 +150,7 @@ export function AccountPasskeys() {
         onOpenChange={(open) => { if (!open) setRemoving(null); }}
         open={removing !== null}
         pending={remove.isPending}
+        pendingLabel={t("common:pending.removing")}
         title={t("account.passkeys.removeTitle")}
       />
     </Item>

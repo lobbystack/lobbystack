@@ -93,7 +93,7 @@ export function CallForwardingFromLink({ businessId }: { businessId: string }) {
 
 function ForwardingConfirm({ confirming, onConfirm }: { confirming: boolean; onConfirm: () => void }) {
   const { t } = useTranslation("dashboard");
-  return <Button className="self-start" disabled={confirming} onClick={onConfirm} type="button" variant="outline">{t("forwarding.itWorks")}</Button>;
+  return <Button className="self-start" loading={confirming} onClick={onConfirm} type="button" variant="outline">{t("forwarding.itWorks")}</Button>;
 }
 
 function ForwardingDialogHeader({ e164 }: { e164: string }) {

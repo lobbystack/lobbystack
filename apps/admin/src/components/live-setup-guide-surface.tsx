@@ -117,14 +117,14 @@ export function LiveSetupGuideSurface({ businessId }: { businessId: string }) {
       <h2 className="type-section-title">{t("setupGuide.title")}</h2>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3 text-muted-foreground"><ProgressRing completed={completed} total={steps.length} /><p className="type-body-lg">{t("setupGuide.description", { completed, total: steps.length })}</p></div>
-        <Button size="sm" disabled={skip.isPending} onClick={async () => { for (const step of steps) if (!skippedSteps.includes(step.id)) await skip.mutateAsync(step.id); }} type="button" variant="outline">{t("setupGuide.skip")}</Button>
+        <Button size="sm" loading={skip.isPending} onClick={async () => { for (const step of steps) if (!skippedSteps.includes(step.id)) await skip.mutateAsync(step.id); }} type="button" variant="outline">{t("setupGuide.skip")}</Button>
       </div>
       <Surface>
         <Accordion onValueChange={(value) => { const next = value[0] as GuideStepId | undefined; const step = steps.find((item) => item.id === next); if (step && opens(step)) setPicked({ step: step.id, during: active }); }} value={[openStep]}>
           {steps.map((step) => {
             const finished = done(step);
             const locked = !opens(step);
-            const skipLink = finished ? null : <Button className="h-auto px-0 underline underline-offset-4" disabled={skip.isPending} onClick={() => skip.mutate(step.id)} variant="link">{t("setupGuide.skipStep")}</Button>;
+            const skipLink = finished ? null : <Button className="h-auto px-0 underline underline-offset-4" disabled={skip.isPending} loading={skip.isPending && skip.variables === step.id} onClick={() => skip.mutate(step.id)} variant="link">{t("setupGuide.skipStep")}</Button>;
             return <AccordionItem key={step.id} value={step.id}>
               <AccordionTrigger aria-disabled={locked || undefined} className={locked ? "min-h-16 cursor-default px-6 [&_[data-icon=inline-end]]:opacity-0" : "min-h-16 px-6"} tabIndex={locked ? -1 : undefined}><span className="flex min-w-0 items-center gap-4"><StepMarker completed={finished} /><span className={finished ? "truncate type-body-lg text-muted-foreground line-through decoration-muted-foreground/70" : "truncate type-body-lg"}>{t(stepTitleKey(step, skippedSteps))}</span></span></AccordionTrigger>
               <AccordionContent aria-labelledby="" className="px-6"><div className="flex gap-4"><span className="size-6 shrink-0" /><div className="flex min-w-0 flex-1 flex-col gap-4">
@@ -132,8 +132,8 @@ export function LiveSetupGuideSurface({ businessId }: { businessId: string }) {
                   <>
                     {job && (importing || stalled || job.status === "failed" || job.status === "cancelled") ? <WebsiteImportProgress inline job={job} /> : <StepDescription>{t("setupGuide.stepDescriptions.fullScan")}</StepDescription>}
                     <StepActions primary={importing ? null : stalled
-                      ? <Button disabled={readAgain.isPending || !step.documentId} onClick={() => { if (step.documentId) readAgain.mutate(step.documentId); }}>{t("setupGuide.stepActions.tryAgain")}</Button>
-                      : <Button disabled={expand.isPending} onClick={() => { if (step.documentId) expand.mutate(step.documentId); }}>{t("setupGuide.stepActions.fullScan")}</Button>} skip={skipLink} />
+                      ? <Button disabled={!step.documentId} loading={readAgain.isPending} loadingLabel={t("common:pending.retrying")} onClick={() => { if (step.documentId) readAgain.mutate(step.documentId); }}>{t("setupGuide.stepActions.tryAgain")}</Button>
+                      : <Button loading={expand.isPending} onClick={() => { if (step.documentId) expand.mutate(step.documentId); }}>{t("setupGuide.stepActions.fullScan")}</Button>} skip={skipLink} />
                   </>
                 ) : step.id === "sources" ? (
                   <>

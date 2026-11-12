@@ -397,5 +397,23 @@
     "failedHint": "Añada los datos de su negocio a mano o vuelva a intentar la importación desde su panel.",
     "inlineRunning": "Leyendo {{host}}. Páginas leídas hasta ahora: {{count}}",
     "stalledTitle": "No pudimos terminar de leer {{host}}"
+  },
+  "pending": {
+    "saving": "Guardando...",
+    "updating": "Actualizando...",
+    "adding": "Añadiendo...",
+    "creating": "Creando...",
+    "deleting": "Eliminando...",
+    "removing": "Quitando...",
+    "sending": "Enviando...",
+    "inviting": "Invitando...",
+    "continuing": "Cargando...",
+    "finishing": "Finalizando...",
+    "confirming": "Confirmando...",
+    "moving": "Moviendo...",
+    "retrying": "Reintentando...",
+    "testing": "Probando...",
+    "connecting": "Conectando...",
+    "disconnecting": "Desconectando..."
   }
 }

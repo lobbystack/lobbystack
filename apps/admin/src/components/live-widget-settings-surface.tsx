@@ -451,7 +451,7 @@ function WidgetKeyForm({ editing, name, businessName, embedOrigin, pending, erro
       <DialogFooter className="items-center border-t px-6 py-4">
         {error ? <p className="mr-auto type-body text-destructive" role="alert">{error}</p> : null}
         <Button type="button" variant="outline" onClick={onCancel}>{t("widget:manage.cancel")}</Button>
-        <Button type="submit" loading={pending} disabled={!draft.origins.trim()}>{row ? t("widget.keys.save") : t("widget.create.action")}</Button>
+        <Button type="submit" loading={pending} loadingLabel={t(editing.mode === "edit" ? "common:pending.saving" : "common:pending.creating")} disabled={!draft.origins.trim()}>{row ? t("widget.keys.save") : t("widget.create.action")}</Button>
       </DialogFooter>
     </form>
   );

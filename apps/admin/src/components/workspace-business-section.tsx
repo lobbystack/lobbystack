@@ -298,8 +298,8 @@ export function WorkspaceBusinessSection({ businessId, canManage, heading = true
                   ) : <span className="hidden sm:block" />}
                   <div className="flex flex-col-reverse gap-2 sm:flex-row">
                     <Button disabled={isSummarySaving} onClick={() => setIsSummaryOpen(false)} type="button" variant="outline">{t("agent:actions.cancel")}</Button>
-                    <Button disabled={isSummarySaving || rewritingInDialog || !canManage || !summary.trim()} onClick={() => void saveSummary(false)} type="button">
-                      {isSummarySaving ? t("agent:actions.saving") : t("agent:actions.save")}
+                    <Button disabled={rewritingInDialog || !canManage || !summary.trim()} loading={isSummarySaving} loadingLabel={t("agent:actions.saving")} onClick={() => void saveSummary(false)} type="button">
+                      {t("agent:actions.save")}
                     </Button>
                   </div>
                 </DialogFooter>

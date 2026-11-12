@@ -394,5 +394,23 @@
     "failedHint": "Add your business details by hand, or try the import again from your dashboard.",
     "inlineRunning": "Reading {{host}}. Pages read so far: {{count}}",
     "stalledTitle": "We couldn't finish reading {{host}}"
+  },
+  "pending": {
+    "saving": "Saving...",
+    "updating": "Updating...",
+    "adding": "Adding...",
+    "creating": "Creating...",
+    "deleting": "Deleting...",
+    "removing": "Removing...",
+    "sending": "Sending...",
+    "inviting": "Inviting...",
+    "continuing": "Continuing...",
+    "finishing": "Finishing...",
+    "confirming": "Confirming...",
+    "moving": "Moving...",
+    "retrying": "Retrying...",
+    "testing": "Testing...",
+    "connecting": "Connecting...",
+    "disconnecting": "Disconnecting..."
   }
 }

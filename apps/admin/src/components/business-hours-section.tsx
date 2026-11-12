@@ -254,7 +254,7 @@ export function BusinessHoursSection({ businessId, canManage, bookingMode }: { b
           {error ? <p className="type-body text-destructive" id={errorId} role="alert">{error}</p> : null}
           <DialogFooter>
             <Button disabled={saving} onClick={close} type="button" variant="outline">{t("hours.cancel")}</Button>
-            <Button disabled={disabled || loading} onClick={() => void save()} type="button">{saving ? t("actions.saving") : t("hours.save")}</Button>
+            <Button disabled={disabled || loading} loading={saving} loadingLabel={t("actions.saving")} onClick={() => void save()} type="button">{t("hours.save")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

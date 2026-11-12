@@ -217,7 +217,7 @@ export function LiveEmployeesSurface() {
       </TableCard>
       {loading ? <DataTablePaginationSkeleton rowsPerPage={paginationLabels.rowsPerPage} /> : <DataTablePagination labels={paginationLabels} table={table} />}
       {business ? <EmployeeDialog businessId={business.businessId} employee={editingEmployee} onOpenChange={setDialogOpen} open={dialogOpen} services={services} today={today} /> : null}
-      <ConfirmActionDialog confirmVariant="destructive" cancelLabel={t("table.actions.deleteCancel")} confirmLabel={t("table.actions.deleteConfirm")} description={t("table.actions.deleteDescription")} onConfirm={async () => { if (!pendingDelete) return; await remove.mutateAsync(pendingDelete); setPendingDelete(null); toast.success(t("table.actions.deleted")); }} onOpenChange={(open) => { if (!open && !remove.isPending) setPendingDelete(null); }} open={Boolean(pendingDelete)} pending={remove.isPending} title={t("table.actions.deleteTitle")} />
+      <ConfirmActionDialog confirmVariant="destructive" cancelLabel={t("table.actions.deleteCancel")} confirmLabel={t("table.actions.deleteConfirm")} description={t("table.actions.deleteDescription")} onConfirm={async () => { if (!pendingDelete) return; await remove.mutateAsync(pendingDelete); setPendingDelete(null); toast.success(t("table.actions.deleted")); }} onOpenChange={(open) => { if (!open && !remove.isPending) setPendingDelete(null); }} open={Boolean(pendingDelete)} pending={remove.isPending} pendingLabel={t("common:pending.deleting")} title={t("table.actions.deleteTitle")} />
     </div>
   );
 }
@@ -412,7 +412,7 @@ function EmployeeDialog({ businessId, employee, open, onOpenChange, services, to
             </Field>
           </FieldGroup>
         </div>
-        <DialogFooter><Button disabled={save.isPending} onClick={() => onOpenChange(false)} type="button" variant="outline">{t("add.cancel")}</Button><Button disabled={save.isPending || !services.length} type="submit">{save.isPending ? t("add.saving") : t(employee ? "edit.save" : "add.save")}</Button></DialogFooter>
+        <DialogFooter><Button disabled={save.isPending} onClick={() => onOpenChange(false)} type="button" variant="outline">{t("add.cancel")}</Button><Button disabled={!services.length} loading={save.isPending} loadingLabel={t("add.saving")} type="submit">{t(employee ? "edit.save" : "add.save")}</Button></DialogFooter>
       </form>
     </DialogContent>
   </Dialog>;

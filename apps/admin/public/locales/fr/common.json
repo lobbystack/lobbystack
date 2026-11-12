@@ -397,5 +397,23 @@
     "failedHint": "Ajoutez vos informations à la main, ou relancez l'import depuis votre tableau de bord.",
     "inlineRunning": "Lecture de {{host}}. Pages lues jusqu'ici : {{count}}",
     "stalledTitle": "Nous n'avons pas pu finir de lire {{host}}"
+  },
+  "pending": {
+    "saving": "Enregistrement...",
+    "updating": "Mise à jour...",
+    "adding": "Ajout...",
+    "creating": "Création...",
+    "deleting": "Suppression...",
+    "removing": "Retrait...",
+    "sending": "Envoi...",
+    "inviting": "Invitation...",
+    "continuing": "Chargement...",
+    "finishing": "Finalisation...",
+    "confirming": "Confirmation...",
+    "moving": "Déplacement...",
+    "retrying": "Nouvelle tentative...",
+    "testing": "Test en cours...",
+    "connecting": "Connexion...",
+    "disconnecting": "Déconnexion..."
   }
 }

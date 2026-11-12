@@ -2,6 +2,8 @@
 
 import { useCallback, useRef, type ReactNode } from "react";
 
+import { useTranslation } from "react-i18next";
+
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -26,6 +28,8 @@ type ConfirmActionDialogProps = {
   onOpenChange: (open: boolean) => void;
   open: boolean;
   pending?: boolean;
+  /** Confirm button text while pending; defaults to the generic "Confirming...". */
+  pendingLabel?: string;
   title: string;
 };
 
@@ -40,8 +44,10 @@ export function ConfirmActionDialog({
   onOpenChange,
   open,
   pending = false,
+  pendingLabel,
   title,
 }: ConfirmActionDialogProps) {
+  const { t } = useTranslation("common");
   const confirmRef = useRef<HTMLButtonElement>(null);
   const handleConfirm = useCallback(async () => {
     try {
@@ -67,7 +73,8 @@ export function ConfirmActionDialog({
             {cancelLabel}
           </AlertDialogClose>
           <Button
-            disabled={pending}
+            loading={pending}
+            loadingLabel={pendingLabel ?? t("pending.confirming")}
             onClick={() => {
               void handleConfirm();
             }}

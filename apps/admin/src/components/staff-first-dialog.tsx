@@ -216,8 +216,8 @@ export function StaffFirstDialog({ businessId, defaultLocale, onOpenChange, onSa
         </div>
         <DialogFooter>
           <Button disabled={isSaving} onClick={() => onOpenChange(false)} type="button" variant="outline">{t("agent:actions.cancel")}</Button>
-          <Button aria-label={t("agent:staffFirst.save")} disabled={isSaving || !draft} onClick={() => void save()} type="button">
-            {isSaving ? t("agent:actions.saving") : t("agent:actions.save")}
+          <Button aria-label={t("agent:staffFirst.save")} disabled={!draft} loading={isSaving} loadingLabel={t("agent:actions.saving")} onClick={() => void save()} type="button">
+            {t("agent:actions.save")}
           </Button>
         </DialogFooter>
       </DialogContent>

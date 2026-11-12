@@ -78,8 +78,8 @@ function Button({
     >
       {loading ? (
         <>
-          <LoaderCircle className="size-4 animate-spin" />
-          {loadingLabel ? <span className="sr-only">{loadingLabel}</span> : null}
+          <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
+          {loadingLabel ?? children}
         </>
       ) : (
         children
