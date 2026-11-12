@@ -57,9 +57,9 @@ Un error de red puede dejarle sin saber si una solicitud funcionó. Envíe un en
 - `POST /knowledge`
 - `POST /services`
 - `POST /rules`
-- `POST /billing/checkout`
+- `POST /billing/checkout` y `POST /billing/extra-numbers/checkout`
 - `POST /widget-keys`
-- `POST /phone-numbers/claims` y `POST /phone-numbers/{phone_number_id}/replace`, que lo exigen
+- `POST /phone-numbers/claims`, `POST /phone-numbers/extra/claims` y `POST /phone-numbers/{phone_number_id}/replace`, que lo exigen
 - `POST /team/invitations`, que lo exige
 
 `POST /webhooks` ignora este encabezado para que LobbyStack nunca guarde una copia del secreto de firma. Si una creación falla por un error de red, consulte `GET /webhooks` antes de reintentar.
