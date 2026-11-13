@@ -308,6 +308,7 @@
       "description": "{{appointment}}",
       "requested": "Requested: {{time}}",
       "confirm": "Move appointment",
+      "moving": "Moving appointment...",
       "keep": "Keep current time",
       "done": "Appointment moved",
       "failed": "We couldn't move the appointment. Try again.",

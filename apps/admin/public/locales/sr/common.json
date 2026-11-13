@@ -310,6 +310,7 @@
       "description": "{{appointment}}",
       "requested": "Traženo: {{time}}",
       "confirm": "Pomeri termin",
+      "moving": "Pomeranje termina...",
       "keep": "Zadrži trenutno vreme",
       "done": "Termin je pomeren",
       "failed": "Nismo uspeli da pomerimo termin. Pokušajte ponovo.",

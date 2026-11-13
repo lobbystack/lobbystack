@@ -310,6 +310,7 @@
       "description": "{{appointment}}",
       "requested": "Demandé : {{time}}",
       "confirm": "Déplacer le rendez-vous",
+      "moving": "Déplacement du rendez-vous...",
       "keep": "Garder l’heure actuelle",
       "done": "Rendez-vous déplacé",
       "failed": "Nous n’avons pas pu déplacer le rendez-vous. Réessayez.",

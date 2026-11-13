@@ -70,7 +70,7 @@ export function OpeningsPicker({ date, today, timeZone, times, loading, failed, 
         {waiting ? <p className="type-body-muted">{waiting}</p>
           : loading ? <OpeningTimesSkeleton />
           : failed ? <p className="type-body-muted text-destructive">{t("appointments.openings.timesFailed")}</p>
-          : times.length ? <div className={cn("grid grid-cols-3 gap-2 overflow-y-auto", compact ? "max-h-48 p-0.5" : "max-h-72", !columns && "sm:grid-cols-2")}>
+          : times.length ? <div className={cn("grid grid-cols-3 gap-2 overflow-y-auto", compact ? "max-h-48 p-0.5" : "-m-1 max-h-72 p-1", !columns && "sm:grid-cols-2")}>
             {times.map((value) => <Button aria-pressed={selected === value} className={cn("tabular-nums", selected === value && "ring-2 ring-ring")} key={value} onClick={() => onSelect(value)} type="button" variant={selected === value ? "default" : "outline"}>{time(value)}</Button>)}
           </div>
           : <p className="type-body-muted">{t("appointments.openings.noTimes")}</p>}
