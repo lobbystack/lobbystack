@@ -7,7 +7,7 @@ import { eyebrow } from "@/marketing/lib/eyebrows"
 import { featureIcons } from "@/marketing/lib/feature-icons"
 import { featureGroups, featureIndexCopy, featureLink, type FeatureId } from "@/marketing/lib/feature-index"
 
-function FeatureCard({ locale, id }: { locale: Locale; id: FeatureId }) {
+export function FeatureCard({ locale, id }: { locale: Locale; id: FeatureId }) {
   const { title, body } = featureIndexCopy[locale].features[id]
   const { href, external } = featureLink(locale, id)
   const Arrow = external ? ArrowUpRight : ArrowRight

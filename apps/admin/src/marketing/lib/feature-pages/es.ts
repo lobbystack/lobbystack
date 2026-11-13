@@ -1,95 +1,6 @@
 import type { FeaturePagesCopy } from "./types"
 
 export const featurePagesEs: FeaturePagesCopy = {
-  rules: {
-    seo: {
-      title: "Recepcionista con IA: reglas y precios a su manera | LobbyStack",
-      description:
-        "Entrene a su recepcionista con IA en lenguaje sencillo. Dígale qué preguntar, qué precios dar y cuándo transferir. Sigue sus reglas en cada llamada.",
-    },
-    name: "Reglas y precios",
-    hero: {
-      title: "Entrene a su recepcionista en lenguaje sencillo",
-      intro:
-        "Dígale a LobbyStack qué preguntar, qué precios dar y cuándo pasar la llamada, como se lo explicaría a un empleado nuevo. Sigue sus reglas en cada llamada.",
-    },
-    facts: [
-      "Reglas escritas con sus palabras",
-      "Precios fijos, desde o por rango",
-      "Usted decide qué regla manda",
-      "Habla más de 70 idiomas",
-    ],
-    benefits: {
-      title: "Su forma de trabajar, en cada llamada",
-      items: [
-        {
-          title: "Escríbalo como lo diría",
-          body: "“Si quien llama dice que es una emergencia, transfiéramelo.” Esa frase ya es una regla completa. Escríbala, guárdela y su recepcionista la cumple.",
-        },
-        {
-          title: "Dé sus precios reales",
-          body: "Asigne a cada servicio un precio fijo, un precio inicial o un rango. Su recepcionista da el precio que usted cargó y jamás inventa una cifra.",
-        },
-        {
-          title: "Decida qué pasa cuando duda",
-          body: "Indíquele que tome un mensaje, prometa devolver la llamada o la transfiera. Su recepcionista sigue esa instrucción en vez de adivinar.",
-        },
-      ],
-    },
-    example: {
-      eyebrow: "Una regla real",
-      title: "Una frase reemplaza todo un árbol de llamadas",
-      body: "Las reglas se aplican en el orden que usted fija, así que ganan las que más importan. Arrastre una regla al primer lugar y tendrá prioridad.",
-      mock: {
-        kind: "text",
-        text: "Si quien llama pregunta cuánto cuesta instalar un calentador de agua, dé nuestro rango de $1,800 a $3,200, pida su dirección y reserve una visita de presupuesto.",
-      },
-    },
-    steps: {
-      title: "Listo en una sola sesión",
-      items: [
-        {
-          title: "Cargue sus servicios y precios",
-          body: "Anote lo que vende, cuánto dura cada trabajo y cuánto cuesta.",
-        },
-        {
-          title: "Escriba sus reglas",
-          body: "Una instrucción por regla, con sus palabras. Hay plantillas para transferencias, devoluciones de llamada, llamadas fuera de horario y preguntas de precios.",
-        },
-        {
-          title: "Llame y escuche",
-          body: "Pruebe desde su navegador y cambie una regla el mismo día en que cambie su proceso.",
-        },
-      ],
-    },
-    faqTitle: "Preguntas sobre reglas y precios",
-    faqs: [
-      {
-        question: "¿Tengo que armar un flujo de llamadas?",
-        answer:
-          "No. Usted escribe instrucciones en lenguaje sencillo y su recepcionista las sigue. LobbyStack no tiene editor de diagramas de flujo.",
-      },
-      {
-        question: "¿Qué pasa si alguien pregunta algo que mis reglas no cubren?",
-        answer:
-          "Su recepcionista responde con lo que sabe de su negocio. Si no puede, sigue la instrucción que usted dejó: tomar un mensaje o transferir la llamada.",
-      },
-      {
-        question: "¿Puede dar precios?",
-        answer:
-          "Sí. Cada servicio admite un precio fijo, un precio inicial o un rango, y su recepcionista da el que usted cargó. Si no hay precio, no inventa uno.",
-      },
-      {
-        question: "¿Cada agente puede tener sus propias reglas?",
-        answer:
-          "Sí. Cada agente guarda sus reglas, así que un agente de fuera de horario puede actuar distinto al de día.",
-      },
-    ],
-    closing: {
-      titleLines: ["Explíquelo una vez.", "Ella atiende cada llamada."],
-      body: "Escriba su primera regla y escúchela hoy en una llamada de prueba.",
-    },
-  },
   "call-transfers": {
     seo: {
       title: "Recepcionista con IA: transferencias a su equipo | LobbyStack",
@@ -139,6 +50,26 @@ export const featurePagesEs: FeaturePagesCopy = {
         ],
       },
     },
+    sections: [
+      {
+        title: "Cada llamada llega a la persona correcta",
+        body: "Defina un número para el negocio y uno por empleado. Sus reglas deciden quién recibe cada llamada.",
+        points: [
+          "Un número de transferencia principal",
+          "Un número por empleado",
+          "Reglas que reparten las llamadas",
+        ],
+      },
+      {
+        title: "Lo encuentran aunque se acaben los minutos",
+        body: "Si se agotan los minutos de su plan, LobbyStack desvía las llamadas a su número de transferencia y nadie se topa con una línea muerta.",
+        points: [
+          "Las llamadas se desvían a su equipo",
+          "Las llamadas desviadas no gastan minutos",
+          "Usted fija su tope de gasto",
+        ],
+      },
+    ],
     steps: {
       title: "Tres pasos para un teléfono más tranquilo",
       items: [
@@ -182,10 +113,363 @@ export const featurePagesEs: FeaturePagesCopy = {
         answer:
           "Estados Unidos, Canadá, Puerto Rico, Reino Unido, Francia, Alemania, España, Italia, Países Bajos, Portugal, México, Brasil, Israel, India, Japón, Australia, Nueva Zelanda y Serbia.",
       },
+      {
+        question: "¿Una llamada que contesto yo gasta minutos de voz?",
+        answer:
+          "No. Con El equipo contesta primero, una llamada que toma su equipo gasta un intento de transferencia y ningún minuto de voz.",
+      },
     ],
     closing: {
       titleLines: ["Atienda las llamadas que dejan dinero.", "Delegue el resto."],
       body: "Defina su número de transferencia y deje que LobbyStack filtre cada llamada.",
+    },
+  },
+  knowledge: {
+    seo: {
+      title: "Recepcionista con IA: base de conocimiento de su web | LobbyStack",
+      description:
+        "Pegue su sitio web y suba sus archivos. LobbyStack responde con sus horarios, precios y políticas, y lista cada pregunta que no pudo responder.",
+    },
+    name: "Base de conocimiento",
+    hero: {
+      title: "Pegue su sitio web. Su recepcionista ya conoce su negocio.",
+      intro:
+        "LobbyStack lee su sitio, sus documentos y sus notas, y responde con sus horarios, precios y políticas.",
+    },
+    facts: [
+      "Importa su sitio web",
+      "PDF, Word, texto y Markdown",
+      "Hasta 8,000 páginas en Pro",
+      "Lista lo que no pudo responder",
+    ],
+    benefits: {
+      title: "Responde como lo haría su equipo",
+      items: [
+        {
+          title: "Aprende de su sitio web",
+          body: "Pegue una URL y LobbyStack lee sus páginas públicas: servicios, horarios, precios y preguntas frecuentes.",
+        },
+        {
+          title: "Lee sus documentos",
+          body: "Suba listas de precios, políticas y formularios de admisión en PDF o Word, de hasta 10 MB cada uno.",
+        },
+        {
+          title: "Le dice lo que no pudo responder",
+          body: "Cada pregunta sin respuesta queda en una lista, las más repetidas primero. Escriba la respuesta una vez y la usa en las siguientes llamadas.",
+        },
+      ],
+    },
+    example: {
+      eyebrow: "Preguntas sin respuesta",
+      title: "Cada semana sabe más",
+      body: "Responda una pregunta de la lista y su recepcionista deja de fallarla.",
+      mock: {
+        kind: "rows",
+        rows: [
+          { label: "¿Trabajan con calentadores sin tanque?", value: "Preguntada 6 veces" },
+          { label: "¿Hay estacionamiento?", value: "Preguntada 4 veces" },
+          { label: "¿Ofrecen financiamiento?", value: "Preguntada 3 veces" },
+        ],
+      },
+    },
+    sections: [
+      {
+        title: "Los datos que más le piden",
+        body: "Su recepcionista responde con lo que usted le dio y, si no tiene el dato, sigue la instrucción que usted dejó.",
+        points: [
+          "Horarios, ubicación y estacionamiento",
+          "Servicios, precios y políticas",
+          "Requisitos de admisión y preguntas frecuentes",
+        ],
+      },
+      {
+        title: "Un negocio, varios agentes",
+        body: "Comparta el conocimiento entre todos los agentes o dele a uno el suyo propio.",
+        points: [
+          "Conocimiento compartido del negocio",
+          "Entradas para un solo agente",
+          "Edite cualquier entrada en el panel",
+        ],
+      },
+    ],
+    steps: {
+      title: "Listo en una sola sesión",
+      items: [
+        {
+          title: "Importe su sitio web",
+          body: "Pegue su página de inicio y LobbyStack lee las páginas que importan a quien llama.",
+        },
+        {
+          title: "Agregue lo que falta",
+          body: "Suba documentos o escriba respuestas cortas sobre horarios, estacionamiento y políticas.",
+        },
+        {
+          title: "Cubra los vacíos",
+          body: "Revise las preguntas sin respuesta y escriba cada respuesta una vez.",
+        },
+      ],
+    },
+    faqTitle: "Preguntas sobre la base de conocimiento",
+    faqs: [
+      {
+        question: "¿Qué archivos puedo subir?",
+        answer: "Archivos PDF, Word (DOCX), de texto y Markdown, de hasta 10 MB cada uno.",
+      },
+      {
+        question: "¿Cuánto puede guardar?",
+        answer:
+          "1 MB de texto en Free, 5 MB en Starter y 20 MB en Pro, unas 400, 2,000 y 8,000 páginas. El límite cuenta el texto extraído, no el tamaño del archivo.",
+      },
+      {
+        question: "¿Qué hace cuando no sabe?",
+        answer:
+          "Sigue la instrucción que usted dejó, como tomar un mensaje, y guarda la pregunta en Preguntas sin respuesta.",
+      },
+      {
+        question: "¿Lee todo mi sitio web?",
+        answer:
+          "Lee las páginas públicas pensadas para sus clientes. Omite las que requieren iniciar sesión y las de pago, carrito, cuenta, privacidad y términos.",
+      },
+      {
+        question: "¿Cuánto tarda en aplicarse una respuesta nueva?",
+        answer: "Las llamadas nuevas la usan poco después de que usted guarda.",
+      },
+      {
+        question: "¿Cada agente puede saber cosas distintas?",
+        answer:
+          "Sí. Sus agentes comparten el conocimiento por defecto, y usted puede darle a uno entradas propias.",
+      },
+    ],
+    closing: {
+      titleLines: ["Pegue su sitio web.", "Reciba su primera llamada."],
+      body: "Empiece gratis, importe su sitio y llame a su recepcionista desde su navegador.",
+    },
+  },
+  rules: {
+    seo: {
+      title: "Recepcionista con IA: reglas y precios a su manera | LobbyStack",
+      description:
+        "Entrene a su recepcionista con IA en lenguaje sencillo. Dígale qué preguntar, qué precios dar y cuándo transferir. Sigue sus reglas en cada llamada.",
+    },
+    name: "Reglas y precios",
+    hero: {
+      title: "Entrene a su recepcionista en lenguaje sencillo",
+      intro:
+        "Dígale a LobbyStack qué preguntar, qué precios dar y cuándo pasar la llamada, como se lo explicaría a un empleado nuevo. Sigue sus reglas en cada llamada.",
+    },
+    facts: [
+      "Reglas escritas con sus palabras",
+      "Precios fijos, desde o por rango",
+      "Usted decide qué regla manda",
+      "Habla más de 70 idiomas",
+    ],
+    benefits: {
+      title: "Su forma de trabajar, en cada llamada",
+      items: [
+        {
+          title: "Escríbalo como lo diría",
+          body: "“Si quien llama dice que es una emergencia, transfiéramelo.” Esa frase ya es una regla completa. Escríbala, guárdela y su recepcionista la cumple.",
+        },
+        {
+          title: "Dé sus precios reales",
+          body: "Asigne a cada servicio un precio fijo, un precio inicial o un rango. Su recepcionista da el precio que usted cargó y jamás inventa una cifra.",
+        },
+        {
+          title: "Decida qué pasa cuando duda",
+          body: "Indíquele que tome un mensaje, prometa devolver la llamada o la transfiera. Su recepcionista sigue esa instrucción en vez de adivinar.",
+        },
+      ],
+    },
+    example: {
+      eyebrow: "Una regla real",
+      title: "Una frase reemplaza todo un árbol de llamadas",
+      body: "Las reglas se aplican en el orden que usted fija, así que ganan las que más importan. Arrastre una regla al primer lugar y tendrá prioridad.",
+      mock: {
+        kind: "text",
+        text: "Si quien llama pregunta cuánto cuesta instalar un calentador de agua, dé nuestro rango de $1,800 a $3,200, pida su dirección y reserve una visita de presupuesto.",
+      },
+    },
+    sections: [
+      {
+        title: "Un agente para el día, otro para la noche",
+        body: "Cada agente guarda sus reglas: su línea de fuera de horario toma mensajes mientras la de día reserva citas.",
+        points: [
+          "Reglas por agente",
+          "Arrastre para fijar la prioridad",
+          "Plantillas para empezar",
+        ],
+      },
+      {
+        title: "Precios que nunca tiene que adivinar",
+        body: "Asigne un tipo de precio a cada servicio y su recepcionista lo da igual en cada llamada.",
+        points: ["Precio fijo", "Precio inicial", "Rango de precios"],
+      },
+    ],
+    steps: {
+      title: "Listo en una sola sesión",
+      items: [
+        {
+          title: "Cargue sus servicios y precios",
+          body: "Anote lo que vende, cuánto dura cada trabajo y cuánto cuesta.",
+        },
+        {
+          title: "Escriba sus reglas",
+          body: "Una instrucción por regla, con sus palabras. Hay plantillas para transferencias, devoluciones de llamada, llamadas fuera de horario y preguntas de precios.",
+        },
+        {
+          title: "Llame y escuche",
+          body: "Pruebe desde su navegador y cambie una regla el mismo día en que cambie su proceso.",
+        },
+      ],
+    },
+    faqTitle: "Preguntas sobre reglas y precios",
+    faqs: [
+      {
+        question: "¿Tengo que armar un flujo de llamadas?",
+        answer:
+          "No. Usted escribe instrucciones en lenguaje sencillo y su recepcionista las sigue. LobbyStack no tiene editor de diagramas de flujo.",
+      },
+      {
+        question: "¿Qué pasa si alguien pregunta algo que mis reglas no cubren?",
+        answer:
+          "Su recepcionista responde con lo que sabe de su negocio. Si no puede, sigue la instrucción que usted dejó: tomar un mensaje o transferir la llamada.",
+      },
+      {
+        question: "¿Puede dar precios?",
+        answer:
+          "Sí. Cada servicio admite un precio fijo, un precio inicial o un rango, y su recepcionista da el que usted cargó. Si no hay precio, no inventa uno.",
+      },
+      {
+        question: "¿Cada agente puede tener sus propias reglas?",
+        answer:
+          "Sí. Cada agente guarda sus reglas, así que un agente de fuera de horario puede actuar distinto al de día.",
+      },
+      {
+        question: "¿Puede reservar un presupuesto en vez de dar un precio?",
+        answer:
+          "Sí. Marque un servicio como de precio presencial y su recepcionista reserva la visita sin dar una cifra.",
+      },
+      {
+        question: "¿Mis reglas funcionan en otros idiomas?",
+        answer:
+          "Sí. Escríbalas en su idioma y su recepcionista las sigue en cada uno de los más de 70 idiomas que habla.",
+      },
+    ],
+    closing: {
+      titleLines: ["Explíquelo una vez.", "Ella atiende cada llamada."],
+      body: "Escriba su primera regla y escúchela hoy en una llamada de prueba.",
+    },
+  },
+  "voices-and-languages": {
+    seo: {
+      title: "Recepcionista con IA: voces en más de 70 idiomas | LobbyStack",
+      description:
+        "Elija entre 22 voces naturales, escriba su saludo y su recepcionista con IA contesta en más de 70 idiomas y cambia de idioma cuando quien llama lo hace.",
+    },
+    name: "Voces e idiomas",
+    hero: {
+      title: "Suena como su negocio, en más de 70 idiomas",
+      intro:
+        "Elija entre 22 voces, escriba su saludo y su recepcionista cambia de idioma en cuanto quien llama lo hace.",
+    },
+    facts: [
+      "22 voces para elegir",
+      "Habla más de 70 idiomas",
+      "Su propio saludo",
+      "Funciona con OpenAI GPT-Live",
+    ],
+    benefits: {
+      title: "La primera impresión es suya",
+      items: [
+        {
+          title: "Elija la voz que escuchan",
+          body: "Escuche las 22 voces en su idioma y elija la que va con su negocio.",
+        },
+        {
+          title: "Salude a su manera",
+          body: "Escriba la frase inicial con el nombre de su negocio y en qué puede ayudar.",
+        },
+        {
+          title: "Cambia de idioma en plena llamada",
+          body: "Alguien empieza en español o pide francés, y su recepcionista responde en ese idioma.",
+        },
+      ],
+    },
+    example: {
+      eyebrow: "Su saludo",
+      title: "La primera frase marca el tono",
+      body: "Que sea corto y concreto. Cámbielo cuando quiera: las llamadas nuevas lo usan poco después de que usted guarda.",
+      mock: {
+        kind: "text",
+        text: "Gracias por llamar a Peak HVAC. ¿Llama por un servicio, una cita o una urgencia?",
+      },
+    },
+    sections: [
+      {
+        title: "Un número para cada idioma que hablan sus clientes",
+        body: "LobbyStack habla más de 70 idiomas, entre ellos español y francés. Sus reglas y precios son los mismos en todos.",
+        points: [
+          "Cambia cuando quien llama lo hace",
+          "Las mismas reglas en cada idioma",
+          "Sin cargo extra por idioma",
+        ],
+      },
+      {
+        title: "Una voz para cada agente",
+        body: "Tenga un agente de día y otro de fuera de horario, cada uno con su voz y su saludo.",
+        points: ["Voz por agente", "Saludo por agente", "Llamadas de prueba desde su navegador"],
+      },
+    ],
+    steps: {
+      title: "Tres pasos hasta su voz",
+      items: [
+        {
+          title: "Elija una voz",
+          body: "Escuche las muestras y elija una.",
+        },
+        {
+          title: "Escriba su saludo",
+          body: "Una o dos frases, lo primero que se escucha.",
+        },
+        {
+          title: "Llame",
+          body: "Haga una llamada de prueba desde su navegador y escuche.",
+        },
+      ],
+    },
+    faqTitle: "Preguntas sobre voces e idiomas",
+    faqs: [
+      {
+        question: "¿Cuántas voces hay?",
+        answer: "22, cada una con su tono y su ritmo. Puede escucharlas todas antes de elegir.",
+      },
+      {
+        question: "¿Qué idiomas habla?",
+        answer:
+          "Más de 70 idiomas, entre ellos inglés, francés, español y serbio. Cambia cuando quien llama habla otro idioma o lo pide.",
+      },
+      {
+        question: "¿Los otros idiomas cuestan más?",
+        answer: "No. Los precios de LobbyStack no tienen cargo extra por idioma.",
+      },
+      {
+        question: "¿Va a sonar robótica?",
+        answer:
+          "Llame y juzgue. El plan Free incluye 30 minutos de voz, y puede hacer una llamada de prueba desde su navegador.",
+      },
+      {
+        question: "¿Puedo cambiar la voz más adelante?",
+        answer:
+          "Sí. Las llamadas nuevas usan la voz nueva poco después de que usted guarda, y una llamada en curso conserva la voz con la que empezó.",
+      },
+      {
+        question: "¿Cada agente puede tener una voz distinta?",
+        answer: "Sí. Cada agente tiene su voz y su saludo.",
+      },
+    ],
+    closing: {
+      titleLines: ["Escúchela antes que sus clientes."],
+      body: "Empiece gratis y haga una llamada de prueba desde su navegador.",
     },
   },
   inbox: {
@@ -237,6 +521,22 @@ export const featurePagesEs: FeaturePagesCopy = {
         ],
       },
     },
+    sections: [
+      {
+        title: "Encuentre cualquier llamada en segundos",
+        body: "Busque en contactos, llamadas y mensajes, o filtre la lista por canal y por agente.",
+        points: ["Busque con Cmd+K", "Filtre por teléfono o SMS", "Filtre por agente"],
+      },
+      {
+        title: "Cada persona que llama tiene su historial",
+        body: "LobbyStack crea un contacto por cada persona que llama, con sus llamadas, SMS y citas en orden.",
+        points: [
+          "Cronología de actividad",
+          "Citas y su estado",
+          "Bloquee llamadas no deseadas",
+        ],
+      },
+    ],
     steps: {
       title: "Del timbre al seguimiento",
       items: [
@@ -274,44 +574,53 @@ export const featurePagesEs: FeaturePagesCopy = {
         question: "¿La IA responde los SMS?",
         answer: "No. Los SMS que llegan al número de su negocio esperan en la Bandeja de entrada a que su equipo los responda.",
       },
+      {
+        question: "¿Mi equipo puede responder los SMS desde la Bandeja de entrada?",
+        answer:
+          "Sí. Abra la conversación y envíe su respuesta. La IA no responde los SMS, así que cada uno espera a una persona.",
+      },
+      {
+        question: "¿Aparecen las llamadas que contestó mi equipo?",
+        answer: "Sí. Aparecen como Atendida por su equipo, sin transcripción ni grabación.",
+      },
     ],
     closing: {
       titleLines: ["Sus llamadas, ya por escrito."],
       body: "Empiece gratis y lea hoy la transcripción de su primera llamada.",
     },
   },
-  "sms-notifications": {
+  notifications: {
     seo: {
-      title: "SMS de confirmación y recordatorio de citas | LobbyStack",
+      title: "Resúmenes de llamadas por correo y alertas por SMS | LobbyStack",
       description:
-        "LobbyStack confirma cada cita por SMS, envía un recordatorio 24 horas antes y avisa a su equipo por SMS cuando hay que devolver una llamada.",
+        "LobbyStack le envía un resumen por correo tras cada llamada, avisa por SMS a su equipo si hay que devolver una y confirma y recuerda las citas a sus clientes.",
     },
-    name: "Notificaciones por SMS",
+    name: "Notificaciones",
     hero: {
-      title: "Menos ausencias y seguimientos más rápidos",
+      title: "Cada llamada, resumida en su correo",
       intro:
-        "LobbyStack envía a sus clientes un SMS de confirmación en cuanto reservan y un recordatorio 24 horas antes. A su equipo le avisa por SMS cuando hay que devolver una llamada.",
+        "LobbyStack le escribe un correo tras cada llamada y un SMS cuando hay que devolver una. Sus clientes reciben por SMS su confirmación y un recordatorio.",
     },
     facts: [
+      "Resumen por correo de cada llamada",
+      "Alertas por SMS a su equipo",
       "SMS de confirmación al reservar",
       "Recordatorio 24 horas antes",
-      "Alertas al equipo por SMS o correo",
-      "Ningún número que registrar",
     ],
     benefits: {
-      title: "SMS que salen sin usted",
+      title: "Se entera sin tener que revisar",
       items: [
+        {
+          title: "Un resumen tras cada llamada",
+          body: "Quién llamó, la hora, la duración y qué quería, por correo y con un enlace a la llamada completa.",
+        },
+        {
+          title: "Un SMS cuando es urgente",
+          body: "Un mensaje que pide devolver la llamada, una transferencia fallida, un SMS nuevo de un cliente. Elija cuáles llegan a su teléfono.",
+        },
         {
           title: "Sus clientes se presentan",
           body: "Cada persona que reserva y acepta recibe una confirmación y un recordatorio el día anterior. Su recepcionista pide permiso durante la llamada.",
-        },
-        {
-          title: "Su equipo se entera al momento",
-          body: "Un mensaje que pide devolver la llamada, una transferencia fallida, un SMS nuevo de un cliente. LobbyStack avisa a quienes pueden resolverlo.",
-        },
-        {
-          title: "En regla desde el primer SMS",
-          body: "LobbyStack pide el consentimiento de cada cliente, respeta STOP y HELP, y envía desde un número gratuito verificado. Usted no registra nada.",
         },
       ],
     },
@@ -327,25 +636,51 @@ export const featurePagesEs: FeaturePagesCopy = {
         ],
       },
     },
+    sections: [
+      {
+        title: "Usted elige qué lo interrumpe",
+        body: "Active o desactive cada alerta, por correo, por SMS o ambos.",
+        points: ["Llamada contestada", "Llamada por devolver", "Transferencia fallida"],
+      },
+      {
+        title: "En regla desde el primer SMS",
+        body: "LobbyStack pide el consentimiento de cada cliente durante la llamada, respeta STOP y HELP, y envía desde un número gratuito verificado.",
+        points: [
+          "Consentimiento registrado por número",
+          "STOP y HELP atendidos",
+          "Ningún número que registrar",
+        ],
+      },
+    ],
     steps: {
-      title: "Cómo salen los SMS",
+      title: "Cómo le llega",
       items: [
         {
-          title: "Alguien llama y reserva",
-          body: "Su recepcionista pregunta si puede enviar la confirmación por SMS.",
+          title: "LobbyStack atiende la llamada",
+          body: "Contesta, reserva o toma un mensaje, según sus reglas.",
         },
         {
-          title: "LobbyStack envía los SMS",
-          body: "La confirmación sale de inmediato y el recordatorio, 24 horas antes de la cita.",
+          title: "Usted recibe el resumen",
+          body: "Un correo por cada llamada y un SMS por las alertas que eligió.",
         },
         {
-          title: "Su equipo recibe sus alertas",
-          body: "Elija correo, SMS o ambos para cada tipo de alerta.",
+          title: "Su cliente recibe un SMS",
+          body: "La confirmación sale al reservar y el recordatorio, 24 horas antes.",
         },
       ],
     },
-    faqTitle: "Preguntas sobre las notificaciones por SMS",
+    faqTitle: "Preguntas sobre las notificaciones",
     faqs: [
+      {
+        question: "¿Puedo desactivar el correo de cada llamada?",
+        answer:
+          "Sí. Desmarque Llamada contestada en sus ajustes de notificaciones y conserve las alertas que piden una acción.",
+      },
+      {
+        question: "¿Qué planes incluyen SMS?",
+        answer:
+          "Las notificaciones por SMS están en Starter y Pro. Starter incluye 50 segmentos de notificaciones por SMS al mes y Pro incluye 200.",
+      },
       {
         question: "¿Tengo que registrar un número para enviar SMS?",
         answer:
@@ -356,9 +691,8 @@ export const featurePagesEs: FeaturePagesCopy = {
         answer: "Estados Unidos, Canadá y Puerto Rico en LobbyStack cloud.",
       },
       {
-        question: "¿Qué planes incluyen SMS?",
-        answer:
-          "Las notificaciones por SMS están en Starter y Pro. Starter incluye 50 segmentos de notificaciones por SMS al mes y Pro incluye 200.",
+        question: "¿Mis clientes tienen que aceptar los SMS para reservar?",
+        answer: "No. Quien los rechaza igual obtiene su cita, sin los SMS.",
       },
       {
         question: "¿La IA responde los SMS?",
@@ -367,8 +701,124 @@ export const featurePagesEs: FeaturePagesCopy = {
       },
     ],
     closing: {
-      titleLines: ["Cita reservada, cita cumplida."],
-      body: "Active las notificaciones por SMS y deje que LobbyStack envíe las confirmaciones.",
+      titleLines: ["Deje de revisar.", "Que le avisen."],
+      body: "Empiece gratis y reciba hoy por correo el resumen de su primera llamada.",
+    },
+  },
+  analytics: {
+    seo: {
+      title: "Recepcionista con IA: valor reservado y tiempo ahorrado | LobbyStack",
+      description:
+        "Vea lo que su recepcionista con IA le hizo ganar: el valor de los trabajos reservados, las horas ahorradas, cómo terminó cada llamada y la tendencia semanal.",
+    },
+    name: "Analíticas",
+    hero: {
+      title: "Vea lo que su recepcionista le hizo ganar",
+      intro:
+        "LobbyStack muestra el valor de los trabajos que reservó, las horas que le ahorró y cuántas llamadas resolvió sin su equipo.",
+    },
+    facts: [
+      "Valor reservado, últimos 30 días",
+      "Tiempo ahorrado en llamadas",
+      "Llamadas resueltas sin transferir",
+      "Tendencias semana a semana",
+    ],
+    benefits: {
+      title: "La prueba de que el teléfono deja dinero",
+      items: [
+        {
+          title: "Valor reservado en dólares",
+          body: "LobbyStack suma el precio de cada cita que reservó, y usted ve cuánto trajo el teléfono.",
+        },
+        {
+          title: "Horas de vuelta en su semana",
+          body: "El tiempo de conversación de las llamadas que atendió su recepcionista, en horas y minutos.",
+        },
+        {
+          title: "Cómo terminó cada llamada",
+          body: "Vea cuántas llamadas se completaron, se transfirieron o se perdieron, y cuánto cambió frente a la semana anterior.",
+        },
+      ],
+    },
+    example: {
+      eyebrow: "Sus últimos 30 días",
+      title: "Tres cifras en su página de inicio",
+      body: "Abra el panel y el resultado es lo primero que ve.",
+      mock: {
+        kind: "rows",
+        rows: [
+          { label: "Valor reservado", value: "$4,860" },
+          { label: "Tiempo ahorrado", value: "11 h 20 min" },
+          { label: "Llamadas sin transferir", value: "86%" },
+        ],
+      },
+    },
+    sections: [
+      {
+        title: "Sepa cuándo sumar cobertura",
+        body: "Las tendencias semanales muestran cuándo suben las llamadas, las citas o la duración, para que ajuste su personal.",
+        points: [
+          "Llamadas de esta semana frente a la anterior",
+          "Duración media de las llamadas",
+          "Citas reservadas",
+        ],
+      },
+      {
+        title: "Cifras en las que puede confiar",
+        body: "El valor reservado cuenta un precio inicial por su mínimo y un rango por su extremo bajo, y excluye las citas canceladas.",
+        points: [
+          "Citas canceladas excluidas",
+          "Las llamadas de su equipo, aparte",
+          "Elija sus propias fechas",
+        ],
+      },
+    ],
+    steps: {
+      title: "Dónde mirar",
+      items: [
+        {
+          title: "LobbyStack atiende sus llamadas",
+          body: "Cada llamada y cada cita se cuenta en el momento.",
+        },
+        {
+          title: "Abra Inicio",
+          body: "Valor reservado, tiempo ahorrado y llamadas sin transferir de los últimos 30 días.",
+        },
+        {
+          title: "Abra Analíticas",
+          body: "Tendencias, resultados de llamadas y canales en las fechas que elija.",
+        },
+      ],
+    },
+    faqTitle: "Preguntas sobre las analíticas",
+    faqs: [
+      {
+        question: "¿Cómo se calcula el valor reservado?",
+        answer:
+          "Suma el precio de cada cita que su recepcionista reservó en los últimos 30 días. Un precio fijo cuenta completo, un precio inicial por su mínimo y un rango por su extremo bajo.",
+      },
+      {
+        question: "¿Qué cuenta como tiempo ahorrado?",
+        answer: "El tiempo de conversación de las llamadas que atendió su recepcionista.",
+      },
+      {
+        question: "¿Cuenta las llamadas que contestó mi equipo?",
+        answer:
+          "No. Las llamadas que su equipo toma con El equipo contesta primero quedan fuera de las cifras. Las encuentra en la Bandeja de entrada.",
+      },
+      {
+        question: "¿Qué fechas puedo ver?",
+        answer: "Inicio cubre los últimos 30 días. Analíticas cubre las fechas que usted elija.",
+      },
+      {
+        question: "¿Se cuentan las citas canceladas?",
+        answer:
+          "No. El valor reservado las excluye, igual que las citas que su equipo reservó en el panel o por la API.",
+      },
+    ],
+    closing: {
+      titleLines: ["Sepa cuánto trae el teléfono."],
+      body: "Empiece gratis y vea aparecer su primera llamada con cita reservada.",
     },
   },
   integrations: {
@@ -422,6 +872,22 @@ export const featurePagesEs: FeaturePagesCopy = {
         ],
       },
     },
+    sections: [
+      {
+        title: "Tres calendarios, disponibilidad real",
+        body: "Su recepcionista lee sus horas ocupadas antes de ofrecer un horario y anota la cita en su calendario.",
+        points: ["Google Calendar", "Cal.com", "Calendly"],
+      },
+      {
+        title: "Construya sobre LobbyStack",
+        body: "La API REST y el servidor MCP dan a sus desarrolladores y a su asistente de IA las mismas llamadas, contactos y citas.",
+        points: [
+          "API REST con claves de API",
+          "Webhooks firmados",
+          "Servidor MCP para asistentes de IA",
+        ],
+      },
+    ],
     steps: {
       title: "Conectado en tres pasos",
       items: [
@@ -460,6 +926,15 @@ export const featurePagesEs: FeaturePagesCopy = {
         question: "¿Qué pasa si mi endpoint se cae?",
         answer:
           "LobbyStack reintenta durante unas 23 horas, luego desactiva el endpoint y avisa a su equipo. Reenvíe los eventos que perdió desde el registro de entregas.",
+      },
+      {
+        question: "¿Las integraciones están en todos los planes?",
+        answer: "Sí. Zapier, los webhooks y el servidor MCP están en todos los planes.",
+      },
+      {
+        question: "¿Puede mover o cancelar un evento de mi calendario?",
+        answer:
+          "Sí. Si usted permite los cambios de cita, LobbyStack actualiza el evento en su calendario.",
       },
     ],
     closing: {

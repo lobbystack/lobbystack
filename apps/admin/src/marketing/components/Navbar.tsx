@@ -17,7 +17,7 @@ import {
   History,
   Home,
   KeyRound,
-  LayoutGrid,
+  ArrowRight,
   Menu,
   Moon,
   Newspaper,
@@ -35,6 +35,8 @@ import {
 
 type NavChildLink = {
   label: string
+  /** One line under the label. */
+  description?: string
   href: string
   external?: boolean
   icon?: LucideIcon
@@ -52,6 +54,8 @@ type NavLink =
       type: "group"
       label: string
       columns: NavColumn[]
+      /** A link under the columns, such as the whole list. */
+      footer?: NavChildLink
     }
 
 const labels = {
@@ -246,19 +250,18 @@ const resourceLinks = (locale: Locale) =>
     },
   ] satisfies NavChildLink[]
 
-/** The first three groups of the features index, then a link to the whole index. */
+/** The first four groups of the features index, each feature with its one-line description. */
 const productColumns = (locale: Locale): NavColumn[] => {
   const copy = featureIndexCopy[locale]
-  const columns: NavColumn[] = featureGroups.slice(0, 3).map((group) => ({
+  return featureGroups.slice(0, 4).map((group) => ({
     title: copy.groups[group.id],
     links: group.features.map((id) => ({
       label: copy.features[id].title,
+      description: copy.features[id].tagline,
       href: featureLink(locale, id).href,
       icon: featureIcons[id],
     })),
   }))
-  columns[2]?.links.push({ label: labels[locale].allFeatures, href: "/features/", icon: LayoutGrid })
-  return columns
 }
 
 const solutionLinks = (locale: Locale) =>
@@ -382,6 +385,7 @@ const navLinks = (locale: Locale): NavLink[] => [
     type: "group",
     label: labels[locale].product,
     columns: productColumns(locale),
+    footer: { label: labels[locale].allFeatures, href: "/features/" },
   },
   {
     type: "group",
@@ -451,7 +455,8 @@ export function Navbar({ locale = "en" }: NavbarProps) {
                       link.columns.length === 3 &&
                         "w-max origin-[25%_0] -translate-x-1/4 grid-cols-[minmax(13rem,max-content)_minmax(13rem,max-content)_minmax(13rem,max-content)] gap-x-8 p-4",
                       link.columns.length === 4 &&
-                        "w-max origin-[25%_0] -translate-x-1/4 grid-cols-[minmax(13rem,max-content)_minmax(13rem,max-content)_minmax(13rem,max-content)_minmax(13rem,max-content)] gap-x-8 p-4"
+                        // Four columns fold to two by two below xl, so the menu fits a 1024px window.
+                        "w-max origin-[25%_0] -translate-x-1/4 grid-cols-[repeat(2,minmax(13rem,max-content))] gap-x-8 p-4 xl:grid-cols-[repeat(4,minmax(13rem,max-content))]"
                     )}
                   >
                     {link.columns.map((column, columnIndex) => (
@@ -495,7 +500,7 @@ export function Navbar({ locale = "en" }: NavbarProps) {
                               }
                               className="group/link flex min-w-0 items-center justify-between gap-4 rounded-md px-3 py-2.5 text-sm text-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:text-foreground focus-visible:outline-none"
                             >
-                              <span className="flex min-w-0 items-center gap-2.5">
+                              <span className="flex min-w-0 items-start gap-2.5">
                                 {LinkIcon && (
                                   <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground transition-colors group-hover/link:text-foreground">
                                     <LinkIcon
@@ -507,6 +512,11 @@ export function Navbar({ locale = "en" }: NavbarProps) {
                                 )}
                                 <span className="min-w-0">
                                   {resourceLink.label}
+                                  {resourceLink.description && (
+                                    <span className="mt-0.5 block text-[0.8125rem] leading-snug font-normal text-muted-foreground">
+                                      {resourceLink.description}
+                                    </span>
+                                  )}
                                 </span>
                               </span>
                               {resourceLink.external && (
@@ -520,6 +530,19 @@ export function Navbar({ locale = "en" }: NavbarProps) {
                         })}
                       </div>
                     ))}
+                    {link.footer && (
+                      <a
+                        href={localizeHref(locale, link.footer.href)}
+                        data-ph-capture-attribute-section="navbar"
+                        data-ph-capture-attribute-action="navigate"
+                        data-ph-capture-attribute-destination={link.footer.href}
+                        data-ph-capture-attribute-label={link.footer.label}
+                        className="col-span-full flex items-center gap-1.5 border-t border-border/70 px-3 pt-4 pb-1 text-sm font-medium text-foreground hover:underline focus-visible:underline focus-visible:outline-none"
+                      >
+                        {link.footer.label}
+                        <ArrowRight className="size-3.5" aria-hidden="true" />
+                      </a>
+                    )}
                   </div>
                 </details>
               ) : (
@@ -635,7 +658,7 @@ export function Navbar({ locale = "en" }: NavbarProps) {
                                 }
                                 className="group/link flex min-w-0 items-center justify-between gap-4 rounded-md px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:text-foreground focus-visible:outline-none"
                               >
-                                <span className="flex min-w-0 items-center gap-2.5">
+                                <span className="flex min-w-0 items-start gap-2.5">
                                   {LinkIcon && (
                                     <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground transition-colors group-hover/link:text-foreground">
                                       <LinkIcon
@@ -660,6 +683,19 @@ export function Navbar({ locale = "en" }: NavbarProps) {
                           })}
                         </div>
                       ))}
+                      {link.footer && (
+                        <a
+                          href={localizeHref(locale, link.footer.href)}
+                          data-ph-capture-attribute-section="mobile_navbar"
+                          data-ph-capture-attribute-action="navigate"
+                          data-ph-capture-attribute-destination={link.footer.href}
+                          data-ph-capture-attribute-label={link.footer.label}
+                          className="flex items-center gap-1.5 rounded-md px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted focus-visible:bg-muted focus-visible:outline-none"
+                        >
+                          {link.footer.label}
+                          <ArrowRight className="size-3.5" aria-hidden="true" />
+                        </a>
+                      )}
                     </div>
                   </details>
                 ) : (

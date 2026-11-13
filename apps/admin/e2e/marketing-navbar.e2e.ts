@@ -37,10 +37,10 @@ test("the Product menu opens the features index, and a feature card opens its pa
   await expect(page).toHaveURL(`${site}/features/`);
 
   const index = page.locator("#feature-index");
-  await expect(index.getByRole("link")).toHaveCount(12);
-  await index.getByRole("link", { name: /SMS notifications/ }).click();
-  await expect(page).toHaveURL(`${site}/features/sms-notifications/`);
-  await expect(page.getByRole("heading", { level: 1, name: "Fewer no-shows and faster follow-ups" })).toBeVisible();
+  await expect(index.getByRole("link")).toHaveCount(15);
+  await index.getByRole("link", { name: /Notifications/ }).click();
+  await expect(page).toHaveURL(`${site}/features/notifications/`);
+  await expect(page.getByRole("heading", { level: 1, name: "Every call, summarized in your inbox" })).toBeVisible();
 });
 
 test("a signed-in visitor gets one Dashboard link in their language", async ({ page: signUpPage, context }, testInfo) => {

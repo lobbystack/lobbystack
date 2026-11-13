@@ -1,4 +1,13 @@
-export const featurePageSlugs = ["rules", "call-transfers", "inbox", "sms-notifications", "integrations"] as const
+export const featurePageSlugs = [
+  "call-transfers",
+  "knowledge",
+  "rules",
+  "voices-and-languages",
+  "inbox",
+  "notifications",
+  "analytics",
+  "integrations",
+] as const
 
 export type FeaturePageSlug = (typeof featurePageSlugs)[number]
 
@@ -16,6 +25,8 @@ export type FeaturePageCopy = {
   facts: string[]
   benefits: { title: string; items: { title: string; body: string }[] }
   example: { eyebrow: string; title: string; body: string; mock: FeatureMock }
+  /** Two illustrated sections, each a claim with three short points. */
+  sections: { title: string; body: string; points: string[] }[]
   steps: { title: string; items: { title: string; body: string }[] }
   faqTitle: string
   faqs: { question: string; answer: string }[]

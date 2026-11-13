@@ -1,15 +1,21 @@
 import {
+  AudioLines,
   BellRing,
   CalendarCheck,
+  Check,
   CircleHelp,
   ClipboardCheck,
+  Clock,
   DollarSign,
   FileText,
+  Globe,
+  Languages,
   ListChecks,
+  Mail,
   MessageSquareText,
   Pencil,
   PhoneForwarded,
-  ShieldCheck,
+  PieChart,
   UserRound,
   Voicemail,
   Webhook,
@@ -21,7 +27,8 @@ import { notFound } from "next/navigation"
 import { FaqSection } from "@/marketing/components/FaqSection"
 import { Footer } from "@/marketing/components/Footer"
 import { Navbar } from "@/marketing/components/Navbar"
-import { ProductScene, type ProductSceneName } from "@/marketing/components/scenes/ProductScenes"
+import { FeatureCard } from "@/marketing/components/features/FeatureIndex"
+import { SceneArt, type AnyScene } from "@/marketing/components/solution-layouts/solution/SolutionSections"
 import { ButtonLink } from "@/marketing/components/system/ButtonLink"
 import { ClosingCta } from "@/marketing/components/system/ClosingCta"
 import { FactStrip } from "@/marketing/components/system/FactStrip"
@@ -32,6 +39,7 @@ import { SplitCard } from "@/marketing/components/system/SplitCard"
 import { getCopy, localizeHref, localizePath, type Locale } from "@/marketing/i18n"
 import { appSignupUrl } from "@/marketing/lib/app-links"
 import { eyebrow } from "@/marketing/lib/eyebrows"
+import { featureGroups, type FeatureId } from "@/marketing/lib/feature-index"
 import {
   featurePagePath,
   getFeaturePage,
@@ -52,20 +60,47 @@ const container = "mx-auto w-full max-w-site px-6"
 
 /** One icon per benefit, in the order the copy lists them. */
 const benefitIcons: Record<FeaturePageSlug, [LucideIcon, LucideIcon, LucideIcon]> = {
-  rules: [Pencil, DollarSign, CircleHelp],
   "call-transfers": [PhoneForwarded, UserRound, Voicemail],
+  knowledge: [Globe, FileText, CircleHelp],
+  rules: [Pencil, DollarSign, CircleHelp],
+  "voices-and-languages": [AudioLines, MessageSquareText, Languages],
   inbox: [FileText, ListChecks, ClipboardCheck],
-  "sms-notifications": [MessageSquareText, BellRing, ShieldCheck],
+  notifications: [Mail, BellRing, CalendarCheck],
+  analytics: [DollarSign, Clock, PieChart],
   integrations: [CalendarCheck, Zap, Webhook],
 }
 
-/** The scene beside each page's headline. */
-const heroScenes: Record<FeaturePageSlug, ProductSceneName> = {
-  rules: "knowledge",
-  "call-transfers": "handoff",
-  inbox: "summary",
-  "sms-notifications": "booking",
+/** The scene beside each page's headline, then one for each of its two sections. */
+const pageScenes: Record<FeaturePageSlug, [AnyScene, AnyScene, AnyScene]> = {
+  "call-transfers": [{ product: "handoff" }, { product: "routing" }, { solution: "coverage" }],
+  knowledge: [{ product: "knowledge" }, { product: "callCapture" }, { product: "guardrails" }],
+  rules: [{ product: "guardrails" }, { solution: "overnight" }, { product: "jobBooked" }],
+  "voices-and-languages": [{ solution: "languages" }, { product: "callCapture" }, { solution: "coverage" }],
+  inbox: [{ product: "summary" }, { product: "answeredBooked" }, { product: "routing" }],
+  notifications: [{ solution: "reminder" }, { product: "summary" }, { product: "booking" }],
+  analytics: [{ product: "jobBooked" }, { product: "answeredBooked" }, { product: "summary" }],
+  integrations: [{ product: "integrations" }, { product: "booking" }, { product: "guardrails" }],
+}
+
+/** The feature on the index that each page belongs to. */
+const pageFeature: Record<FeaturePageSlug, FeatureId> = {
+  "call-transfers": "transfers",
+  knowledge: "knowledge",
+  rules: "rules",
+  "voices-and-languages": "voices",
+  inbox: "inbox",
+  notifications: "notifications",
+  analytics: "analytics",
   integrations: "integrations",
+}
+
+/** Three other features to read next: the rest of this one's group, then the next group's first. */
+function relatedFeatures(slug: FeaturePageSlug): FeatureId[] {
+  const self = pageFeature[slug]
+  const groupIndex = featureGroups.findIndex((group) => group.features.includes(self))
+  const group = featureGroups[groupIndex]?.features ?? []
+  const next = featureGroups[(groupIndex + 1) % featureGroups.length]?.features ?? []
+  return [...group.filter((id) => id !== self), ...next].slice(0, 3)
 }
 
 function pageOr404(locale: Locale, slug: string) {
@@ -140,6 +175,7 @@ export function FeatureDetailPage({ locale, slug: rawSlug }: { locale: Locale; s
     "data-ph-capture-attribute-destination": signup,
   })
   const icons = benefitIcons[slug]
+  const scenes = pageScenes[slug]
 
   return (
     <>
@@ -167,7 +203,7 @@ export function FeatureDetailPage({ locale, slug: rawSlug }: { locale: Locale; s
                 </ButtonLink>
               </>
             }
-            art={<ProductScene name={heroScenes[slug]} locale={locale} fit="panel" neutral />}
+            art={<SceneArt scene={scenes[0]} locale={locale} fit="hero" />}
           />
           <div className={`${container} mt-12 md:mt-16`}>
             <FactStrip facts={page.facts} />
@@ -207,6 +243,30 @@ export function FeatureDetailPage({ locale, slug: rawSlug }: { locale: Locale; s
           </div>
         </section>
 
+        <section className="pt-6" id="more">
+          <div className={`${container} grid gap-6`}>
+            {page.sections.map((section, index) => (
+              <SplitCard
+                key={section.title}
+                reverse={index % 2 === 0}
+                headingLevel="h2"
+                title={section.title}
+                body={section.body}
+                media={<SceneArt scene={scenes[index + 1] ?? scenes[0]} locale={locale} fit="panel" />}
+              >
+                <ul className="mt-6 grid gap-2.5">
+                  {section.points.map((point) => (
+                    <li key={point} className="flex items-center gap-2.5 text-base text-foreground/80">
+                      <Check className="size-4 shrink-0 text-beige-foreground" aria-hidden="true" />
+                      {point}
+                    </li>
+                  ))}
+                </ul>
+              </SplitCard>
+            ))}
+          </div>
+        </section>
+
         <section className="section-spacing" id="how-it-works">
           <div className={container}>
             <SectionTitle className="max-w-3xl">{page.steps.title}</SectionTitle>
@@ -223,6 +283,22 @@ export function FeatureDetailPage({ locale, slug: rawSlug }: { locale: Locale; s
         </section>
 
         <FaqSection className="" heading={page.faqTitle} faqs={page.faqs} />
+
+        <section className="section-spacing" id="related">
+          <div className={container}>
+            <p className="eyebrow">{eyebrow(locale, "features.wall")}</p>
+            <div className="mt-4 grid gap-px overflow-hidden rounded-2xl border border-border/70 bg-border/70 md:grid-cols-3">
+              {relatedFeatures(slug).map((id) => (
+                <FeatureCard key={id} locale={locale} id={id} />
+              ))}
+            </div>
+            <div className="mt-6">
+              <ButtonLink href={localizeHref(locale, "/features/")} variant="secondary">
+                {common.seeFullFeatureList}
+              </ButtonLink>
+            </div>
+          </div>
+        </section>
 
         <ClosingCta
           titleLines={page.closing.titleLines}

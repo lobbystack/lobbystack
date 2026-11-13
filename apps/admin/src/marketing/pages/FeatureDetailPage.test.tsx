@@ -24,6 +24,8 @@ describe("feature pages", () => {
     expect(body).toContain(page.hero.title)
     for (const item of [...page.benefits.items, ...page.steps.items]) expect(body).toContain(item.title)
     for (const faq of page.faqs) expect(body).toContain(faq.question)
+    expect(page.sections).toHaveLength(2)
+    for (const section of page.sections) expect(body).toContain(section.title)
   })
 
   it.each(SUPPORTED_LOCALES.filter((locale) => locale !== "en"))("keeps the %s copy in the shape of the English copy", (locale: Locale) => {
