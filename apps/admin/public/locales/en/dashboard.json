@@ -285,6 +285,7 @@
     "callAgain": "Call it again",
     "steps": {
       "fullScan": "Read the rest of your site",
+      "website": "Add your website",
       "sources": "Add more sources",
       "hours": "Add opening hours",
       "testCall": "Hear your agent",
@@ -295,6 +296,7 @@
     },
     "stepDescriptions": {
       "fullScan": "Your agent has read a sample of your site.",
+      "website": "Your agent answers callers from what it reads there.",
       "sources": "Upload your policies, FAQs or pricing.",
       "hours": "Your agent books appointments only during these hours.",
       "testCall": "Ask what your callers ask most.",
@@ -305,6 +307,7 @@
     },
     "stepActions": {
       "fullScan": "Read the rest",
+      "website": "Import website",
       "sources": "Upload document",
       "hours": "Add hours",
       "testCall": "Start a call",

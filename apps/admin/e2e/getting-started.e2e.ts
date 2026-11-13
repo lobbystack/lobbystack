@@ -2,8 +2,9 @@ import { expect, test, type Page, type TestInfo } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 
-import { businesses, createDatabaseClient, websiteIngestionJobs } from "@lobbystack/db";
+import { businesses, createDatabaseClient, defaultAgentIdOf, phoneNumbers, websiteIngestionJobs } from "@lobbystack/db";
 
+import agent from "../public/locales/en/agent.json" with { type: "json" };
 import common from "../public/locales/en/common.json" with { type: "json" };
 import dashboard from "../public/locales/en/dashboard.json" with { type: "json" };
 import onboarding from "../public/locales/en/onboarding.json" with { type: "json" };
@@ -126,6 +127,51 @@ test("Getting started says a website read stalled, and Try again starts it again
     await expect(page.getByText(common.websiteImport.inlineRunning.replace("{{host}}", "stalled.example.invalid").replace("{{count}}", "0"), { exact: true })).toBeVisible();
     const [job] = await database.db.select({ status: websiteIngestionJobs.status }).from(websiteIngestionJobs).where(eq(websiteIngestionJobs.rootDocumentId, documentId));
     expect(job?.status).toBe("queued");
+  } finally {
+    if (businessId) await database.db.execute(sql`delete from public.outbox_messages where business_id = ${businessId}`);
+    await removeFixtures(database, email, businessId);
+    await database.pool.end();
+  }
+});
+
+test("Getting started asks a business that gave no website for one, under keeping its number, and counts it once read", async ({ page }, testInfo) => {
+  test.setTimeout(120_000);
+  const database = migrator();
+  const email = `${prefix}-${randomUUID()}@example.invalid`;
+  let businessId: string | undefined;
+  try {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    businessId = await newOwner(page, testInfo, database, email);
+    // A direct business with a number gets the number list.
+    await database.db.insert(phoneNumbers).values({ businessId, agentId: defaultAgentIdOf(businessId), e164: `+1416${String(Math.floor(Math.random() * 10_000_000)).padStart(7, "0")}`, providerPhoneId: `PN${randomUUID().replaceAll("-", "")}`, status: "active" });
+    await page.goto("/");
+    await expect(list(page)).toBeVisible();
+    const steps = page.locator('[data-slot="accordion-item"]');
+    const website = steps.filter({ hasText: dashboard.setupGuide.steps.website });
+    await expect(website).toHaveCount(1);
+    await expect(steps.filter({ hasText: dashboard.setupGuide.steps.fullScan })).toHaveCount(0);
+    const titles = await steps.allTextContents();
+    const forwarding = titles.findIndex((text) => text.includes(dashboard.setupGuide.steps.forwardFromCurrent));
+    expect(forwarding).toBeGreaterThanOrEqual(0);
+    expect(titles.findIndex((text) => text.includes(dashboard.setupGuide.steps.website))).toBe(forwarding + 1);
+    const total = titles.length;
+    await expect(page.getByText(`0 of ${total} setup steps complete.`, { exact: true })).toBeVisible();
+    await expect(website.getByText(dashboard.setupGuide.steps.website, { exact: true })).not.toHaveClass(/line-through/);
+    await page.screenshot({ path: testInfo.outputPath("getting-started-without-website.png"), fullPage: true });
+
+    await website.getByRole("button", { name: dashboard.setupGuide.steps.website }).click();
+    await website.getByRole("button", { name: dashboard.setupGuide.stepActions.website, exact: true }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByLabel(agent.sections.knowledge.fields.websiteUrl.label, { exact: true }).fill("clinic.example.invalid");
+    await dialog.getByRole("button", { name: agent.sections.knowledge.websiteImport.submit, exact: true }).click();
+    await expect(dialog).toBeHidden();
+    const [job] = await database.db.select({ id: websiteIngestionJobs.id }).from(websiteIngestionJobs).where(eq(websiteIngestionJobs.businessId, businessId));
+    expect(job).toBeDefined();
+    // No worker runs here, so finish the crawl as it would.
+    await database.db.update(websiteIngestionJobs).set({ status: "completed", importedCount: 12, indexedCount: 12, updatedAt: new Date() }).where(eq(websiteIngestionJobs.id, job!.id));
+    await expect(page.getByText(`1 of ${total} setup steps complete.`, { exact: true })).toBeVisible({ timeout: 15_000 });
+    await expect(website.getByText(dashboard.setupGuide.steps.website, { exact: true })).toHaveClass(/line-through/);
+    await page.screenshot({ path: testInfo.outputPath("getting-started-website-added.png"), fullPage: true });
   } finally {
     if (businessId) await database.db.execute(sql`delete from public.outbox_messages where business_id = ${businessId}`);
     await removeFixtures(database, email, businessId);

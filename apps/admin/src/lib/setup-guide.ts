@@ -9,13 +9,20 @@ export function showsSetupGuide({ canSetUp, role }: { canSetUp: boolean; role: s
   return canSetUp && (role === "business_owner" || role === "business_admin");
 }
 
-export type SetupStepId = "fullScan" | "sources" | "testCall" | "phoneNumber" | "callNumber" | "forwardCalls";
+export type SetupStepId = "fullScan" | "website" | "sources" | "testCall" | "phoneNumber" | "callNumber" | "forwardCalls";
 
-/** The classic list's order: a partner's business, or a direct one that never had a number. */
-export const SETUP_STEP_ORDER: readonly SetupStepId[] = ["fullScan", "sources", "testCall", "phoneNumber"];
+/**
+ * The classic list's order: a partner's business, or a direct one that never
+ * had a number. The server sends one of fullScan and website: reading the rest
+ * of a site onboarding read, or adding one when it read none.
+ */
+export const SETUP_STEP_ORDER: readonly SetupStepId[] = ["fullScan", "website", "sources", "testCall", "phoneNumber"];
 
 /** The order for a business that has, or had, a number. The opening hours step, when it shows, goes before the sources. */
-export const NUMBER_SETUP_STEP_ORDER: readonly SetupStepId[] = ["fullScan", "callNumber", "forwardCalls", "sources"];
+export const NUMBER_SETUP_STEP_ORDER: readonly SetupStepId[] = ["fullScan", "callNumber", "forwardCalls", "website", "sources"];
+
+/** The steps the loading list shows: the classic list as onboarding with a website leaves it. */
+export const SETUP_SKELETON_STEPS: readonly SetupStepId[] = SETUP_STEP_ORDER.filter((id) => id !== "website");
 
 export type SetupStep = { id: SetupStepId; status: string; documentId?: string | null };
 export type SetupGuide = {

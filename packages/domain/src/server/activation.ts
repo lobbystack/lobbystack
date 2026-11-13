@@ -76,8 +76,8 @@ export async function hasAnsweredPhoneCall(tx: DatabaseTransaction, businessId: 
 
 // The setup guide: what's left after onboarding, which the dashboard and the API share.
 
-/** The classic list's steps. The v1 API reads these ids, so they never change. */
-export const setupGuideStepIds = ["fullScan", "sources", "testCall", "phoneNumber"] as const;
+/** The classic list's steps, and adding a website, which stands in for reading the rest of it when onboarding read no site. The v1 API reads these ids, so they never change. */
+export const setupGuideStepIds = ["fullScan", "website", "sources", "testCall", "phoneNumber"] as const;
 export type SetupGuideStepId = (typeof setupGuideStepIds)[number];
 /** The steps only the list for a business with a number has. */
 export const numberGuideStepIds = ["callNumber", "forwardCalls"] as const;
@@ -104,20 +104,30 @@ export type SetupGuide = {
   numberLost: boolean;
   skippedSteps: string[];
   fullScanDocumentId: string | null;
+  /**
+   * Which website step the list shows. `fullScan` once onboarding read the
+   * business's website, `website` for a business that has none read yet.
+   */
+  siteStep: "fullScan" | "website";
 };
 
 /** Each setup guide step's status. A step that got done reads complete, even if it was skipped. */
 export async function loadSetupGuideInTransaction(tx: DatabaseTransaction, businessId: string): Promise<SetupGuide> {
-  const business = (await tx.select({ skippedSteps: businesses.setupGuideSkippedSteps, partnerId: businesses.partnerId }).from(businesses).where(eq(businesses.id, businessId)).limit(1))[0];
+  const business = (await tx.select({ skippedSteps: businesses.setupGuideSkippedSteps, partnerId: businesses.partnerId, websiteUrl: businesses.websiteUrl }).from(businesses).where(eq(businesses.id, businessId)).limit(1))[0];
   const knowledge = await tx.select({ count: count() }).from(knowledgeDocuments).where(and(eq(knowledgeDocuments.businessId, businessId), eq(knowledgeDocuments.sourceType, "upload"), ne(knowledgeDocuments.status, "error"), ne(knowledgeDocuments.status, "cancelled")));
   const sampled = await currentWebsiteIngestion(tx, businessId);
   // Onboarding samples a site, and an expansion reuses the same row, so the
   // page count cannot say which kind of crawl produced it; the cap it ran
-  // with can. The step is done once the site has been read in full: with no
-  // crawl at all, or a completed one that was not cut off by the sample cap.
-  // A crawl still running or one that failed leaves the step open, so the
-  // count never goes backwards and a failed read keeps its way back in.
-  const fullyRead = !sampled?.rootDocumentId || (sampled.status === "completed" && !(sampled.pageLimit === ONBOARDING_CRAWL_PAGE_LIMIT && sampled.importedCount >= ONBOARDING_CRAWL_PAGE_LIMIT));
+  // with can. The step is done once the site has been read in full: a
+  // completed crawl that was not cut off by the sample cap. A crawl still
+  // running or one that failed leaves the step open, so the count never goes
+  // backwards and a failed read keeps its way back in.
+  const fullyRead = Boolean(sampled?.rootDocumentId) && sampled?.status === "completed" && !(sampled.pageLimit === ONBOARDING_CRAWL_PAGE_LIMIT && sampled.importedCount >= ONBOARDING_CRAWL_PAGE_LIMIT);
+  // Onboarding saves the site it reads as the business's website, so a crawl
+  // of that site means onboarding read one. Without it the list asks for a
+  // website instead, done once any website import finished, a sample or in full.
+  const siteStep = sampled?.rootDocumentId && business?.websiteUrl && sampled.websiteUrl === business.websiteUrl ? "fullScan" : "website";
+  const [websiteRead] = await tx.select({ id: websiteIngestionJobs.id }).from(websiteIngestionJobs).where(and(eq(websiteIngestionJobs.businessId, businessId), eq(websiteIngestionJobs.status, "completed"))).limit(1);
   const heardCalls = await countOperatorTestCallsHeard(tx, businessId);
   const businessNumber = await tx.select({ count: count() }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, businessId), eq(phoneNumbers.status, "active"), isNull(phoneNumbers.reclaimScheduledAt)));
   const skipped = business?.skippedSteps ?? [];
@@ -134,6 +144,7 @@ export async function loadSetupGuideInTransaction(tx: DatabaseTransaction, busin
     variant,
     steps: {
       fullScan: status(fullyRead, "fullScan"),
+      website: status(Boolean(websiteRead), "website"),
       sources: status(Number(knowledge[0]?.count ?? 0) > 0, "sources"),
       testCall: status(heardCalls > 0, "testCall"),
       phoneNumber: status(Number(businessNumber[0]?.count ?? 0) > 0, "phoneNumber"),
@@ -146,6 +157,7 @@ export async function loadSetupGuideInTransaction(tx: DatabaseTransaction, busin
     numberLost,
     skippedSteps: skipped,
     fullScanDocumentId: sampled?.rootDocumentId ?? null,
+    siteStep,
   };
 }
 

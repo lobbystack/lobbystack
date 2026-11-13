@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, ChevronRight, Copy } from "lucide-react";
@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { useBusinessCan } from "@/components/business-capabilities-provider";
 import { CallForwardingDialog, ForwardingGuide } from "@/components/call-forwarding-dialog";
 import { useCopiedField } from "@/components/detail-fields";
+import { KnowledgeForms } from "@/components/knowledge/knowledge-parts";
 import { phoneNumberChooserText } from "@/components/live-phone-number-settings-surface";
 import { PhoneNumberChooser, phoneNumberChooserApi } from "@/components/phone-number-chooser";
 import { useTelemetry } from "@/components/product-analytics";
@@ -66,6 +67,12 @@ export function LiveSetupGuideSurface({ businessId }: { businessId: string }) {
   const importing = isWebsiteImportRunning(job);
   const stalled = isWebsiteImportStalled(job);
   const setup = useSetupGuide(businessId, importing);
+  // The list polls only while an import runs, so read it once more when the import stops, or a finished read waits for the next visit.
+  const wasImporting = useRef(importing);
+  useEffect(() => {
+    if (wasImporting.current && !importing) void queryClient.invalidateQueries({ queryKey: ["setup", businessId] });
+    wasImporting.current = importing;
+  }, [businessId, importing, queryClient]);
   // Instant booking with no opening hours books nothing, so a business that
   // books instantly and has none gets a step for them: after its sources in
   // the classic list, before them in the number list. Hours the website scan
@@ -110,6 +117,8 @@ export function LiveSetupGuideSurface({ businessId }: { businessId: string }) {
     mutationFn: (documentId: string) => requestJson(`/api/knowledge/${encodeURIComponent(documentId)}?businessId=${encodeURIComponent(businessId)}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "expand" }) }),
     onSuccess: async () => { await Promise.all([queryClient.invalidateQueries({ queryKey: ["activation", businessId] }), queryClient.invalidateQueries({ queryKey: ["setup", businessId] })]); },
   });
+  // Adding a website opens the knowledge page's website import here, and the step follows its progress.
+  const [importingWebsite, setImportingWebsite] = useState(false);
   const skip = useMutation({ mutationFn: (stepId: GuideStepId) => requestJson<{ skippedSteps: string[] }>(`/api/setup?businessId=${encodeURIComponent(businessId)}`, { method: "PATCH", body: JSON.stringify({ stepId, skipped: true }) }), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ["setup", businessId] }); } });
 
   return (
@@ -135,6 +144,11 @@ export function LiveSetupGuideSurface({ businessId }: { businessId: string }) {
                       ? <Button disabled={readAgain.isPending || !step.documentId} onClick={() => { if (step.documentId) readAgain.mutate(step.documentId); }}>{t("setupGuide.stepActions.tryAgain")}</Button>
                       : <Button disabled={expand.isPending} onClick={() => { if (step.documentId) expand.mutate(step.documentId); }}>{t("setupGuide.stepActions.fullScan")}</Button>} skip={skipLink} />
                   </>
+                ) : step.id === "website" ? (
+                  <>
+                    {job && (importing || stalled || job.status === "failed" || job.status === "cancelled") ? <WebsiteImportProgress inline job={job} /> : <StepDescription>{t("setupGuide.stepDescriptions.website")}</StepDescription>}
+                    <StepActions primary={importing ? null : <Button onClick={() => setImportingWebsite(true)}>{t("setupGuide.stepActions.website")}</Button>} skip={skipLink} />
+                  </>
                 ) : step.id === "sources" ? (
                   <>
                     <StepDescription>{t("setupGuide.stepDescriptions.sources")}</StepDescription>
@@ -157,6 +171,7 @@ export function LiveSetupGuideSurface({ businessId }: { businessId: string }) {
           })}
         </Accordion>
       </Surface>
+      <KnowledgeForms businessId={businessId} editing={null} form={importingWebsite ? "website" : null} onClose={() => setImportingWebsite(false)} onSaved={async () => { await Promise.all([queryClient.invalidateQueries({ queryKey: ["activation", businessId] }), queryClient.invalidateQueries({ queryKey: ["setup", businessId] })]); }} />
     </section>
   );
 }

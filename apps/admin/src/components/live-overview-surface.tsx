@@ -39,7 +39,7 @@ import { type Appointment } from "@/hooks/use-appointments";
 import { fetchUnansweredQuestions, UNANSWERED_QUESTIONS_ANCHOR, unansweredQuestionsQueryKey } from "@/components/unanswered-questions-section";
 import { useBusinessCan } from "@/components/business-capabilities-provider";
 import { useActiveBusiness } from "@/hooks/use-active-business";
-import { isSetupGuideFinished, SETUP_STEP_ORDER, showsSetupGuide } from "@/lib/setup-guide";
+import { isSetupGuideFinished, SETUP_SKELETON_STEPS, showsSetupGuide } from "@/lib/setup-guide";
 import { Status } from "@/components/ui/status";
 import { appointmentStatusVariant, REQUEST_STATUS_VARIANTS } from "@/lib/status-variants";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -128,7 +128,7 @@ export function LiveOverviewSurface() {
       {showGuide ? (
         <div className="mb-4"><LiveSetupGuideSurface businessId={businessId!} /></div>
       ) : guidePending ? (
-        <div className="mb-4"><SetupGuideSkeleton labels={{ title: t("setupGuide.title"), skip: t("setupGuide.skip"), steps: SETUP_STEP_ORDER.map((id) => t(`setupGuide.steps.${id}`)) }} /></div>
+        <div className="mb-4"><SetupGuideSkeleton labels={{ title: t("setupGuide.title"), skip: t("setupGuide.skip"), steps: SETUP_SKELETON_STEPS.map((id) => t(`setupGuide.steps.${id}`)) }} /></div>
       ) : null}
       <div className="flex flex-col gap-6">
         {/* Getting started covers what the activation card would offer. */}

@@ -19533,10 +19533,11 @@
                     "greeting",
                     "plan",
                     "phone_number",
+                    "website",
                     "full_site_read",
                     "test_call"
                   ],
-                  "description": "business_details: a name and time zone. knowledge: a website or knowledge the receptionist answers from. greeting: a greeting, the default one included; change it with PATCH /receptionist. plan: a paid plan. phone_number: a live number. full_site_read: the whole website read, beyond the first sample, and done when there is no website. test_call: a call the receptionist answered."
+                  "description": "business_details: a name and time zone. knowledge: a website or knowledge the receptionist answers from. greeting: a greeting, the default one included; change it with PATCH /receptionist. plan: a paid plan. phone_number: a live number. website: a website the receptionist has read, a sample or in full. full_site_read: the whole website read, beyond the first sample, and done when there is no website. test_call: a call the receptionist answered."
                 },
                 "status": {
                   "type": "string",
@@ -19570,6 +19571,7 @@
                 "greeting",
                 "plan",
                 "phone_number",
+                "website",
                 "full_site_read",
                 "test_call"
               ]
@@ -19590,18 +19592,19 @@
         "type": "object",
         "properties": {
           "skip_steps": {
-            "maxItems": 4,
+            "maxItems": 5,
             "type": "array",
             "items": {
               "type": "string",
               "enum": [
                 "knowledge",
                 "phone_number",
+                "website",
                 "full_site_read",
                 "test_call"
               ]
             },
-            "description": "The steps to skip, out of knowledge, phone_number, full_site_read and test_call. The list replaces the one before, so a step left out is no longer skipped."
+            "description": "The steps to skip, out of knowledge, phone_number, website, full_site_read and test_call. The list replaces the one before, so a step left out is no longer skipped."
           }
         },
         "required": [

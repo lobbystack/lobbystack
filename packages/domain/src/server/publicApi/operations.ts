@@ -830,7 +830,7 @@ export async function getExtraNumbersCheckoutForApi(context: DomainContext, call
 // business has, and completion checks only what the dashboard can't finish without.
 
 // The setup guide step each skippable item stands for.
-const onboardingSetupSteps: Record<ApiOnboardingUpdate["skip_steps"][number], SetupGuideStepId> = { knowledge: "sources", phone_number: "phoneNumber", full_site_read: "fullScan", test_call: "testCall" };
+const onboardingSetupSteps: Record<ApiOnboardingUpdate["skip_steps"][number], SetupGuideStepId> = { knowledge: "sources", phone_number: "phoneNumber", website: "website", full_site_read: "fullScan", test_call: "testCall" };
 
 const onboardingHints: Record<ApiOnboardingItem, string> = {
   business_details: "Set a name and time zone with PATCH /business.",
@@ -838,6 +838,7 @@ const onboardingHints: Record<ApiOnboardingItem, string> = {
   greeting: "Save a greeting with PATCH /receptionist.",
   plan: "Start a paid plan with POST /billing/checkout.",
   phone_number: "Claim a number with POST /phone-numbers/claims, or send skip_number.",
+  website: "Add a website with POST /knowledge/sources.",
   full_site_read: "Read the rest of the website with POST /knowledge/sources/{source_id}/expand.",
   test_call: "Call the business's number once.",
 };
@@ -848,7 +849,7 @@ async function loadOnboarding(tx: DatabaseTransaction, businessId: string): Prom
   const [profile] = await tx.select({ greeting: agents.greeting }).from(agents).where(defaultAgentOf(businessId)).limit(1);
   const [indexed] = await tx.select({ count: count() }).from(knowledgeDocuments).where(and(eq(knowledgeDocuments.businessId, businessId), eq(knowledgeDocuments.status, "indexed")));
   const [entries] = await tx.select({ count: count() }).from(knowledgeSnippets).where(and(eq(knowledgeSnippets.businessId, businessId), eq(knowledgeSnippets.active, true)));
-  const { steps } = await loadSetupGuideInTransaction(tx, businessId);
+  const { steps, fullScanDocumentId } = await loadSetupGuideInTransaction(tx, businessId);
   // The plan step is done once the business holds a live entitlement. A self-hosted server sells no plan.
   const entitlement = await loadEntitlement(tx, businessId);
   const paid = entitlement.live && entitlement.source !== "unlimited";
@@ -861,7 +862,9 @@ async function loadOnboarding(tx: DatabaseTransaction, businessId: string): Prom
     item("greeting", !profile || profile.greeting.trim().length > 0, false, false),
     item("plan", paid, !paid, false),
     item("phone_number", steps.phoneNumber === "complete", steps.phoneNumber === "skipped", paid),
-    item("full_site_read", steps.fullScan === "complete", steps.fullScan === "skipped", false),
+    item("website", steps.website === "complete", steps.website === "skipped", false),
+    // With no website crawl there is nothing more to read.
+    item("full_site_read", steps.fullScan === "complete" || fullScanDocumentId === null, steps.fullScan === "skipped", false),
     // From the command line there is no browser test call, so the first answered call to the number counts.
     item("test_call", steps.testCall === "complete" || answeredCall, steps.testCall === "skipped", false),
   ];

@@ -1,8 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
-import { businesses, calls, createDatabaseClient, partners, phoneNumbers, users, type Database, type DatabaseTransaction, defaultAgentIdOf } from "@lobbystack/db";
+import { businesses, calls, createDatabaseClient, knowledgeDocuments, partners, phoneNumbers, users, websiteIngestionJobs, type Database, type DatabaseTransaction, defaultAgentIdOf } from "@lobbystack/db";
 import { loadSetupGuideInTransaction } from "./activation";
+import { FULL_CRAWL_PAGE_LIMIT, ONBOARDING_CRAWL_PAGE_LIMIT } from "./knowledge";
 import { createBusiness } from "./tenancy";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
@@ -39,6 +40,12 @@ async function workspace(tx: DatabaseTransaction) {
   return businessId;
 }
 
+async function crawl(tx: DatabaseTransaction, businessId: string, input: { websiteUrl: string; status: string; pageLimit: number; importedCount: number }) {
+  const [document] = await tx.insert(knowledgeDocuments).values({ businessId, title: input.websiteUrl, sourceType: "website", sourceUrl: input.websiteUrl, status: input.status === "completed" ? "indexed" : "processing" }).returning({ id: knowledgeDocuments.id });
+  const [job] = await tx.insert(websiteIngestionJobs).values({ businessId, rootDocumentId: document!.id, websiteUrl: input.websiteUrl, provider: "firecrawl", status: input.status, pageLimit: input.pageLimit, importedCount: input.importedCount }).returning({ id: websiteIngestionJobs.id });
+  return { documentId: document!.id, jobId: job!.id };
+}
+
 const line = () => `+1416${String(Math.floor(Math.random() * 10_000_000)).padStart(7, "0")}`;
 
 describe.skipIf(!testUrl)("Getting started against PostgreSQL", () => {
@@ -54,6 +61,40 @@ describe.skipIf(!testUrl)("Getting started against PostgreSQL", () => {
       expect(guide.variant).toBe("number");
       expect(guide.numberSteps.callNumber).toBe("complete");
       expect(guide.numberSteps.forwardCalls).toBe("needs setup");
+    });
+  });
+
+  it("asks a business onboarding read no website for one, and counts it only once a website was read", async () => {
+    await rollbackTest(async (tx) => {
+      const businessId = await workspace(tx);
+      const before = await loadSetupGuideInTransaction(tx, businessId);
+      expect(before.siteStep).toBe("website");
+      expect(before.steps.website).toBe("needs setup");
+      // No crawl means nothing was read, so reading the rest isn't done either.
+      expect(before.steps.fullScan).toBe("needs setup");
+      const { jobId } = await crawl(tx, businessId, { websiteUrl: "https://clinic.example/", status: "crawling", pageLimit: FULL_CRAWL_PAGE_LIMIT, importedCount: 3 });
+      expect((await loadSetupGuideInTransaction(tx, businessId)).steps.website).toBe("needs setup");
+      await tx.update(websiteIngestionJobs).set({ status: "completed" }).where(eq(websiteIngestionJobs.id, jobId));
+      const after = await loadSetupGuideInTransaction(tx, businessId);
+      // An import after onboarding keeps the website step, now done.
+      expect(after.siteStep).toBe("website");
+      expect(after.steps.website).toBe("complete");
+      await tx.update(businesses).set({ setupGuideSkippedSteps: ["website"] }).where(eq(businesses.id, businessId));
+      await tx.delete(websiteIngestionJobs).where(eq(websiteIngestionJobs.id, jobId));
+      expect((await loadSetupGuideInTransaction(tx, businessId)).steps.website).toBe("skipped");
+    });
+  });
+
+  it("keeps reading the rest of the site onboarding read", async () => {
+    await rollbackTest(async (tx) => {
+      const businessId = await workspace(tx);
+      await tx.update(businesses).set({ websiteUrl: "https://clinic.example/" }).where(eq(businesses.id, businessId));
+      const { documentId, jobId } = await crawl(tx, businessId, { websiteUrl: "https://clinic.example/", status: "completed", pageLimit: ONBOARDING_CRAWL_PAGE_LIMIT, importedCount: ONBOARDING_CRAWL_PAGE_LIMIT });
+      const sampled = await loadSetupGuideInTransaction(tx, businessId);
+      expect(sampled).toMatchObject({ siteStep: "fullScan", fullScanDocumentId: documentId });
+      expect(sampled.steps.fullScan).toBe("needs setup");
+      await tx.update(websiteIngestionJobs).set({ pageLimit: FULL_CRAWL_PAGE_LIMIT, importedCount: 40 }).where(eq(websiteIngestionJobs.id, jobId));
+      expect((await loadSetupGuideInTransaction(tx, businessId)).steps.fullScan).toBe("complete");
     });
   });
 
