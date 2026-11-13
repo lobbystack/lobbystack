@@ -1,34 +1,24 @@
 #!/usr/bin/env node
 // Writes .env from .env.example with every internal secret generated. Provider credentials
 // (Twilio, Polar, ...) are cleared rather than generated: only the operator can supply them.
-import { randomBytes } from "node:crypto";
 import { existsSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const PROVIDER_CREDENTIALS = new Set(["TWILIO_AUTH_TOKEN", "POLAR_WEBHOOK_SECRET"]);
-const PLACEHOLDER_PREFIX = "replace-with-";
+import { KEY_LINE, randomSecret, resolveExampleValue } from "./lib/env-placeholders.mjs";
 
-export function generateEnv(example, random = () => randomBytes(32).toString("hex")) {
+export function generateEnv(example, random = randomSecret) {
   const generated = [];
-  const valuesByPlaceholder = new Map();
+  const secrets = new Map();
   const output = example
     .split("\n")
     .map((line) => {
-      const match = /^([A-Z0-9_]+)=(.*)$/.exec(line);
+      const match = KEY_LINE.exec(line);
       if (!match) return line;
-      const [, key, value] = match;
-      if (!value.startsWith(PLACEHOLDER_PREFIX)) {
-        // Reuse generated secrets inside composite values such as DATABASE_URL.
-        let resolved = value;
-        for (const [placeholder, secret] of valuesByPlaceholder) resolved = resolved.replaceAll(placeholder, secret);
-        return `${key}=${resolved}`;
-      }
-      if (PROVIDER_CREDENTIALS.has(key)) return `${key}=`;
-      generated.push(key);
-      const secret = random();
-      valuesByPlaceholder.set(value, secret);
-      return `${key}=${secret}`;
+      const [, key, exampleValue] = match;
+      const resolved = resolveExampleValue(key, exampleValue, secrets, random);
+      if (resolved.generated) generated.push(key);
+      return `${key}=${resolved.value}`;
     })
     .join("\n");
   return { output, generated };

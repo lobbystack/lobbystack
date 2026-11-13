@@ -310,6 +310,7 @@
       "description": "{{appointment}}",
       "requested": "Solicitado: {{time}}",
       "confirm": "Cambiar la cita",
+      "moving": "Cambiando la cita...",
       "keep": "Mantener la hora actual",
       "done": "Cita cambiada",
       "failed": "No pudimos cambiar la cita. Inténtelo de nuevo.",
