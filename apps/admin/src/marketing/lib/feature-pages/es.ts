@@ -268,7 +268,7 @@ export const featurePagesEs: FeaturePagesCopy = {
       {
         question: "¿Tengo que abrir la Bandeja de entrada para saber que alguien llamó?",
         answer:
-          "No. LobbyStack le envía un correo por cada llamada atendida con quién llamó, la hora, la duración y el resumen. Los planes de pago pueden sumar alertas por SMS.",
+          "No. LobbyStack le envía un correo por cada llamada atendida con quién llamó, la hora, la duración y el resumen. Los planes de pago añaden notificaciones por SMS.",
       },
       {
         question: "¿La IA responde los SMS?",
@@ -358,7 +358,7 @@ export const featurePagesEs: FeaturePagesCopy = {
       {
         question: "¿Qué planes incluyen SMS?",
         answer:
-          "Los SMS de citas y las alertas por SMS están en Starter y Pro. Starter incluye 50 segmentos de SMS de alerta al mes y Pro incluye 200.",
+          "Las notificaciones por SMS están en Starter y Pro. Starter incluye 50 segmentos de notificaciones por SMS al mes y Pro incluye 200.",
       },
       {
         question: "¿La IA responde los SMS?",

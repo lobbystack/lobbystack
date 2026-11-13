@@ -5,27 +5,27 @@ export const pricingFaqs: FaqItem[] = [
   {
     question: "How does LobbyStack paid pricing work?",
     answer:
-      "Starter is $30/month or $288/year and includes 150 voice minutes each month. Pro is $100/month or $960/year and includes 500 voice minutes each month. Starter voice overage is $0.20/minute, Pro voice overage is $0.18/minute, and extra alert SMS segments and transfer attempts cost $0.02 each.",
+      "Starter is $30/month or $288/year with 150 voice minutes a month. Pro is $100/month or $960/year with 500. Extra minutes cost $0.20 on Starter and $0.18 on Pro. Extra SMS notification segments and transfer attempts cost $0.02 each.",
   },
   {
     question: "Do spam calls or very short calls count toward usage?",
     answer:
-      "No. LobbyStack excludes spam calls and calls under 10 seconds from usage, so wrong numbers, robocalls, instant hang-ups, and pocket dials do not count against your included voice minutes or paid-plan overages.",
+      "No. Spam calls and calls under 10 seconds don't count. Wrong numbers, robocalls, hang-ups and pocket dials use none of your voice minutes and add no overage.",
   },
   {
     question: "Can I switch plans or cancel anytime?",
     answer:
-      "Yes. You can upgrade, downgrade, or cancel your plan from billing settings. When you downgrade, you keep your current plan until the end of the billing period. There are no cancellation fees.",
+      "Yes. Upgrade, downgrade or cancel in billing settings. After a downgrade you keep your current plan until the billing period ends. Cancelling costs nothing.",
   },
   {
     question: "Can I use LobbyStack for free?",
     answer:
-      "Yes. Free includes 30 voice minutes, with no credit card. You can test your receptionist in your browser and, where a free trial is available, get a phone number free for 14 days. Choose Starter or Pro to keep your number after the trial.",
+      "Yes. Free includes 30 voice minutes, with no credit card. Test your receptionist in your browser and, where a free trial is available, get a phone number free for 14 days. Pick Starter or Pro to keep the number.",
   },
   {
     question: "What AI receptionist features are available today?",
     answer:
-      "LobbyStack answers calls in 70+ languages, captures caller details, answers business questions from your knowledge base, qualifies leads, books appointments into Google Calendar, Cal.com or Calendly, and routes urgent callers. It emails your team when it takes a message and keeps a recording and transcript of each call.",
+      "LobbyStack answers calls in 70+ languages, takes caller details, answers questions from your knowledge base, qualifies leads, books appointments in Google Calendar, Cal.com or Calendly, and routes urgent callers. It emails your team each message and keeps a recording and transcript of every call.",
   },
 ]
 
@@ -33,29 +33,29 @@ export const pricingFaqsFr: FaqItem[] = [
   {
     question: "Comment fonctionnent les forfaits payants LobbyStack ?",
     answer:
-      "Starter coûte 30 $/mois ou 288 $/an et inclut 150 minutes vocales chaque mois. Pro coûte 100 $/mois ou 960 $/an et inclut 500 minutes vocales. Les dépassements vocaux sont de 0,20 $/min en Starter et 0,18 $/min en Pro; les SMS d’alerte et tentatives de transfert supplémentaires sont facturés 0,02 $ par unité.",
+      "Starter coûte 30 $/mois ou 288 $/an avec 150 minutes vocales par mois. Pro coûte 100 $/mois ou 960 $/an avec 500 minutes. La minute supplémentaire coûte 0,20 $ en Starter et 0,18 $ en Pro. Chaque segment de notification SMS ou tentative de transfert supplémentaire coûte 0,02 $.",
   },
   {
     question:
       "Les appels indésirables ou très courts comptent-ils dans l’usage ?",
     answer:
-      "Non. LobbyStack exclut les appels indésirables et les appels de moins de 10 secondes de l’usage, afin que les mauvais numéros, appels automatisés, raccrochages instantanés et appels accidentels ne consomment pas vos minutes incluses.",
+      "Non. Les appels indésirables et ceux de moins de 10 secondes ne comptent pas. Les mauvais numéros, les appels automatisés, les raccrochages et les appels accidentels ne consomment aucune de vos minutes incluses.",
   },
   {
     question: "Puis-je changer de forfait ou annuler à tout moment ?",
     answer:
-      "Oui. Vous pouvez passer à un forfait supérieur, revenir à un forfait inférieur ou annuler depuis les réglages de facturation. Si vous changez de forfait, votre forfait actuel reste actif jusqu’à la fin de la période. Il n’y a pas de frais d’annulation.",
+      "Oui. Changez de forfait ou annulez depuis les réglages de facturation. Si vous passez à un forfait inférieur, l’actuel reste actif jusqu’à la fin de la période. L’annulation est sans frais.",
   },
   {
     question: "Puis-je utiliser LobbyStack gratuitement ?",
     answer:
-      "Oui. Free inclut 30 minutes vocales, sans carte bancaire. Vous pouvez tester votre réceptionniste dans le navigateur et, là où l’essai gratuit est proposé, obtenir un numéro de téléphone gratuit pendant 14 jours. Choisissez Starter ou Pro pour garder votre numéro après l’essai.",
+      "Oui. Free inclut 30 minutes vocales, sans carte bancaire. Testez votre réceptionniste dans le navigateur et, là où l’essai gratuit est proposé, obtenez un numéro de téléphone gratuit pendant 14 jours. Choisissez Starter ou Pro pour garder le numéro.",
   },
   {
     question:
       "Quelles fonctionnalités de réceptionniste IA sont disponibles aujourd’hui ?",
     answer:
-      "LobbyStack répond aux appels dans plus de 70 langues, note les détails de l’appelant, répond aux questions depuis votre base de connaissances, qualifie les prospects, planifie les rendez‑vous dans Google Calendar, Cal.com ou Calendly et transfère les urgences. Il envoie un courriel à votre équipe quand il prend un message et garde l’enregistrement et la transcription de chaque appel.",
+      "LobbyStack répond aux appels dans plus de 70 langues, note les détails de l’appelant, répond aux questions depuis votre base de connaissances, qualifie les prospects, planifie les rendez‑vous dans Google Calendar, Cal.com ou Calendly et transfère les urgences. Il envoie chaque message par courriel à votre équipe et garde l’enregistrement et la transcription de chaque appel.",
   },
 ]
 
@@ -63,27 +63,27 @@ export const pricingFaqsEs: FaqItem[] = [
   {
     question: "¿Cómo funcionan los planes de pago de LobbyStack?",
     answer:
-      "Starter cuesta $30/mes o $288/año e incluye 150 minutos de voz al mes. Pro cuesta $100/mes o $960/año e incluye 500 minutos de voz al mes. El excedente de voz cuesta $0.20/minuto en Starter y $0.18/minuto en Pro, y cada segmento de SMS de alerta o intento de transferencia adicional cuesta $0.02.",
+      "Starter cuesta $30/mes o $288/año con 150 minutos de voz al mes. Pro cuesta $100/mes o $960/año con 500. El minuto adicional cuesta $0.20 en Starter y $0.18 en Pro. Cada segmento de notificación por SMS o intento de transferencia adicional cuesta $0.02.",
   },
   {
     question: "¿Las llamadas de spam o muy cortas cuentan en el uso?",
     answer:
-      "No. LobbyStack excluye del uso las llamadas de spam y las de menos de 10 segundos, así que los números equivocados, las llamadas automáticas, los cuelgues inmediatos y las llamadas accidentales no consumen sus minutos de voz incluidos ni generan excedentes en los planes de pago.",
+      "No. Las llamadas de spam y las de menos de 10 segundos no cuentan. Los números equivocados, las llamadas automáticas, los cuelgues y las llamadas accidentales no gastan sus minutos de voz ni generan excedentes.",
   },
   {
     question: "¿Puedo cambiar de plan o cancelar en cualquier momento?",
     answer:
-      "Sí. Puede subir de plan, bajar de plan o cancelar desde la configuración de facturación. Si baja de plan, conserva su plan actual hasta el final del período de facturación. No hay cargos por cancelación.",
+      "Sí. Suba de plan, baje de plan o cancele desde la configuración de facturación. Si baja de plan, conserva el actual hasta el final del período de facturación. Cancelar no tiene costo.",
   },
   {
     question: "¿Puedo usar LobbyStack gratis?",
     answer:
-      "Sí. Free incluye 30 minutos de voz, sin tarjeta de crédito. Puede probar a su recepcionista en el navegador y, donde haya prueba gratuita, obtener un número de teléfono gratis durante 14 días. Elija Starter o Pro para conservar su número después de la prueba.",
+      "Sí. Free incluye 30 minutos de voz, sin tarjeta de crédito. Pruebe a su recepcionista en el navegador y, donde haya prueba gratuita, obtenga un número de teléfono gratis durante 14 días. Elija Starter o Pro para conservar el número.",
   },
   {
     question: "¿Qué funciones de recepcionista con IA están disponibles hoy?",
     answer:
-      "LobbyStack contesta llamadas en más de 70 idiomas, toma los datos de quien llama, responde preguntas sobre su negocio con su base de conocimiento, califica clientes potenciales, reserva citas en Google Calendar, Cal.com o Calendly y deriva las llamadas urgentes. Envía un correo electrónico a su equipo cuando toma un mensaje y guarda la grabación y la transcripción de cada llamada.",
+      "LobbyStack contesta llamadas en más de 70 idiomas, toma los datos de quien llama, responde preguntas con su base de conocimiento, califica clientes potenciales, reserva citas en Google Calendar, Cal.com o Calendly y deriva las llamadas urgentes. Envía cada mensaje por correo electrónico a su equipo y guarda la grabación y la transcripción de cada llamada.",
   },
 ]
 
@@ -91,27 +91,27 @@ export const pricingFaqsSr: FaqItem[] = [
   {
     question: "Kako funkcionišu plaćeni LobbyStack paketi?",
     answer:
-      "Starter košta $30 mesečno ili $288 godišnje i uključuje 150 minuta razgovora svakog meseca. Pro košta $100 mesečno ili $960 godišnje i uključuje 500 minuta razgovora svakog meseca. Prekoračenje minuta razgovora košta $0.20 po minutu na paketu Starter i $0.18 po minutu na paketu Pro, a svaki dodatni segment SMS upozorenja i pokušaj preusmeravanja košta $0.02.",
+      "Starter košta $30 mesečno ili $288 godišnje i uključuje 150 minuta razgovora mesečno. Pro košta $100 mesečno ili $960 godišnje i uključuje 500. Dodatni minut košta $0.20 na paketu Starter i $0.18 na paketu Pro. Svaki dodatni SMS segment za obaveštenja i pokušaj preusmeravanja košta $0.02.",
   },
   {
     question: "Da li se spam pozivi i veoma kratki pozivi računaju u potrošnju?",
     answer:
-      "Ne. LobbyStack ne računa spam pozive i pozive kraće od 10 sekundi, tako da pogrešni brojevi, automatski pozivi, odmah prekinuti pozivi i slučajni pozivi ne troše Vaše uključene minute razgovora niti stvaraju prekoračenja na plaćenim paketima.",
+      "Ne. Spam pozivi i pozivi kraći od 10 sekundi se ne računaju. Pogrešni brojevi, automatski pozivi, odmah prekinuti i slučajni pozivi ne troše Vaše minute razgovora i ne stvaraju prekoračenja.",
   },
   {
     question: "Mogu li da promenim paket ili otkažem bilo kada?",
     answer:
-      "Da. Paket možete da nadogradite, spustite na niži ili otkažete u podešavanjima naplate. Kada pređete na niži paket, trenutni paket Vam ostaje do kraja obračunskog perioda. Nema troškova otkazivanja.",
+      "Da. Paket nadogradite, spustite na niži ili otkažite u podešavanjima naplate. Kada pređete na niži paket, trenutni Vam ostaje do kraja obračunskog perioda. Otkazivanje je besplatno.",
   },
   {
     question: "Mogu li da koristim LobbyStack besplatno?",
     answer:
-      "Da. Free uključuje 30 minuta razgovora, bez platne kartice. Možete da isprobate Vašeg AI recepcionera u pregledaču, a gde je dostupna besplatna proba, dobijate i broj telefona besplatno na 14 dana. Izaberite Starter ili Pro da biste zadržali broj posle probnog perioda.",
+      "Da. Free uključuje 30 minuta razgovora, bez platne kartice. Isprobajte Vašeg AI recepcionera u pregledaču, a gde je dostupna besplatna proba, dobijate i broj telefona besplatno na 14 dana. Izaberite Starter ili Pro da zadržite broj.",
   },
   {
     question: "Koje funkcije AI recepcionera su dostupne danas?",
     answer:
-      "LobbyStack odgovara na pozive na više od 70 jezika, beleži podatke pozivalaca, odgovara na pitanja o firmi iz Vaše baze znanja, kvalifikuje potencijalne klijente, zakazuje termine u Google Calendar-u, Cal.com-u ili Calendly-ju i preusmerava hitne pozive. Vašem timu šalje obaveštenje e-poštom kada primi poruku i čuva snimak i transkript svakog poziva.",
+      "LobbyStack odgovara na pozive na više od 70 jezika, beleži podatke pozivalaca, odgovara na pitanja iz Vaše baze znanja, kvalifikuje potencijalne klijente, zakazuje termine u Google Calendar-u, Cal.com-u ili Calendly-ju i preusmerava hitne pozive. Svaku poruku šalje Vašem timu e-poštom i čuva snimak i transkript svakog poziva.",
   },
 ]
 

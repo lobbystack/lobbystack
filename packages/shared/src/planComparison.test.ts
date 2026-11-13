@@ -23,7 +23,7 @@ describe("plan comparison", () => {
 
   it("agrees French counts with their nouns", () => {
     const rows = rowsOf("fr");
-    expect(rows.find((row) => row.feature === "Segments SMS d'alerte")!.pro).toEqual({ included: "200 inclus", then: "puis 0,02 $/segment" });
+    expect(rows.find((row) => row.feature === "Notifications SMS")!.pro).toEqual({ included: "200 incluses", then: "puis 0,02 $/segment" });
     expect(rows.find((row) => row.feature === "Tentatives de transfert")!.pro).toEqual({ included: "100 incluses", then: "puis 0,02 $/tentative" });
   });
 });

@@ -269,7 +269,7 @@ export const featurePagesFr: FeaturePagesCopy = {
       {
         question: "Dois-je ouvrir la Boîte de réception pour savoir que quelqu’un a appelé ?",
         answer:
-          "Non. LobbyStack vous envoie un courriel pour chaque appel traité, avec l’appelant, l’heure, la durée et le résumé. Les forfaits payants peuvent ajouter des alertes SMS.",
+          "Non. LobbyStack vous envoie un courriel pour chaque appel traité, avec l’appelant, l’heure, la durée et le résumé. Les forfaits payants ajoutent les notifications SMS.",
       },
       {
         question: "L’IA répond-elle aux SMS ?",
@@ -360,7 +360,7 @@ export const featurePagesFr: FeaturePagesCopy = {
       {
         question: "Quels forfaits incluent les SMS ?",
         answer:
-          "Les SMS de rendez‑vous et les alertes SMS sont inclus dans Starter et Pro. Starter inclut 50 segments SMS d’alerte par mois, et Pro en inclut 200.",
+          "Les notifications SMS sont incluses dans Starter et Pro. Starter inclut 50 segments de notifications SMS par mois, et Pro en inclut 200.",
       },
       {
         question: "L’IA répond-elle aux SMS ?",

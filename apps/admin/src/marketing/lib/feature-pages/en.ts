@@ -268,7 +268,7 @@ export const featurePagesEn: FeaturePagesCopy = {
       {
         question: "Do I have to open the Inbox to know someone called?",
         answer:
-          "No. LobbyStack emails you each answered call with the caller, the time, the length and the summary. Paid plans can add SMS alerts.",
+          "No. LobbyStack emails you each answered call with the caller, the time, the length and the summary. Paid plans add SMS notifications.",
       },
       {
         question: "Does the AI answer texts?",
@@ -358,7 +358,7 @@ export const featurePagesEn: FeaturePagesCopy = {
       {
         question: "Which plans include SMS?",
         answer:
-          "Appointment texts and SMS alerts are on Starter and Pro. Starter includes 50 alert SMS segments a month and Pro includes 200.",
+          "SMS notifications are on Starter and Pro. Starter includes 50 SMS notification segments a month and Pro includes 200.",
       },
       {
         question: "Does the AI reply to texts?",

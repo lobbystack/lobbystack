@@ -8,11 +8,11 @@ import { OnboardingPlanComparison } from "./onboarding-plan-comparison";
 
 afterEach(cleanup);
 
-const cells = (feature: string) => within(screen.getByText(feature).closest("tr")!).getAllByRole("cell").map((cell) => cell.textContent);
+const cells = (feature: string) => within(screen.getAllByText(feature)[0]!.closest("tr")!).getAllByRole("cell").map((cell) => cell.textContent);
 
 it.each([
-  ["en", { minutes: "30 included", numbers: "Phone numbers", trial: "Free for 14 days", history: "Call history and recordings", notIncluded: "Not included", noFree: ["Appointment confirmation texts"], freeAllowances: { "Transfer attempts": "2 included", "Alert SMS segments": "10 included" } }],
-  ["fr", { minutes: "30 incluses", numbers: "Numéros de téléphone", trial: "Gratuit 14 jours", history: "Historique et enregistrements d'appels", notIncluded: "Non inclus", noFree: ["SMS de confirmation de rendez‑vous"], freeAllowances: { "Tentatives de transfert": "2 incluses", "Segments SMS d'alerte": "10 inclus" } }],
+  ["en", { minutes: "30 included", numbers: "Phone numbers", trial: "Free for 14 days", history: "Call history and recordings", notIncluded: "Not included", noFree: ["Appointment confirmation texts"], freeAllowances: { "Transfer attempts": "2 included", "SMS notifications": "10 included" } }],
+  ["fr", { minutes: "30 incluses", numbers: "Numéros de téléphone", trial: "Gratuit 14 jours", history: "Historique et enregistrements d'appels", notIncluded: "Non inclus", noFree: ["SMS de confirmation de rendez‑vous"], freeAllowances: { "Tentatives de transfert": "2 incluses", "Notifications SMS": "10 incluses" } }],
 ] as const)("describes supported capabilities in %s", async (locale, text) => {
   const i18n = createInstance();
   await i18n.init({ lng: locale, resources: { en: { onboarding: en }, fr: { onboarding: fr } } });

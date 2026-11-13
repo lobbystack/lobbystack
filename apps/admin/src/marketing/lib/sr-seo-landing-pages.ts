@@ -1172,6 +1172,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
           body: "Upišite početnu cenu odgušenja, cenu izlaska i doplatu za intervenciju van radnog vremena. LobbyStack navodi samo cene koje ste uneli, kao tačan iznos, početnu cenu ili raspon.",
           points: [
             "Za uslugu bez upisane cene zakazuje izlazak na procenu",
+            "Pozivaocima navodi Vaše područje rada i radno vreme",
           ],
         },
       ],
@@ -2055,6 +2056,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
           body: "Vlasnici pitaju da li radite sa njihovim osiguranjem, da li ćete se sastati sa proceniteljem i koliko košta pregled. Odgovore napišete jednom, a LobbyStack ih daje u svakom pozivu.",
           points: [
             "Za pitanje van scenarija prima poruku za povratni poziv",
+            "Javlja se i kada posle oluje stigne više poziva istovremeno",
           ],
         },
         {

@@ -316,7 +316,7 @@ export const softwareApplicationJsonLd = (
       price: "30",
       priceCurrency: "USD",
       description:
-        "Starter includes 150 voice minutes, 20 transfer attempts, 50 alert SMS segments, and 5 MB knowledge base.",
+        "Starter includes 150 voice minutes, 20 transfer attempts, 50 SMS notification segments, and 5 MB knowledge base.",
       url: absoluteUrl("/pricing/"),
       availability: "https://schema.org/InStock",
     },
@@ -326,7 +326,7 @@ export const softwareApplicationJsonLd = (
       price: "100",
       priceCurrency: "USD",
       description:
-        "Pro includes 500 voice minutes, 100 transfer attempts, 200 alert SMS segments, and 20 MB knowledge base.",
+        "Pro includes 500 voice minutes, 100 transfer attempts, 200 SMS notification segments, and 20 MB knowledge base.",
       url: absoluteUrl("/pricing/"),
       availability: "https://schema.org/InStock",
     },

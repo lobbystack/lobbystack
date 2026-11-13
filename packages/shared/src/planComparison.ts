@@ -21,8 +21,8 @@ type Feature =
 type Copy = {
   groups: [string, string, string, string, string, string, string];
   features: Record<Feature, string>;
-  /** "Included" agrees with the noun in French: minutes and attempts are feminine, segments masculine. */
-  included: (count: number, gender: "f" | "m") => string;
+  /** "Included" agrees with the row's noun: minutes, attempts or SMS notifications. All three are feminine in French; only notifications are in Spanish. */
+  included: (count: number, noun: "minutes" | "attempts" | "notifications") => string;
   then: (rate: string, unit: "min" | "attempt" | "segment") => string;
   rate: (cents: number) => string;
   megabytes: (count: number) => string;
@@ -44,8 +44,8 @@ const copy: Record<PlanCardLocale, Copy> = {
   en: {
     groups: ["Usage & limits", "Core receptionist", "Booking", "Routing & transfers", "Notifications & messaging", "Data & dashboard", "Deployment & support"],
     features: {
-      voiceMinutes: "Voice minutes", outboundCalls: "Transfer attempts", alertSms: "Alert SMS segments", knowledgeStorage: "Knowledge base", phoneNumbers: "Phone numbers", agents: "Agents",
-      callAnswering: "24/7 call answering", callerDetails: "Caller details and message capture", knowledgeAnswers: "Knowledge base answers", workflows: "Plain-language workflows", spamFiltering: "Spam filtering", shortCalls: "Calls under 10s excluded from billing", concurrentCalls: "Unlimited concurrent calls", multilingual: "Speaks 70+ languages",
+      voiceMinutes: "Voice minutes", outboundCalls: "Transfer attempts", alertSms: "SMS notifications", knowledgeStorage: "Knowledge base", phoneNumbers: "Phone numbers", agents: "Agents",
+      callAnswering: "24/7 call answering", callerDetails: "Caller details and message capture", knowledgeAnswers: "Knowledge base answers", workflows: "Plain-language workflows", spamFiltering: "Spam filtering", shortCalls: "Calls under 10s not billed", concurrentCalls: "Unlimited concurrent calls", multilingual: "Speaks 70+ languages",
       appointmentBooking: "Appointment booking", confirmationTexts: "Appointment confirmation texts", googleCalendar: "Google Calendar integration",
       urgentHandoff: "Urgent call handoff", callTransfers: "Call transfers", afterHours: "After-hours answering",
       emailNotifications: "Email notifications", smsNotifications: "SMS notifications",
@@ -65,15 +65,15 @@ const copy: Record<PlanCardLocale, Copy> = {
   fr: {
     groups: ["Usage et limites", "Réceptionniste IA", "Rendez-vous", "Routage et transferts", "Notifications et messagerie", "Données et tableau de bord", "Hébergement et support"],
     features: {
-      voiceMinutes: "Minutes vocales", outboundCalls: "Tentatives de transfert", alertSms: "Segments SMS d'alerte", knowledgeStorage: "Base de connaissances", phoneNumbers: "Numéros de téléphone", agents: "Agents",
-      callAnswering: "Réponse aux appels 24/7", callerDetails: "Collecte des détails et messages", knowledgeAnswers: "Réponses depuis la base de connaissances", workflows: "Consignes en langage naturel", spamFiltering: "Filtrage du spam", shortCalls: "Appels de moins de 10 s exclus de la facturation", concurrentCalls: "Appels simultanés illimités", multilingual: "Parle plus de 70 langues",
+      voiceMinutes: "Minutes vocales", outboundCalls: "Tentatives de transfert", alertSms: "Notifications SMS", knowledgeStorage: "Base de connaissances", phoneNumbers: "Numéros de téléphone", agents: "Agents",
+      callAnswering: "Réponse aux appels 24/7", callerDetails: "Collecte des détails et messages", knowledgeAnswers: "Réponses depuis la base de connaissances", workflows: "Consignes en langage naturel", spamFiltering: "Filtrage du spam", shortCalls: "Appels de moins de 10 s non facturés", concurrentCalls: "Appels simultanés illimités", multilingual: "Parle plus de 70 langues",
       appointmentBooking: "Prise de rendez‑vous", confirmationTexts: "SMS de confirmation de rendez‑vous", googleCalendar: "Intégration Google Calendar",
       urgentHandoff: "Transfert des appels urgents", callTransfers: "Transferts d'appel", afterHours: "Réponse hors horaires",
       emailNotifications: "Notifications par courriel", smsNotifications: "Notifications SMS",
-      summaries: "Résumés et transcriptions d’appels", history: "Historique et enregistrements d'appels", callerProfiles: "Profils et notes d'appelants", contacts: "Contacts", websiteImport: "Import de connaissances depuis le site web",
+      summaries: "Résumés et transcriptions d’appels", history: "Historique et enregistrements d'appels", callerProfiles: "Profils et notes d'appelants", contacts: "Contacts", websiteImport: "Import depuis votre site web",
       hosting: "Hébergement", usageBilling: "Dépassements à l’usage", support: "Support",
     },
-    included: (count, gender) => `${count} ${gender === "f" ? "incluses" : "inclus"}`,
+    included: (count) => `${count} incluses`,
     then: (rate, unit) => `puis ${rate}/${unit === "attempt" ? "tentative" : unit}`,
     rate: (cents) => `${dollars(cents).replace(".", ",")} $`,
     megabytes: (count) => `${count} Mo`,
@@ -86,15 +86,15 @@ const copy: Record<PlanCardLocale, Copy> = {
   es: {
     groups: ["Uso y límites", "Funciones de recepción", "Reservas", "Enrutamiento y transferencias", "Notificaciones y mensajes", "Datos y panel", "Implementación y soporte"],
     features: {
-      voiceMinutes: "Minutos de voz", outboundCalls: "Intentos de transferencia", alertSms: "Segmentos de SMS de alerta", knowledgeStorage: "Base de conocimiento", phoneNumbers: "Números de teléfono", agents: "Agentes",
-      callAnswering: "Atención de llamadas 24/7", callerDetails: "Datos y mensajes de quien llama", knowledgeAnswers: "Respuestas desde la base de conocimiento", workflows: "Flujos de trabajo en lenguaje sencillo", spamFiltering: "Filtro de spam", shortCalls: "Llamadas de menos de 10 s excluidas de la facturación", concurrentCalls: "Llamadas simultáneas ilimitadas", multilingual: "Habla más de 70 idiomas",
+      voiceMinutes: "Minutos de voz", outboundCalls: "Intentos de transferencia", alertSms: "Notificaciones por SMS", knowledgeStorage: "Base de conocimiento", phoneNumbers: "Números de teléfono", agents: "Agentes",
+      callAnswering: "Atención de llamadas 24/7", callerDetails: "Datos y mensajes de quien llama", knowledgeAnswers: "Respuestas desde la base de conocimiento", workflows: "Flujos de trabajo en lenguaje sencillo", spamFiltering: "Filtro de spam", shortCalls: "Llamadas de menos de 10 s sin cargo", concurrentCalls: "Llamadas simultáneas ilimitadas", multilingual: "Habla más de 70 idiomas",
       appointmentBooking: "Reserva de citas", confirmationTexts: "SMS de confirmación de citas", googleCalendar: "Integración con Google Calendar",
       urgentHandoff: "Derivación de llamadas urgentes", callTransfers: "Transferencias de llamadas", afterHours: "Atención fuera de horario",
       emailNotifications: "Notificaciones por correo electrónico", smsNotifications: "Notificaciones por SMS",
-      summaries: "Resúmenes y transcripciones de llamadas", history: "Historial y grabaciones de llamadas", callerProfiles: "Perfiles y notas de quienes llaman", contacts: "Contactos", websiteImport: "Importación de conocimiento desde el sitio web",
+      summaries: "Resúmenes y transcripciones de llamadas", history: "Historial y grabaciones de llamadas", callerProfiles: "Perfiles y notas de quienes llaman", contacts: "Contactos", websiteImport: "Importación desde su sitio web",
       hosting: "Alojamiento", usageBilling: "Excedentes según el uso", support: "Soporte",
     },
-    included: (count) => `${count} incluidos`,
+    included: (count, noun) => `${count} ${noun === "notifications" ? "incluidas" : "incluidos"}`,
     then: (rate, unit) => `luego ${rate}/${unit === "attempt" ? "intento" : unit === "segment" ? "segmento" : unit}`,
     rate: (cents) => `$${dollars(cents)}`,
     megabytes: (count) => `${count} MB`,
@@ -107,8 +107,8 @@ const copy: Record<PlanCardLocale, Copy> = {
   sr: {
     groups: ["Potrošnja i limiti", "Osnovne funkcije recepcionera", "Zakazivanje", "Rutiranje i preusmeravanje", "Obaveštenja i poruke", "Podaci i kontrolna tabla", "Hosting i podrška"],
     features: {
-      voiceMinutes: "Minuti razgovora", outboundCalls: "Pokušaji preusmeravanja", alertSms: "Segmenti SMS upozorenja", knowledgeStorage: "Baza znanja", phoneNumbers: "Brojevi telefona", agents: "Agenti",
-      callAnswering: "Odgovaranje na pozive 24/7", callerDetails: "Beleženje podataka i poruka pozivalaca", knowledgeAnswers: "Odgovori iz baze znanja", workflows: "Tokovi rada opisani običnim jezikom", spamFiltering: "Filtriranje spama", shortCalls: "Pozivi kraći od 10 s se ne naplaćuju", concurrentCalls: "Neograničen broj istovremenih poziva", multilingual: "Govori više od 70 jezika",
+      voiceMinutes: "Minuti razgovora", outboundCalls: "Pokušaji preusmeravanja", alertSms: "SMS obaveštenja", knowledgeStorage: "Baza znanja", phoneNumbers: "Brojevi telefona", agents: "Agenti",
+      callAnswering: "Odgovaranje na pozive 24/7", callerDetails: "Beleženje podataka i poruka pozivalaca", knowledgeAnswers: "Odgovori iz baze znanja", workflows: "Tokovi rada na običnom jeziku", spamFiltering: "Filtriranje spama", shortCalls: "Pozivi kraći od 10 s se ne naplaćuju", concurrentCalls: "Neograničeni istovremeni pozivi", multilingual: "Govori više od 70 jezika",
       appointmentBooking: "Zakazivanje termina", confirmationTexts: "SMS potvrde termina", googleCalendar: "Google Calendar integracija",
       urgentHandoff: "Prosleđivanje hitnih poziva", callTransfers: "Preusmeravanje poziva", afterHours: "Odgovaranje van radnog vremena",
       emailNotifications: "Obaveštenja e-poštom", smsNotifications: "SMS obaveštenja",
@@ -136,14 +136,14 @@ export function planComparison(locale: string): ComparisonGroup[] {
     const split = typeof paid === "object" && "starter" in paid ? paid : { starter: paid, pro: paid };
     return { feature: c.features[feature], free, starter: split.starter, pro: split.pro, enterprise };
   };
-  const allowance = (count: number, rateCents: number, unit: "min" | "attempt" | "segment", gender: "f" | "m") => ({ included: c.included(count, gender), then: c.then(c.rate(rateCents), unit) });
+  const allowance = (count: number, rateCents: number, unit: "min" | "attempt" | "segment", noun: "minutes" | "attempts" | "notifications") => ({ included: c.included(count, noun), then: c.then(c.rate(rateCents), unit) });
   const mb = (bytes: number) => c.megabytes(bytes / (1024 * 1024));
   const agentLimit = (limit: number | null) => limit === null ? c.unlimited.m : String(limit);
   return [
     { category: c.groups[0], rows: [
-      row("voiceMinutes", { included: c.included(free.voiceSecondsIncluded / 60, "f") }, { starter: allowance(starter.voiceSecondsIncluded / 60, starter.voiceOverageRatePerMinuteCents, "min", "f"), pro: allowance(pro.voiceSecondsIncluded / 60, pro.voiceOverageRatePerMinuteCents, "min", "f") }, c.custom),
-      row("outboundCalls", { included: c.included(free.outboundCallAttemptsIncluded, "f") }, { starter: allowance(starter.outboundCallAttemptsIncluded, starter.outboundCallAttemptOverageRateCents, "attempt", "f"), pro: allowance(pro.outboundCallAttemptsIncluded, pro.outboundCallAttemptOverageRateCents, "attempt", "f") }, c.custom),
-      row("alertSms", { included: c.included(free.alertSmsSegmentsIncluded, "m") }, { starter: allowance(starter.alertSmsSegmentsIncluded, starter.alertSmsOverageRatePerSegmentCents, "segment", "m"), pro: allowance(pro.alertSmsSegmentsIncluded, pro.alertSmsOverageRatePerSegmentCents, "segment", "m") }, c.custom),
+      row("voiceMinutes", { included: c.included(free.voiceSecondsIncluded / 60, "minutes") }, { starter: allowance(starter.voiceSecondsIncluded / 60, starter.voiceOverageRatePerMinuteCents, "min", "minutes"), pro: allowance(pro.voiceSecondsIncluded / 60, pro.voiceOverageRatePerMinuteCents, "min", "minutes") }, c.custom),
+      row("outboundCalls", { included: c.included(free.outboundCallAttemptsIncluded, "attempts") }, { starter: allowance(starter.outboundCallAttemptsIncluded, starter.outboundCallAttemptOverageRateCents, "attempt", "attempts"), pro: allowance(pro.outboundCallAttemptsIncluded, pro.outboundCallAttemptOverageRateCents, "attempt", "attempts") }, c.custom),
+      row("alertSms", { included: c.included(free.alertSmsSegmentsIncluded, "notifications") }, { starter: allowance(starter.alertSmsSegmentsIncluded, starter.alertSmsOverageRatePerSegmentCents, "segment", "notifications"), pro: allowance(pro.alertSmsSegmentsIncluded, pro.alertSmsOverageRatePerSegmentCents, "segment", "notifications") }, c.custom),
       row("knowledgeStorage", mb(free.knowledgeStorageBytes), { starter: mb(starter.knowledgeStorageBytes), pro: mb(pro.knowledgeStorageBytes) }, c.custom),
       row("phoneNumbers", c.freeForDays, c.dedicated, c.multiple),
       // A plan with no agent limit says Unlimited. "Agents" is masculine in French and Spanish.

@@ -24,6 +24,7 @@ const tilts: Record<SceneName, Tilt> = {
   summary: "right",
   jobBooked: "left",
   guardrails: "right",
+  integrations: "left",
   salonDay: "right",
   stylists: "left",
   reschedule: "flat",

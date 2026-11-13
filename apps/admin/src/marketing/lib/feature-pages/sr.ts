@@ -359,7 +359,7 @@ export const featurePagesSr: FeaturePagesCopy = {
       {
         question: "Koji paketi uključuju SMS?",
         answer:
-          "SMS poruke o terminima i SMS obaveštenja su u paketima Starter i Pro. Starter uključuje 50 SMS segmenata za obaveštenja mesečno, a Pro 200.",
+          "SMS obaveštenja su u paketima Starter i Pro. Starter uključuje 50 SMS segmenata za obaveštenja mesečno, a Pro 200.",
       },
       {
         question: "Da li AI odgovara na SMS poruke?",

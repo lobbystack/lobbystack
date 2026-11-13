@@ -4,9 +4,9 @@ import {
   Bot,
   CalendarCheck,
   CalendarDays,
+  Clock,
   FileText,
   Globe,
-  Clock,
   History,
   MessageSquareText,
   Paperclip,
@@ -15,7 +15,9 @@ import {
   Server,
   ShieldCheck,
   Tag,
+  Webhook,
   Wrench,
+  Zap,
   type LucideIcon,
 } from "lucide-react"
 import { Fragment, type ReactNode } from "react"
@@ -38,6 +40,7 @@ export type ProductSceneName =
   | "summary"
   | "jobBooked"
   | "guardrails"
+  | "integrations"
 
 type SceneProps = { locale: Locale; neutral?: boolean | undefined }
 
@@ -417,6 +420,37 @@ function GuardrailsScene({ locale, neutral }: SceneProps) {
   )
 }
 
+/** A booking fanning out to the calendar, Zapier and a webhook. */
+function IntegrationsScene({ locale, neutral }: SceneProps) {
+  const t = getProductScenesCopy(locale, neutral)
+  const targets: { icon: LucideIcon; title: string; detail?: string }[] = [
+    { icon: CalendarDays, title: "Google Calendar" },
+    { icon: Zap, title: "Zapier" },
+    { icon: Webhook, title: "Webhook", detail: "appointment.booked" },
+  ]
+  return (
+    <Scene width={534} height={300} tilt="left">
+      <Place x={0} y={108}>
+        <Tile accent className="w-[13rem]" innerClassName="p-4">
+          <Row icon={<IconDot icon={CalendarCheck} />} title={t.appointmentBooked} detail={slot(locale, 15)} />
+        </Tile>
+      </Place>
+      <Connector x={224} y={150} length={38} />
+      <Connector x={262} y={42} length={216} vertical />
+      {targets.map((target, index) => (
+        <Fragment key={target.title}>
+          <Connector x={262} y={42 + index * 108} length={24} />
+          <Place x={286} y={index * 108}>
+            <Tile className="w-[14.5rem]" innerClassName="p-4">
+              <Row icon={<IconDot icon={target.icon} />} title={target.title} detail={target.detail} />
+            </Tile>
+          </Place>
+        </Fragment>
+      ))}
+    </Scene>
+  )
+}
+
 const scenes = {
   callCapture: CallCaptureScene,
   booking: BookingScene,
@@ -427,6 +461,7 @@ const scenes = {
   summary: SummaryScene,
   jobBooked: JobBookedScene,
   guardrails: GuardrailsScene,
+  integrations: IntegrationsScene,
 } satisfies Record<ProductSceneName, (props: SceneProps) => ReactNode>
 
 // How much each kind of panel scales its scene's plane.

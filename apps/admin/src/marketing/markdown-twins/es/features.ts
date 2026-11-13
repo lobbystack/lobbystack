@@ -33,7 +33,7 @@ ${featureIndexMarkdown("es")}
 
 Todos los planes incluyen voz en el navegador, flujos de trabajo en lenguaje natural, reserva de citas, resúmenes de llamadas, notificaciones por correo electrónico, base de conocimiento, panel, historial de llamadas y llamadas simultáneas ilimitadas.
 
-Free incluye 30 minutos de voz y un número de EE. UU. o Canadá gratis durante 14 días. Starter y Pro incluyen un número de teléfono dedicado para llamadas entrantes y transferencias. Los límites de cada plan para intentos de transferencia y segmentos de SMS de alerta aparecen en la comparativa de precios.
+Free incluye 30 minutos de voz y un número de EE. UU. o Canadá gratis durante 14 días. Starter y Pro incluyen un número de teléfono dedicado para llamadas entrantes y transferencias. Los límites de cada plan para intentos de transferencia y segmentos de notificaciones por SMS aparecen en la comparativa de precios.
 `
 
 export const GET = () =>

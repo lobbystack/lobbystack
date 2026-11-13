@@ -21,10 +21,12 @@ import { notFound } from "next/navigation"
 import { FaqSection } from "@/marketing/components/FaqSection"
 import { Footer } from "@/marketing/components/Footer"
 import { Navbar } from "@/marketing/components/Navbar"
+import { ProductScene, type ProductSceneName } from "@/marketing/components/scenes/ProductScenes"
 import { ButtonLink } from "@/marketing/components/system/ButtonLink"
 import { ClosingCta } from "@/marketing/components/system/ClosingCta"
 import { FactStrip } from "@/marketing/components/system/FactStrip"
 import { IconCards } from "@/marketing/components/system/IconCards"
+import { PageHero } from "@/marketing/components/system/PageHero"
 import { SectionTitle } from "@/marketing/components/system/SectionTitle"
 import { SplitCard } from "@/marketing/components/system/SplitCard"
 import { getCopy, localizeHref, localizePath, type Locale } from "@/marketing/i18n"
@@ -55,6 +57,15 @@ const benefitIcons: Record<FeaturePageSlug, [LucideIcon, LucideIcon, LucideIcon]
   inbox: [FileText, ListChecks, ClipboardCheck],
   "sms-notifications": [MessageSquareText, BellRing, ShieldCheck],
   integrations: [CalendarCheck, Zap, Webhook],
+}
+
+/** The scene beside each page's headline. */
+const heroScenes: Record<FeaturePageSlug, ProductSceneName> = {
+  rules: "knowledge",
+  "call-transfers": "handoff",
+  inbox: "summary",
+  "sms-notifications": "booking",
+  integrations: "integrations",
 }
 
 function pageOr404(locale: Locale, slug: string) {
@@ -135,15 +146,13 @@ export function FeatureDetailPage({ locale, slug: rawSlug }: { locale: Locale; s
       <PageJsonLd seo={seo} />
       <Navbar locale={locale} />
       <main id="main-content" tabIndex={-1}>
-        <section id="hero">
-          <div className={`${container} pt-10 md:pt-11`}>
-            <div className="mx-auto max-w-4xl text-center">
-              <p className="animate-fade-up eyebrow">{page.name}</p>
-              <h1 className="animate-fade-up display-heading mt-4 stagger-1">{page.hero.title}</h1>
-              <p className="animate-fade-up mx-auto mt-4 max-w-[40rem] text-lg leading-[1.6] text-pretty text-muted-foreground stagger-2">
-                {page.hero.intro}
-              </p>
-              <div className="animate-fade-up mt-8 flex flex-wrap items-center justify-center gap-2.5 stagger-3">
+        <div id="hero">
+          <PageHero
+            eyebrow={page.name}
+            title={page.hero.title}
+            intro={page.hero.intro}
+            actions={
+              <>
                 <ButtonLink href={signup} {...signupAttributes(`feature_${slug}_hero`)}>
                   {common.tryFree}
                 </ButtonLink>
@@ -156,11 +165,14 @@ export function FeatureDetailPage({ locale, slug: rawSlug }: { locale: Locale; s
                 >
                   {common.viewPricing}
                 </ButtonLink>
-              </div>
-            </div>
-            <FactStrip facts={page.facts} className="mt-12 md:mt-16" />
+              </>
+            }
+            art={<ProductScene name={heroScenes[slug]} locale={locale} fit="panel" neutral />}
+          />
+          <div className={`${container} mt-12 md:mt-16`}>
+            <FactStrip facts={page.facts} />
           </div>
-        </section>
+        </div>
 
         <section className="section-spacing" id="benefits">
           <div className={container}>
