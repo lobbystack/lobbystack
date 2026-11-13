@@ -29,6 +29,19 @@ test("a signed-out visitor keeps Log in and Try for free", async ({ page }) => {
   await expect(header.getByRole("link", { name: "Dashboard" })).toHaveCount(0);
 });
 
+test("the Product menu opens the features index, and a feature card opens its page", async ({ page }) => {
+  await openSite(page, "/");
+  const header = page.locator("header.site-header");
+  await header.locator("summary", { hasText: "Product" }).first().click();
+  await header.getByRole("link", { name: "All features" }).first().click();
+  await expect(page).toHaveURL(`${site}/features/`);
+
+  const index = page.locator("#feature-index");
+  await expect(index.getByRole("link")).toHaveCount(12);
+  await index.getByRole("link", { name: /MCP server/ }).click();
+  await expect(page).toHaveURL(`${site}/features/mcp/`);
+});
+
 test("a signed-in visitor gets one Dashboard link in their language", async ({ page: signUpPage, context }, testInfo) => {
   test.setTimeout(120_000);
   const database = migrator();

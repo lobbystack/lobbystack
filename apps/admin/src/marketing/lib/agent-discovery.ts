@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto"
 import { selfHostedSupportCatalog } from "@lobbystack/shared"
 import { PREFIXED_LOCALES, type Locale } from "@/marketing/i18n/config"
+import { featureIndexMarkdown } from "@/marketing/lib/feature-index"
 import {
   DEFAULT_DESCRIPTION,
   DEFAULT_TITLE,
@@ -699,16 +700,20 @@ LobbyStack is an open-source AI receptionist for call-heavy small businesses. It
 ## Core Capabilities
 
 - Call answering for every call, or only when a team is busy, closed, or unavailable.
-- Plain-language workflows that let businesses describe what to ask, say, book, quote, transfer, and notify.
+- Plain-language rules that let businesses describe what to ask, say, book, quote, transfer, and notify.
 - Appointment booking on Google Calendar, Cal.com or Calendly with reschedules, cancellations, a confirmation text, and one reminder text 24 hours before the appointment when the caller agrees (paid plans).
 - Business knowledge answers for FAQs, services, pricing, hours, policies, locations, and staff instructions.
 - Quote handling for exact prices, starting prices, price ranges, or a message for the team to quote later.
 - Lead qualification and structured caller detail capture.
 - Human handoff through transfers, messages, and team notifications.
 - Owner alerts by email, with optional SMS alerts on paid plans.
-- Dashboard, call history, recordings, transcripts, summaries, contact profiles, analytics, and action-required views.
+- Replies to Instagram direct messages with the knowledge and rules the agent uses on calls.
+- Inbox, call history, recordings, transcripts, summaries, contact profiles, analytics, and action-required views.
 - Answers in the caller's language.
+- Webhooks, an HTTP API, the lobbystack CLI, and an MCP server for AI assistants.
+- Open source, with self-hosting on Docker Compose and a white-label option.
 
+${featureIndexMarkdown("en")}
 ## Every Plan Includes
 
 Every plan includes browser voice, plain-language workflows, appointment booking, call summaries, email notifications, knowledge base, dashboard, call history, and unlimited concurrent calls.

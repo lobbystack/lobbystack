@@ -1,4 +1,5 @@
 import { localizedRouteMeta } from "@/marketing/lib/localized-markdown"
+import { featureIndexMarkdown } from "@/marketing/lib/feature-index"
 import { markdownResponse } from "@/marketing/lib/markdown-response"
 import { absoluteUrl } from "@/marketing/lib/seo"
 
@@ -27,6 +28,7 @@ LobbyStack es una recepcionista con IA de código abierto para pequeñas empresa
 - Panel, historial de llamadas, grabaciones, transcripciones, resúmenes, perfiles de contacto, analíticas y vistas de acciones pendientes.
 - Respuestas en el idioma de quien llama.
 
+${featureIndexMarkdown("es")}
 ## Incluido en todos los planes
 
 Todos los planes incluyen voz en el navegador, flujos de trabajo en lenguaje natural, reserva de citas, resúmenes de llamadas, notificaciones por correo electrónico, base de conocimiento, panel, historial de llamadas y llamadas simultáneas ilimitadas.

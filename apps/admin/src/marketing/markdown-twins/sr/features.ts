@@ -1,4 +1,5 @@
 import { localizedRouteMeta } from "@/marketing/lib/localized-markdown"
+import { featureIndexMarkdown } from "@/marketing/lib/feature-index"
 import { markdownResponse } from "@/marketing/lib/markdown-response"
 import { absoluteUrl } from "@/marketing/lib/seo"
 
@@ -27,6 +28,7 @@ LobbyStack je AI recepcioner otvorenog koda za male firme koje primaju mnogo poz
 - Kontrolna tabla, istorija poziva, snimci, transkripti, rezimei, profili kontakata, analitika i pregled stavki koje traže akciju.
 - Odgovori na jeziku pozivaoca.
 
+${featureIndexMarkdown("sr")}
 ## Svaki paket uključuje
 
 Svaki paket uključuje glasovne pozive u pregledaču, tokove rada opisane običnim jezikom, zakazivanje termina, rezimee poziva, obaveštenja e-poštom, bazu znanja, kontrolnu tablu, istoriju poziva i neograničen broj istovremenih poziva.

@@ -11,7 +11,7 @@ const featuresHeroCopy = {
   en: {
     h1Start: "AI receptionist features that actually",
     h1Emphasis: "get work done",
-    body: "LobbyStack handles AI phone answering, appointment booking, team notifications, call routing, quotes, and lead qualification without phone trees or workflow-builder mess.",
+    body: "LobbyStack answers your phone, replies to Instagram messages, books appointments, quotes prices, transfers calls and alerts your team. You set it up in plain language, from the dashboard or through the API.",
     workflowLabel: "Write the workflow",
     workflowText:
       "When someone asks for a quote, ask what service they need, where they are located, their timeline, and their budget. Give our approved price range for standard jobs. If they need exact pricing, book an on-site estimate and attach the summary for the team.",
@@ -33,7 +33,7 @@ const featuresHeroCopy = {
   fr: {
     h1Start: "Tout ce qu’il faut pour",
     h1Emphasis: "répondre, qualifier et réserver",
-    body: "LobbyStack prend les appels, qualifie les demandes, planifie les rendez‑vous et transmet les bonnes informations à votre équipe, sans menu téléphonique ni scénarios impossibles à maintenir.",
+    body: "LobbyStack répond au téléphone et aux messages Instagram, prend les rendez‑vous, donne vos prix, transfère les appels et prévient votre équipe. Vous le configurez en langage courant, depuis le tableau de bord ou par l’API.",
     workflowLabel: "Décrivez vos règles",
     workflowText:
       "Si quelqu’un demande un devis, demandez le service, l’adresse, le délai souhaité et le budget. Donnez la fourchette approuvée pour les demandes standards. Si le prix doit être confirmé, planifiez une visite d’estimation et joignez le résumé pour l’équipe.",
@@ -55,7 +55,7 @@ const featuresHeroCopy = {
   es: {
     h1Start: "Funciones de recepcionista con IA que de verdad",
     h1Emphasis: "hacen el trabajo",
-    body: "LobbyStack contesta el teléfono con IA, reserva citas, avisa a su equipo, dirige llamadas, da presupuestos y califica clientes potenciales, sin menús telefónicos ni editores de flujos enredados.",
+    body: "LobbyStack contesta el teléfono y los mensajes de Instagram, reserva citas, da precios, transfiere llamadas y avisa a su equipo. Usted lo configura en lenguaje sencillo, desde el panel o con la API.",
     workflowLabel: "Escriba el flujo",
     workflowText:
       "Cuando alguien pida un presupuesto, pregunte qué servicio necesita, dónde se encuentra, su plazo y su presupuesto. Dé nuestro rango de precios aprobado para trabajos estándar. Si necesita un precio exacto, reserve una visita de estimación y adjunte el resumen para el equipo.",
@@ -77,7 +77,7 @@ const featuresHeroCopy = {
   sr: {
     h1Start: "Funkcije AI recepcionera koje zaista",
     h1Emphasis: "obavljaju posao",
-    body: "LobbyStack odgovara na pozive uz pomoć AI, zakazuje termine, obaveštava tim, usmerava pozive, daje cene i kvalifikuje potencijalne klijente, bez telefonskih menija i zamršenih alata za tokove rada.",
+    body: "LobbyStack odgovara na pozive i Instagram poruke, zakazuje termine, navodi cene, preusmerava pozive i obaveštava Vaš tim. Podešavate ga običnim jezikom, iz kontrolne table ili preko API-ja.",
     workflowLabel: "Napišite tok rada",
     workflowText:
       "Kada neko traži ponudu, pitajte koja mu usluga treba, gde se nalazi, kakav mu je rok i budžet. Za standardne poslove navedite naš odobreni raspon cena. Ako mu treba tačna cena, zakažite procenu na licu mesta i priložite rezime za tim.",

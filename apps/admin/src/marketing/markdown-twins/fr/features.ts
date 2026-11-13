@@ -1,3 +1,4 @@
+import { featureIndexMarkdown } from "@/marketing/lib/feature-index"
 import { markdownResponse } from "@/marketing/lib/markdown-response"
 import { absoluteUrl } from "@/marketing/lib/seo"
 
@@ -20,7 +21,8 @@ LobbyStack répond aux appels, prend des rendez‑vous, collecte les détails im
 - Qualification de prospects et collecte structurée des détails de l’appelant.
 - Transfert humain avec résumés, notifications et contexte.
 - Tableau de bord, historique, enregistrements, transcriptions, résumés, profils de contacts et analyses.
-`
+
+${featureIndexMarkdown("fr")}`
 
 export const GET = () =>
   markdownResponse({

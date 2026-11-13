@@ -16,6 +16,7 @@ import {
   History,
   Home,
   KeyRound,
+  LayoutGrid,
   Menu,
   Moon,
   Newspaper,
@@ -25,7 +26,9 @@ import {
   Server,
   Stethoscope,
   Tag,
+  Terminal,
   WashingMachine,
+  Webhook,
   Wind,
   Wrench,
   X,
@@ -56,8 +59,13 @@ type NavLink =
 
 const labels = {
   en: {
+    product: "Product",
+    receptionist: "Receptionist",
+    platform: "Platform",
+    allFeatures: "All features",
+    api: "API",
+    integrations: "Integrations",
     solutions: "Solutions",
-    features: "Features",
     resources: "Resources",
     pricing: "Pricing",
     login: "Log in",
@@ -74,8 +82,13 @@ const labels = {
     mobileNavigation: "Mobile navigation",
   },
   fr: {
+    product: "Produit",
+    receptionist: "Réceptionniste",
+    platform: "Plateforme",
+    allFeatures: "Toutes les fonctionnalités",
+    api: "API",
+    integrations: "Intégrations",
     solutions: "Solutions",
-    features: "Fonctionnalités",
     resources: "Ressources",
     pricing: "Tarifs",
     login: "Connexion",
@@ -92,8 +105,13 @@ const labels = {
     mobileNavigation: "Navigation mobile",
   },
   es: {
+    product: "Producto",
+    receptionist: "Recepcionista",
+    platform: "Plataforma",
+    allFeatures: "Todas las funciones",
+    api: "API",
+    integrations: "Integraciones",
     solutions: "Soluciones",
-    features: "Funciones",
     resources: "Recursos",
     pricing: "Precios",
     login: "Iniciar sesión",
@@ -110,8 +128,13 @@ const labels = {
     mobileNavigation: "Navegación móvil",
   },
   sr: {
+    product: "Proizvod",
+    receptionist: "Recepcioner",
+    platform: "Platforma",
+    allFeatures: "Sve funkcije",
+    api: "API",
+    integrations: "Integracije",
     solutions: "Rešenja",
-    features: "Funkcije",
     resources: "Resursi",
     pricing: "Cene",
     login: "Prijava",
@@ -242,18 +265,46 @@ const resourceLinks = (locale: Locale) =>
     },
   ] satisfies NavChildLink[]
 
+const docsLocales = new Set<Locale>(["fr", "es"])
+
+/** A Help Center page in the reader's language, where the docs have one. */
+const helpCenterUrl = (locale: Locale, path: string) =>
+  `https://docs.lobbystack.com/${docsLocales.has(locale) ? `${locale}/` : ""}${path}`
+
+const productColumns = (locale: Locale): NavColumn[] => [
+  {
+    title: labels[locale].receptionist,
+    links: [
+      {
+        label: solutionLabelMap[locale].aiPhoneAnswering,
+        href: "/solutions/ai-phone-answering/",
+        icon: PhoneCall,
+      },
+      {
+        label: solutionLabelMap[locale].aiAppointmentScheduler,
+        href: "/solutions/ai-appointment-scheduler/",
+        icon: CalendarCheck,
+      },
+      { label: labels[locale].allFeatures, href: "/features/", icon: LayoutGrid },
+    ],
+  },
+  {
+    title: labels[locale].platform,
+    links: [
+      { label: labels[locale].mcpServer, href: "/features/mcp/", icon: Plug },
+      { label: labels[locale].api, href: "/docs/api/", icon: Terminal },
+      {
+        label: labels[locale].integrations,
+        href: helpCenterUrl(locale, "integrations/overview"),
+        external: true,
+        icon: Webhook,
+      },
+    ],
+  },
+]
+
 const solutionLinks = (locale: Locale) =>
   [
-    {
-      label: solutionLabelMap[locale].aiPhoneAnswering,
-      href: "/solutions/ai-phone-answering/",
-      icon: PhoneCall,
-    },
-    {
-      label: solutionLabelMap[locale].aiAppointmentScheduler,
-      href: "/solutions/ai-appointment-scheduler/",
-      icon: CalendarCheck,
-    },
     {
       label: solutionLabelMap[locale].afterHours,
       href: "/solutions/after-hours-answering-service/",
@@ -268,11 +319,6 @@ const solutionLinks = (locale: Locale) =>
       label: solutionLabelMap[locale].whiteLabel,
       href: "/white-label/",
       icon: Tag,
-    },
-    {
-      label: labels[locale].mcpServer,
-      href: "/features/mcp/",
-      icon: Plug,
     },
   ] satisfies NavChildLink[]
 
@@ -376,10 +422,14 @@ const solutionColumns = (locale: Locale) =>
 const navLinks = (locale: Locale): NavLink[] => [
   {
     type: "group",
+    label: labels[locale].product,
+    columns: productColumns(locale),
+  },
+  {
+    type: "group",
     label: labels[locale].solutions,
     columns: solutionColumns(locale),
   },
-  { type: "link", label: labels[locale].features, href: "/features/" },
   {
     type: "group",
     label: labels[locale].resources,

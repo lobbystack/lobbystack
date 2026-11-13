@@ -2,7 +2,7 @@ import { Footer } from "@/marketing/components/Footer"
 import { Navbar } from "@/marketing/components/Navbar"
 import { FeaturesCtaSection } from "@/marketing/components/features/FeaturesCtaSection"
 import { FeaturesHero } from "@/marketing/components/features/FeaturesHero"
-import { FeatureWall } from "@/marketing/components/features/FeatureWall"
+import { FeatureIndex } from "@/marketing/components/features/FeatureIndex"
 import { IncludedOnEveryPlan } from "@/marketing/components/features/IncludedOnEveryPlan"
 import { getCopy, getRouteSeo, localeTag, localizePath, type Locale } from "@/marketing/i18n"
 import { absoluteUrl, breadcrumbJsonLd, organizationJsonLd, webSiteJsonLd } from "@/marketing/lib/seo"
@@ -54,7 +54,7 @@ export function FeaturesPage({ locale }: { locale: Locale }) {
       <Navbar locale={locale} />
       <main id="main-content" tabIndex={-1}>
         <FeaturesHero locale={locale} />
-        <FeatureWall locale={locale} />
+        <FeatureIndex locale={locale} />
         <IncludedOnEveryPlan locale={locale} />
         <FeaturesCtaSection locale={locale} />
       </main>
