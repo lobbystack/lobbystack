@@ -59,7 +59,7 @@ function TimePicker({ value, onChange, hourCycle = "24h", locale, minuteStep = 5
     <Popover onOpenChange={setOpen} open={open}>
       <PopoverTrigger
         render={
-          <Button aria-label={ariaLabel} className={cn("justify-start rounded-xl font-normal tabular-nums", className)} disabled={disabled} type="button" variant="outline" />
+          <Button aria-label={ariaLabel} className={cn("justify-start rounded-xl border-input font-normal text-base! tabular-nums md:text-sm! shadow-xs group-has-[[data-slot=field-label]:hover]/field:bg-input/50", className)} disabled={disabled} type="button" variant="outline" />
         }
       >
         <Clock className="text-muted-foreground" data-icon="inline-start" />
@@ -94,7 +94,7 @@ function TimeColumn({ label, onSelect, open, options, render, selected, title }:
   return (
     <div className="flex min-h-0 w-14 flex-col gap-1">
     {/* An empty title keeps the AM/PM column aligned with the titled ones. */}
-    <span aria-hidden="true" className="flex h-6 shrink-0 items-center justify-center border-b border-border type-label text-muted-foreground">{title}</span>
+    <span aria-hidden="true" className="flex h-6 shrink-0 items-center justify-center border-b border-border type-label text-muted-foreground uppercase">{title}</span>
     <div aria-label={label} className="flex min-h-0 flex-1 touch-pan-y flex-col gap-1 overflow-y-auto overscroll-contain [scrollbar-width:none]" ref={listRef} role="listbox">
       {options.map((option) => (
         <button

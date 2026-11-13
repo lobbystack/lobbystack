@@ -73,6 +73,29 @@ test("an owner books from the calendar's week, sees the booking as a block, and 
     await sheet.getByRole("button", { name: common.accessibility.close }).first().click();
     await expect(sheet).toBeHidden();
 
+    // Dragging the line under an hour resizes every row and dragging a day header's edge resizes that day. A double click puts each back.
+    const rowHeight = (await block.boundingBox())!.height;
+    const rowHandle = page.getByTestId("calendar-row-handle").first();
+    await rowHandle.scrollIntoViewIfNeeded();
+    const rowAt = (await rowHandle.boundingBox())!;
+    await page.mouse.move(rowAt.x + rowAt.width / 2, rowAt.y + rowAt.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(rowAt.x + rowAt.width / 2, rowAt.y + rowAt.height / 2 + 40, { steps: 4 });
+    await page.mouse.up();
+    expect((await block.boundingBox())!.height).toBeGreaterThan(rowHeight);
+    await rowHandle.dblclick();
+    expect((await block.boundingBox())!.height).toBeCloseTo(rowHeight, 0);
+    const columnHandle = page.getByTestId("calendar-column-handle").first();
+    const columnWidth = (await columnHandle.locator("xpath=..").boundingBox())!.width;
+    const columnAt = (await columnHandle.boundingBox())!;
+    await page.mouse.move(columnAt.x + columnAt.width / 2, columnAt.y + columnAt.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(columnAt.x + columnAt.width / 2 + 60, columnAt.y + columnAt.height / 2, { steps: 4 });
+    await page.mouse.up();
+    expect((await columnHandle.locator("xpath=..").boundingBox())!.width).toBeGreaterThan(columnWidth + 40);
+    await columnHandle.dblclick();
+    expect((await columnHandle.locator("xpath=..").boundingBox())!.width).toBeCloseTo(columnWidth, 0);
+
     // An empty slot tomorrow at 10 AM draws a draft there and opens a popover over the calendar on that time.
     const calendar = page.getByRole("region", { name: copy.views.calendar });
     const widthBefore = (await calendar.boundingBox())!.width;
@@ -90,7 +113,7 @@ test("an owner books from the calendar's week, sees the booking as a block, and 
     expect(box.x + box.width).toBeLessThanOrEqual(viewport.width);
     expect(box.y + box.height).toBeLessThanOrEqual(viewport.height);
     await expect(panel.getByRole("button", { name: copy.create.confirm, exact: true })).toBeInViewport();
-    await expect(panel.getByLabel(copy.openings.date, { exact: true })).toHaveValue(tomorrow.toISODate()!);
+    await expect(panel.getByLabel(copy.openings.date, { exact: true })).toContainText(tomorrow.toFormat("LLL d, yyyy"));
     // Escape drops it with its draft.
     await page.keyboard.press("Escape");
     await expect(panel).toBeHidden();
@@ -126,8 +149,11 @@ test("an owner books from the calendar's week, sees the booking as a block, and 
     await page.getByRole("button", { name: copy.timeOff.action, exact: true }).click();
     const timeOff = page.getByRole("dialog", { name: copy.timeOff.title });
     await timeOff.getByLabel(copy.timeOff.name, { exact: true }).fill("Staff training");
-    await timeOff.getByLabel(copy.timeOff.startDate, { exact: true }).fill(tomorrow.toISODate()!);
-    await timeOff.getByLabel(copy.timeOff.endDate, { exact: true }).fill(tomorrow.toISODate()!);
+    // Each date field opens a calendar; the day picker stamps each day with its US-order date.
+    await timeOff.getByLabel(copy.timeOff.startDate, { exact: true }).click();
+    await page.locator(`[data-day="${tomorrow.toFormat("M/d/yyyy")}"]`).click();
+    await timeOff.getByLabel(copy.timeOff.endDate, { exact: true }).click();
+    await page.locator(`[data-day="${tomorrow.toFormat("M/d/yyyy")}"]`).click();
     const added = page.waitForResponse((response) => new URL(response.url()).pathname === "/api/time-off" && response.request().method() === "POST");
     await timeOff.getByRole("button", { name: copy.timeOff.save, exact: true }).click();
     expect((await added).status()).toBe(201);

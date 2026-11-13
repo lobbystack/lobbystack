@@ -72,7 +72,7 @@ function AppointmentDetails({ appointment, contactName, showClose }: { appointme
             {time(appointment.startsAt, { weekday: "long", month: "long", day: "numeric" })} · {time(appointment.startsAt, { hour: "numeric", minute: "2-digit" })}–{time(appointment.endsAt, { hour: "numeric", minute: "2-digit" })}
           </DrawerDescription>
         </DrawerHeader>
-        <div className="m-4 flex flex-1 flex-col gap-4 overflow-y-auto">
+        <div className="m-3 flex flex-1 flex-col gap-4 overflow-y-auto p-1">
           <dl className="ph-mask flex flex-col divide-y">
             {details.map(([label, value]) => (
               <div className="flex items-start justify-between gap-6 py-3" key={label}>
@@ -117,12 +117,12 @@ function AppointmentNotes({ appointment }: { appointment: Appointment }) {
       <FieldGroup className="gap-4">
         <Field>
           <FieldLabel htmlFor={notesId}>{t("appointments.create.notes")}</FieldLabel>
-          <Textarea aria-describedby={`${notesId}-hint`} className="ph-mask" id={notesId} maxLength={2000} onChange={(event) => setNotes(event.target.value)} readOnly={!canEdit} rows={2} value={notes} />
+          <Textarea aria-describedby={`${notesId}-hint`} className="ph-mask" id={notesId} maxLength={2000} onChange={(event) => setNotes(event.target.value)} placeholder={canEdit ? t("appointments.create.notesPlaceholder") : undefined} readOnly={!canEdit} rows={2} value={notes} />
           <FieldDescription id={`${notesId}-hint`}>{t("appointments.create.notesHint")}</FieldDescription>
         </Field>
         <Field>
           <FieldLabel htmlFor={internalId}>{t("appointments.create.internalNotes")}</FieldLabel>
-          <Textarea aria-describedby={`${internalId}-hint`} className="ph-mask" id={internalId} maxLength={2000} onChange={(event) => setInternalNotes(event.target.value)} readOnly={!canEdit} rows={2} value={internalNotes} />
+          <Textarea aria-describedby={`${internalId}-hint`} className="ph-mask" id={internalId} maxLength={2000} onChange={(event) => setInternalNotes(event.target.value)} placeholder={canEdit ? t("appointments.create.internalNotesPlaceholder") : undefined} readOnly={!canEdit} rows={2} value={internalNotes} />
           <FieldDescription id={`${internalId}-hint`}>{t("appointments.create.internalNotesHint")}</FieldDescription>
         </Field>
       </FieldGroup>

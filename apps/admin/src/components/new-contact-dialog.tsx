@@ -92,7 +92,7 @@ export function NewContactDialog({ businessId, onOpenChange }: { businessId: str
           <FieldGroup className="gap-4">
             <Field data-invalid={nameError || undefined}>
               <FieldLabel htmlFor={nameId}>{t("create.name")}</FieldLabel>
-              <Input aria-describedby={nameError ? `${nameId}-error` : undefined} aria-invalid={nameError || undefined} autoComplete="off" className="ph-mask" id={nameId} maxLength={200} onChange={(event) => setName(event.target.value)} value={name} />
+              <Input aria-describedby={nameError ? `${nameId}-error` : undefined} aria-invalid={nameError || undefined} autoComplete="off" className="ph-mask" id={nameId} maxLength={200} onChange={(event) => setName(event.target.value)} placeholder={t("create.namePlaceholder")} value={name} />
               {nameError ? <FieldError id={`${nameId}-error`}>{t("create.nameRequired")}</FieldError> : null}
             </Field>
             <Field data-invalid={phoneError || undefined}>
@@ -105,7 +105,7 @@ export function NewContactDialog({ businessId, onOpenChange }: { businessId: str
             </Field>
             <Field data-invalid={emailError || undefined}>
               <FieldLabel htmlFor={emailId}>{t("create.email")}</FieldLabel>
-              <Input aria-describedby={emailError ? `${emailId}-error` : undefined} aria-invalid={emailError || undefined} autoComplete="off" className="ph-mask" id={emailId} maxLength={320} onChange={(event) => setEmail(event.target.value)} type="email" value={email} />
+              <Input aria-describedby={emailError ? `${emailId}-error` : undefined} aria-invalid={emailError || undefined} autoComplete="off" className="ph-mask" id={emailId} maxLength={320} onChange={(event) => setEmail(event.target.value)} placeholder={t("create.emailPlaceholder")} type="email" value={email} />
               {emailError ? <FieldError id={`${emailId}-error`}>{t("create.invalidEmail")}</FieldError> : null}
             </Field>
             {problem === "failed" ? <FieldError>{t("create.failed")}</FieldError> : null}

@@ -154,7 +154,7 @@ export function OAuthConsentSurface(props: OAuthConsentProps) {
         {error ? <p className="type-body text-destructive" role="alert">{error}</p> : null}
 
         <div className="flex flex-col gap-3">
-          <Button disabled={pending !== null || !target} onClick={() => void decide(true)}>{pending === "allow" ? t("oauthConsent.allowing") : t("oauthConsent.allow")}</Button>
+          <Button disabled={pending !== null || !target} loading={pending === "allow"} loadingLabel={t("oauthConsent.allowing")} onClick={() => void decide(true)}>{t("oauthConsent.allow")}</Button>
           <Button disabled={pending !== null} onClick={() => void decide(false)} variant="outline">{t("oauthConsent.deny")}</Button>
         </div>
       </div>

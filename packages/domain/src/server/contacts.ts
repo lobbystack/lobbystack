@@ -175,27 +175,50 @@ export async function getContactDetail(
 }
 
 /**
- * An operator corrects a contact's name or email, for example a name the agent misheard.
- * The agent only fills a name that is empty, so a corrected name stays. Null clears a field.
+ * An operator corrects a contact's name, phone or email, for example a name the agent misheard.
+ * The agent only fills a name that is empty, so a corrected name stays. Null clears a name or an email;
+ * a phone can change but not be removed. A phone another contact has throws ContactPhoneTakenError.
+ * Consent belongs to the number that gave it: a new number starts without it, and an opt-out stays.
  */
 export async function updateContactDetails(
   context: DomainContext,
-  input: { userId: string; businessId: string; contactId: string; name?: string | null | undefined; email?: string | null | undefined },
-): Promise<{ contactId: string; name: string | null; email: string | null } | null> {
-  return await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: "operator" }, async tx => {
-    await requireBusinessAdmin(tx, input);
-    if (input.name === undefined && input.email === undefined) throw Object.assign(new Error("Send a name or an email to update."), { status: 400 });
-    const [current] = await tx.select({ id: contacts.id, name: contacts.name, email: contacts.email }).from(contacts).where(and(eq(contacts.id, input.contactId), eq(contacts.businessId, input.businessId))).limit(1).for("update");
-    if (!current) return null;
-    // Only a field that actually differs is written, so saving without changes leaves no audit entry.
-    const patch = { ...(input.name !== undefined && input.name !== current.name ? { name: input.name } : {}), ...(input.email !== undefined && input.email !== current.email ? { email: input.email } : {}) };
-    if (!Object.keys(patch).length) return { contactId: current.id, name: current.name, email: current.email };
-    const [contact] = await tx.update(contacts).set({ ...patch, updatedAt: new Date() }).where(and(eq(contacts.id, input.contactId), eq(contacts.businessId, input.businessId))).returning({ id: contacts.id, name: contacts.name, email: contacts.email });
-    if (!contact) return null;
-    await tx.insert(auditLogs).values({ businessId: input.businessId, actorUserId: input.userId, eventType: "contact.updated", entityType: "contact", entityId: contact.id, payload: { fields: Object.keys(patch) } });
-    await enqueueOutbox(tx, { topic: "realtime.publish", businessId: input.businessId, aggregateType: "contact", aggregateId: input.contactId, dedupeKey: `contact:${input.contactId}:updated:${Date.now()}`, payload: { type: "conversation.updated", entityId: input.contactId } });
-    return { contactId: contact.id, name: contact.name, email: contact.email };
-  });
+  input: { userId: string; businessId: string; contactId: string; name?: string | null | undefined; phone?: string | undefined; email?: string | null | undefined },
+): Promise<{ contactId: string; name: string | null; phone: string | null; email: string | null } | null> {
+  try {
+    return await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: "operator" }, async tx => {
+      await requireBusinessAdmin(tx, input);
+      if (input.name === undefined && input.phone === undefined && input.email === undefined) throw Object.assign(new Error("Send a name, a phone or an email to update."), { status: 400 });
+      const [current] = await tx.select({ id: contacts.id, name: contacts.name, phone: contacts.phone, email: contacts.email }).from(contacts).where(and(eq(contacts.id, input.contactId), eq(contacts.businessId, input.businessId))).limit(1).for("update");
+      if (!current) return null;
+      // Only a field that actually differs is written, so saving without changes leaves no audit entry.
+      const phoneChanged = input.phone !== undefined && input.phone !== current.phone;
+      const patch = {
+        ...(input.name !== undefined && input.name !== current.name ? { name: input.name } : {}),
+        ...(phoneChanged ? { phone: input.phone! } : {}),
+        ...(input.email !== undefined && input.email !== current.email ? { email: input.email } : {}),
+      };
+      if (!Object.keys(patch).length) return { contactId: current.id, name: current.name, phone: current.phone, email: current.email };
+      if (phoneChanged) {
+        const [taken] = await tx.select({ id: contacts.id }).from(contacts).where(and(eq(contacts.businessId, input.businessId), eq(contacts.phone, input.phone!))).limit(1);
+        if (taken) throw new ContactPhoneTakenError(taken.id);
+      }
+      // The database clock dates the change, so texts the old number sent stop counting as consent.
+      const consent = phoneChanged ? {
+        smsConsentStatus: sql<string | null>`case when ${contacts.smsConsentStatus} = 'subscribed' then null else ${contacts.smsConsentStatus} end`,
+        smsConsentUpdatedAt: sql<Date | null>`now()`,
+        smsOptInConfirmedAt: sql<Date | null>`null`,
+      } : {};
+      const [contact] = await tx.update(contacts).set({ ...patch, ...consent, updatedAt: new Date() }).where(and(eq(contacts.id, input.contactId), eq(contacts.businessId, input.businessId))).returning({ id: contacts.id, name: contacts.name, phone: contacts.phone, email: contacts.email });
+      if (!contact) return null;
+      await tx.insert(auditLogs).values({ businessId: input.businessId, actorUserId: input.userId, eventType: "contact.updated", entityType: "contact", entityId: contact.id, payload: { fields: Object.keys(patch) } });
+      await enqueueOutbox(tx, { topic: "realtime.publish", businessId: input.businessId, aggregateType: "contact", aggregateId: input.contactId, dedupeKey: `contact:${input.contactId}:updated:${Date.now()}`, payload: { type: "conversation.updated", entityId: input.contactId } });
+      return { contactId: contact.id, name: contact.name, phone: contact.phone, email: contact.email };
+    });
+  } catch (error) {
+    // Two edits racing onto one number fail on the unique index, which reads the same way.
+    if (isUniqueViolation(error)) throw new ContactPhoneTakenError(null);
+    throw error;
+  }
 }
 
 /** The dashboard can delete standalone contacts; linked history must remain intact. */

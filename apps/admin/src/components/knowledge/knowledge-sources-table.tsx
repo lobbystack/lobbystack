@@ -2,11 +2,13 @@
 
 import { useTable, type PaginationState } from "@tanstack/react-table";
 import { FileText, Globe, Text } from "lucide-react";
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { DataTablePagination, paginationFeatures, useDataTablePaginationLabels } from "@/components/data-table/pagination";
-import { DataTablePaginationSkeleton, KnowledgeRowsSkeleton } from "@/components/loading-skeletons";
+import { matchesSearch } from "@/components/data-table/search-match";
+import { TableSearch } from "@/components/data-table/table-search";
+import { DataTablePaginationSkeleton, KnowledgeRowsSkeleton, TableSearchSkeleton } from "@/components/loading-skeletons";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Status } from "@/components/ui/status";
@@ -100,8 +102,28 @@ function StatusCell({ source, off }: { source: KnowledgeSource; off: boolean }) 
   return <Status variant={knowledgeStatusVariant(source.status)}>{t(`sections.knowledge.status.${status}`, { defaultValue: source.status })}</Status>;
 }
 
+export type KnowledgeSearch = {
+  /** What is typed in the field. */
+  value: string;
+  onChange: (value: string) => void;
+  /** The trimmed text the rows are filtered by. */
+  query: string;
+  /** Whether the field shows: not while there is nothing to search. */
+  visible: boolean;
+};
+
+/** Filters a table's rows by what is typed: title, address and preview. Pass `rows` to the table and selection, `search` to the table. */
+export function useKnowledgeSearch(all: KnowledgeSource[]): { rows: KnowledgeSource[]; search: KnowledgeSearch } {
+  const [value, onChange] = useState("");
+  const query = value.trim();
+  const rows = useMemo(() => query ? all.filter((source) => matchesSearch(query, [source.title, source.sourceUrl, source.preview ? previewText(source.preview) : null])) : all, [all, query]);
+  return { rows, search: { value, onChange, query, visible: all.length > 0 || Boolean(query) } };
+}
+
 export type KnowledgeSourcesTableProps = {
   rows: KnowledgeSource[];
+  /** The search field above the table. Without it there is none. */
+  search?: KnowledgeSearch | undefined;
   loading: boolean;
   selection?: Selection | undefined;
   /** Opens a row: a website's pages, a file's text, an entry's editor. */
@@ -121,17 +143,21 @@ export type KnowledgeSourcesTableProps = {
 };
 
 /** Knowledge sources, one row each, in pages of ten. In selection mode each row gets a checkbox. */
-export function KnowledgeSourcesTable({ rows, loading, selection, onOpen, isOff, toggle, menu, onRetry, expandedId, expanded, emptyText, label }: KnowledgeSourcesTableProps) {
+export function KnowledgeSourcesTable({ rows, loading, selection, onOpen, isOff, toggle, menu, onRetry, expandedId, expanded, emptyText, label, search }: KnowledgeSourcesTableProps) {
   const { i18n, t } = useTranslation("agent");
+  const { t: tCommon } = useTranslation("common");
   const paginationLabels = useDataTablePaginationLabels("agent");
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
   const table = useTable({ features: paginationFeatures, data: rows, columns: [], onPaginationChange: setPagination, state: { pagination } });
   const pageRows = table.getRowModel().rows.map((row) => row.original);
+  const query = search?.query ?? "";
+  useEffect(() => { setPagination((current) => current.pageIndex === 0 ? current : { ...current, pageIndex: 0 }); }, [query]);
   const selecting = Boolean(selection?.selecting);
   const columns = 4 + (selecting ? 1 : 0) + (toggle ? 1 : 0) + (menu ? 1 : 0);
   const filled = loading || pageRows.length > 0;
   return (
     <div className="flex w-full flex-col gap-4">
+      {search ? loading ? <TableSearchSkeleton /> : search.visible ? <TableSearch label={tCommon("tableSearch.knowledge")} onValueChange={search.onChange} value={search.value} /> : null : null}
       <TableCard>
         <Table aria-label={label} className={cn("w-full table-fixed", filled && "min-w-[60rem]")}>
           <colgroup>
@@ -165,7 +191,7 @@ export function KnowledgeSourcesTable({ rows, loading, selection, onOpen, isOff,
                 </TableRow>
                 {expandedId === source.id && expanded ? <TableRow className="bg-muted/20 hover:bg-muted/20"><TableCell colSpan={columns}>{expanded}</TableCell></TableRow> : null}
               </Fragment>
-            )) : <TableRow><TableCell className="h-24 text-center whitespace-normal text-muted-foreground" colSpan={columns}>{emptyText}</TableCell></TableRow>}
+            )) : <TableRow><TableCell className="h-24 text-center whitespace-normal text-muted-foreground" colSpan={columns}>{query ? tCommon("tableSearch.noResults", { query }) : emptyText}</TableCell></TableRow>}
           </TableBody>
         </Table>
       </TableCard>

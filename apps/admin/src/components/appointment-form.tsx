@@ -14,11 +14,12 @@ import { Button } from "@/components/ui/button";
 import { Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxItem, ComboboxList } from "@/components/ui/combobox";
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { DurationPicker } from "@/components/ui/duration-picker";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { dayKey } from "@/lib/calendar-days";
 import { getContactDisplayName } from "@/lib/contact-display";
-import { formatDateTimeRange } from "@/lib/locale";
+import { formatDateTimeRange, intlLocale } from "@/lib/locale";
 import { formatPhoneNumberDisplay } from "@/lib/phone";
 import { requestJson } from "@/lib/request-json";
 
@@ -227,7 +228,7 @@ export function AppointmentForm({ businessId, timeZone: fallbackTimeZone, initia
                 <FieldLabel htmlFor={nameId}>{t("appointments.create.name")}</FieldLabel>
                 <Button onClick={() => { setNewContact(false); setSubmitted(false); }} size="xs" type="button" variant="ghost">{t("appointments.create.chooseContact")}</Button>
               </div>
-              <Input aria-describedby={nameMissing ? `${nameId}-error` : undefined} aria-invalid={nameMissing || undefined} autoComplete="off" className="ph-mask" id={nameId} maxLength={200} onChange={(event) => setName(event.target.value)} value={name} />
+              <Input aria-describedby={nameMissing ? `${nameId}-error` : undefined} aria-invalid={nameMissing || undefined} autoComplete="off" className="ph-mask" id={nameId} maxLength={200} onChange={(event) => setName(event.target.value)} placeholder={t("appointments.create.namePlaceholder")} value={name} />
               {nameMissing ? <FieldError id={`${nameId}-error`}>{t("appointments.create.nameRequired")}</FieldError> : null}
             </Field>
             <Field data-invalid={phoneProblem ? true : undefined}>
@@ -265,8 +266,8 @@ export function AppointmentForm({ businessId, timeZone: fallbackTimeZone, initia
           </Field>}
           <Field data-invalid={durationInvalid || undefined}>
             <FieldLabel htmlFor={durationId}>{t("appointments.create.duration")}</FieldLabel>
-            <Input aria-invalid={durationInvalid || undefined} className="w-32" id={durationId} inputMode="numeric" max={MAX_MINUTES} min={MIN_MINUTES} onChange={(event) => setDuration(event.target.value)} step={5} type="number" value={duration ?? String(minutes)} />
-            {durationInvalid ? <FieldError>{t("appointments.create.durationInvalid", { min: MIN_MINUTES, max: MAX_MINUTES })}</FieldError> : null}
+            <DurationPicker aria-describedby={durationInvalid ? `${durationId}-error` : undefined} className="w-40" columnLabels={{ hours: t("appointments.timeOff.picker.hours"), minutes: t("appointments.timeOff.picker.minutes") }} id={durationId} invalid={durationInvalid} locale={intlLocale(i18n.language)} onChange={(next) => setDuration(String(next))} value={typedMinutes ?? minutes} />
+            {durationInvalid ? <FieldError id={`${durationId}-error`}>{t("appointments.create.durationInvalid", { min: MIN_MINUTES, max: MAX_MINUTES })}</FieldError> : null}
           </Field>
           {/* Always shown, so the form asks for a time from the start and keeps its height once a service is picked. */}
           <Field data-invalid={timeMissing || Boolean(timeError) || undefined}>
@@ -276,12 +277,12 @@ export function AppointmentForm({ businessId, timeZone: fallbackTimeZone, initia
           </Field>
           <Field>
             <FieldLabel htmlFor={notesId}>{t("appointments.create.notes")}</FieldLabel>
-            <Textarea aria-describedby={`${notesId}-hint`} id={notesId} maxLength={MAX_NOTES} onChange={(event) => setNotes(event.target.value)} rows={2} value={notes} />
+            <Textarea aria-describedby={`${notesId}-hint`} id={notesId} maxLength={MAX_NOTES} onChange={(event) => setNotes(event.target.value)} placeholder={t("appointments.create.notesPlaceholder")} rows={2} value={notes} />
             <FieldDescription id={`${notesId}-hint`}>{t("appointments.create.notesHint")}</FieldDescription>
           </Field>
           <Field>
             <FieldLabel htmlFor={internalId}>{t("appointments.create.internalNotes")}</FieldLabel>
-            <Textarea aria-describedby={`${internalId}-hint`} id={internalId} maxLength={MAX_NOTES} onChange={(event) => setInternalNotes(event.target.value)} rows={2} value={internalNotes} />
+            <Textarea aria-describedby={`${internalId}-hint`} id={internalId} maxLength={MAX_NOTES} onChange={(event) => setInternalNotes(event.target.value)} placeholder={t("appointments.create.internalNotesPlaceholder")} rows={2} value={internalNotes} />
             <FieldDescription id={`${internalId}-hint`}>{t("appointments.create.internalNotesHint")}</FieldDescription>
           </Field>
         </FieldGroup>

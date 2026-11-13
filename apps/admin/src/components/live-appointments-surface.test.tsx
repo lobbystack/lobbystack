@@ -122,7 +122,7 @@ describe("new appointments locale baseline", () => {
     const sheet = await screen.findByRole("dialog", { name: "Rosa" });
     expect(within(sheet).getByText("Feniranje na ravno + ampula - nadogradnja")).toBeTruthy();
     expect(within(sheet).getByText("Marija")).toBeTruthy();
-    expect(within(sheet).getByText("45 min")).toBeTruthy();
+    expect(within(sheet).getByText("45m")).toBeTruthy();
     expect(within(sheet).getByRole("link", { name: "rosa@example.invalid" }).getAttribute("href")).toBe("mailto:rosa@example.invalid");
     expect(within(sheet).getByRole("link", { name: /555/ }).getAttribute("href")).toBe("tel:+14155550100");
   });
@@ -151,6 +151,25 @@ describe("new appointments locale baseline", () => {
     const ended = await screen.findByRole("row", { name: /12:00 PM/ });
     expect(within(ended).queryByRole("button", { name: rowActions })).toBeNull();
     expect(screen.queryByRole("row", { name: /3:00 PM/ })).toBeNull();
+  });
+
+  it("filters the list by customer, service or employee as you type, and says when nothing matches", async () => {
+    route.search = "view=list";
+    vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-09-06T13:00:00Z") });
+    const base = { timezone: "UTC", status: "confirmed", sourceChannel: "voice", calendarSyncState: "synced" };
+    await setup("en", false, "scheduler");
+    clients[0]!.setQueryData(["appointments", "business"], { appointments: [
+      { ...base, id: "a", startsAt: "2026-09-06T15:00:00Z", endsAt: "2026-09-06T15:45:00Z", contactName: "Rosa", serviceName: "Haircut", staffName: "Ana" },
+      { ...base, id: "b", startsAt: "2026-09-06T16:00:00Z", endsAt: "2026-09-06T16:45:00Z", contactName: "Marko", serviceName: "Massage", staffName: "Ivan" },
+    ] });
+    expect(await screen.findByRole("row", { name: /3:00 PM/ })).toBeTruthy();
+    expect(screen.getByRole("row", { name: /4:00 PM/ })).toBeTruthy();
+    await userEvent.type(screen.getByRole("textbox", { name: en.tableSearch.appointments }), "massage");
+    await waitFor(() => expect(screen.queryByRole("row", { name: /3:00 PM/ })).toBeNull());
+    expect(screen.getByRole("row", { name: /4:00 PM/ })).toBeTruthy();
+    await userEvent.clear(screen.getByRole("textbox", { name: en.tableSearch.appointments }));
+    await userEvent.type(screen.getByRole("textbox", { name: en.tableSearch.appointments }), "zzz");
+    expect(await screen.findByText(en.tableSearch.noResults.replace("{{query}}", "zzz"))).toBeTruthy();
   });
 
   it("shows the Calendar column only once a calendar is connected, with each state as a chip", async () => {
@@ -262,7 +281,7 @@ describe("appointments calendar", () => {
     expect(within(screen.getByTestId("calendar-draft")).getByText(/9:30\s–\s10:30\sAM/)).toBeTruthy();
     expect(within(popover).getByTestId("appointment-form-time").textContent).toMatch(/Thu, Sep 3, 9:30\s–\s10:30\sAM/);
     // A date field instead of a month.
-    expect((within(popover).getByLabelText(en.appointments.openings.date) as HTMLInputElement).value).toBe("2026-09-03");
+    expect(within(popover).getByLabelText(en.appointments.openings.date).textContent).toContain("Sep 3, 2026");
     await userEvent.type(within(popover).getByLabelText(en.appointments.create.notes), "Window seat");
 
     // Another slot moves the booking and keeps what's filled in.

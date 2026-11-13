@@ -3,7 +3,9 @@
     "close": "Fermer",
     "toggleSidebar": "Afficher ou masquer la barre latérale",
     "skipToContent": "Aller au contenu principal",
-    "clearSearch": "Effacer la recherche"
+    "clearSearch": "Effacer la recherche",
+    "decrease": "Diminuer",
+    "increase": "Augmenter"
   },
   "errors": {
     "unexpected": "Une erreur est survenue. Veuillez réessayer."
@@ -198,6 +200,8 @@
       "more": "+{{count}} de plus",
       "allDay": "Toute la journée",
       "newAt": "Nouveau rendez-vous à {{time}}",
+      "resizeColumn": "Redimensionner la colonne {{day}}",
+      "resizeRows": "Redimensionner les lignes des heures",
       "block": "{{name}}, {{service}}, {{time}}",
       "blockCancelled": "{{name}}, {{service}}, {{time}}, annulé"
     },
@@ -225,6 +229,7 @@
       "endBeforeStart": "Choisissez une fin après le début.",
       "datesRequired": "Choisissez une date de début et de fin.",
       "reason": "Motif (facultatif)",
+      "reasonPlaceholder": "ex. Fête de fin d'année de l'équipe, Travaux dans le bâtiment",
       "save": "Enregistrer",
       "saving": "Enregistrement…",
       "cancel": "Annuler",
@@ -334,6 +339,7 @@
       "newContact": "Nouveau contact",
       "chooseContact": "Choisir un contact",
       "name": "Nom",
+      "namePlaceholder": "ex. Jeanne Martin",
       "nameRequired": "Saisissez un nom.",
       "phone": "Téléphone",
       "phoneCountry": "Pays du numéro",
@@ -356,8 +362,10 @@
       "duration": "Durée (minutes)",
       "durationInvalid": "Entrez de {{min}} à {{max}} minutes.",
       "notes": "Notes",
+      "notesPlaceholder": "ex. Première visite, préfère le matin",
       "notesHint": "Visibles par votre agent",
       "internalNotes": "Notes internes",
+      "internalNotesPlaceholder": "ex. Acompte réglé par téléphone",
       "internalNotesHint": "Équipe seulement",
       "notOpen": "Ce créneau n’est pas ouvert. Choisissez-en un autre.",
       "timeOff": "Ce créneau n’est pas disponible : {{name}}."
@@ -391,5 +399,40 @@
     "failedHint": "Ajoutez vos informations à la main, ou relancez l'import depuis votre tableau de bord.",
     "inlineRunning": "Lecture de {{host}}. Pages lues jusqu'ici : {{count}}",
     "stalledTitle": "Nous n'avons pas pu finir de lire {{host}}"
+  },
+  "pending": {
+    "saving": "Enregistrement...",
+    "updating": "Mise à jour...",
+    "adding": "Ajout...",
+    "creating": "Création...",
+    "deleting": "Suppression...",
+    "removing": "Retrait...",
+    "sending": "Envoi...",
+    "inviting": "Invitation...",
+    "continuing": "Chargement...",
+    "finishing": "Finalisation...",
+    "confirming": "Confirmation...",
+    "moving": "Déplacement...",
+    "retrying": "Nouvelle tentative...",
+    "testing": "Test en cours...",
+    "connecting": "Connexion...",
+    "disconnecting": "Déconnexion...",
+    "cancelling": "Annulation...",
+    "rescheduling": "Reprogrammation...",
+    "blocking": "Blocage...",
+    "unblocking": "Déblocage...",
+    "revoking": "Révocation...",
+    "rotating": "Renouvellement...",
+    "archiving": "Archivage...",
+    "releasing": "Libération..."
+  },
+  "tableSearch": {
+    "contacts": "Rechercher des contacts",
+    "appointments": "Rechercher des rendez-vous",
+    "knowledge": "Rechercher dans les connaissances",
+    "services": "Rechercher des services",
+    "employees": "Rechercher des employés",
+    "rules": "Rechercher des règles",
+    "noResults": "Aucun résultat pour « {{query}} »"
   }
 }

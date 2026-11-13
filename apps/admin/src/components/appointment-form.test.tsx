@@ -49,10 +49,24 @@ describe("AppointmentForm", () => {
   it("starts on the clicked slot, an hour long until a service gives its length", async () => {
     const { drafts } = await setup({ initialStartsAt: slot });
     expect(drafts.at(-1)).toEqual({ startsAt: slot, durationMinutes: 60, serviceId: null });
-    expect((screen.getByLabelText(copy.duration) as HTMLInputElement).value).toBe("60");
+    expect(screen.getByLabelText(copy.duration).textContent).toBe("1h");
     await chooseService();
     await waitFor(() => expect(drafts.at(-1)).toEqual({ startsAt: slot, durationMinutes: 30, serviceId: "service-1" }));
     expect((await screen.findByRole("button", { name: "10:00 AM" })).getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("types into the contact field letter by letter and clears it with delete", async () => {
+    await setup({ initialStartsAt: slot });
+    const input = screen.getByLabelText(copy.contact) as HTMLInputElement;
+    const user = userEvent.setup();
+    await user.click(input);
+    await user.keyboard("mi");
+    expect(input.value).toBe("mi");
+    await user.keyboard("l");
+    expect(input.value).toBe("mil");
+    await user.tripleClick(input);
+    await user.keyboard("{Delete}");
+    expect(input.value).toBe("");
   });
 
   it("books with a custom length and both notes, and asks for openings of that length", async () => {
@@ -60,8 +74,9 @@ describe("AppointmentForm", () => {
     await userEvent.click(screen.getByLabelText(copy.contact));
     await userEvent.click(await screen.findByRole("option", { name: /Milan/ }));
     await chooseService();
-    await userEvent.clear(screen.getByLabelText(copy.duration));
-    await userEvent.type(screen.getByLabelText(copy.duration), "45");
+    // 30 minutes from the service becomes 45 through the picker's minute column.
+    await userEvent.click(screen.getByLabelText(copy.duration));
+    await userEvent.click(await screen.findByRole("option", { name: "45" }));
     await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => String(url).includes("durationMinutes=45"))).toBe(true));
     await userEvent.type(screen.getByLabelText(copy.notes), "Bring the forms");
     await userEvent.type(screen.getByLabelText(copy.internalNotes), "Pays cash");

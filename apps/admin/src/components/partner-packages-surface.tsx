@@ -18,6 +18,7 @@ import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogT
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { NumberField } from "@/components/ui/number-field";
 import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from "@/components/ui/input-group";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Surface } from "@/components/ui/surface";
@@ -74,6 +75,7 @@ function readAllowance(text: string): number | undefined {
  */
 export function PartnerPackagesSurface() {
   const { t, i18n } = useTranslation("partner");
+  const { t: tCommon } = useTranslation("common");
   const partner = useConsolePartner();
   const telemetry = useTelemetry();
   const pathname = usePathname();
@@ -187,7 +189,7 @@ export function PartnerPackagesSurface() {
               <Field data-invalid={createPriceError ? true : undefined}>
                 <FieldLabel htmlFor="partner-package-price">{t("packages.create.priceLabel")}</FieldLabel>
                 <InputGroup>
-                  <InputGroupInput aria-describedby={createPriceError ? "partner-package-price-error" : undefined} aria-invalid={createPriceError ? true : undefined} className="tabular-nums" id="partner-package-price" inputMode="decimal" onChange={(event) => setDraft({ ...draft, price: event.target.value })} value={draft.price} />
+                  <InputGroupInput aria-describedby={createPriceError ? "partner-package-price-error" : undefined} aria-invalid={createPriceError ? true : undefined} className="tabular-nums" id="partner-package-price" inputMode="decimal" onChange={(event) => setDraft({ ...draft, price: event.target.value })} placeholder={t("packages.create.pricePlaceholder")} value={draft.price} />
                   <InputGroupAddon align="inline-end"><InputGroupText>{currency}</InputGroupText></InputGroupAddon>
                 </InputGroup>
                 {createPriceError ? <FieldError id="partner-package-price-error">{createPriceError}</FieldError> : null}
@@ -203,11 +205,11 @@ export function PartnerPackagesSurface() {
             <div className="grid gap-4 sm:grid-cols-2">
               <Field>
                 <FieldLabel htmlFor="partner-package-minutes">{t("packages.create.minutesLabel")}</FieldLabel>
-                <Input className="tabular-nums" id="partner-package-minutes" inputMode="numeric" onChange={(event) => setDraft({ ...draft, minutes: event.target.value })} placeholder="300" value={draft.minutes} />
+                <NumberField className="w-full" decrementLabel={tCommon("accessibility.decrease")} id="partner-package-minutes" incrementLabel={tCommon("accessibility.increase")} integer max={PARTNER_PACKAGE_ALLOWANCE_MAX} min={0} onValueChange={(value) => setDraft({ ...draft, minutes: value === null ? "" : String(value) })} placeholder="300" step={10} value={draft.minutes === "" ? null : Number(draft.minutes)} />
               </Field>
               <Field>
                 <FieldLabel htmlFor="partner-package-chats">{t("packages.create.chatsLabel")}</FieldLabel>
-                <Input className="tabular-nums" id="partner-package-chats" inputMode="numeric" onChange={(event) => setDraft({ ...draft, chats: event.target.value })} placeholder="1000" value={draft.chats} />
+                <NumberField className="w-full" decrementLabel={tCommon("accessibility.decrease")} id="partner-package-chats" incrementLabel={tCommon("accessibility.increase")} integer max={PARTNER_PACKAGE_ALLOWANCE_MAX} min={0} onValueChange={(value) => setDraft({ ...draft, chats: value === null ? "" : String(value) })} placeholder="1000" step={100} value={draft.chats === "" ? null : Number(draft.chats)} />
               </Field>
             </div>
             <FieldDescription>{t("packages.create.fixedTerms")}</FieldDescription>
@@ -294,7 +296,7 @@ export function PartnerPackagesSurface() {
             </DialogHeader>
             <Field data-invalid={renameNameError ? true : undefined}>
               <FieldLabel htmlFor="partner-package-rename">{t("packages.create.nameLabel")}</FieldLabel>
-              <Input aria-describedby={renameNameError ? "partner-package-rename-error" : undefined} aria-invalid={renameNameError ? true : undefined} autoComplete="off" id="partner-package-rename" maxLength={PARTNER_PACKAGE_NAME_MAX_LENGTH} onChange={(event) => setNewName(event.target.value)} value={newName} />
+              <Input aria-describedby={renameNameError ? "partner-package-rename-error" : undefined} aria-invalid={renameNameError ? true : undefined} autoComplete="off" id="partner-package-rename" maxLength={PARTNER_PACKAGE_NAME_MAX_LENGTH} onChange={(event) => setNewName(event.target.value)} placeholder={t("packages.create.namePlaceholder")} value={newName} />
               {renameNameError ? <FieldError id="partner-package-rename-error">{renameNameError}</FieldError> : null}
             </Field>
             {renameError ? <p className="type-body text-destructive" role="alert">{renameError}</p> : null}
@@ -305,7 +307,7 @@ export function PartnerPackagesSurface() {
           </form>
         </DialogContent>
       </Dialog>
-      <ConfirmActionDialog
+      <ConfirmActionDialog pendingLabel={t("common:pending.archiving")}
         cancelLabel={t("packages.archive.cancel")}
         confirmLabel={t("packages.archive.confirm")}
         confirmVariant="destructive"

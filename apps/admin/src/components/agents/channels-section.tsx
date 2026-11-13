@@ -260,7 +260,7 @@ export function ChannelsSection({ agentId, widgetsEnabled }: { agentId: string; 
         </SectionBlock>
       ) : null}
 
-      <ConfirmActionDialog
+      <ConfirmActionDialog pendingLabel={t("common:pending.moving")}
         cancelLabel={t("nav:agents.cancel")}
         confirmLabel={t("nav:channels.move")}
         description={t("nav:channels.moveDescription", { name: moving?.to.name ?? "" })}
@@ -280,7 +280,7 @@ export function ChannelsSection({ agentId, widgetsEnabled }: { agentId: string; 
         pending={move.isPending}
         title={t("nav:channels.moveTitle", { channel: moving?.channel.name ?? "", name: moving?.to.name ?? "" })}
       />
-      <ConfirmActionDialog
+      <ConfirmActionDialog pendingLabel={t("common:pending.disconnecting")}
         cancelLabel={t("nav:agents.cancel")}
         confirmLabel={t("nav:channels.disconnect")}
         confirmVariant="destructive"

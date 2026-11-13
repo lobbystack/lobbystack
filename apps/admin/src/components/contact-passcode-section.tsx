@@ -93,11 +93,11 @@ export function ContactPasscodeSection({ businessId, canMutate, contactId, local
           </Field>
           <DialogFooter>
             <Button disabled={save.isPending} onClick={() => setSetOpen(false)} type="button" variant="outline">{t("detail.passcode.cancel")}</Button>
-            <Button disabled={!value} loading={save.isPending} type="submit">{t("detail.passcode.save")}</Button>
+            <Button disabled={!value} loading={save.isPending} loadingLabel={t("common:pending.saving")} type="submit">{t("detail.passcode.save")}</Button>
           </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
-    <ConfirmActionDialog cancelLabel={t("detail.passcode.cancel")} confirmLabel={t("detail.passcode.removeConfirm")} confirmVariant="destructive" description={t("detail.passcode.removeDescription")} onConfirm={async () => { await remove.mutateAsync(); }} onOpenChange={(open) => { if (!remove.isPending) setRemoveOpen(open); }} open={removeOpen} pending={remove.isPending} title={t("detail.passcode.removeTitle")} />
+    <ConfirmActionDialog cancelLabel={t("detail.passcode.cancel")} confirmLabel={t("detail.passcode.removeConfirm")} confirmVariant="destructive" description={t("detail.passcode.removeDescription")} onConfirm={async () => { await remove.mutateAsync(); }} onOpenChange={(open) => { if (!remove.isPending) setRemoveOpen(open); }} open={removeOpen} pending={remove.isPending} pendingLabel={t("common:pending.removing")} title={t("detail.passcode.removeTitle")} />
   </DetailSection>;
 }

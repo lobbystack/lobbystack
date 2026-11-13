@@ -135,9 +135,9 @@ export function PoolOverageSection({ partnerId, overage, spendCents }: { partner
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">
-                <Button disabled={busy || capInput.trim().length === 0} onClick={saveCap} size="sm">{t(overage.capCents === null ? "billing.overage.saveCap" : "billing.overage.updateCap")}</Button>
+                <Button disabled={busy || capInput.trim().length === 0} loading={busy && save.variables?.enabled === true && save.variables.capCents !== null} loadingLabel={t(overage.capCents === null ? "common:pending.saving" : "common:pending.updating")} onClick={saveCap} size="sm">{t(overage.capCents === null ? "billing.overage.saveCap" : "billing.overage.updateCap")}</Button>
                 {overage.capCents !== null ? (
-                  <Button disabled={busy} onClick={() => save.mutate({ enabled: true, capCents: null })} size="sm" variant="outline">{t("billing.overage.removeCap")}</Button>
+                  <Button disabled={busy} loading={busy && save.variables?.enabled === true && save.variables.capCents === null} loadingLabel={t("common:pending.removing")} onClick={() => save.mutate({ enabled: true, capCents: null })} size="sm" variant="outline">{t("billing.overage.removeCap")}</Button>
                 ) : null}
               </div>
             </div>

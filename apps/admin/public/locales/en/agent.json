@@ -172,9 +172,7 @@
           "hint": "Appointment length, used for availability checks.",
           "required": "Choose a duration of at least 1 minute.",
           "hours": "Hours",
-          "minutes": "Minutes",
-          "hoursTitle": "h",
-          "minutesTitle": "min"
+          "minutes": "Minutes"
         },
         "price": {
           "label": "Price",
@@ -328,6 +326,7 @@
     },
     "name": {
       "label": "Name",
+      "placeholder": "e.g. Ava",
       "hint": "Only your team sees it."
     },
     "greeting": {
@@ -445,11 +444,13 @@
     },
     "message": {
       "label": "Message before ringing",
+      "placeholder": "e.g. One moment, I'll check who is free.",
       "hint": "Optional. Callers hear this first.",
       "noSerbianVoice": "Callers won't hear this. Messages can't be read in Serbian yet."
     },
     "handover": {
       "label": "Message before the agent answers",
+      "placeholder": "e.g. Sorry, nobody is free right now. I can help instead.",
       "hint": "Optional. Callers hear this if nobody picks up."
     },
     "errors": {
@@ -562,6 +563,8 @@
       "description": "Add holidays and other times you're closed. The agent won't book appointments during them. Times are in {{timezone}}.",
       "startsAt": "Closure {{number}}: closed from",
       "endsAt": "Closure {{number}}: closed until",
+      "startTime": "Closure {{number}}: start time",
+      "endTime": "Closure {{number}}: end time",
       "reason": "Closure {{number}}: reason",
       "reasonPlaceholder": "Reason (optional)",
       "add": "Add closure",

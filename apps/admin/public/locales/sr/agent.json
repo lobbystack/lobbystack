@@ -172,9 +172,7 @@
           "hint": "Trajanje termina, za proveru slobodnih termina.",
           "required": "Izaberite trajanje od najmanje 1 minuta.",
           "hours": "Sati",
-          "minutes": "Minuti",
-          "hoursTitle": "h",
-          "minutesTitle": "min"
+          "minutes": "Minuti"
         },
         "price": {
           "label": "Cena",
@@ -329,6 +327,7 @@
     },
     "name": {
       "label": "Ime",
+      "placeholder": "npr. Ava",
       "hint": "Vidi ga samo vaš tim."
     },
     "greeting": {
@@ -446,11 +445,13 @@
     },
     "message": {
       "label": "Poruka pre zvonjenja",
+      "placeholder": "npr. Trenutak, proveriću ko je slobodan.",
       "hint": "Opciono. Pozivaoci je čuju prvu.",
       "noSerbianVoice": "Pozivaoci je neće čuti. Poruke još ne mogu da se čitaju na srpskom."
     },
     "handover": {
       "label": "Poruka pre nego što se agent javi",
+      "placeholder": "npr. Izvinite, trenutno niko nije slobodan. Ja mogu da pomognem.",
       "hint": "Opciono. Pozivaoci je čuju ako se niko ne javi."
     },
     "errors": {
@@ -563,6 +564,8 @@
       "description": "Dodajte praznike i druge periode kada ne radite. Agent tada ne zakazuje termine. Vreme je prema vremenskoj zoni {{timezone}}.",
       "startsAt": "Neradni period {{number}}: zatvoreno od",
       "endsAt": "Neradni period {{number}}: zatvoreno do",
+      "startTime": "Neradni period {{number}}: vreme početka",
+      "endTime": "Neradni period {{number}}: vreme završetka",
       "reason": "Neradni period {{number}}: razlog",
       "reasonPlaceholder": "Razlog (opciono)",
       "add": "Dodaj neradni period",

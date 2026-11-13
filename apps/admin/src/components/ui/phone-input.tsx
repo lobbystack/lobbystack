@@ -145,7 +145,7 @@ export function PhoneInput({
   country,
   defaultCountry,
   disabled,
-  limitNationalDigits,
+  limitNationalDigits = country !== undefined,
   locale,
   onChange,
   onRawValueChange,
@@ -191,6 +191,7 @@ export function PhoneInput({
         disabled={disabled}
         inputMode={props.inputMode ?? "tel"}
         inputComponent={PhoneNumberTextInput}
+        limitMaxLength
         onChange={() => undefined}
         onRawValueChange={(rawValue: string) => {
           onRawValueChange?.(rawValue);

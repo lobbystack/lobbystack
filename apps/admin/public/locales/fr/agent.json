@@ -172,9 +172,7 @@
           "hint": "Durée du rendez-vous, pour vérifier les disponibilités.",
           "required": "Choisissez une durée d'au moins 1 minute.",
           "hours": "Heures",
-          "minutes": "Minutes",
-          "hoursTitle": "h",
-          "minutesTitle": "min"
+          "minutes": "Minutes"
         },
         "price": {
           "label": "Prix",
@@ -329,6 +327,7 @@
     },
     "name": {
       "label": "Nom",
+      "placeholder": "ex. Léa",
       "hint": "Seule votre équipe le voit."
     },
     "greeting": {
@@ -446,11 +445,13 @@
     },
     "message": {
       "label": "Message avant la sonnerie",
+      "placeholder": "ex. Un instant, je vérifie qui est disponible.",
       "hint": "Facultatif. Les appelants l'entendent en premier.",
       "noSerbianVoice": "Les appelants ne l'entendront pas. Les messages ne peuvent pas encore être lus en serbe."
     },
     "handover": {
       "label": "Message avant la réponse de l'agent",
+      "placeholder": "ex. Désolé, personne n'est disponible pour le moment. Je peux vous aider.",
       "hint": "Facultatif. Les appelants l'entendent si personne ne répond."
     },
     "errors": {
@@ -563,6 +564,8 @@
       "description": "Ajoutez les jours fériés et les autres périodes où vous êtes fermé. L'agent ne réserve pas de rendez-vous pendant ces périodes. Les heures suivent le fuseau {{timezone}}.",
       "startsAt": "Fermeture {{number}} : fermé à partir du",
       "endsAt": "Fermeture {{number}} : fermé jusqu'au",
+      "startTime": "Fermeture {{number}} : heure de début",
+      "endTime": "Fermeture {{number}} : heure de fin",
       "reason": "Fermeture {{number}} : motif",
       "reasonPlaceholder": "Motif (facultatif)",
       "add": "Ajouter une fermeture",

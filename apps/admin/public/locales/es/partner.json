@@ -227,6 +227,7 @@
       "nameLabel": "Nombre",
       "namePlaceholder": "Recepción",
       "priceLabel": "Precio mensual",
+      "pricePlaceholder": "p. ej. 49",
       "setupFeeLabel": "Cuota de alta",
       "optional": "Opcional",
       "minutesLabel": "Minutos al mes",
@@ -457,6 +458,7 @@
       "title": "Marca"
     },
     "nameLabel": "Nombre",
+    "namePlaceholder": "p. ej. Northwind Voz",
     "logoLabel": "Logotipo",
     "logoHelp": "PNG, JPEG, WebP o SVG, de hasta 256 KB.",
     "faviconLabel": "Favicon",
@@ -787,6 +789,7 @@
     "nameLabel": "Nombre de la empresa",
     "namePlaceholder": "Recepción Acme",
     "subdomainLabel": "Dirección del panel",
+    "subdomainPlaceholder": "p. ej. northwind",
     "subdomainHelp": "Use de 3 a 40 letras minúsculas, dígitos y guiones.",
     "submit": "Crear cuenta de socio",
     "submitting": "Creando…",

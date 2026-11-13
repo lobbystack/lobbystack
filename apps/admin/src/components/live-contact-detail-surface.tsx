@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -12,6 +12,7 @@ import {
   Ellipsis,
   Info,
   MessageSquare,
+  Pencil,
   Phone,
   ShieldBan,
   ShieldCheck,
@@ -38,6 +39,7 @@ import { formatDateTime, intlLocale, formatRelativeTime } from "@/lib/locale";
 import { requestJson } from "@/lib/request-json";
 import { getChannelLabel, getContactChannels, getContactDisplayName, hasDisplayablePhone, normalizeChannel } from "@/lib/contact-display";
 import { formatPhoneNumberDisplay } from "@/lib/phone";
+import { EditContactDialog } from "@/components/edit-contact-dialog";
 import { Status } from "@/components/ui/status";
 import { appointmentStatusVariant, callOutcomeVariant, CONTACT_STATUS_VARIANTS } from "@/lib/status-variants";
 
@@ -118,13 +120,32 @@ function smsConsentStatusLabel(status: string, t: ReturnType<typeof useTranslati
   return key ? t(`detail.details.smsConsentStatusValues.${key}`) : humanize(status);
 }
 
+const CONTACT_TABS = ["activity", "appointments", "details"] as const;
+
 export function LiveContactDetailSurface({ contactId }: { contactId: string }) {
   const { i18n, t } = useTranslation("contacts");
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  // ?tab=appointments or ?tab=details; Activity, the default, stays out of the URL.
+  const requestedTab = searchParams.get("tab");
+  const urlTab = CONTACT_TABS.find((option) => option === requestedTab) ?? "activity";
+  // The tab switches at once; the URL follows, and back or forward moves the tab again.
+  const [tab, setTab] = useState<string>(urlTab);
+  useEffect(() => { setTab(urlTab); }, [urlTab]);
+  const selectTab = (next: string) => {
+    setTab(next);
+    const params = new URLSearchParams(searchParams.toString());
+    if (next === "activity") params.delete("tab");
+    else params.set("tab", next);
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+  };
   const queryClient = useQueryClient();
   const { copiedField, copy } = useCopiedField();
   const [blockDialogOpen, setBlockDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
   const { businesses, business } = useActiveBusiness();
   const canMutate = business ? ["business_owner", "business_admin"].includes(business.role) : false;
   const detail = useQuery({
@@ -163,6 +184,7 @@ export function LiveContactDetailSurface({ contactId }: { contactId: string }) {
         <DropdownMenu>
           <DropdownMenuTrigger render={<Button aria-label={t("table.actions.moreOptions")} size="icon-sm" variant="ghost" />}><Ellipsis /></DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem disabled={!canMutate} onClick={() => setEditing(true)}><Pencil />{t("table.actions.editContact")}</DropdownMenuItem>
             <DropdownMenuItem disabled={!canMutate} onClick={() => setBlockDialogOpen(true)}>{contact.operatorBlockedAt ? <ShieldCheck /> : <ShieldBan />}{contact.operatorBlockedAt ? t("detail.blocking.unblockAction") : t("detail.blocking.blockAction")}</DropdownMenuItem>
             <DropdownMenuItem disabled={!canMutate} onClick={() => setDeleteDialogOpen(true)} variant="destructive"><Trash2 />{t("table.actions.deleteContact")}</DropdownMenuItem>
           </DropdownMenuContent>
@@ -182,7 +204,7 @@ export function LiveContactDetailSurface({ contactId }: { contactId: string }) {
         <StatCard className="border-l border-t border-border sm:border-t-0" label={t("detail.stats.conversations")} value={data.activityCounts.conversations} />
       </Surface>
 
-      <Tabs defaultValue="activity">
+      <Tabs onValueChange={selectTab} value={tab}>
         <TabsList variant="pills">
           <TabsTrigger value="activity"><Activity className="size-4" />{t("detail.tabs.activity")}</TabsTrigger>
           <TabsTrigger value="appointments"><Calendar className="size-4" />{t("detail.tabs.appointments")}</TabsTrigger>
@@ -193,8 +215,9 @@ export function LiveContactDetailSurface({ contactId }: { contactId: string }) {
         <TabsContent value="details"><DetailsTab businessId={business!.businessId} canMutate={canMutate} contact={contact} copiedField={copiedField} locale={i18n.language} onCopy={copy} passcode={data.passcode} /></TabsContent>
       </Tabs>
 
-      <ConfirmActionDialog cancelLabel={t("detail.blocking.cancel")} confirmLabel={contact.operatorBlockedAt ? t("detail.blocking.unblockConfirm") : t("detail.blocking.blockConfirm")} confirmVariant={contact.operatorBlockedAt ? "default" : "destructive"} description={contact.operatorBlockedAt ? t("detail.blocking.unblockDescription") : t("detail.blocking.blockDescription")} onConfirm={async () => { await updateBlock.mutateAsync(!contact.operatorBlockedAt); }} onOpenChange={(open) => { if (!updateBlock.isPending) setBlockDialogOpen(open); }} open={blockDialogOpen} pending={updateBlock.isPending} title={contact.operatorBlockedAt ? t("detail.blocking.unblockTitle") : t("detail.blocking.blockTitle")} />
-      <ConfirmActionDialog confirmVariant="destructive" cancelLabel={t("table.actions.deleteCancel")} confirmLabel={t("table.actions.deleteConfirm")} description={t("table.actions.deleteDescription")} onConfirm={async () => { await remove.mutateAsync(); }} onOpenChange={(open) => { if (!remove.isPending) setDeleteDialogOpen(open); }} open={deleteDialogOpen} pending={remove.isPending} title={t("table.actions.deleteTitle")} />
+      <EditContactDialog businessId={business!.businessId} contact={editing ? contact : null} onOpenChange={(open) => { if (!open) setEditing(false); }} />
+      <ConfirmActionDialog pendingLabel={t(contact.operatorBlockedAt ? "common:pending.unblocking" : "common:pending.blocking")} cancelLabel={t("detail.blocking.cancel")} confirmLabel={contact.operatorBlockedAt ? t("detail.blocking.unblockConfirm") : t("detail.blocking.blockConfirm")} confirmVariant={contact.operatorBlockedAt ? "default" : "destructive"} description={contact.operatorBlockedAt ? t("detail.blocking.unblockDescription") : t("detail.blocking.blockDescription")} onConfirm={async () => { await updateBlock.mutateAsync(!contact.operatorBlockedAt); }} onOpenChange={(open) => { if (!updateBlock.isPending) setBlockDialogOpen(open); }} open={blockDialogOpen} pending={updateBlock.isPending} title={contact.operatorBlockedAt ? t("detail.blocking.unblockTitle") : t("detail.blocking.blockTitle")} />
+      <ConfirmActionDialog pendingLabel={t("common:pending.deleting")} confirmVariant="destructive" cancelLabel={t("table.actions.deleteCancel")} confirmLabel={t("table.actions.deleteConfirm")} description={t("table.actions.deleteDescription")} onConfirm={async () => { await remove.mutateAsync(); }} onOpenChange={(open) => { if (!remove.isPending) setDeleteDialogOpen(open); }} open={deleteDialogOpen} pending={remove.isPending} title={t("table.actions.deleteTitle")} />
     </div>
   );
 }

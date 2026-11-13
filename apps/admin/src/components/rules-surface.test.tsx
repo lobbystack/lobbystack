@@ -93,9 +93,9 @@ describe("rules loading states", () => {
     expect(screen.queryByText("sections.rules.addKnowledge")).toBeNull();
   });
 
-  it("shows the add button and no search box once the rules have loaded", () => {
+  it("shows the add button and the search box once the rules have loaded", () => {
     setup();
-    expect(screen.queryByRole("textbox")).toBeNull();
+    expect(screen.getByRole("textbox", { name: "tableSearch.rules" })).toBeTruthy();
     expect(screen.getByRole("button", { name: /sections.rules.addKnowledge/ })).toBeTruthy();
     expect(skeletons("tbody")).toBe(0);
   });

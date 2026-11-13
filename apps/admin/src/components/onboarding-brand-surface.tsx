@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { ImageUp, LoaderCircle, X } from "lucide-react";
+import { ImageUp, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { MAX_APP_NAME_LENGTH, MAX_BRAND_LOGO_BYTES, brandLogoContentType, brandLogoContentTypes, normalizeAppName } from "@lobbystack/shared";
 
@@ -122,8 +122,7 @@ export function OnboardingBrandSurface({ askAppName, askLogo }: { askAppName: bo
     return (
       <div className="flex flex-col gap-4">
         <p className="text-center type-body-muted" role="status">{t("brand.errors.closed")}</p>
-        <Button className="w-full" disabled={navigating} onClick={() => navigate(NEXT_STEP)} type="button">
-          {navigating ? <LoaderCircle className="size-4 animate-spin" /> : null}
+        <Button className="w-full" loading={navigating} loadingLabel={t("common:pending.continuing")} onClick={() => navigate(NEXT_STEP)} type="button">
           {t("brand.continue")}
         </Button>
       </div>
@@ -182,8 +181,8 @@ export function OnboardingBrandSurface({ askAppName, askLogo }: { askAppName: bo
           </Surface>
         </div>
         {error ? <FieldError>{error}</FieldError> : null}
-        <Button className="mt-2 w-full" disabled={working || !chosen} type="submit">
-          {working ? <><LoaderCircle className="size-4 animate-spin" />{t("brand.saving")}</> : t("brand.continue")}
+        <Button className="mt-2 w-full" disabled={!chosen} loading={working} loadingLabel={t("brand.saving")} type="submit">
+          {t("brand.continue")}
         </Button>
         <button className="type-title text-muted-foreground underline underline-offset-4 hover:text-foreground disabled:opacity-50" disabled={working} onClick={() => { setError(null); save.mutate({}); }} type="button">
           {t("brand.skip")}

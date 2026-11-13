@@ -165,7 +165,7 @@ export function StaffFirstDialog({ businessId, defaultLocale, onOpenChange, onSa
                       <FieldDescription>{t("agent:staffFirst.number.hint")}</FieldDescription>
                     </FieldContent>
                     <div className="flex w-full min-w-0">
-                      <PhoneCountrySelect ariaLabel={t("agent:fields.transferNumber.country")} className="rounded-r-none px-4 font-medium text-muted-foreground" countries={countries} onChange={(next) => update({ country: next as Country, number: "", rawNumber: "" })} value={draft.country} />
+                      <PhoneCountrySelect ariaLabel={t("agent:fields.transferNumber.country")} className="rounded-r-none px-4 font-medium" countries={countries} onChange={(next) => update({ country: next as Country, number: "", rawNumber: "" })} value={draft.country} />
                       <PhoneInput
                         aria-label={t("agent:staffFirst.number.label")}
                         className="rounded-l-none border-l-0"
@@ -199,14 +199,14 @@ export function StaffFirstDialog({ businessId, defaultLocale, onOpenChange, onSa
                       <FieldLabel htmlFor="agent-staff-first-message">{t("agent:staffFirst.message.label")}</FieldLabel>
                       <FieldDescription>{serbian ? t("agent:staffFirst.message.noSerbianVoice") : t("agent:staffFirst.message.hint")}</FieldDescription>
                     </FieldContent>
-                    <Textarea aria-label={t("agent:staffFirst.message.label")} id="agent-staff-first-message" maxLength={STAFF_FIRST_MESSAGE_MAX_LENGTH} onChange={(event) => update({ message: event.target.value })} rows={2} value={draft.message} />
+                    <Textarea aria-label={t("agent:staffFirst.message.label")} id="agent-staff-first-message" maxLength={STAFF_FIRST_MESSAGE_MAX_LENGTH} onChange={(event) => update({ message: event.target.value })} placeholder={t("agent:staffFirst.message.placeholder")} rows={2} value={draft.message} />
                   </Field>
                   <Field>
                     <FieldContent>
                       <FieldLabel htmlFor="agent-staff-first-handover">{t("agent:staffFirst.handover.label")}</FieldLabel>
                       <FieldDescription>{serbian ? t("agent:staffFirst.message.noSerbianVoice") : t("agent:staffFirst.handover.hint")}</FieldDescription>
                     </FieldContent>
-                    <Textarea aria-label={t("agent:staffFirst.handover.label")} id="agent-staff-first-handover" maxLength={STAFF_FIRST_MESSAGE_MAX_LENGTH} onChange={(event) => update({ handoverMessage: event.target.value })} rows={2} value={draft.handoverMessage} />
+                    <Textarea aria-label={t("agent:staffFirst.handover.label")} id="agent-staff-first-handover" maxLength={STAFF_FIRST_MESSAGE_MAX_LENGTH} onChange={(event) => update({ handoverMessage: event.target.value })} placeholder={t("agent:staffFirst.handover.placeholder")} rows={2} value={draft.handoverMessage} />
                   </Field>
                 </>
               )}
@@ -216,8 +216,8 @@ export function StaffFirstDialog({ businessId, defaultLocale, onOpenChange, onSa
         </div>
         <DialogFooter>
           <Button disabled={isSaving} onClick={() => onOpenChange(false)} type="button" variant="outline">{t("agent:actions.cancel")}</Button>
-          <Button aria-label={t("agent:staffFirst.save")} disabled={isSaving || !draft} onClick={() => void save()} type="button">
-            {isSaving ? t("agent:actions.saving") : t("agent:actions.save")}
+          <Button aria-label={t("agent:staffFirst.save")} disabled={!draft} loading={isSaving} loadingLabel={t("agent:actions.saving")} onClick={() => void save()} type="button">
+            {t("agent:actions.save")}
           </Button>
         </DialogFooter>
       </DialogContent>

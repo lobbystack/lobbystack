@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperti
 import { useTranslation } from "react-i18next";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
+import { ColumnResizeHandle, RowResizeHandle, TIME_GUTTER, useGridSize } from "@/components/calendar-grid-resize";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { hasEnded, isCancelled, type Appointment, type TimeOff } from "@/hooks/use-appointments";
@@ -13,7 +14,6 @@ import {
   closedSpans,
   dayLength,
   daySegments,
-  HOUR_HEIGHT,
   HOUR_PADDING,
   instantAt,
   layoutColumns,
@@ -38,7 +38,9 @@ export type CalendarDraft = { startsAt: string; endsAt: string; colorKey?: strin
 /** Lines a month cell has room for under its day number. */
 export const MONTH_CELL_LINES = 3;
 const SEVEN_COLUMNS: CSSProperties = { gridTemplateColumns: "repeat(7, minmax(0, 1fr))" };
-const HOUR_LINES: CSSProperties = { backgroundImage: "linear-gradient(to bottom, var(--color-border) 1px, transparent 1px)", backgroundSize: `100% ${HOUR_HEIGHT}px` };
+const hourLines = (hourHeight: number): CSSProperties => ({ backgroundImage: "linear-gradient(to bottom, var(--color-border) 1px, transparent 1px)", backgroundSize: `100% ${hourHeight}px` });
+/** A day column no one has resized takes this much, so a week scrolls sideways once the screen is narrower. */
+const UNSIZED_COLUMN_MIN = 60;
 
 type CalendarProps = {
   view: CalendarView;
@@ -143,6 +145,8 @@ function TimeGrid(props: CalendarProps & { onOpenDay: (day: string) => void }) {
   const { days, timeZone, now, appointments, timeOff, hours, draft } = props;
   const labels = useLabels(timeZone, props.contactName);
   const scroller = useRef<HTMLDivElement>(null);
+  const size = useGridSize(scroller, days.length);
+  const { hourHeight, widths } = size;
   const appointmentsById = useMemo(() => new Map(appointments.map((appointment) => [appointment.id, appointment])), [appointments]);
   const timeOffById = useMemo(() => new Map(timeOff.map((entry) => [entry.id, entry])), [timeOff]);
   const columns = useMemo(() => days.map((day) => {
@@ -158,9 +162,12 @@ function TimeGrid(props: CalendarProps & { onOpenDay: (day: string) => void }) {
     };
   }), [appointments, days, draft, timeOff, timeOffById, timeZone]);
   const range = visibleHours({ hours, days, segments: columns.flatMap((column) => [...column.timed, ...column.employeeOff, ...(column.draft ? [column.draft] : [])]) });
-  const height = (range.end - range.start) * HOUR_HEIGHT;
+  const height = (range.end - range.start) * hourHeight;
   const hasAllDay = columns.some((column) => column.allDay.length);
-  const template: CSSProperties = { gridTemplateColumns: `3.5rem repeat(${days.length}, minmax(0, 1fr))` };
+  const sizedColumns = days.length > 1 && widths.some((width) => width != null);
+  // A resized column keeps its width. The others share the rest, and a filler takes it when every column has one.
+  const template: CSSProperties = { gridTemplateColumns: sizedColumns ? `${TIME_GUTTER}px ${days.map((_, index) => widths[index] != null ? `${widths[index]}px` : "minmax(0, 1fr)").join(" ")}${days.every((_, index) => widths[index] != null) ? " minmax(0, 1fr)" : ""}` : `3.5rem repeat(${days.length}, minmax(0, 1fr))` };
+  const minWidth = sizedColumns ? TIME_GUTTER + days.reduce((total, _, index) => total + (widths[index] ?? UNSIZED_COLUMN_MIN), 0) : undefined;
   const todayIndex = days.indexOf(props.today);
   const nowMinutes = todayIndex >= 0 ? minutesInDay(new Date(now).toISOString(), props.today, timeZone) : -1;
   const daysKey = days.join();
@@ -172,14 +179,14 @@ function TimeGrid(props: CalendarProps & { onOpenDay: (day: string) => void }) {
     if (props.busy || scrolledFor.current === daysKey || !scroller.current) return;
     scrolledFor.current = daysKey;
     const target = nowMinutes >= range.start * 60 && nowMinutes <= range.end * 60 ? nowMinutes - 60 : Number.isFinite(firstStart) ? firstStart - 30 : (range.start + HOUR_PADDING) * 60;
-    scroller.current.scrollTop = Math.max(0, ((target - range.start * 60) * HOUR_HEIGHT) / 60);
-  }, [daysKey, firstStart, nowMinutes, props.busy, range.end, range.start]);
+    scroller.current.scrollTop = Math.max(0, ((target - range.start * 60) * hourHeight) / 60);
+  }, [daysKey, firstStart, hourHeight, nowMinutes, props.busy, range.end, range.start]);
 
   return (
     <div className="overflow-hidden rounded-xl border">
-      <div className="max-h-[min(70svh,44rem)] overflow-auto" data-testid="calendar-time-grid" ref={scroller}>
+      <div className="max-h-[min(70svh,44rem)] touch-pan-x touch-pan-y overflow-auto" data-testid="calendar-time-grid" ref={scroller}>
         {/* Narrower than this, a week scrolls sideways. */}
-        <div className={cn(days.length > 1 && "min-w-[30rem]")}>
+        <div className={cn(days.length > 1 && !sizedColumns && "min-w-[30rem]")} style={minWidth ? { minWidth } : undefined}>
           <div className="sticky top-0 z-40 grid border-b bg-background" style={template}>
             <div aria-hidden="true" />
             {days.map((day) => {
@@ -190,7 +197,10 @@ function TimeGrid(props: CalendarProps & { onOpenDay: (day: string) => void }) {
                 <span className={cn("inline-flex size-7 items-center justify-center rounded-full type-body tabular-nums", isToday && "bg-primary font-medium text-primary-foreground")}>{formatDateTime(keyToDate(day).toISOString(), i18n.language, { day: "numeric", timeZone: "UTC" })}</span>
               </>;
               return days.length > 1
-                ? <button aria-label={dayName} className="flex items-center justify-center gap-1.5 border-l py-2 outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset" key={day} onClick={() => props.onOpenDay(day)} type="button">{content}</button>
+                ? <div className="relative" data-column-header="" key={day}>
+                  <button aria-label={dayName} className="flex size-full items-center justify-center gap-1.5 border-l py-2 outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset" onClick={() => props.onOpenDay(day)} type="button">{content}</button>
+                  <ColumnResizeHandle index={days.indexOf(day)} label={t("appointments.calendarView.resizeColumn", { day: dayName })} size={size} />
+                </div>
                 : <div className="flex items-center justify-center gap-1.5 border-l py-2" key={day}><span className="sr-only">{dayName}</span><span aria-hidden="true" className="flex items-center gap-1.5">{content}</span></div>;
             })}
             {hasAllDay ? <>
@@ -206,11 +216,15 @@ function TimeGrid(props: CalendarProps & { onOpenDay: (day: string) => void }) {
             </> : null}
           </div>
           <div className="grid" style={template}>
-            <div aria-hidden="true" className="relative" style={{ height }}>
+            <div className="relative" style={{ height }}>
               {Array.from({ length: range.end - range.start - 1 }, (_, index) => range.start + index + 1).map((hour) => (
-                <span className="absolute right-2 -translate-y-1/2 type-caption whitespace-nowrap text-muted-foreground tabular-nums" key={hour} style={{ top: (hour - range.start) * HOUR_HEIGHT }}>
+                <span aria-hidden="true" className="absolute right-2 -translate-y-1/2 type-caption whitespace-nowrap text-muted-foreground tabular-nums" key={hour} style={{ top: (hour - range.start) * hourHeight }}>
                   {formatDateTime(instantAt(days[0]!, hour * 60, timeZone), i18n.language, { hour: "numeric", timeZone })}
                 </span>
+              ))}
+              {/* Dragging the line under an hour resizes every row. */}
+              {Array.from({ length: range.end - range.start - 1 }, (_, index) => index + 1).map((boundary) => (
+                <RowResizeHandle boundary={boundary} key={boundary} label={t("appointments.calendarView.resizeRows")} size={size} top={boundary * hourHeight} />
               ))}
             </div>
             {columns.map((column, index) => {
@@ -218,18 +232,18 @@ function TimeGrid(props: CalendarProps & { onOpenDay: (day: string) => void }) {
               const length = dayLength(column.day, timeZone);
               const inRange = (segment: Pick<Segment, "start" | "end">) => ({ start: Math.max(segment.start, range.start * 60), end: Math.min(segment.end, range.end * 60) });
               return (
-                <div className="relative border-l" data-day={column.day} key={column.day} style={{ ...HOUR_LINES, height }}>
+                <div className="relative border-l" data-day={column.day} key={column.day} style={{ ...hourLines(hourHeight), height }}>
                   {closedSpans(column.day, hours, range.start, range.end).map((span) => {
-                    const { top, height: spanHeight } = blockPosition(span, range.start);
+                    const { top, height: spanHeight } = blockPosition(span, range.start, hourHeight);
                     return <div aria-hidden="true" className="calendar-hatch-closed pointer-events-none absolute inset-x-0" key={`closed-${span.start}`} style={{ top, height: spanHeight }} />;
                   })}
                   {props.onCreateAt ? slotStarts(range.start, range.end).filter((start) => start < length && Date.parse(instantAt(column.day, start + SLOT_MINUTES, timeZone)) > now).map((start) => {
                     const startsAt = instantAt(column.day, start, timeZone);
-                    return <button aria-label={t("appointments.calendarView.newAt", { time: formatDateTime(startsAt, i18n.language, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone }) })} className="absolute inset-x-0 z-0 outline-none hover:bg-muted/60 focus-visible:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset" data-starts-at={startsAt} key={start} onClick={(event) => props.onCreateAt!(startsAt, event.currentTarget)} style={{ top: ((start - range.start * 60) * HOUR_HEIGHT) / 60, height: (SLOT_MINUTES * HOUR_HEIGHT) / 60 }} tabIndex={-1} type="button" />;
+                    return <button aria-label={t("appointments.calendarView.newAt", { time: formatDateTime(startsAt, i18n.language, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone }) })} className="absolute inset-x-0 z-0 outline-none hover:bg-muted/60 focus-visible:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset" data-starts-at={startsAt} key={start} onClick={(event) => props.onCreateAt!(startsAt, event.currentTarget)} style={{ top: ((start - range.start * 60) * hourHeight) / 60, height: (SLOT_MINUTES * hourHeight) / 60 }} tabIndex={-1} type="button" />;
                   }) : null}
                   {column.closures.map((segment) => {
                     const entry = timeOffById.get(segment.id)!;
-                    const { top, height: areaHeight } = blockPosition(inRange(segment), range.start);
+                    const { top, height: areaHeight } = blockPosition(inRange(segment), range.start, hourHeight);
                     // The hatching lets clicks through to the slots, so a booking there says the time is unavailable; the name opens the closure.
                     return (
                       <div className="calendar-hatch-time-off pointer-events-none absolute inset-x-0 z-10 flex items-start overflow-hidden px-1 py-1" key={segment.id} style={{ top, height: areaHeight }}>
@@ -241,7 +255,7 @@ function TimeGrid(props: CalendarProps & { onOpenDay: (day: string) => void }) {
                   })}
                   {[...column.timed, ...column.employeeOff].map((segment) => {
                     const { column: slot, columns: share } = placed.get(segment.id)!;
-                    const { top, height: blockHeight } = blockPosition(inRange(segment), range.start);
+                    const { top, height: blockHeight } = blockPosition(inRange(segment), range.start, hourHeight);
                     const style: CSSProperties = { top, height: blockHeight, left: `calc(${(slot / share) * 100}% + 2px)`, width: `calc(${100 / share}% - 4px)` };
                     const appointment = appointmentsById.get(segment.id);
                     if (!appointment) {
@@ -264,7 +278,7 @@ function TimeGrid(props: CalendarProps & { onOpenDay: (day: string) => void }) {
                     );
                   })}
                   {column.draft ? (() => {
-                    const { top, height: draftHeight } = blockPosition(inRange(column.draft), range.start);
+                    const { top, height: draftHeight } = blockPosition(inRange(column.draft), range.start, hourHeight);
                     return (
                       <div className={cn("pointer-events-none absolute inset-x-0.5 z-30 flex flex-col overflow-hidden rounded-md border-l-[3px] px-1.5 py-0.5 type-caption leading-4 shadow-lg ring-2 ring-background", draft?.colorKey ? serviceColorClasses(draft.colorKey) : "border-primary bg-primary text-primary-foreground")} data-testid="calendar-draft" ref={props.draftRef} style={{ top, height: draftHeight }}>
                         <span className="truncate font-medium">{t("appointments.create.title")}</span>
@@ -273,7 +287,7 @@ function TimeGrid(props: CalendarProps & { onOpenDay: (day: string) => void }) {
                     );
                   })() : null}
                   {index === todayIndex && nowMinutes >= range.start * 60 && nowMinutes <= range.end * 60 ? (
-                    <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 z-30 h-0.5 bg-destructive" data-testid="calendar-now" style={{ top: ((nowMinutes - range.start * 60) * HOUR_HEIGHT) / 60 }}>
+                    <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 z-30 h-0.5 bg-destructive" data-testid="calendar-now" style={{ top: ((nowMinutes - range.start * 60) * hourHeight) / 60 }}>
                       <span className="absolute -top-1 -left-1 size-2.5 rounded-full bg-destructive" />
                     </div>
                   ) : null}

@@ -3,7 +3,9 @@
     "close": "Zatvori",
     "toggleSidebar": "Prikaži/sakrij bočnu traku",
     "skipToContent": "Pređi na glavni sadržaj",
-    "clearSearch": "Obriši pretragu"
+    "clearSearch": "Obriši pretragu",
+    "decrease": "Smanji",
+    "increase": "Povećaj"
   },
   "errors": {
     "unexpected": "Nešto nije u redu. Pokušajte ponovo."
@@ -198,6 +200,8 @@
       "more": "+{{count}} još",
       "allDay": "Ceo dan",
       "newAt": "Novi termin u {{time}}",
+      "resizeColumn": "Promeni širinu kolone {{day}}",
+      "resizeRows": "Promeni visinu redova sati",
       "block": "{{name}}, {{service}}, {{time}}",
       "blockCancelled": "{{name}}, {{service}}, {{time}}, otkazano"
     },
@@ -225,6 +229,7 @@
       "endBeforeStart": "Izaberite kraj posle početka.",
       "datesRequired": "Izaberite datum početka i završetka.",
       "reason": "Razlog (nije obavezno)",
+      "reasonPlaceholder": "npr. Žurka za zaposlene, Radovi u zgradi",
       "save": "Sačuvaj",
       "saving": "Čuvanje…",
       "cancel": "Otkaži",
@@ -334,6 +339,7 @@
       "newContact": "Novi kontakt",
       "chooseContact": "Izaberite kontakt",
       "name": "Ime",
+      "namePlaceholder": "npr. Jovana Petrović",
       "nameRequired": "Unesite ime.",
       "phone": "Telefon",
       "phoneCountry": "Država broja",
@@ -356,8 +362,10 @@
       "duration": "Trajanje (minuti)",
       "durationInvalid": "Unesite od {{min}} do {{max}} minuta.",
       "notes": "Napomene",
+      "notesPlaceholder": "npr. Prva poseta, preferira jutro",
       "notesHint": "Vidi ih vaš agent",
       "internalNotes": "Interne napomene",
+      "internalNotesPlaceholder": "npr. Depozit plaćen telefonom",
       "internalNotesHint": "Samo za osoblje",
       "notOpen": "Ovaj termin nije otvoren. Izaberite drugi.",
       "timeOff": "Ovaj termin nije dostupan: {{name}}."
@@ -391,5 +399,40 @@
     "failedHint": "Unesite podatke o firmi ručno ili ponovo pokrenite uvoz sa kontrolne table.",
     "inlineRunning": "Čitanje sajta {{host}}. Pročitano stranica: {{count}}",
     "stalledTitle": "Nismo uspeli da završimo čitanje sajta {{host}}"
+  },
+  "pending": {
+    "saving": "Čuvanje...",
+    "updating": "Ažuriranje...",
+    "adding": "Dodavanje...",
+    "creating": "Kreiranje...",
+    "deleting": "Brisanje...",
+    "removing": "Uklanjanje...",
+    "sending": "Slanje...",
+    "inviting": "Pozivanje...",
+    "continuing": "Učitavanje...",
+    "finishing": "Završavanje...",
+    "confirming": "Potvrđivanje...",
+    "moving": "Premeštanje...",
+    "retrying": "Ponovni pokušaj...",
+    "testing": "Testiranje...",
+    "connecting": "Povezivanje...",
+    "disconnecting": "Prekidanje veze...",
+    "cancelling": "Otkazivanje...",
+    "rescheduling": "Pomeranje termina...",
+    "blocking": "Blokiranje...",
+    "unblocking": "Odblokiranje...",
+    "revoking": "Opozivanje...",
+    "rotating": "Rotiranje...",
+    "archiving": "Arhiviranje...",
+    "releasing": "Oslobađanje..."
+  },
+  "tableSearch": {
+    "contacts": "Pretraži kontakte",
+    "appointments": "Pretraži termine",
+    "knowledge": "Pretraži znanje",
+    "services": "Pretraži usluge",
+    "employees": "Pretraži zaposlene",
+    "rules": "Pretraži pravila",
+    "noResults": "Nema rezultata za „{{query}}“"
   }
 }

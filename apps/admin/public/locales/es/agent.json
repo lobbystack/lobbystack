@@ -172,9 +172,7 @@
           "hint": "Duración de la cita, para comprobar la disponibilidad.",
           "required": "Elija una duración de al menos 1 minuto.",
           "hours": "Horas",
-          "minutes": "Minutos",
-          "hoursTitle": "h",
-          "minutesTitle": "min"
+          "minutes": "Minutos"
         },
         "price": {
           "label": "Precio",
@@ -329,6 +327,7 @@
     },
     "name": {
       "label": "Nombre",
+      "placeholder": "p. ej. Ava",
       "hint": "Solo tu equipo lo ve."
     },
     "greeting": {
@@ -446,11 +445,13 @@
     },
     "message": {
       "label": "Mensaje antes del timbre",
+      "placeholder": "p. ej. Un momento, voy a ver quién está disponible.",
       "hint": "Opcional. Quien llama lo oye primero.",
       "noSerbianVoice": "Quien llama no lo oirá. Los mensajes aún no se pueden leer en serbio."
     },
     "handover": {
       "label": "Mensaje antes de que responda el agente",
+      "placeholder": "p. ej. Lo siento, no hay nadie disponible ahora. Puedo ayudarle yo.",
       "hint": "Opcional. Quien llama lo oye si nadie contesta."
     },
     "errors": {
@@ -563,6 +564,8 @@
       "description": "Agregue los días festivos y otros períodos en que su negocio cierra. El agente no reserva citas durante esos períodos. Las horas están en la zona horaria {{timezone}}.",
       "startsAt": "Cierre {{number}}: cerrado desde",
       "endsAt": "Cierre {{number}}: cerrado hasta",
+      "startTime": "Cierre {{number}}: hora de inicio",
+      "endTime": "Cierre {{number}}: hora de fin",
       "reason": "Cierre {{number}}: motivo",
       "reasonPlaceholder": "Motivo (opcional)",
       "add": "Agregar cierre",

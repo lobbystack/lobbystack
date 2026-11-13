@@ -91,7 +91,7 @@ function EndpointForm({ initial, onSubmit, pending, submitLabel, onCancel }: { i
       </div>
       <DialogFooter>
         <Button onClick={onCancel} variant="outline">{t("webhooks.form.cancel")}</Button>
-        <Button disabled={!url.trim() || events.length === 0 || pending} onClick={() => onSubmit({ url: url.trim(), description: description.trim(), events })}>{submitLabel}</Button>
+        <Button disabled={!url.trim() || events.length === 0} loading={pending} loadingLabel={t(initial ? "common:pending.saving" : "common:pending.creating")} onClick={() => onSubmit({ url: url.trim(), description: description.trim(), events })}>{submitLabel}</Button>
       </DialogFooter>
     </div>
   );
@@ -138,7 +138,7 @@ function DeliveryLog({ businessId, endpointId }: { businessId: string; endpointI
               <TableCell>{row.attemptCount}</TableCell>
               <TableCell className="text-muted-foreground">{format(row.lastAttemptAt ?? row.createdAt)}</TableCell>
               <TableCell className="text-right">
-                <Button disabled={resend.isPending} onClick={() => resend.mutate(row.id)} size="sm" variant="ghost"><RefreshCw data-icon="inline-start" />{t("webhooks.deliveries.resend")}</Button>
+                <Button disabled={resend.isPending && resend.variables !== row.id} loading={resend.isPending && resend.variables === row.id} loadingLabel={t("common:pending.sending")} onClick={() => resend.mutate(row.id)} size="sm" variant="ghost"><RefreshCw data-icon="inline-start" />{t("webhooks.deliveries.resend")}</Button>
               </TableCell>
             </TableRow>
           ))}
@@ -222,7 +222,7 @@ export function LiveWebhooksSurface() {
                 {endpoint.disabled_reason === "failing" ? <Alert variant="destructive"><AlertTitle>{t("webhooks.failing.title")}</AlertTitle><AlertDescription>{t("webhooks.failing.description")}</AlertDescription></Alert> : null}
                 <div className="flex flex-wrap gap-2">
                   <Button onClick={() => setOpenLog(openLog === endpoint.id ? null : endpoint.id)} size="sm" variant="outline">{openLog === endpoint.id ? t("webhooks.deliveries.hide") : t("webhooks.deliveries.show")}</Button>
-                  <Button disabled={test.isPending} onClick={() => test.mutate(endpoint.id)} size="sm" variant="outline"><Send data-icon="inline-start" />{t("webhooks.test.action")}</Button>
+                  <Button disabled={test.isPending && test.variables !== endpoint.id} loading={test.isPending && test.variables === endpoint.id} loadingLabel={t("common:pending.testing")} onClick={() => test.mutate(endpoint.id)} size="sm" variant="outline"><Send data-icon="inline-start" />{t("webhooks.test.action")}</Button>
                   <Button onClick={() => setDialog({ mode: "edit", endpoint })} size="sm" variant="ghost">{t("webhooks.edit.action")}</Button>
                   <Button onClick={() => setConfirm({ kind: "rotate", endpoint })} size="sm" variant="ghost">{t("webhooks.rotate.action")}</Button>
                   <Button onClick={() => setConfirm({ kind: "delete", endpoint })} size="sm" variant="ghost"><Trash2 data-icon="inline-start" />{t("webhooks.delete.action")}</Button>
@@ -256,7 +256,7 @@ export function LiveWebhooksSurface() {
         </DialogContent>
       </Dialog>
 
-      <ConfirmActionDialog
+      <ConfirmActionDialog pendingLabel={t(confirm?.kind === "delete" ? "common:pending.deleting" : "common:pending.rotating")}
         cancelLabel={t("webhooks.form.cancel")}
         confirmLabel={confirm?.kind === "delete" ? t("webhooks.delete.confirm") : t("webhooks.rotate.confirm")}
         confirmVariant={confirm?.kind === "delete" ? "destructive" : "default"}

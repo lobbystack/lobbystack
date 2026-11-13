@@ -12,14 +12,12 @@ type DurationPickerProps = {
   /** Total minutes. */
   value: number;
   onChange: (minutes: number) => void;
-  /** BCP 47 locale for the "1 hr 30 min" label. */
+  /** BCP 47 locale for the "1h 30m" label. */
   locale?: string;
   maxHours?: number;
   minuteStep?: number;
   /** Accessible names for the hour and minute columns. */
   columnLabels: { hours: string; minutes: string };
-  /** Short visible titles above the hour and minute columns, such as "h" and "min". */
-  columnTitles: { hours: string; minutes: string };
   disabled?: boolean | undefined;
   invalid?: boolean | undefined;
   className?: string | undefined;
@@ -29,14 +27,14 @@ type DurationPickerProps = {
 };
 
 function formatDuration(minutes: number, locale: string | undefined): string {
-  const unit = (value: number, name: "hour" | "minute") => new Intl.NumberFormat(locale, { style: "unit", unit: name, unitDisplay: "short" }).format(value);
+  const unit = (value: number, name: "hour" | "minute") => new Intl.NumberFormat(locale, { style: "unit", unit: name, unitDisplay: "narrow" }).format(value);
   const hours = Math.floor(minutes / 60);
   const rest = minutes % 60;
   if (!hours) return unit(rest, "minute");
   return rest ? `${unit(hours, "hour")} ${unit(rest, "minute")}` : unit(hours, "hour");
 }
 
-function DurationPicker({ value, onChange, locale, maxHours = 12, minuteStep = 5, columnLabels, columnTitles, disabled, invalid, className, id, "aria-label": ariaLabel, "aria-describedby": ariaDescribedBy }: DurationPickerProps) {
+function DurationPicker({ value, onChange, locale, maxHours = 12, minuteStep = 5, columnLabels, disabled, invalid, className, id, "aria-label": ariaLabel, "aria-describedby": ariaDescribedBy }: DurationPickerProps) {
   const [open, setOpen] = React.useState(false);
   const hours = Math.floor(value / 60);
   const minute = value % 60;
@@ -54,15 +52,15 @@ function DurationPicker({ value, onChange, locale, maxHours = 12, minuteStep = 5
     <Popover onOpenChange={setOpen} open={open}>
       <PopoverTrigger
         render={
-          <Button aria-describedby={ariaDescribedBy} aria-invalid={invalid || undefined} aria-label={ariaLabel} className={cn("justify-start rounded-xl font-normal tabular-nums", className)} disabled={disabled} id={id} type="button" variant="outline" />
+          <Button aria-describedby={ariaDescribedBy} aria-invalid={invalid || undefined} aria-label={ariaLabel} className={cn("justify-start rounded-xl border-input font-normal text-base! tabular-nums md:text-sm! shadow-xs group-has-[[data-slot=field-label]:hover]/field:bg-input/50", className)} disabled={disabled} id={id} type="button" variant="outline" />
         }
       >
         <Timer className="text-muted-foreground" data-icon="inline-start" />
         {formatDuration(value, locale)}
       </PopoverTrigger>
       <PopoverContent align="start" className="h-[min(18rem,var(--available-height))] w-auto flex-row gap-1 p-1">
-        <TimeColumn label={columnLabels.hours} onSelect={(next) => onChange(next * 60 + minute)} open={open} options={hourOptions} render={String} selected={hours} title={columnTitles.hours} />
-        <TimeColumn label={columnLabels.minutes} onSelect={(next) => onChange(hours * 60 + next)} open={open} options={minuteOptions} render={(option) => String(option).padStart(2, "0")} selected={minute} title={columnTitles.minutes} />
+        <TimeColumn label={columnLabels.hours} onSelect={(next) => onChange(next * 60 + minute)} open={open} options={hourOptions} render={String} selected={hours} title="HH" />
+        <TimeColumn label={columnLabels.minutes} onSelect={(next) => onChange(hours * 60 + next)} open={open} options={minuteOptions} render={(option) => String(option).padStart(2, "0")} selected={minute} title="MM" />
       </PopoverContent>
     </Popover>
   );

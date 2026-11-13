@@ -57,7 +57,7 @@ export function WebsitePagesDialog({ businessId, documentId, onOpenChange, canMa
           <DialogDescription>{source ? t("sections.knowledge.website.pages", { count: source.pageCount ?? 0 }) : " "}</DialogDescription>
           {canManage && !forAgent && source ? (
             <div className="pt-2">
-              <Button disabled={pending !== null} onClick={() => void run("reimport", { action: "reimport", items: [{ type: "website", id: source.id }] }, t("sections.knowledge.batch.done.reimport", { count: 1 }))} size="sm" type="button" variant="outline"><RefreshCw data-icon="inline-start" />{t("sections.knowledge.batch.reimport")}</Button>
+              <Button disabled={pending !== null} loading={pending === "reimport"} loadingLabel={t("common:pending.updating")} onClick={() => void run("reimport", { action: "reimport", items: [{ type: "website", id: source.id }] }, t("sections.knowledge.batch.done.reimport", { count: 1 }))} size="sm" type="button" variant="outline"><RefreshCw data-icon="inline-start" />{t("sections.knowledge.batch.reimport")}</Button>
             </div>
           ) : null}
         </DialogHeader>
@@ -82,7 +82,7 @@ export function WebsitePagesDialog({ businessId, documentId, onOpenChange, canMa
             </ul>
           ) : <p className="py-6 text-center type-body-muted">{pages.isError ? t("sections.knowledge.previewError") : t("sections.knowledge.websiteImport.previewPending")}</p>}
         </div>
-        <ConfirmActionDialog
+        <ConfirmActionDialog pendingLabel={t("common:pending.removing")}
           cancelLabel={t("actions.deleteCancel")}
           confirmLabel={t("sections.knowledge.pagesDialog.removeConfirm")}
           confirmVariant="destructive"

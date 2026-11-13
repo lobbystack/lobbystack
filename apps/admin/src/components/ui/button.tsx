@@ -21,15 +21,15 @@ const buttonVariants = cva(
       variant: {
         default: "bg-primary text-primary-foreground hover:bg-primary/80",
         outline:
-          "border-border bg-input/30 hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground",
+          "border-input bg-input/30 shadow-xs hover:bg-input/50 hover:text-foreground aria-expanded:bg-input/50 aria-expanded:text-foreground",
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-secondary/80 aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
         ghost:
           "hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground",
         destructive:
-          "bg-destructive/10 text-destructive hover:bg-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30",
+          "border-destructive/30 bg-destructive/10 text-destructive shadow-xs hover:bg-destructive/20 dark:border-destructive/40 dark:bg-destructive/20 dark:hover:bg-destructive/30",
         success:
-          "bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 dark:bg-emerald-500/20 dark:text-emerald-400 dark:hover:bg-emerald-500/30",
+          "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 shadow-xs hover:bg-emerald-500/20 dark:border-emerald-500/40 dark:bg-emerald-500/20 dark:text-emerald-400 dark:hover:bg-emerald-500/30",
         link: "text-primary underline-offset-4 hover:underline",
       },
       // Polar's Orbit Button sizes (github.com/polarsource/polar, clients/packages/orbit/src/components/Button.tsx):
@@ -78,8 +78,8 @@ function Button({
     >
       {loading ? (
         <>
-          <LoaderCircle className="size-4 animate-spin" />
-          {loadingLabel ? <span className="sr-only">{loadingLabel}</span> : null}
+          <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
+          {loadingLabel ?? children}
         </>
       ) : (
         children
