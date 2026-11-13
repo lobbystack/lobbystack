@@ -11,7 +11,7 @@ export const featurePagesFr: FeaturePagesCopy = {
     hero: {
       title: "Formez votre réceptionniste avec vos mots",
       intro:
-        "Dites à LobbyStack quoi demander, quels prix donner et quand passer la main, comme vous le diriez à une nouvelle recrue. Il suit vos règles à chaque appel, et vous ne construirez plus jamais de scénario d’appel.",
+        "Dites à LobbyStack quoi demander, quels prix donner et quand passer la main, comme vous le diriez à une nouvelle recrue. Il suit vos règles à chaque appel.",
     },
     facts: [
       "Des règles écrites avec vos mots",
@@ -100,7 +100,7 @@ export const featurePagesFr: FeaturePagesCopy = {
     hero: {
       title: "Les appels importants arrivent jusqu’à vous. LobbyStack gère le reste.",
       intro:
-        "LobbyStack répond en premier, règle les appels courants et transfère les appels urgents sur votre téléphone. Les urgences, les gros contrats et les clients mécontents obtiennent une personne tout de suite.",
+        "LobbyStack répond en premier, traite les appels courants et transfère les urgences sur votre téléphone.",
     },
     facts: [
       "Règles de transfert en langage courant",
@@ -198,7 +198,7 @@ export const featurePagesFr: FeaturePagesCopy = {
     hero: {
       title: "Chaque appel, mis par écrit avant que vous le demandiez",
       intro:
-        "Chaque appel arrive dans votre Boîte de réception avec son résultat, sa transcription complète et l’enregistrement. Vous savez qui a appelé, ce qu’il voulait et quelle est la suite, sans écouter un seul message vocal.",
+        "Chaque appel arrive dans votre Boîte de réception avec son résultat, sa transcription et son enregistrement. Vous savez qui a appelé et quelle est la suite, sans écouter de message vocal.",
     },
     facts: [
       "Une transcription de chaque appel",

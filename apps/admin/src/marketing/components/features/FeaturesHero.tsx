@@ -11,7 +11,7 @@ const featuresHeroCopy = {
   en: {
     h1Start: "The AI receptionist that answers,",
     h1Emphasis: "books and follows up",
-    body: "LobbyStack picks up every call in 70+ languages, books the job, quotes your prices, transfers the urgent ones and texts the confirmation. You train it in plain English.",
+    body: "LobbyStack picks up every call in 70+ languages, books the job, quotes your prices and transfers the urgent ones. You train it in plain English.",
     workflowLabel: "Write the workflow",
     workflowText:
       "When someone asks for a quote, ask what service they need, where they are located, their timeline, and their budget. Give our approved price range for standard jobs. If they need exact pricing, book an on-site estimate and attach the summary for the team.",
@@ -33,7 +33,7 @@ const featuresHeroCopy = {
   fr: {
     h1Start: "Le réceptionniste IA qui répond,",
     h1Emphasis: "réserve et assure le suivi",
-    body: "LobbyStack décroche chaque appel dans plus de 70 langues, prend le rendez‑vous, donne vos prix, transfère les urgences et envoie la confirmation par SMS. Vous le formez en langage courant.",
+    body: "LobbyStack décroche chaque appel dans plus de 70 langues, prend le rendez‑vous, donne vos prix et transfère les urgences. Vous le formez en langage courant.",
     workflowLabel: "Décrivez vos règles",
     workflowText:
       "Si quelqu’un demande un devis, demandez le service, l’adresse, le délai souhaité et le budget. Donnez la fourchette approuvée pour les demandes standards. Si le prix doit être confirmé, planifiez une visite d’estimation et joignez le résumé pour l’équipe.",
@@ -55,7 +55,7 @@ const featuresHeroCopy = {
   es: {
     h1Start: "La recepcionista con IA que contesta,",
     h1Emphasis: "reserva y da seguimiento",
-    body: "LobbyStack contesta cada llamada en más de 70 idiomas, reserva la cita, da sus precios, transfiere las urgencias y envía la confirmación por SMS. Usted la instruye en lenguaje sencillo.",
+    body: "LobbyStack contesta cada llamada en más de 70 idiomas, reserva la cita, da sus precios y transfiere las urgencias. Usted la instruye en lenguaje sencillo.",
     workflowLabel: "Escriba el flujo",
     workflowText:
       "Cuando alguien pida un presupuesto, pregunte qué servicio necesita, dónde se encuentra, su plazo y su presupuesto. Dé nuestro rango de precios aprobado para trabajos estándar. Si necesita un precio exacto, reserve una visita de estimación y adjunte el resumen para el equipo.",
@@ -77,7 +77,7 @@ const featuresHeroCopy = {
   sr: {
     h1Start: "AI recepcioner koji se javlja,",
     h1Emphasis: "zakazuje i prati svaki poziv",
-    body: "LobbyStack se javlja na svaki poziv na više od 70 jezika, zakazuje termin, navodi Vaše cene, preusmerava hitne pozive i šalje SMS potvrdu. Obučavate ga običnim jezikom.",
+    body: "LobbyStack se javlja na svaki poziv na više od 70 jezika, zakazuje termin, navodi Vaše cene i preusmerava hitne pozive. Obučavate ga običnim jezikom.",
     workflowLabel: "Napišite tok rada",
     workflowText:
       "Kada neko traži ponudu, pitajte koja mu usluga treba, gde se nalazi, kakav mu je rok i budžet. Za standardne poslove navedite naš odobreni raspon cena. Ako mu treba tačna cena, zakažite procenu na licu mesta i priložite rezime za tim.",

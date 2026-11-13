@@ -11,7 +11,7 @@ export const featurePagesSr: FeaturePagesCopy = {
     hero: {
       title: "Obučite recepcionera običnim jezikom",
       intro:
-        "Recite LobbyStack-u šta da pita, koju cenu da navede i kada da preda poziv, kao što biste objasnili novom zaposlenom. On se drži Vaših pravila u svakom pozivu, a Vi više nikada ne crtate tok poziva.",
+        "Recite LobbyStack-u šta da pita, koju cenu da navede i kada da preda poziv, kao što biste objasnili novom zaposlenom. On se drži Vaših pravila u svakom pozivu.",
     },
     facts: [
       "Pravila pisana Vašim rečima",
@@ -100,7 +100,7 @@ export const featurePagesSr: FeaturePagesCopy = {
     hero: {
       title: "Pozivi kojima ste potrebni stižu do Vas. Ostalo rešava LobbyStack.",
       intro:
-        "LobbyStack se javlja prvi, rešava rutinske pozive i preusmerava hitne na Vaš telefon. Hitni slučajevi, veliki poslovi i nezadovoljni klijenti odmah dobijaju čoveka.",
+        "LobbyStack se javlja prvi, rešava rutinske pozive i preusmerava hitne na Vaš telefon.",
     },
     facts: [
       "Pravila preusmeravanja običnim jezikom",
@@ -198,7 +198,7 @@ export const featurePagesSr: FeaturePagesCopy = {
     hero: {
       title: "Svaki poziv zapisan pre nego što pitate",
       intro:
-        "Svaki poziv stiže u Vaše Prijemno sanduče sa ishodom, celim transkriptom i snimkom. Znate ko je zvao, šta je hteo i šta sledi, a da niste preslušali nijednu govornu poruku.",
+        "Svaki poziv stiže u Vaše Prijemno sanduče sa ishodom, transkriptom i snimkom. Znate ko je zvao i šta sledi, a da niste preslušali govornu poruku.",
     },
     facts: [
       "Transkript svakog poziva",

@@ -27,7 +27,7 @@ export function PhoneAnsweringSections() {
       <SolutionHero
         eyebrow="AI phone answering"
         title="An AI phone answering service for the calls you can't take"
-        intro="When you're on a job or with a customer, the caller you can't answer dials the next business on their list. LobbyStack picks up on your number, books the visit into Google Calendar, Cal.com or Calendly and rings your phone when a call is urgent."
+        intro="When you're on a job or with a customer, the caller you can't answer dials the next business on their list. LobbyStack picks up on your number, and rings your phone when a call is urgent."
         primary={signupLink("Try for free", signup, "phone_answering_hero")}
         secondary={{ label: "View pricing", href: "/pricing/" }}
         footnote="Free plan with 30 voice minutes. No credit card required."

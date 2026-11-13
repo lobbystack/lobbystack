@@ -11,7 +11,7 @@ export const featurePagesEn: FeaturePagesCopy = {
     hero: {
       title: "Train your receptionist in plain English",
       intro:
-        "Tell LobbyStack what to ask, what to quote and when to hand off, the way you'd brief a new hire. It follows your rules on every call, and you'll never build a call flow again.",
+        "Tell LobbyStack what to ask, what to quote and when to hand off, the way you'd brief a new hire. It follows your rules on every call.",
     },
     facts: [
       "Rules written in your own words",
@@ -100,7 +100,7 @@ export const featurePagesEn: FeaturePagesCopy = {
     hero: {
       title: "The calls that need you reach you. LobbyStack handles the rest.",
       intro:
-        "LobbyStack answers first, deals with the routine calls and transfers the urgent ones to your phone. Emergencies, big jobs and upset customers get a person right away.",
+        "LobbyStack answers first, handles the routine calls and transfers the urgent ones to your phone.",
     },
     facts: [
       "Transfer rules in plain language",
@@ -198,7 +198,7 @@ export const featurePagesEn: FeaturePagesCopy = {
     hero: {
       title: "Every call, written up before you ask",
       intro:
-        "Each call lands in your Inbox with its outcome, a full transcript and the recording. You know who called, what they wanted and what happens next without playing a single voicemail.",
+        "Each call lands in your Inbox with its outcome, transcript and recording. You know who called and what happens next without playing a voicemail.",
     },
     facts: [
       "A transcript of every call",

@@ -11,7 +11,7 @@ export const featurePagesEs: FeaturePagesCopy = {
     hero: {
       title: "Entrene a su recepcionista en lenguaje sencillo",
       intro:
-        "Dígale a LobbyStack qué preguntar, qué precios dar y cuándo pasar la llamada, como se lo explicaría a un empleado nuevo. Sigue sus reglas en cada llamada, y usted no vuelve a armar un flujo de llamadas.",
+        "Dígale a LobbyStack qué preguntar, qué precios dar y cuándo pasar la llamada, como se lo explicaría a un empleado nuevo. Sigue sus reglas en cada llamada.",
     },
     facts: [
       "Reglas escritas con sus palabras",
@@ -100,7 +100,7 @@ export const featurePagesEs: FeaturePagesCopy = {
     hero: {
       title: "Las llamadas que requieren de usted le llegan. LobbyStack resuelve el resto.",
       intro:
-        "LobbyStack contesta primero, resuelve las llamadas de rutina y transfiere las urgentes a su teléfono. Las emergencias, los trabajos grandes y los clientes molestos hablan con una persona de inmediato.",
+        "LobbyStack contesta primero, resuelve las llamadas de rutina y transfiere las urgentes a su teléfono.",
     },
     facts: [
       "Reglas de transferencia en lenguaje sencillo",
@@ -198,7 +198,7 @@ export const featurePagesEs: FeaturePagesCopy = {
     hero: {
       title: "Cada llamada, por escrito antes de que usted pregunte",
       intro:
-        "Cada llamada llega a su Bandeja de entrada con el resultado, la transcripción completa y la grabación. Usted sabe quién llamó, qué quería y qué sigue sin escuchar un solo mensaje de voz.",
+        "Cada llamada llega a su Bandeja de entrada con el resultado, la transcripción y la grabación. Usted sabe quién llamó y qué sigue sin escuchar un mensaje de voz.",
     },
     facts: [
       "Transcripción de cada llamada",
