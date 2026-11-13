@@ -25,7 +25,7 @@ Smith.ai kombinuje AI sa pristupom mreži recepcionera iz Severne Amerike. Lobby
 | Plaćeni ulazni paket | Pro od $150 za 75 poziva | Starter za $30 sa 150 minuta |
 | Rezervna ljudska podrška | Mreža agenata; neki zadaci živih agenata naplaćuju se po pozivu | Preusmeravanje na tim koji podesite |
 | Zakazivanje i prijem podataka | Navedeni | Uključeni, uz pravila koja možete da podesite |
-| Jezici | Navedeni engleski i španski | Odgovara na jeziku pozivaoca |
+| Jezici | Navedeni engleski i španski | Govori više od 70 jezika |
 | Izvorni kod | Nije naveden | Javni repozitorijum pod MIT licencom |
 | Samostalno hostovanje | Nije navedeno | Podržan način primene |
 

@@ -257,7 +257,7 @@ export const tradeDetails: Record<string, TradeDetails> = {
       {
         call: "Caller speaks Spanish or another language",
         action: "Answers",
-        detail: "Switches to the caller's language and keeps your urgency rules",
+        detail: "Speaks 70+ languages and keeps your urgency rules",
       },
       {
         call: "Tune-up or maintenance visit",

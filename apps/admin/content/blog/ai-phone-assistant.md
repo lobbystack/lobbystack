@@ -21,7 +21,7 @@ An **AI phone assistant** is software that answers your business calls in a natu
 
 You forward your line to the assistant, or give it a number of its own. When a customer calls:
 
-1. The assistant picks up in your business's default language, with the greeting you wrote.
+1. The assistant picks up with the greeting you wrote.
 2. It listens to the request and answers from your website, your documents and your notes.
 3. It acts on your rules: it books an open time, rings your cell for an emergency or takes a message.
 4. After the call, the summary, transcript and recording appear in your dashboard.
@@ -76,7 +76,7 @@ Prices run by the minute or by the call. On November 3, 2026, LobbyStack Starter
 
 ### Does an AI phone assistant speak French?
 
-Yes, if the product supports it. LobbyStack opens the call in French when that's your default language and answers in more than 70 languages with OpenAI's GPT-Live. We don't promise a Quebec accent, so listen to it with your own expressions before you forward your line.
+Yes, if the product supports it. LobbyStack speaks 70+ languages, French included, with OpenAI's GPT-Live. We don't promise a Quebec accent, so listen to it with your own expressions before you forward your line.
 
 ### What's the difference between an AI phone assistant and an AI voice agent?
 

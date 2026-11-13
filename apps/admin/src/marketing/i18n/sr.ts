@@ -1,3 +1,4 @@
+import { featurePageRoutes } from "@/marketing/lib/feature-pages"
 import type { LandingMessages } from "@/marketing/i18n/types"
 
 export const sr = {
@@ -30,6 +31,7 @@ export const sr = {
     blocked: "Pregledač je blokirao kopiranje. Kopirajte prompt odavde:",
   },
   routes: {
+    ...featurePageRoutes("sr"),
     "/": {
       title: "AI recepcioner za mala preduzeća | LobbyStack",
       description:

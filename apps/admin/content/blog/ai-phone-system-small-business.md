@@ -101,7 +101,7 @@ LobbyStack charges $0.20 per extra minute, at the low end of the French plans in
 What works:
 
 - Starter at $30 for 150 minutes, then $0.20 a minute; Pro at $100 for 500 minutes, then $0.18. No setup fee.
-- Calls open in French if you set French as the default, then the receptionist answers in the caller's language: 70+ languages on OpenAI's GPT-Live. That helps if you serve tourists or international customers.
+- The receptionist speaks 70+ languages on OpenAI's GPT-Live, French included. That helps if you serve tourists or international customers.
 - Booking into Google Calendar, Cal.com or Calendly, transfers of urgent calls to your number, and a summary, transcript and recording of every call.
 - Calls under 10 seconds and calls the receptionist ends as spam don't count toward usage.
 - The code is MIT open source: a technical team can audit it or self-host it with its own OpenAI and Twilio accounts.
@@ -129,7 +129,7 @@ Pick a French provider if you want a French number, texts to your customers' mob
 
 ### Does an AI phone system speak French?
 
-Yes. The five French plans in this guide answer in French. LobbyStack opens each call in French if you set French as the default language, then answers in the caller's language, among 70+ languages. During the trial, test the accent and how it pronounces your street names, product names and staff names.
+Yes. The five French plans in this guide answer in French. LobbyStack speaks 70+ languages, French included. During the trial, test the accent and how it pronounces your street names, product names and staff names.
 
 ### Can I try an AI phone system for free?
 

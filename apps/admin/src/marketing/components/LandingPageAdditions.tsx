@@ -117,13 +117,13 @@ export const homeSectionsCopy = {
           name: "Starter",
           price: "$30/mo",
           description:
-            "150 voice minutes, up to 50 text alerts, 20 transfer attempts, and email support.",
+            "150 voice minutes, up to 50 SMS notifications, 20 transfer attempts, and email support.",
         },
         {
           name: "Pro",
           price: "$100/mo",
           description:
-            "500 voice minutes, up to 200 text alerts, 100 transfer attempts, and priority email support.",
+            "500 voice minutes, up to 200 SMS notifications, 100 transfer attempts, and priority email support.",
         },
         {
           name: "Enterprise",
@@ -254,13 +254,13 @@ export const homeSectionsCopy = {
           name: "Starter",
           price: "$30/mois",
           description:
-            "150 minutes vocales, jusqu’à 50 alertes SMS, 20 tentatives de transfert et support par courriel.",
+            "150 minutes vocales, jusqu’à 50 notifications SMS, 20 tentatives de transfert et support par courriel.",
         },
         {
           name: "Pro",
           price: "$100/mois",
           description:
-            "500 minutes vocales, jusqu’à 200 alertes SMS, 100 tentatives de transfert et support prioritaire par courriel.",
+            "500 minutes vocales, jusqu’à 200 notifications SMS, 100 tentatives de transfert et support prioritaire par courriel.",
         },
         {
           name: "Enterprise",
@@ -390,13 +390,13 @@ export const homeSectionsCopy = {
           name: "Starter",
           price: "$30/mes",
           description:
-            "150 minutos de voz, hasta 50 alertas por SMS, 20 intentos de transferencia y soporte por correo electrónico.",
+            "150 minutos de voz, hasta 50 notificaciones por SMS, 20 intentos de transferencia y soporte por correo electrónico.",
         },
         {
           name: "Pro",
           price: "$100/mes",
           description:
-            "500 minutos de voz, hasta 200 alertas por SMS, 100 intentos de transferencia y soporte prioritario por correo electrónico.",
+            "500 minutos de voz, hasta 200 notificaciones por SMS, 100 intentos de transferencia y soporte prioritario por correo electrónico.",
         },
         {
           name: "Enterprise",

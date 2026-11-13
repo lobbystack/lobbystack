@@ -101,7 +101,7 @@ LobbyStack facture la minute en plus 0,20 $, dans le bas de la fourchette des o
 Ce qui marche :
 
 - Le forfait Starter à 30 $ pour 150 minutes, puis 0,20 $ la minute ; Pro à 100 $ pour 500 minutes, puis 0,18 $. Aucun frais de mise en service.
-- L'appel s'ouvre en français si vous choisissez le français par défaut, puis le réceptionniste répond dans la langue de l'appelant : plus de 70 langues avec GPT-Live d'OpenAI. Utile si vous recevez une clientèle touristique ou étrangère.
+- LobbyStack parle plus de 70 langues avec GPT-Live d'OpenAI, dont le français. Utile si vous recevez une clientèle touristique ou étrangère.
 - La prise de rendez-vous dans Google Agenda, Cal.com ou Calendly, le transfert des urgences vers votre numéro, et un résumé, une transcription et un enregistrement de chaque appel.
 - Les appels de moins de 10 secondes et ceux que le réceptionniste raccroche comme spam ne sont pas décomptés.
 - Le code est open source (licence MIT) : une équipe technique peut l'auditer ou l'héberger elle-même, avec ses propres comptes OpenAI et Twilio.
@@ -129,7 +129,7 @@ Choisissez une offre française si vous voulez un numéro français, des SMS ver
 
 ### Un standard téléphonique IA parle-t-il français ?
 
-Oui. Les cinq offres françaises de ce guide répondent en français. LobbyStack ouvre l'appel en français si vous choisissez cette langue par défaut, puis répond dans la langue de l'appelant, parmi plus de 70 langues. Pendant l'essai, testez l'accent et la prononciation de vos noms de rues, de produits et de collaborateurs.
+Oui. Les cinq offres françaises de ce guide répondent en français. LobbyStack parle plus de 70 langues, dont le français. Pendant l'essai, testez l'accent et la prononciation de vos noms de rues, de produits et de collaborateurs.
 
 ### Peut-on essayer un standard téléphonique IA gratuitement ?
 

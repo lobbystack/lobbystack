@@ -2,6 +2,7 @@ import { createHash } from "node:crypto"
 import { selfHostedSupportCatalog } from "@lobbystack/shared"
 import { PREFIXED_LOCALES, type Locale } from "@/marketing/i18n/config"
 import { featureIndexMarkdown } from "@/marketing/lib/feature-index"
+import { featurePagePaths } from "@/marketing/lib/feature-pages"
 import {
   DEFAULT_DESCRIPTION,
   DEFAULT_TITLE,
@@ -28,6 +29,7 @@ export const markdownAlternatePath = (pathname: string) => {
     "/",
     "/features/",
     "/features/mcp/",
+    ...featurePagePaths,
     "/pricing/",
     "/pricing/self-hosted/",
     "/affiliate-program/",
@@ -42,6 +44,7 @@ export const markdownAlternatePath = (pathname: string) => {
     "/": "/index.md",
     "/features/": "/features.md",
     "/features/mcp/": "/features/mcp.md",
+    ...Object.fromEntries(featurePagePaths.map((path) => [path, `${path.slice(0, -1)}.md`])),
     "/pricing/": "/pricing.md",
     "/pricing/self-hosted/": "/pricing/self-hosted.md",
     "/affiliate-program/": "/affiliate-program.md",
@@ -706,10 +709,9 @@ LobbyStack is an open-source AI receptionist for call-heavy small businesses. It
 - Quote handling for exact prices, starting prices, price ranges, or a message for the team to quote later.
 - Lead qualification and structured caller detail capture.
 - Human handoff through transfers, messages, and team notifications.
-- Owner alerts by email, with optional SMS alerts on paid plans.
-- Replies to Instagram direct messages with the knowledge and rules the agent uses on calls.
+- Owner alerts by email, with optional SMS notifications on paid plans.
 - Inbox, call history, recordings, transcripts, summaries, contact profiles, analytics, and action-required views.
-- Answers in the caller's language.
+- Speaks 70+ languages and switches to the caller's language.
 - Webhooks, an HTTP API, the lobbystack CLI, and an MCP server for AI assistants.
 - Open source, with self-hosting on Docker Compose and a white-label option.
 
@@ -1029,7 +1031,7 @@ Start with a conservative estimate and rerun the calculator with a second scenar
 No. Count them in your missed call total only if you lower the opportunity rate to account for them. The calculator is meant to estimate lost job revenue, so spam, vendors, wrong numbers, and non-buying calls should not be treated as real opportunities.
 
 ### Will an AI receptionist replace my office manager?
-No. LobbyStack is designed to handle the repetitive frontline work: answering basic questions, collecting intake details, and booking appointments. Your office manager can focus on complex dispatching, ordering parts, and customer service.
+No. LobbyStack handles the repetitive frontline work: answering basic questions, collecting intake details, and booking appointments. Your office manager can focus on complex dispatching, ordering parts, and customer service.
 
 ### Is this the same as an answering service ROI calculator?
 It is closely related. This calculator shows the revenue that may be at risk from missed calls. To think about ROI, compare that estimate with the monthly cost of an answering service or AI receptionist that can answer, qualify, and book more of those calls.

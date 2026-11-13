@@ -45,7 +45,7 @@ const copy: Record<PlanCardLocale, Copy> = {
     groups: ["Usage & limits", "Core receptionist", "Booking", "Routing & transfers", "Notifications & messaging", "Data & dashboard", "Deployment & support"],
     features: {
       voiceMinutes: "Voice minutes", outboundCalls: "Transfer attempts", alertSms: "Alert SMS segments", knowledgeStorage: "Knowledge base", phoneNumbers: "Phone numbers", agents: "Agents",
-      callAnswering: "24/7 call answering", callerDetails: "Caller details and message capture", knowledgeAnswers: "Knowledge base answers", workflows: "Plain-language workflows", spamFiltering: "Spam filtering", shortCalls: "Calls under 10s excluded from billing", concurrentCalls: "Unlimited concurrent calls", multilingual: "Answers in the caller's language",
+      callAnswering: "24/7 call answering", callerDetails: "Caller details and message capture", knowledgeAnswers: "Knowledge base answers", workflows: "Plain-language workflows", spamFiltering: "Spam filtering", shortCalls: "Calls under 10s excluded from billing", concurrentCalls: "Unlimited concurrent calls", multilingual: "Speaks 70+ languages",
       appointmentBooking: "Appointment booking", confirmationTexts: "Appointment confirmation texts", googleCalendar: "Google Calendar integration",
       urgentHandoff: "Urgent call handoff", callTransfers: "Call transfers", afterHours: "After-hours answering",
       emailNotifications: "Email notifications", smsNotifications: "SMS notifications",
@@ -66,7 +66,7 @@ const copy: Record<PlanCardLocale, Copy> = {
     groups: ["Usage et limites", "Réceptionniste IA", "Rendez-vous", "Routage et transferts", "Notifications et messagerie", "Données et tableau de bord", "Hébergement et support"],
     features: {
       voiceMinutes: "Minutes vocales", outboundCalls: "Tentatives de transfert", alertSms: "Segments SMS d'alerte", knowledgeStorage: "Base de connaissances", phoneNumbers: "Numéros de téléphone", agents: "Agents",
-      callAnswering: "Réponse aux appels 24/7", callerDetails: "Collecte des détails et messages", knowledgeAnswers: "Réponses depuis la base de connaissances", workflows: "Consignes en langage naturel", spamFiltering: "Filtrage du spam", shortCalls: "Appels de moins de 10 s exclus de la facturation", concurrentCalls: "Appels simultanés illimités", multilingual: "Répond dans la langue de l'appelant",
+      callAnswering: "Réponse aux appels 24/7", callerDetails: "Collecte des détails et messages", knowledgeAnswers: "Réponses depuis la base de connaissances", workflows: "Consignes en langage naturel", spamFiltering: "Filtrage du spam", shortCalls: "Appels de moins de 10 s exclus de la facturation", concurrentCalls: "Appels simultanés illimités", multilingual: "Parle plus de 70 langues",
       appointmentBooking: "Prise de rendez‑vous", confirmationTexts: "SMS de confirmation de rendez‑vous", googleCalendar: "Intégration Google Calendar",
       urgentHandoff: "Transfert des appels urgents", callTransfers: "Transferts d'appel", afterHours: "Réponse hors horaires",
       emailNotifications: "Notifications par courriel", smsNotifications: "Notifications SMS",
@@ -87,7 +87,7 @@ const copy: Record<PlanCardLocale, Copy> = {
     groups: ["Uso y límites", "Funciones de recepción", "Reservas", "Enrutamiento y transferencias", "Notificaciones y mensajes", "Datos y panel", "Implementación y soporte"],
     features: {
       voiceMinutes: "Minutos de voz", outboundCalls: "Intentos de transferencia", alertSms: "Segmentos de SMS de alerta", knowledgeStorage: "Base de conocimiento", phoneNumbers: "Números de teléfono", agents: "Agentes",
-      callAnswering: "Atención de llamadas 24/7", callerDetails: "Datos y mensajes de quien llama", knowledgeAnswers: "Respuestas desde la base de conocimiento", workflows: "Flujos de trabajo en lenguaje sencillo", spamFiltering: "Filtro de spam", shortCalls: "Llamadas de menos de 10 s excluidas de la facturación", concurrentCalls: "Llamadas simultáneas ilimitadas", multilingual: "Responde en el idioma de quien llama",
+      callAnswering: "Atención de llamadas 24/7", callerDetails: "Datos y mensajes de quien llama", knowledgeAnswers: "Respuestas desde la base de conocimiento", workflows: "Flujos de trabajo en lenguaje sencillo", spamFiltering: "Filtro de spam", shortCalls: "Llamadas de menos de 10 s excluidas de la facturación", concurrentCalls: "Llamadas simultáneas ilimitadas", multilingual: "Habla más de 70 idiomas",
       appointmentBooking: "Reserva de citas", confirmationTexts: "SMS de confirmación de citas", googleCalendar: "Integración con Google Calendar",
       urgentHandoff: "Derivación de llamadas urgentes", callTransfers: "Transferencias de llamadas", afterHours: "Atención fuera de horario",
       emailNotifications: "Notificaciones por correo electrónico", smsNotifications: "Notificaciones por SMS",
@@ -108,7 +108,7 @@ const copy: Record<PlanCardLocale, Copy> = {
     groups: ["Potrošnja i limiti", "Osnovne funkcije recepcionera", "Zakazivanje", "Rutiranje i preusmeravanje", "Obaveštenja i poruke", "Podaci i kontrolna tabla", "Hosting i podrška"],
     features: {
       voiceMinutes: "Minuti razgovora", outboundCalls: "Pokušaji preusmeravanja", alertSms: "Segmenti SMS upozorenja", knowledgeStorage: "Baza znanja", phoneNumbers: "Brojevi telefona", agents: "Agenti",
-      callAnswering: "Odgovaranje na pozive 24/7", callerDetails: "Beleženje podataka i poruka pozivalaca", knowledgeAnswers: "Odgovori iz baze znanja", workflows: "Tokovi rada opisani običnim jezikom", spamFiltering: "Filtriranje spama", shortCalls: "Pozivi kraći od 10 s se ne naplaćuju", concurrentCalls: "Neograničen broj istovremenih poziva", multilingual: "Odgovara na jeziku pozivaoca",
+      callAnswering: "Odgovaranje na pozive 24/7", callerDetails: "Beleženje podataka i poruka pozivalaca", knowledgeAnswers: "Odgovori iz baze znanja", workflows: "Tokovi rada opisani običnim jezikom", spamFiltering: "Filtriranje spama", shortCalls: "Pozivi kraći od 10 s se ne naplaćuju", concurrentCalls: "Neograničen broj istovremenih poziva", multilingual: "Govori više od 70 jezika",
       appointmentBooking: "Zakazivanje termina", confirmationTexts: "SMS potvrde termina", googleCalendar: "Google Calendar integracija",
       urgentHandoff: "Prosleđivanje hitnih poziva", callTransfers: "Preusmeravanje poziva", afterHours: "Odgovaranje van radnog vremena",
       emailNotifications: "Obaveštenja e-poštom", smsNotifications: "SMS obaveštenja",

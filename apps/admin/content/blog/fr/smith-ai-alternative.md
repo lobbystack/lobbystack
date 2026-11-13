@@ -24,7 +24,7 @@ Smith.ai associe l'IA à un réseau de réceptionnistes en Amérique du Nord. Lo
 | Quota gratuit | 25 appels, carte requise | 30 minutes vocales, sans carte, numéro américain ou canadien gratuit pendant 14 jours |
 | Entrée payante | Pro dès 150 $ pour 75 appels | Starter à 30 $ pour 150 minutes |
 | Relais humain | Réseau d'agents, certaines tâches facturées par appel | Équipe que vous configurez |
-| Langues | Anglais et espagnol annoncés | Répond dans la langue de l'appelant |
+| Langues | Anglais et espagnol annoncés | Parle plus de 70 langues |
 | Code source | Non annoncé | Dépôt public sous licence MIT |
 | Auto-hébergement | Non annoncé | Parcours pris en charge |
 

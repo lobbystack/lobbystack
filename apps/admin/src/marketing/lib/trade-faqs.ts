@@ -67,7 +67,7 @@ export const hvacFaqs: FaqItem[] = [
   {
     question: "Can an AI receptionist for HVAC answer callers who speak Spanish?",
     answer:
-      "Yes. Each call opens in your default language: English, French, Spanish, Serbian, German, Brazilian Portuguese, Italian, or Dutch. If the caller asks to switch or speaks another language, LobbyStack answers in that language. It runs on OpenAI GPT-Live, which handles more than 70 languages, and your urgency rules stay the same in each one.",
+      "Yes. LobbyStack speaks 70+ languages. If the caller asks to switch or speaks another language, it answers in that language, and your urgency rules stay the same in each one. You pick the language the greeting uses.",
   },
   {
     question: "What system details can it collect?",
@@ -315,7 +315,7 @@ export const propertyManagementFaqs: FaqItem[] = [
   {
     question: "Can it book showings?",
     answer:
-      "Yes. LobbyStack checks your leasing agent's Google Calendar, offers open times, books the showing, and texts a confirmation if the prospect agrees.",
+      "Yes. LobbyStack checks your leasing agent's calendar, offers open times, books the showing, and texts a confirmation if the prospect agrees.",
   },
   {
     question: "Does it work as an answering service for landlords with a few units?",

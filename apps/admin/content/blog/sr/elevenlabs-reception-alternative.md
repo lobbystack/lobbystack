@@ -28,7 +28,7 @@ Reception zvuči odlično i govori više od 70 jezika. LobbyStack Vam daje dvost
 | Srednji paket | $79 za 275 kredita ($66 uz godišnje plaćanje) | $100 za 500 minuta ($80 uz godišnje plaćanje) |
 | Prekoračenje u srednjem paketu | $0.38 po kreditu | $0.18 po minutu |
 | Istovremeni pozivi u početnom paketu | 1 | Bez ograničenja paketa na Starter i Pro bez limita potrošnje |
-| Jezici | 70+ uz automatsko prepoznavanje | Odgovara na jeziku pozivaoca |
+| Jezici | 70+ uz automatsko prepoznavanje | Govori više od 70 jezika |
 | Osoblje se javlja prvo | Ugrađen režim u kom se osoblje javlja prvo | Preko preusmeravanja poziva kod Vašeg operatera |
 | Integracije | Google Calendar, Zapier, webhookovi, MCP | Google Calendar, Cal.com, Calendly |
 | HIPAA | Nije podržan | Samostalno hostovanje za punu kontrolu nad podacima o pozivima |

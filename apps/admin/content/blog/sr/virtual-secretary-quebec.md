@@ -68,7 +68,7 @@ AI recepcioner je dovoljan kada većina Vaših poziva ide istim putem: pitanje o
 
 Sa LobbyStackom, na primer:
 
-- poziv počinje na francuskom kada je francuski Vaš podrazumevani jezik i prelazi na engleski ako ga pozivalac govori;
+- govori više od 70 jezika, odgovara na francuskom i prelazi na engleski ako ga pozivalac govori;
 - odgovara na osnovu Vašeg sajta, Vaših dokumenata i cena koje mu date;
 - zakazuje u Google Calendar, Cal.com ili Calendly i šalje SMS potvrdu klijentima koji pristanu;
 - prebacuje hitne pozive na Vaš mobilni, a za sve ostalo prima poruku i šalje Vam obaveštenje imejlom ili SMS-om.

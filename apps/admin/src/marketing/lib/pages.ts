@@ -4,6 +4,7 @@ import {
   absoluteUrl,
   ogImagePath,
 } from "@/marketing/lib/seo"
+import { featurePagePath, featurePageSlugs, getFeaturePage } from "@/marketing/lib/feature-pages"
 import { seoLandingPages } from "@/marketing/lib/seo-landing-pages"
 
 export type PublicPage = {
@@ -31,7 +32,7 @@ export const publicPages: PublicPage[] = [
     path: "/pricing/",
     title: "AI Receptionist Pricing for Small Businesses",
     description:
-      "Compare LobbyStack AI receptionist pricing for Free, Starter, Pro, and Enterprise plans, including voice minutes, annual billing, SMS alerts, and overage rates.",
+      "Compare LobbyStack AI receptionist pricing for Free, Starter, Pro, and Enterprise plans, including voice minutes, annual billing, SMS notifications, and overage rates.",
     markdown: "/pricing.md",
   },
   {
@@ -55,6 +56,12 @@ export const publicPages: PublicPage[] = [
       "Connect Claude, ChatGPT or any MCP client to your LobbyStack AI receptionist. Read calls and messages, book appointments and change your hours from the chat.",
     markdown: "/features/mcp.md",
   },
+  ...featurePageSlugs.map((slug) => ({
+    path: featurePagePath(slug),
+    title: getFeaturePage("en", slug).seo.title.replace(/ \| LobbyStack$/, ""),
+    description: getFeaturePage("en", slug).seo.description,
+    markdown: `/features/${slug}.md`,
+  })),
   {
     path: "/blog/",
     title: "AI Receptionist Blog and Product Updates",

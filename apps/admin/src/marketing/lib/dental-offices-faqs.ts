@@ -39,7 +39,7 @@ export const dentalOfficesFaqs: FaqItem[] = [
   {
     question: "Which languages can patients speak?",
     answer:
-      "Each call opens in your practice's default language: English, French, Spanish, Serbian, German, Brazilian Portuguese, Italian or Dutch. The receptionist switches when a patient speaks another language or asks for one. It runs on OpenAI GPT-Live, which handles 70+ languages, and LobbyStack's pricing lists no language add-on.",
+      "Patients can speak 70+ languages. The receptionist switches when a patient speaks another language or asks for one, and you pick the language the greeting uses. It runs on OpenAI GPT-Live, and LobbyStack's pricing lists no language add-on.",
   },
   {
     question: "Does it answer at lunch, after hours and on weekends?",

@@ -28,7 +28,7 @@ Reception suena excelente y habla más de 70 idiomas. LobbyStack le da el doble 
 | Plan intermedio | $79 por 275 créditos ($66 con facturación anual) | $100 por 500 minutos ($80 con facturación anual) |
 | Excedente del plan intermedio | $0.38 por crédito | $0.18 por minuto |
 | Llamadas simultáneas en el plan de entrada | 1 | Sin límite del plan en Starter y Pro sin límite de gasto |
-| Idiomas | Más de 70 con detección automática | Responde en el idioma de quien llama |
+| Idiomas | Más de 70 con detección automática | Habla más de 70 idiomas |
 | El equipo contesta primero | Modo integrado que da prioridad al equipo | Mediante el desvío de llamadas de su operador |
 | Integraciones | Google Calendar, Zapier, webhooks, MCP | Google Calendar, Cal.com, Calendly |
 | HIPAA | No compatible | Autoalojamiento para controlar por completo los datos de las llamadas |

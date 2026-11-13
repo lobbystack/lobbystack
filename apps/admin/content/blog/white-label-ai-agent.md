@@ -101,7 +101,7 @@ A client also counts against its own package, so it stops at whichever limit it 
 A few places name LobbyStack because they run on its accounts:
 
 - Your sign-in pages offer email and password without **Continue with Google**.
-- Consent screens for Google Calendar and Instagram name LobbyStack when a business connects them.
+- The Google Calendar consent screen names LobbyStack when a business connects it.
 - Texts come from LobbyStack's verified number. A customer's first appointment text and the reply to HELP name LobbyStack and the business.
 
 On a call, the receptionist answers in the business's name.

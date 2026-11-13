@@ -26,7 +26,7 @@ Upfirst charges by handled call, while LobbyStack charges by voice minute. Lobby
 | Paid usage | Call allowances and per-call overages | Minute allowances and per-minute overages |
 | Booking | Direct calendar scheduling | Booking, changes, and business rules |
 | Transfers | Warm and waterfall transfers | Blind transfer to one number |
-| Languages | More than 35 advertised | Answers in the caller's language |
+| Languages | More than 35 advertised | Speaks 70+ languages |
 | Deployment | Hosted service | Managed cloud or self-hosted |
 | Source code | Public pages do not advertise source access | Public MIT-licensed repository |
 

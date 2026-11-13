@@ -1,3 +1,4 @@
+import { featurePageRoutes } from "@/marketing/lib/feature-pages"
 import type { LandingMessages } from "@/marketing/i18n/types"
 
 export const en = {
@@ -29,6 +30,7 @@ export const en = {
     blocked: "Your browser blocked copying. Copy the prompt from here:",
   },
   routes: {
+    ...featurePageRoutes("en"),
     "/": {
       title: "AI Receptionist Software for Small Businesses | LobbyStack",
       description:
@@ -42,7 +44,7 @@ export const en = {
     "/pricing/": {
       title: "AI Receptionist Pricing for Small Businesses",
       description:
-        "Compare LobbyStack AI receptionist pricing for Free, Starter, Pro, and Enterprise plans, including voice minutes, annual billing, SMS alerts, and overage rates.",
+        "Compare LobbyStack AI receptionist pricing for Free, Starter, Pro, and Enterprise plans, including voice minutes, annual billing, SMS notifications, and overage rates.",
     },
     "/pricing/self-hosted/": {
       title: "Self-Hosted AI Receptionist Pricing and Support | LobbyStack",

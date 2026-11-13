@@ -15,7 +15,7 @@ const EN_FAQS: FaqItem[] = [
   {
     question: "Will my clients see the LobbyStack name?",
     answer:
-      "Sign-in, the dashboard, emails and the website widget's script all carry your brand. A few places still name LobbyStack: the Google Calendar and Instagram consent screens, and texts, which come from our verified toll-free number. Carriers require the first text and the HELP and STOP replies to name LobbyStack next to the business. Every other text names only the business.",
+      "Sign-in, the dashboard, emails and the website widget's script all carry your brand. A few places still name LobbyStack: the Google Calendar consent screen, and texts, which come from our verified toll-free number. Carriers require the first text and the HELP and STOP replies to name LobbyStack next to the business. Every other text names only the business.",
   },
   {
     question: "How do I charge my clients?",
@@ -73,7 +73,7 @@ const FR_FAQS: FaqItem[] = [
   {
     question: "Mes clients verront-ils le nom LobbyStack ?",
     answer:
-      "La connexion, le tableau de bord, les courriels et le script du widget du site portent votre marque. Quelques endroits nomment encore LobbyStack : les écrans d'autorisation de Google Agenda et d'Instagram, et les textos, envoyés depuis notre numéro sans frais vérifié. Les opérateurs exigent que le premier texto et les réponses à HELP et STOP nomment LobbyStack à côté de l'entreprise. Tous les autres textos ne nomment que l'entreprise.",
+      "La connexion, le tableau de bord, les courriels et le script du widget du site portent votre marque. Quelques endroits nomment encore LobbyStack : l'écran d'autorisation de Google Agenda, et les textos, envoyés depuis notre numéro sans frais vérifié. Les opérateurs exigent que le premier texto et les réponses à HELP et STOP nomment LobbyStack à côté de l'entreprise. Tous les autres textos ne nomment que l'entreprise.",
   },
   {
     question: "Comment est-ce que je facture mes clients ?",
@@ -131,7 +131,7 @@ const ES_FAQS: FaqItem[] = [
   {
     question: "¿Verán mis clientes el nombre de LobbyStack?",
     answer:
-      "El inicio de sesión, el panel, los correos y el script del widget del sitio llevan su marca. Algunos lugares siguen nombrando a LobbyStack: las pantallas de permiso de Google Calendar e Instagram, y los SMS, que salen de nuestro número gratuito verificado. Las operadoras exigen que el primer SMS y las respuestas a HELP y STOP nombren a LobbyStack junto al negocio. Los demás SMS solo nombran al negocio.",
+      "El inicio de sesión, el panel, los correos y el script del widget del sitio llevan su marca. Algunos lugares siguen nombrando a LobbyStack: la pantalla de permiso de Google Calendar, y los SMS, que salen de nuestro número gratuito verificado. Las operadoras exigen que el primer SMS y las respuestas a HELP y STOP nombren a LobbyStack junto al negocio. Los demás SMS solo nombran al negocio.",
   },
   {
     question: "¿Cómo cobro a mis clientes?",
@@ -189,7 +189,7 @@ const SR_FAQS: FaqItem[] = [
   {
     question: "Da li će moji klijenti videti ime LobbyStack?",
     answer:
-      "Prijava, kontrolna tabla, imejlovi i skripta vidžeta na sajtu nose vaš brend. Na nekoliko mesta i dalje piše LobbyStack: na ekranima za odobrenje Google Calendar-a i Instagrama, i u SMS porukama, koje stižu sa našeg verifikovanog besplatnog broja. Operateri zahtevaju da prva poruka i odgovori na HELP i STOP navedu LobbyStack pored firme. Sve ostale poruke navode samo firmu.",
+      "Prijava, kontrolna tabla, imejlovi i skripta vidžeta na sajtu nose vaš brend. Na nekoliko mesta i dalje piše LobbyStack: na ekranu za odobrenje Google Calendar-a, i u SMS porukama, koje stižu sa našeg verifikovanog besplatnog broja. Operateri zahtevaju da prva poruka i odgovori na HELP i STOP navedu LobbyStack pored firme. Sve ostale poruke navode samo firmu.",
   },
   {
     question: "Kako naplaćujem klijentima?",

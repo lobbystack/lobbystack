@@ -31,7 +31,7 @@ Su asistente no puede contestar el teléfono por sí solo. LobbyStack pone el ag
 
 ## Paso 2: defina su saludo y su idioma
 
-Escriba la primera frase que oirán quienes llamen, como "Gracias por llamar a Clínica Dental Northside, ¿en qué puedo ayudarle?". Elija el idioma en que empiezan las llamadas: inglés, francés, español, serbio, alemán, portugués, italiano o neerlandés. La recepcionista cambia de idioma cuando quien llama lo pide o habla otro.
+Escriba la primera frase que oirán quienes llamen, como "Gracias por llamar a Clínica Dental Northside, ¿en qué puedo ayudarle?". Elija el idioma principal de quienes le llaman. La recepcionista habla más de 70 idiomas y cambia cuando quien llama lo pide o habla otro.
 
 Los negocios nuevos empiezan con la voz Marin, y más adelante puede elegir otra de las [voces de GPT-Live](/es/blog/openai-voices/). LobbyStack no clona voces.
 

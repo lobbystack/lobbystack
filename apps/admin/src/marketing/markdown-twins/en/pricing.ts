@@ -8,5 +8,5 @@ export const GET = () =>
     canonical: absoluteUrl("/pricing/"),
     title: "AI Receptionist Pricing for Small Businesses",
     description:
-      "Compare LobbyStack AI receptionist pricing for Free, Starter, Pro, and Enterprise plans, including voice minutes, annual billing, SMS alerts, and overage rates.",
+      "Compare LobbyStack AI receptionist pricing for Free, Starter, Pro, and Enterprise plans, including voice minutes, annual billing, SMS notifications, and overage rates.",
   })

@@ -1,10 +1,11 @@
 import { NavbarAuthLinks } from "@/marketing/components/NavbarAuthLinks"
 import { GithubIcon } from "@/marketing/components/GithubIcon"
 import { localizeHref, localizePath, type Locale } from "@/marketing/i18n"
+import { featureIcons } from "@/marketing/lib/feature-icons"
+import { featureGroups, featureIndexCopy, featureLink } from "@/marketing/lib/feature-index"
 import { cn } from "@/marketing/lib/utils"
 import {
   BookOpen,
-  CalendarCheck,
   Building2,
   Calculator,
   ChevronDown,
@@ -20,15 +21,11 @@ import {
   Menu,
   Moon,
   Newspaper,
-  PhoneCall,
-  Plug,
   Scissors,
   Server,
   Stethoscope,
   Tag,
-  Terminal,
   WashingMachine,
-  Webhook,
   Wind,
   Wrench,
   X,
@@ -60,11 +57,7 @@ type NavLink =
 const labels = {
   en: {
     product: "Product",
-    receptionist: "Receptionist",
-    platform: "Platform",
     allFeatures: "All features",
-    api: "API",
-    integrations: "Integrations",
     solutions: "Solutions",
     resources: "Resources",
     pricing: "Pricing",
@@ -83,11 +76,7 @@ const labels = {
   },
   fr: {
     product: "Produit",
-    receptionist: "Réceptionniste",
-    platform: "Plateforme",
     allFeatures: "Toutes les fonctionnalités",
-    api: "API",
-    integrations: "Intégrations",
     solutions: "Solutions",
     resources: "Ressources",
     pricing: "Tarifs",
@@ -106,11 +95,7 @@ const labels = {
   },
   es: {
     product: "Producto",
-    receptionist: "Recepcionista",
-    platform: "Plataforma",
     allFeatures: "Todas las funciones",
-    api: "API",
-    integrations: "Integraciones",
     solutions: "Soluciones",
     resources: "Recursos",
     pricing: "Precios",
@@ -129,11 +114,7 @@ const labels = {
   },
   sr: {
     product: "Proizvod",
-    receptionist: "Recepcioner",
-    platform: "Platforma",
     allFeatures: "Sve funkcije",
-    api: "API",
-    integrations: "Integracije",
     solutions: "Rešenja",
     resources: "Resursi",
     pricing: "Cene",
@@ -265,43 +246,20 @@ const resourceLinks = (locale: Locale) =>
     },
   ] satisfies NavChildLink[]
 
-const docsLocales = new Set<Locale>(["fr", "es"])
-
-/** A Help Center page in the reader's language, where the docs have one. */
-const helpCenterUrl = (locale: Locale, path: string) =>
-  `https://docs.lobbystack.com/${docsLocales.has(locale) ? `${locale}/` : ""}${path}`
-
-const productColumns = (locale: Locale): NavColumn[] => [
-  {
-    title: labels[locale].receptionist,
-    links: [
-      {
-        label: solutionLabelMap[locale].aiPhoneAnswering,
-        href: "/solutions/ai-phone-answering/",
-        icon: PhoneCall,
-      },
-      {
-        label: solutionLabelMap[locale].aiAppointmentScheduler,
-        href: "/solutions/ai-appointment-scheduler/",
-        icon: CalendarCheck,
-      },
-      { label: labels[locale].allFeatures, href: "/features/", icon: LayoutGrid },
-    ],
-  },
-  {
-    title: labels[locale].platform,
-    links: [
-      { label: labels[locale].mcpServer, href: "/features/mcp/", icon: Plug },
-      { label: labels[locale].api, href: "/docs/api/", icon: Terminal },
-      {
-        label: labels[locale].integrations,
-        href: helpCenterUrl(locale, "integrations/overview"),
-        external: true,
-        icon: Webhook,
-      },
-    ],
-  },
-]
+/** The first three groups of the features index, then a link to the whole index. */
+const productColumns = (locale: Locale): NavColumn[] => {
+  const copy = featureIndexCopy[locale]
+  const columns: NavColumn[] = featureGroups.slice(0, 3).map((group) => ({
+    title: copy.groups[group.id],
+    links: group.features.map((id) => ({
+      label: copy.features[id].title,
+      href: featureLink(locale, id).href,
+      icon: featureIcons[id],
+    })),
+  }))
+  columns[2]?.links.push({ label: labels[locale].allFeatures, href: "/features/", icon: LayoutGrid })
+  return columns
+}
 
 const solutionLinks = (locale: Locale) =>
   [

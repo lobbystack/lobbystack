@@ -76,7 +76,7 @@ Cene se računaju po minutu ili po pozivu. LobbyStack Starter je 3. novembra 202
 
 ### Da li AI telefonski asistent govori francuski?
 
-Da, ako proizvod to podržava. LobbyStack počinje poziv na francuskom kada je to Vaš podrazumevani jezik i odgovara na više od 70 jezika uz OpenAI GPT-Live. Ne obećavamo kvebečki akcenat, pa ga preslušajte sa svojim izrazima pre nego što preusmerite liniju.
+Da, ako proizvod to podržava. LobbyStack govori više od 70 jezika uz OpenAI GPT-Live, uključujući francuski. Ne obećavamo kvebečki akcenat, pa ga preslušajte sa svojim izrazima pre nego što preusmerite liniju.
 
 ### Koja je razlika između AI telefonskog asistenta i AI glasovnog agenta?
 

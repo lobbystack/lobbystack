@@ -2,18 +2,16 @@ import type { Locale } from "@/marketing/i18n/config"
 import { localizeHref } from "@/marketing/i18n/routes"
 import { absoluteUrl } from "@/marketing/lib/seo"
 
-const docsLocales = new Set<Locale>(["fr", "es"])
-
-/** Where a feature's card leads: a page on this site, a Help Center guide, or another site. */
-type FeatureTarget = { page: string } | { guide: string } | { url: string }
+/** Where a feature's card leads: a page on this site or another site. */
+type FeatureTarget = { page: string } | { url: string }
 
 export type FeatureId =
   | "calls"
   | "booking"
   | "rules"
-  | "instagram"
+  | "transfers"
   | "inbox"
-  | "alerts"
+  | "sms"
   | "integrations"
   | "mcp"
   | "api"
@@ -21,16 +19,16 @@ export type FeatureId =
   | "whiteLabel"
   | "source"
 
-export type FeatureGroupId = "receptionist" | "conversations" | "platform" | "openSource"
+export type FeatureGroupId = "receptionist" | "followUp" | "platform" | "openSource"
 
 const targets: Record<FeatureId, FeatureTarget> = {
   calls: { page: "/solutions/ai-phone-answering/" },
   booking: { page: "/solutions/ai-appointment-scheduler/" },
-  rules: { guide: "agent/rules" },
-  instagram: { guide: "integrations/instagram" },
-  inbox: { guide: "dashboard/inbox" },
-  alerts: { guide: "integrations/sms" },
-  integrations: { guide: "integrations/overview" },
+  rules: { page: "/features/rules/" },
+  transfers: { page: "/features/call-transfers/" },
+  inbox: { page: "/features/inbox/" },
+  sms: { page: "/features/sms-notifications/" },
+  integrations: { page: "/features/integrations/" },
   mcp: { page: "/features/mcp/" },
   api: { page: "/docs/api/" },
   selfHosting: { page: "/solutions/self-hosted-ai-receptionist/" },
@@ -40,7 +38,7 @@ const targets: Record<FeatureId, FeatureTarget> = {
 
 export const featureGroups: { id: FeatureGroupId; features: FeatureId[] }[] = [
   { id: "receptionist", features: ["calls", "booking", "rules"] },
-  { id: "conversations", features: ["instagram", "inbox", "alerts"] },
+  { id: "followUp", features: ["transfers", "inbox", "sms"] },
   { id: "platform", features: ["integrations", "mcp", "api"] },
   { id: "openSource", features: ["selfHosting", "whiteLabel", "source"] },
 ]
@@ -49,9 +47,7 @@ export const featureGroups: { id: FeatureGroupId; features: FeatureId[] }[] = [
 export function featureLink(locale: Locale, id: FeatureId): { href: string; external: boolean } {
   const target = targets[id]
   if ("page" in target) return { href: localizeHref(locale, target.page), external: false }
-  if ("url" in target) return { href: target.url, external: true }
-  const prefix = docsLocales.has(locale) ? `${locale}/` : ""
-  return { href: `https://docs.lobbystack.com/${prefix}${target.guide}`, external: true }
+  return { href: target.url, external: true }
 }
 
 type FeatureCopy = { title: string; body: string }
@@ -64,37 +60,37 @@ type FeatureIndexCopy = {
 
 export const featureIndexCopy = {
   en: {
-    heading: "Calls, messages, bookings and the tools around them",
+    heading: "Calls, bookings, follow-up and the tools around them",
     groups: {
       receptionist: "Receptionist",
-      conversations: "Conversations",
+      followUp: "Handoff and follow-up",
       platform: "Platform",
       openSource: "Open source",
     },
     features: {
       calls: {
         title: "Call answering",
-        body: "LobbyStack answers every call to your number in the caller's language, day or night, and takes several calls at once.",
+        body: "LobbyStack picks up every call, day or night, speaks 70+ languages and takes as many calls at once as your customers make.",
       },
       booking: {
         title: "Appointment booking",
         body: "It checks your Google Calendar, Cal.com or Calendly, books the time, and can text the caller a confirmation and a reminder.",
       },
       rules: {
-        title: "Rules, quotes and transfers",
-        body: "Write in plain language what to ask, which prices to quote, and which calls go to your team.",
+        title: "Rules and quotes",
+        body: "Brief it like a new hire. Write what to ask, which prices to quote and what to do when it's unsure.",
       },
-      instagram: {
-        title: "Instagram messages",
-        body: "Your agent replies to Instagram direct messages with the knowledge and rules it uses on calls, and books appointments there.",
+      transfers: {
+        title: "Call transfers",
+        body: "Urgent callers reach your phone. LobbyStack handles the routine calls and takes a message when nobody picks up.",
       },
       inbox: {
         title: "Inbox",
-        body: "Read each call's transcript and listen to its recording next to your Instagram messages and texts.",
+        body: "Every call arrives with its outcome, transcript and recording, next to the texts your customers send.",
       },
-      alerts: {
-        title: "Alerts and texts",
-        body: "Your team gets an email or a text when a caller needs follow-up, and customers get their booking confirmation by text.",
+      sms: {
+        title: "SMS notifications",
+        body: "Customers get a confirmation and a reminder by text. Your team gets a text when a caller needs a callback.",
       },
       integrations: {
         title: "Integrations",
@@ -123,37 +119,37 @@ export const featureIndexCopy = {
     },
   },
   fr: {
-    heading: "Appels, messages, rendez‑vous et les outils autour",
+    heading: "Appels, rendez‑vous, suivi et les outils autour",
     groups: {
       receptionist: "Réceptionniste",
-      conversations: "Conversations",
+      followUp: "Transfert et suivi",
       platform: "Plateforme",
       openSource: "Open source",
     },
     features: {
       calls: {
         title: "Réponse aux appels",
-        body: "LobbyStack répond à chaque appel sur votre numéro dans la langue de l’appelant, jour et nuit, et prend plusieurs appels en même temps.",
+        body: "LobbyStack décroche chaque appel, jour et nuit, parle plus de 70 langues et prend autant d’appels à la fois qu’il en arrive.",
       },
       booking: {
         title: "Prise de rendez‑vous",
         body: "Il consulte votre Google Calendar, Cal.com ou Calendly, réserve le créneau et peut envoyer à l’appelant un SMS de confirmation et un rappel.",
       },
       rules: {
-        title: "Règles, prix et transferts",
-        body: "Écrivez en langage courant quoi demander, quels prix donner et quels appels transférer à votre équipe.",
+        title: "Règles et prix",
+        body: "Briefez-le comme une nouvelle recrue. Écrivez quoi demander, quels prix donner et quoi faire quand il hésite.",
       },
-      instagram: {
-        title: "Messages Instagram",
-        body: "Votre agent répond aux messages privés Instagram avec les connaissances et les règles qu’il utilise au téléphone, et y prend des rendez‑vous.",
+      transfers: {
+        title: "Transferts d’appels",
+        body: "Les appels urgents sonnent sur votre téléphone. LobbyStack traite les appels courants et prend un message si personne ne décroche.",
       },
       inbox: {
         title: "Boîte de réception",
-        body: "Lisez la transcription de chaque appel et écoutez son enregistrement à côté de vos messages Instagram et de vos SMS.",
+        body: "Chaque appel arrive avec son résultat, sa transcription et son enregistrement, à côté des SMS de vos clients.",
       },
-      alerts: {
-        title: "Alertes et SMS",
-        body: "Votre équipe reçoit un courriel ou un SMS quand un appelant attend un suivi, et vos clients reçoivent leur confirmation de rendez‑vous par SMS.",
+      sms: {
+        title: "Notifications SMS",
+        body: "Vos clients reçoivent une confirmation et un rappel par SMS. Votre équipe reçoit un SMS quand un appelant attend un rappel.",
       },
       integrations: {
         title: "Intégrations",
@@ -182,37 +178,37 @@ export const featureIndexCopy = {
     },
   },
   es: {
-    heading: "Llamadas, mensajes, citas y las herramientas que los rodean",
+    heading: "Llamadas, citas, seguimiento y las herramientas que los rodean",
     groups: {
       receptionist: "Recepcionista",
-      conversations: "Conversaciones",
+      followUp: "Transferencia y seguimiento",
       platform: "Plataforma",
       openSource: "Código abierto",
     },
     features: {
       calls: {
         title: "Atención de llamadas",
-        body: "LobbyStack contesta cada llamada a su número en el idioma de quien llama, de día o de noche, y atiende varias llamadas a la vez.",
+        body: "LobbyStack contesta cada llamada, de día o de noche, habla más de 70 idiomas y atiende todas las llamadas que entren a la vez.",
       },
       booking: {
         title: "Reserva de citas",
         body: "Consulta su Google Calendar, Cal.com o Calendly, reserva la hora y puede enviar a quien llama un SMS de confirmación y un recordatorio.",
       },
       rules: {
-        title: "Reglas, precios y transferencias",
-        body: "Escriba en lenguaje sencillo qué preguntar, qué precios dar y qué llamadas pasar a su equipo.",
+        title: "Reglas y precios",
+        body: "Instrúyala como a una persona nueva en el equipo. Escriba qué preguntar, qué precios dar y qué hacer cuando tenga dudas.",
       },
-      instagram: {
-        title: "Mensajes de Instagram",
-        body: "Su agente responde los mensajes directos de Instagram con el conocimiento y las reglas que usa en las llamadas, y también reserva citas allí.",
+      transfers: {
+        title: "Transferencia de llamadas",
+        body: "Las llamadas urgentes suenan en su teléfono. LobbyStack resuelve las de rutina y toma un mensaje si nadie contesta.",
       },
       inbox: {
         title: "Bandeja de entrada",
-        body: "Lea la transcripción de cada llamada y escuche su grabación junto a sus mensajes de Instagram y sus SMS.",
+        body: "Cada llamada llega con su resultado, su transcripción y su grabación, junto a los SMS de sus clientes.",
       },
-      alerts: {
-        title: "Alertas y SMS",
-        body: "Su equipo recibe un correo o un SMS cuando alguien espera seguimiento, y sus clientes reciben por SMS la confirmación de su cita.",
+      sms: {
+        title: "Notificaciones por SMS",
+        body: "Sus clientes reciben una confirmación y un recordatorio por SMS. Su equipo recibe un SMS cuando alguien espera que le devuelvan la llamada.",
       },
       integrations: {
         title: "Integraciones",
@@ -241,37 +237,37 @@ export const featureIndexCopy = {
     },
   },
   sr: {
-    heading: "Pozivi, poruke, termini i alati oko njih",
+    heading: "Pozivi, termini, praćenje i alati oko njih",
     groups: {
       receptionist: "Recepcioner",
-      conversations: "Razgovori",
+      followUp: "Preusmeravanje i praćenje",
       platform: "Platforma",
       openSource: "Otvoreni kod",
     },
     features: {
       calls: {
         title: "Javljanje na pozive",
-        body: "LobbyStack odgovara na svaki poziv na Vašem broju, na jeziku pozivaoca, danju i noću, i vodi više poziva istovremeno.",
+        body: "LobbyStack se javlja na svaki poziv, danju i noću, govori više od 70 jezika i vodi onoliko poziva istovremeno koliko ih stigne.",
       },
       booking: {
         title: "Zakazivanje termina",
         body: "Proverava Vaš Google Calendar, Cal.com ili Calendly, zakazuje termin i može da pošalje pozivaocu SMS potvrdu i podsetnik.",
       },
       rules: {
-        title: "Pravila, cene i preusmeravanja",
-        body: "Napišite običnim jezikom šta da pita, koje cene da navede i koje pozive da preusmeri Vašem timu.",
+        title: "Pravila i cene",
+        body: "Uputite ga kao novog zaposlenog. Napišite šta da pita, koje cene da navede i šta da radi kada nije siguran.",
       },
-      instagram: {
-        title: "Instagram poruke",
-        body: "Vaš agent odgovara na direktne poruke na Instagramu uz znanje i pravila koja koristi u pozivima, i tu zakazuje termine.",
+      transfers: {
+        title: "Preusmeravanje poziva",
+        body: "Hitni pozivi zvone na Vašem telefonu. LobbyStack rešava rutinske pozive i prima poruku ako se niko ne javi.",
       },
       inbox: {
         title: "Prijemno sanduče",
-        body: "Čitajte transkript svakog poziva i slušajte njegov snimak pored Instagram poruka i SMS-ova.",
+        body: "Svaki poziv stiže sa ishodom, transkriptom i snimkom, pored SMS poruka Vaših klijenata.",
       },
-      alerts: {
-        title: "Obaveštenja i SMS",
-        body: "Vaš tim dobija e-poruku ili SMS kada pozivalac čeka odgovor, a klijenti SMS-om dobijaju potvrdu termina.",
+      sms: {
+        title: "SMS obaveštenja",
+        body: "Klijenti dobijaju SMS potvrdu i podsetnik. Vaš tim dobija SMS kada pozivalac čeka povratni poziv.",
       },
       integrations: {
         title: "Integracije",

@@ -101,7 +101,7 @@ Klijent se računa i prema svojoj ponudi, pa staje na onom limitu koji prvi dost
 Nekoliko mesta navodi LobbyStack jer rade na njegovim nalozima:
 
 - Vaše stranice za prijavu nude imejl i lozinku, bez opcije **Nastavi sa Google nalogom**.
-- Ekrani za saglasnost za Google Calendar i Instagram navode LobbyStack kada ih firma povezuje.
+- Ekran za saglasnost za Google Calendar navodi LobbyStack kada ga firma povezuje.
 - SMS poruke stižu sa verifikovanog LobbyStack broja. Prva poruka kupcu o terminu i odgovor na HELP navode LobbyStack i firmu.
 
 Na pozivu recepcioner odgovara u ime firme.

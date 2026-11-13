@@ -31,7 +31,7 @@ Nemate sajt? Izaberite **Nemam sajt**, pa otpremite dokumente ili nalepite tekst
 
 ## Korak 2: Podesite pozdrav i jezik
 
-Napišite prvu rečenicu koju pozivaoci čuju, na primer „Hvala što ste pozvali Northside Dental, kako mogu da pomognem?“ Izaberite jezik na kom pozivi počinju: engleski, francuski, španski, srpski, nemački, portugalski, italijanski ili holandski. Recepcioner menja jezik kada pozivalac to zatraži ili govori drugi jezik.
+Napišite prvu rečenicu koju pozivaoci čuju, na primer „Hvala što ste pozvali Northside Dental, kako mogu da pomognem?“ Izaberite jezik pozdrava. LobbyStack govori više od 70 jezika, a recepcioner menja jezik kada pozivalac to zatraži ili govori drugi jezik.
 
 Nove firme počinju sa glasom Marin, a kasnije možete da izaberete neki drugi od [GPT-Live glasova](/sr/blog/openai-voices/). LobbyStack ne klonira glasove.
 

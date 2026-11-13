@@ -68,7 +68,7 @@ Una recepcionista con IA basta si la mayoría de sus llamadas siguen el mismo ca
 
 Con LobbyStack, por ejemplo:
 
-- la llamada empieza en francés cuando el francés es su idioma predeterminado, y pasa al inglés si quien llama lo habla;
+- habla más de 70 idiomas, incluidos el francés y el inglés;
 - contesta a partir de su sitio web, sus documentos y los precios que usted le da;
 - reserva en Google Calendar, Cal.com o Calendly y envía la confirmación por SMS a los clientes que la aceptan;
 - transfiere las llamadas urgentes a su celular y toma un mensaje para el resto, con un aviso por correo o por SMS.

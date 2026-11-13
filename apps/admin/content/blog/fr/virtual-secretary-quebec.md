@@ -68,7 +68,7 @@ Un réceptionniste IA suffit si la plupart de vos appels suivent le même chemin
 
 Avec LobbyStack, par exemple :
 
-- l'appel commence en français quand le français est votre langue par défaut, et passe à l'anglais si l'appelant le parle ;
+- il parle plus de 70 langues, répond en français et passe à l'anglais si l'appelant le parle ;
 - il répond à partir de votre site web, de vos documents et des prix que vous lui donnez ;
 - il réserve dans Google Calendar, Cal.com ou Calendly et texte la confirmation aux clients qui acceptent ;
 - il transfère les appels urgents à votre cellulaire et prend un message pour le reste, avec une alerte par courriel ou par texto.

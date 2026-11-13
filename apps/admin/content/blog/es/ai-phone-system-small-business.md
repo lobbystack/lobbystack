@@ -101,7 +101,7 @@ LobbyStack cobra $0.20 por minuto extra, en la parte baja del rango de las ofert
 Lo que funciona:
 
 - Starter a $30 por 150 minutos, luego $0.20 por minuto; Pro a $100 por 500 minutos, luego $0.18. Sin costo de alta.
-- La llamada se abre en francés si elige el francés como idioma predeterminado, y luego la recepcionista responde en el idioma de quien llama: más de 70 idiomas con GPT-Live de OpenAI. Sirve si atiende a turistas o clientes extranjeros.
+- La recepcionista habla más de 70 idiomas con GPT-Live de OpenAI, incluido el francés. Sirve si atiende a turistas o clientes extranjeros.
 - Citas en Google Calendar, Cal.com o Calendly, transferencia de urgencias a su número, y un resumen, una transcripción y una grabación de cada llamada.
 - Las llamadas de menos de 10 segundos y las que la recepcionista corta como spam no cuentan en el consumo.
 - El código es abierto (licencia MIT): un equipo técnico puede auditarlo o alojarlo por su cuenta, con sus propias cuentas de OpenAI y Twilio.
@@ -129,7 +129,7 @@ Elija un proveedor francés si quiere un número francés, SMS a los móviles de
 
 ### ¿Un conmutador virtual con IA habla francés?
 
-Sí. Las cinco ofertas francesas de esta guía responden en francés. LobbyStack abre cada llamada en francés si elige ese idioma como predeterminado, y luego responde en el idioma de quien llama, entre más de 70 idiomas. Durante la prueba, revise el acento y cómo pronuncia los nombres de sus calles, productos y empleados.
+Sí. Las cinco ofertas francesas de esta guía responden en francés. LobbyStack habla más de 70 idiomas, incluido el francés. Durante la prueba, revise el acento y cómo pronuncia los nombres de sus calles, productos y empleados.
 
 ### ¿Se puede probar gratis?
 

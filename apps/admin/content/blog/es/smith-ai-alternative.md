@@ -25,7 +25,7 @@ Smith.ai combina la IA con el acceso a una red de recepcionistas en Norteaméric
 | Entrada de pago | Pro desde $150 por 75 llamadas | Starter a $30 por 150 minutos |
 | Respaldo humano | Red de agentes; algunas tareas en vivo se cobran por llamada | Transferencia al equipo que usted configure |
 | Reservas y recogida de datos | Anunciadas | Incluidas con reglas configurables |
-| Idiomas | Inglés y español anunciados | Responde en el idioma de quien llama |
+| Idiomas | Inglés y español anunciados | Habla más de 70 idiomas |
 | Código fuente | No se anuncia | Repositorio público con licencia MIT |
 | Autoalojamiento | No se anuncia | Opción de despliegue compatible |
 

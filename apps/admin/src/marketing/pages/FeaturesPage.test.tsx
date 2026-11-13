@@ -28,12 +28,6 @@ describe("features page", () => {
     }
   })
 
-  it("opens the Help Center in French and Spanish, and in English for Serbian", () => {
-    expect(featureLink("fr", "inbox").href).toBe("https://docs.lobbystack.com/fr/dashboard/inbox")
-    expect(featureLink("es", "inbox").href).toBe("https://docs.lobbystack.com/es/dashboard/inbox")
-    expect(featureLink("sr", "inbox").href).toBe("https://docs.lobbystack.com/dashboard/inbox")
-  })
-
   it.each(SUPPORTED_LOCALES)("lists the same features in the Markdown twin in %s", async (locale) => {
     const body = await (await markdownTwin(locale, "features"))?.text()
     for (const id of featureIds) {

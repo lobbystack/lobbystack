@@ -101,7 +101,7 @@ LobbyStack naplaćuje $0.20 po dodatnom minutu, u donjem delu raspona francuskih
 Šta radi:
 
 - Starter za $30 za 150 minuta, zatim $0.20 po minutu; Pro za $100 za 500 minuta, zatim $0.18. Bez troška uključenja.
-- Poziv počinje na francuskom ako izaberete francuski kao podrazumevani jezik, a zatim recepcioner odgovara na jeziku pozivaoca: više od 70 jezika na OpenAI modelu GPT-Live. Korisno ako radite sa turistima ili stranim klijentima.
+- LobbyStack govori više od 70 jezika na OpenAI modelu GPT-Live, uključujući francuski. Korisno ako radite sa turistima ili stranim klijentima.
 - Zakazivanje u Google kalendaru, Cal.com-u ili Calendly-ju, prebacivanje hitnih poziva na Vaš broj, i rezime, transkript i snimak svakog poziva.
 - Pozivi kraći od 10 sekundi i pozivi koje recepcioner prekine kao spam ne računaju se u potrošnju.
 - Kod je otvoren (MIT licenca): tehnički tim može da ga pregleda ili da ga sam hostuje, sa sopstvenim OpenAI i Twilio nalozima.
@@ -129,7 +129,7 @@ Izaberite francuskog dobavljača ako želite francuski broj, SMS poruke na mobil
 
 ### Da li AI telefonska centrala govori francuski?
 
-Da. Svih pet francuskih ponuda iz ovog vodiča odgovara na francuskom. LobbyStack otvara svaki poziv na francuskom ako ga izaberete kao podrazumevani jezik, a zatim odgovara na jeziku pozivaoca, među više od 70 jezika. Tokom probe proverite naglasak i kako izgovara nazive Vaših ulica, proizvoda i zaposlenih.
+Da. Svih pet francuskih ponuda iz ovog vodiča odgovara na francuskom. LobbyStack govori više od 70 jezika, uključujući francuski. Tokom probe proverite naglasak i kako izgovara nazive Vaših ulica, proizvoda i zaposlenih.
 
 ### Može li AI telefonska centrala da se isproba besplatno?
 

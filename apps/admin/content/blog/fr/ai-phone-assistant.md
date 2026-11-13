@@ -76,7 +76,7 @@ Les prix se calculent à la minute ou à l'appel. Le 3 novembre 2026, LobbyStack
 
 ### Un assistant téléphonique IA parle-t-il français ?
 
-Oui, s'il le permet. LobbyStack commence l'appel en français quand c'est votre langue par défaut et répond dans plus de 70 langues avec GPT-Live d'OpenAI. Nous ne promettons pas d'accent québécois : écoutez-le avec vos propres expressions avant de renvoyer votre ligne.
+Oui, s'il le permet. LobbyStack parle plus de 70 langues avec GPT-Live d'OpenAI, dont le français. Nous ne promettons pas d'accent québécois : écoutez-le avec vos propres expressions avant de renvoyer votre ligne.
 
 ### Quelle est la différence entre un assistant téléphonique IA et un agent vocal IA ?
 

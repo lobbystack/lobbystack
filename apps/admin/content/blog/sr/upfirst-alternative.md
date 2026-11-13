@@ -26,7 +26,7 @@ Upfirst naplaćuje po obrađenom pozivu, a LobbyStack po minutu razgovora. Lobby
 | Plaćeno korišćenje | Paketi poziva i prekoračenja po pozivu | Paketi minuta i prekoračenja po minutu |
 | Zakazivanje | Direktno zakazivanje u kalendaru | Zakazivanje, izmene i pravila firme |
 | Preusmeravanje | Najavljeno i kaskadno preusmeravanje | Slepo preusmeravanje na jedan broj |
-| Jezici | Navedeno više od 35 | Odgovara na jeziku pozivaoca |
+| Jezici | Navedeno više od 35 | Govori više od 70 jezika |
 | Primena | Hostovana usluga | Upravljani cloud ili samostalno hostovanje |
 | Izvorni kod | Javne stranice ne navode pristup izvornom kodu | Javni repozitorijum pod MIT licencom |
 

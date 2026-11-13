@@ -31,7 +31,7 @@ export const calculatorFaqs = [
   },
   {
     q: "Will an AI receptionist replace my office manager?",
-    a: "No. LobbyStack is designed to handle the repetitive frontline work: answering basic questions, collecting intake details, and booking appointments. Your office manager can focus on complex dispatching, ordering parts, and customer service.",
+    a: "No. LobbyStack handles the repetitive frontline work: answering basic questions, collecting intake details, and booking appointments. Your office manager can focus on complex dispatching, ordering parts, and customer service.",
   },
   {
     q: "Is this the same as an answering service ROI calculator?",

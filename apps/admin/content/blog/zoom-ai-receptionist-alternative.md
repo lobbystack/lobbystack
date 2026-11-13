@@ -28,7 +28,7 @@ LobbyStack includes booking, call transfers, SMS alerts, transcripts, summaries,
 | Existing phone system | Works with any phone system, no Zoom Phone required | Forward calls from your current number |
 | Booking | Zoom Scheduler, Google, Microsoft, and Calendly | Booking into Google Calendar, Cal.com, or Calendly with business rules |
 | Transfers | Warm transfer and transfer by name | Blind transfer to one number |
-| Languages | 23 in Zoom's pricing table | Opens in your choice of 8 languages, then answers in the caller's language (70+) |
+| Languages | 23 in Zoom's pricing table | Speaks 70+ languages |
 | Source code | Not advertised | Public MIT-licensed repository |
 | Deployment | Zoom-managed service | Managed cloud or self-hosted |
 

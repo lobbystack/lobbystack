@@ -4,7 +4,7 @@ import { absoluteUrl } from "@/marketing/lib/seo"
 
 const markdown = `---
 title: Fonctionnalités de réceptionniste IA
-description: Découvrez les fonctionnalités LobbyStack pour répondre au téléphone, qualifier les demandes, prendre des rendez‑vous, envoyer des alertes SMS, transférer les urgences et produire des résumés.
+description: Découvrez les fonctionnalités LobbyStack pour répondre au téléphone, qualifier les demandes, prendre des rendez‑vous, envoyer des notifications SMS, transférer les urgences et produire des résumés.
 url: ${absoluteUrl("/fr/features/")}
 ---
 
@@ -21,6 +21,7 @@ LobbyStack répond aux appels, prend des rendez‑vous, collecte les détails im
 - Qualification de prospects et collecte structurée des détails de l’appelant.
 - Transfert humain avec résumés, notifications et contexte.
 - Tableau de bord, historique, enregistrements, transcriptions, résumés, profils de contacts et analyses.
+- Parle plus de 70 langues et passe à celle de l’appelant.
 
 ${featureIndexMarkdown("fr")}`
 
@@ -30,5 +31,5 @@ export const GET = () =>
     canonical: absoluteUrl("/fr/features/"),
     title: "Fonctionnalités de réceptionniste IA",
     description:
-      "Découvrez les fonctionnalités LobbyStack pour répondre au téléphone, qualifier les demandes, prendre des rendez‑vous, envoyer des alertes SMS, transférer les urgences et produire des résumés.",
+      "Découvrez les fonctionnalités LobbyStack pour répondre au téléphone, qualifier les demandes, prendre des rendez‑vous, envoyer des notifications SMS, transférer les urgences et produire des résumés.",
   })

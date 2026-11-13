@@ -183,7 +183,7 @@ const bespokeSolutionPagesFr: Record<string, SeoLandingPage> = {
     sections: [
       {
         title: "Comment l’agent de prise de rendez-vous IA réserve un appel",
-        body: "Il détermine le service dont l’appelant a besoin, trouve des plages assez longues pour ce travail et lui laisse le choix. L’appelant en prend une, et le rendez-vous apparaît dans votre Google Calendar ou Cal.com.",
+        body: "Il détermine le service dont l’appelant a besoin, trouve des plages assez longues pour ce travail et lui laisse le choix. L’appelant en prend une, et le rendez-vous apparaît dans votre Google Calendar, Cal.com ou Calendly.",
         points: [
           "Si l’appelant accepte, il envoie tout de suite une confirmation par texto et un rappel 24 heures avant",
           "Sur LobbyStack Cloud, les textos vont aux numéros américains et canadiens",
@@ -221,7 +221,7 @@ const bespokeSolutionPagesFr: Record<string, SeoLandingPage> = {
         points: [
           "Les nouveaux clients, les clients réguliers et les appelants hors heures peuvent réserver dès le premier appel",
           "Vous préférez approuver chaque visite ? Faites-lui enregistrer l’heure souhaitée par l’appelant comme une demande pour votre équipe",
-          "Chaque appel commence dans votre langue par défaut et change de langue quand l’appelant en parle une autre",
+          "Parle plus de 70 langues et passe à celle de l’appelant",
         ],
       },
     ],
@@ -303,7 +303,7 @@ const bespokeSolutionPagesFr: Record<string, SeoLandingPage> = {
     ctaHeading:
       "Réservez votre prochain appelant pendant qu’il est encore en ligne",
     ctaBody:
-      "Ajoutez vos services, connectez Google Calendar ou Cal.com et appelez votre numéro pour réserver un rendez-vous test. Le forfait gratuit inclut 30 minutes vocales.",
+      "Ajoutez vos services, connectez Google Calendar, Cal.com ou Calendly et appelez votre numéro pour réserver un rendez-vous test. Le forfait gratuit inclut 30 minutes vocales.",
     ctaPrimaryLabel: "Essayer gratuitement",
     ctaSecondaryLabel: "Voir les tarifs",
   },

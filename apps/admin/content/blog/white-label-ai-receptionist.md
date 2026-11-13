@@ -57,7 +57,7 @@ A few places still show LobbyStack, and we chose to say so on the [White Label p
 
 - **Texts.** Every business texts from our verified toll-free number. Carriers expect that number's verified brand in the first text and in HELP replies, so those name LobbyStack next to the business. Every other text names only the business.
 - **Google sign-in.** It would show our Google app's name, so partner domains offer email and password sign-in only.
-- **Google Calendar and Instagram.** Their consent screens show our app's name. The callback returns to the partner's domain.
+- **Google Calendar.** Its consent screen shows our app's name. The callback returns to the partner's domain.
 
 ## One pool of minutes for every client
 
@@ -153,7 +153,7 @@ Yes. The code is MIT licensed, and every partner feature works on your own serve
 
 ### Do my clients ever see the LobbyStack name?
 
-On sign-in, the dashboard, emails and the widget, they see your brand. The first text to each customer and HELP replies name LobbyStack, as carriers require, and the Google Calendar and Instagram consent screens show our app's name.
+On sign-in, the dashboard, emails and the widget, they see your brand. The first text to each customer and HELP replies name LobbyStack, as carriers require, and the Google Calendar consent screen shows our app's name.
 
 ## Try it
 

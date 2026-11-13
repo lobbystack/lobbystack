@@ -28,7 +28,7 @@ Reception offre d'excellentes voix et parle plus de 70 langues. LobbyStack vous 
 | Niveau intermédiaire | 79 $ pour 275 crédits (66 $ par mois à l'année) | 100 $ pour 500 minutes (80 $ par mois à l'année) |
 | Dépassement intermédiaire | 0,38 $ par crédit | 0,18 $ par minute |
 | Appels simultanés au premier niveau | 1 | Aucune limite sur Starter et Pro sans plafond de dépenses |
-| Langues | Plus de 70, détection automatique | Répond dans la langue de l'appelant |
+| Langues | Plus de 70, détection automatique | Parle plus de 70 langues |
 | Personnel en premier | Mode intégré | Par le renvoi d'appel de votre opérateur |
 | Intégrations | Google Calendar, Zapier, webhooks, MCP | Google Calendar, Cal.com, Calendly |
 | HIPAA | Non pris en charge | Auto-hébergement pour contrôler les données d'appel |

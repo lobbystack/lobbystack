@@ -20,12 +20,12 @@ export const homeFaqs: FaqItem[] = [
   {
     question: "Which languages can callers speak?",
     answer:
-      "Callers can talk to LobbyStack in 70+ languages. Each call opens in your default language: English, French, Spanish, Serbian, German, Brazilian Portuguese, Italian, or Dutch. If the caller asks to switch or speaks another language, the receptionist answers in that language.",
+      "LobbyStack speaks 70+ languages. If the caller asks to switch or speaks another language, the receptionist answers in that language. You pick the language the greeting uses.",
   },
   {
     question: "Can the AI receptionist send a call summary to my phone?",
     answer:
-      "Not after every call. LobbyStack saves a summary of each call in your dashboard. When it takes a message, it sends your team an email alert, and on paid plans you can also turn on SMS alerts.",
+      "Not after every call. LobbyStack saves a summary of each call in your dashboard. When it takes a message, it sends your team an email alert, and on paid plans you can also turn on SMS notifications.",
   },
   {
     question: "What types of calls should still go to a human?",
@@ -70,12 +70,12 @@ export const homeFaqsFr: FaqItem[] = [
   {
     question: "Dans quelles langues les appelants peuvent-ils parler ?",
     answer:
-      "Les appelants peuvent parler à LobbyStack dans plus de 70 langues. Chaque appel commence dans votre langue par défaut : anglais, français, espagnol, serbe, allemand, portugais du Brésil, italien ou néerlandais. Si l'appelant demande à changer de langue ou en parle une autre, le réceptionniste lui répond dans cette langue.",
+      "LobbyStack parle plus de 70 langues. Si l'appelant demande à changer de langue ou en parle une autre, le réceptionniste lui répond dans cette langue. Vous choisissez la langue de l'accueil.",
   },
   {
     question: "Le réceptionniste IA peut-il m'envoyer un résumé d'appel ?",
     answer:
-      "Pas après chaque appel. LobbyStack enregistre un résumé de chaque appel dans le tableau de bord. Quand il prend un message, il envoie une alerte par courriel à votre équipe, et sur les forfaits payants, vous pouvez aussi activer les alertes SMS.",
+      "Pas après chaque appel. LobbyStack enregistre un résumé de chaque appel dans le tableau de bord. Quand il prend un message, il envoie une alerte par courriel à votre équipe, et sur les forfaits payants, vous pouvez aussi activer les notifications SMS.",
   },
   {
     question: "Quels appels doivent encore revenir à une personne ?",
@@ -120,13 +120,13 @@ export const homeFaqsEs: FaqItem[] = [
   {
     question: "¿En qué idiomas pueden hablar quienes llaman?",
     answer:
-      "Quienes llaman pueden hablar con LobbyStack en más de 70 idiomas. Cada llamada empieza en su idioma predeterminado: inglés, francés, español, serbio, alemán, portugués de Brasil, italiano o neerlandés. Si la persona pide cambiar de idioma o habla otro, la recepcionista le responde en ese idioma.",
+      "LobbyStack habla más de 70 idiomas. Si la persona pide cambiar de idioma o habla otro, la recepcionista le responde en ese idioma. Usted elige el idioma del saludo.",
   },
   {
     question:
       "¿Puede la recepcionista con IA enviar un resumen de la llamada a mi teléfono?",
     answer:
-      "No después de cada llamada. LobbyStack guarda un resumen de cada llamada en el panel. Cuando toma un mensaje, le envía a su equipo una alerta por correo electrónico, y en los planes de pago también puede activar alertas por SMS.",
+      "No después de cada llamada. LobbyStack guarda un resumen de cada llamada en el panel. Cuando toma un mensaje, le envía a su equipo una alerta por correo electrónico, y en los planes de pago también puede activar las notificaciones por SMS.",
   },
   {
     question: "¿Qué llamadas debería seguir atendiendo una persona?",
@@ -170,7 +170,7 @@ export const homeFaqsSr: FaqItem[] = [
   {
     question: "Na kojim jezicima pozivaoci mogu da govore?",
     answer:
-      "Pozivaoci mogu da razgovaraju sa LobbyStack recepcionerom na više od 70 jezika. Svaki poziv počinje na Vašem podrazumevanom jeziku: engleskom, francuskom, španskom, srpskom, nemačkom, brazilskom portugalskom, italijanskom ili holandskom. Ako pozivalac zatraži drugi jezik ili govori nekim drugim jezikom, recepcioner mu odgovara na tom jeziku.",
+      "LobbyStack govori više od 70 jezika. Ako pozivalac zatraži drugi jezik ili govori nekim drugim jezikom, recepcioner mu odgovara na tom jeziku. Vi birate jezik pozdrava.",
   },
   {
     question: "Može li AI recepcioner da mi pošalje rezime poziva na telefon?",

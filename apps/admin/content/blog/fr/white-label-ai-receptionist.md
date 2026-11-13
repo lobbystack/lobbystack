@@ -57,7 +57,7 @@ Le nom LobbyStack reste visible à quelques endroits, et nous avons choisi de le
 
 - **Textos.** Chaque entreprise envoie ses textos depuis notre numéro sans frais vérifié. Les opérateurs attendent la marque vérifiée de ce numéro dans le premier texto et dans les réponses HELP, qui nomment donc LobbyStack à côté de l'entreprise. Les autres textos ne nomment que l'entreprise.
 - **Connexion Google.** Elle afficherait le nom de notre application Google, donc les domaines des partenaires n'offrent que la connexion par courriel et mot de passe.
-- **Google Agenda et Instagram.** Leurs écrans de consentement affichent le nom de notre application. Le retour se fait sur le domaine du partenaire.
+- **Google Agenda.** Son écran de consentement affiche le nom de notre application. Le retour se fait sur le domaine du partenaire.
 
 ## Une seule réserve de minutes pour tous les clients
 
@@ -153,7 +153,7 @@ Oui. Le code est sous licence MIT, et chaque fonction partenaire marche sur vos 
 
 ### Mes clients voient-ils parfois le nom LobbyStack ?
 
-À la connexion, dans le tableau de bord, les courriels et le widget, ils voient votre marque. Le premier texto envoyé à chaque client et les réponses HELP nomment LobbyStack, comme l'exigent les opérateurs, et les écrans de consentement de Google Agenda et d'Instagram affichent le nom de notre application.
+À la connexion, dans le tableau de bord, les courriels et le widget, ils voient votre marque. Le premier texto envoyé à chaque client et les réponses HELP nomment LobbyStack, comme l'exigent les opérateurs, et l'écran de consentement de Google Agenda affiche le nom de notre application.
 
 ## Essayez-le
 

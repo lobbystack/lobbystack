@@ -1,3 +1,4 @@
+import { featurePageRoutes } from "@/marketing/lib/feature-pages"
 import type { LandingMessages } from "@/marketing/i18n/types"
 
 export const es = {
@@ -30,6 +31,7 @@ export const es = {
     blocked: "Su navegador bloqueó la copia. Copie el prompt desde aquí:",
   },
   routes: {
+    ...featurePageRoutes("es"),
     "/": {
       title: "Recepcionista con IA para pequeñas empresas | LobbyStack",
       description:
@@ -43,7 +45,7 @@ export const es = {
     "/pricing/": {
       title: "Precios de recepcionista con IA para pequeñas empresas",
       description:
-        "Compare los planes Free, Starter, Pro y Enterprise de LobbyStack: minutos de voz, facturación anual, alertas por SMS y tarifas por uso adicional.",
+        "Compare los planes Free, Starter, Pro y Enterprise de LobbyStack: minutos de voz, facturación anual, notificaciones por SMS y tarifas por uso adicional.",
     },
     "/pricing/self-hosted/": {
       title: "Precios de la recepcionista con IA autoalojada | LobbyStack",

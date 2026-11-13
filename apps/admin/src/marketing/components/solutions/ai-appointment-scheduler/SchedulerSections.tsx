@@ -179,7 +179,7 @@ export function SchedulerSections() {
           {
             icon: Globe,
             title: "Callers in other languages",
-            body: "Each call opens in your default language and switches when the caller speaks another one or asks to.",
+            body: "LobbyStack speaks 70+ languages and switches when the caller speaks another one or asks to.",
           },
           {
             icon: PhoneOutgoing,
@@ -204,7 +204,7 @@ export function SchedulerSections() {
 
       <SolutionClosing
         title="Book your next caller while they're still on the line"
-        body="Add your services, connect Google Calendar or Cal.com and call your number to book a test appointment. The free plan includes 30 voice minutes."
+        body="Add your services, connect Google Calendar, Cal.com or Calendly and call your number to book a test appointment. The free plan includes 30 voice minutes."
         primary={signupLink("Try for free", signup, "scheduler_closing")}
         secondary={{ label: "View pricing", href: "/pricing/" }}
         footnote="No credit card required. Cancel anytime."

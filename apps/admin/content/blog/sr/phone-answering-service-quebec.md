@@ -78,7 +78,7 @@ Izaberite operatere uživo kada Vaši pozivi traže procenu: ljut klijent, spisa
 
 Izaberite AI recepcionera kada je većina Vaših poziva slična: pitanja o radnom vremenu i cenama, termini za zakazivanje, hitni slučajevi koje treba proslediti. Javlja se noću i vikendom po istoj ceni, prima više poziva odjednom i zakazuje tokom poziva.
 
-LobbyStack, na primer, počinje poziv na francuskom kada je francuski podrazumevani jezik Vaše firme i prelazi na engleski ili drugi jezik kada ga pozivalac govori. Zakazuje u Google Calendar, Cal.com ili Calendly, šalje SMS potvrdu klijentima koji pristanu i prebacuje na Vaš mobilni pozive koje Vaša pravila označe kao hitne. Njegova ograničenja: naplaćuje u američkim dolarima, povezuje se samo sa Google Calendar-om, Cal.com-om i Calendly-jem i ne zamenjuje osobu u osetljivom razgovoru. Naša stranica o [AI recepcioneru za firme u Kvebeku](/sr/solutions/ai-receptionist-quebec/) opisuje ova podešavanja.
+LobbyStack, na primer, govori više od 70 jezika: odgovara na francuskom i prelazi na engleski ili drugi jezik kada ga pozivalac govori. Zakazuje u Google Calendar, Cal.com ili Calendly, šalje SMS potvrdu klijentima koji pristanu i prebacuje na Vaš mobilni pozive koje Vaša pravila označe kao hitne. Njegova ograničenja: naplaćuje u američkim dolarima, povezuje se samo sa Google Calendar-om, Cal.com-om i Calendly-jem i ne zamenjuje osobu u osetljivom razgovoru. Naša stranica o [AI recepcioneru za firme u Kvebeku](/sr/solutions/ai-receptionist-quebec/) opisuje ova podešavanja.
 
 ## Kako da izaberete uslugu odgovaranja na pozive u Kvebeku?
 

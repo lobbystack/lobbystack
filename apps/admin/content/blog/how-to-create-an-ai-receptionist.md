@@ -31,7 +31,7 @@ No website? Choose **I don't have a website**, then upload documents or paste te
 
 ## Step 2: Set your greeting and language
 
-Write the first line callers hear, such as "Thanks for calling Northside Dental, how can I help?" Pick the language calls open in: English, French, Spanish, Serbian, German, Portuguese, Italian or Dutch. The receptionist switches when a caller asks or speaks another language.
+Write the first line callers hear, such as "Thanks for calling Northside Dental, how can I help?" Pick your callers' main language. The receptionist speaks 70+ languages and switches when a caller asks or speaks another one.
 
 New businesses start with the voice Marin, and you can pick another of [GPT-Live's voices](/blog/openai-voices/) later. LobbyStack doesn't clone voices.
 

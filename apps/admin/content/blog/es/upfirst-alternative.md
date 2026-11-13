@@ -26,7 +26,7 @@ Upfirst cobra por llamada atendida, mientras que LobbyStack cobra por minuto de 
 | Uso de pago | Asignaciones de llamadas y excedentes por llamada | Asignaciones de minutos y excedentes por minuto |
 | Reservas | Agenda directa en el calendario | Reservas, cambios y reglas del negocio |
 | Transferencias | Transferencias asistidas y en cascada | Transferencia ciega a un solo número |
-| Idiomas | Más de 35 anunciados | Responde en el idioma de quien llama |
+| Idiomas | Más de 35 anunciados | Habla más de 70 idiomas |
 | Despliegue | Servicio alojado | Nube gestionada o autoalojado |
 | Código fuente | Las páginas públicas no anuncian acceso al código | Repositorio público con licencia MIT |
 

@@ -21,7 +21,7 @@ Un **asistente telefónico con IA** es un software que contesta las llamadas de 
 
 Usted desvía su línea al asistente o le asigna un número propio. Cuando un cliente llama:
 
-1. El asistente contesta en el idioma predeterminado de su empresa, con el saludo que usted escribió.
+1. El asistente contesta con el saludo que usted escribió.
 2. Escucha la petición y responde a partir de su sitio web, sus documentos y sus notas.
 3. Actúa según sus reglas: reserva un horario libre, hace sonar su celular ante una urgencia o toma un mensaje.
 4. Después de la llamada, usted recibe el resumen, la transcripción y la grabación en el panel.
@@ -76,7 +76,7 @@ Los precios se calculan por minuto o por llamada. El 3 de noviembre de 2026, Lob
 
 ### ¿Un asistente telefónico con IA habla francés?
 
-Sí, si la herramienta lo permite. LobbyStack empieza la llamada en francés cuando es su idioma predeterminado y responde en más de 70 idiomas con GPT-Live de OpenAI. No prometemos acento quebequense: escúchelo con sus propias expresiones antes de desviar su línea.
+Sí, si la herramienta lo permite. LobbyStack habla más de 70 idiomas, incluido el francés, con GPT-Live de OpenAI. No prometemos acento quebequense: escúchelo con sus propias expresiones antes de desviar su línea.
 
 ### ¿Qué diferencia hay entre un asistente telefónico con IA y un agente de voz con IA?
 

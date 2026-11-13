@@ -25,7 +25,7 @@ export const pricingFaqs: FaqItem[] = [
   {
     question: "What AI receptionist features are available today?",
     answer:
-      "LobbyStack can answer calls, capture caller details, answer business questions from your knowledge base, qualify leads, book appointments, route urgent callers, send email alerts when it takes a message, and support recordings, transcripts, Google Calendar, Cal.com, Calendly, and conversations in the caller's language.",
+      "LobbyStack answers calls in 70+ languages, captures caller details, answers business questions from your knowledge base, qualifies leads, books appointments into Google Calendar, Cal.com or Calendly, and routes urgent callers. It emails your team when it takes a message and keeps a recording and transcript of each call.",
   },
 ]
 
@@ -55,7 +55,7 @@ export const pricingFaqsFr: FaqItem[] = [
     question:
       "Quelles fonctionnalités de réceptionniste IA sont disponibles aujourd’hui ?",
     answer:
-      "LobbyStack peut répondre aux appels, collecter les détails de l’appelant, répondre aux questions depuis votre base de connaissances, qualifier les prospects, planifier des rendez‑vous, transférer les urgences, envoyer une alerte par courriel quand il prend un message et prendre en charge les enregistrements, transcriptions, Google Calendar, Cal.com, Calendly et conversations dans la langue de l’appelant.",
+      "LobbyStack répond aux appels dans plus de 70 langues, note les détails de l’appelant, répond aux questions depuis votre base de connaissances, qualifie les prospects, planifie les rendez‑vous dans Google Calendar, Cal.com ou Calendly et transfère les urgences. Il envoie un courriel à votre équipe quand il prend un message et garde l’enregistrement et la transcription de chaque appel.",
   },
 ]
 
@@ -83,7 +83,7 @@ export const pricingFaqsEs: FaqItem[] = [
   {
     question: "¿Qué funciones de recepcionista con IA están disponibles hoy?",
     answer:
-      "LobbyStack puede contestar llamadas, tomar los datos de quien llama, responder preguntas sobre su negocio con su base de conocimiento, calificar clientes potenciales, reservar citas, derivar llamadas urgentes, enviar una alerta por correo electrónico cuando toma un mensaje y ofrecer grabaciones, transcripciones, Google Calendar, Cal.com, Calendly y conversaciones en el idioma de quien llama.",
+      "LobbyStack contesta llamadas en más de 70 idiomas, toma los datos de quien llama, responde preguntas sobre su negocio con su base de conocimiento, califica clientes potenciales, reserva citas en Google Calendar, Cal.com o Calendly y deriva las llamadas urgentes. Envía un correo electrónico a su equipo cuando toma un mensaje y guarda la grabación y la transcripción de cada llamada.",
   },
 ]
 
@@ -111,7 +111,7 @@ export const pricingFaqsSr: FaqItem[] = [
   {
     question: "Koje funkcije AI recepcionera su dostupne danas?",
     answer:
-      "LobbyStack može da odgovara na pozive, beleži podatke pozivalaca, odgovara na pitanja o firmi iz Vaše baze znanja, kvalifikuje potencijalne klijente, zakazuje termine, preusmerava hitne pozive, šalje obaveštenje e-poštom kada primi poruku i podržava snimke, transkripte, Google Calendar, Cal.com, Calendly i razgovore na jeziku pozivaoca.",
+      "LobbyStack odgovara na pozive na više od 70 jezika, beleži podatke pozivalaca, odgovara na pitanja o firmi iz Vaše baze znanja, kvalifikuje potencijalne klijente, zakazuje termine u Google Calendar-u, Cal.com-u ili Calendly-ju i preusmerava hitne pozive. Vašem timu šalje obaveštenje e-poštom kada primi poruku i čuva snimak i transkript svakog poziva.",
   },
 ]
 

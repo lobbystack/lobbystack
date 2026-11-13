@@ -28,7 +28,7 @@ Reception sounds excellent and speaks more than 70 languages. LobbyStack gives y
 | Mid-tier plan | $79 for 275 credits ($66 billed annually) | $100 for 500 minutes ($80 billed annually) |
 | Mid-tier overage | $0.38 per credit | $0.18 per minute |
 | Concurrent calls on entry plan | 1 | No plan limit on Starter and Pro without a spending cap |
-| Languages | 70+ with automatic detection | Answers in the caller's language |
+| Languages | 70+ with automatic detection | Speaks 70+ languages |
 | Staff answers first | Built-in staff-first mode | Through your carrier's call forwarding |
 | Integrations | Google Calendar, Zapier, webhooks, MCP | Google Calendar, Cal.com, Calendly |
 | HIPAA | Not supported | Self-host for full control of call data |

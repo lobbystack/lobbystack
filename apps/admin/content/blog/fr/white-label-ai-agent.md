@@ -103,7 +103,7 @@ Un client consomme aussi sa propre formule : il s'arrête donc à la première l
 Quelques endroits nomment LobbyStack, car ils passent par ses comptes :
 
 - Vos pages de connexion proposent le courriel et le mot de passe, sans **Continuer avec Google**.
-- Les écrans de consentement de Google Agenda et d'Instagram nomment LobbyStack quand une entreprise les connecte.
+- L'écran de consentement de Google Agenda nomme LobbyStack quand une entreprise le connecte.
 - Les textos partent du numéro vérifié de LobbyStack. Le premier texto de rendez-vous d'un client et la réponse à HELP nomment LobbyStack et l'entreprise.
 
 Pendant un appel, la réceptionniste répond au nom de l'entreprise.

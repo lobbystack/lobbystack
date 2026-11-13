@@ -25,7 +25,7 @@ Smith.ai combines AI with access to a North American receptionist network. Lobby
 | Paid entry | Pro from $150 for 75 calls | Starter at $30 for 150 minutes |
 | Human backup | Agent network; some live tasks cost per call | Transfer to your configured team |
 | Booking and intake | Advertised | Included with configurable rules |
-| Languages | English and Spanish advertised | Answers in the caller's language |
+| Languages | English and Spanish advertised | Speaks 70+ languages |
 | Source code | Not advertised | Public MIT-licensed repository |
 | Self-hosting | Not advertised | Supported deployment path |
 

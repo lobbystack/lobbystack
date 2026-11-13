@@ -309,7 +309,7 @@ const bespokeSolutionPagesSr: Record<string, SeoLandingPage> = {
         points: [
           "Novi klijenti, stalni klijenti i oni koji zovu van radnog vremena mogu da zakažu već u prvom pozivu",
           "Želite sami da odobrite svaku posetu? Podesite ga da željeno vreme pozivaoca sačuva kao zahtev za Vaš tim",
-          "Svaki poziv počinje na Vašem podrazumevanom jeziku i prelazi na drugi kada pozivalac počne njime da govori",
+          "Govori više od 70 jezika i prelazi na jezik pozivaoca",
         ],
       },
     ],
@@ -765,10 +765,10 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         },
         {
           title: "Pacijenti govore na svom jeziku",
-          body: "Svaki poziv počinje na podrazumevanom jeziku Vaše ordinacije: engleskom, francuskom, španskom, srpskom, nemačkom, brazilskom portugalskom, italijanskom ili holandskom. Kada pacijent počne da govori drugim jezikom ili ga zatraži, recepcioner prelazi na taj jezik. Radi na OpenAI GPT-Live modelu, koji podržava više od 70 jezika.",
+          body: "LobbyStack govori više od 70 jezika. Kada pacijent počne da govori drugim jezikom ili ga zatraži, recepcioner prelazi na taj jezik, a Vi birate jezik pozdrava. Radi na OpenAI GPT-Live modelu.",
           points: [
             "Kontrolna tabla i imejlovi stižu Vam na engleskom, francuskom, španskom ili srpskom",
-            "SMS potvrde i podsetnici stižu na Vašem podrazumevanom jeziku",
+            "SMS potvrde i podsetnici stižu na jeziku Vaše ordinacije",
           ],
         },
         {
@@ -829,7 +829,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "Na kojim jezicima pacijenti mogu da govore?",
           answer:
-            "Svaki poziv počinje na podrazumevanom jeziku Vaše ordinacije: engleskom, francuskom, španskom, srpskom, nemačkom, brazilskom portugalskom, italijanskom ili holandskom. Recepcioner prelazi na drugi jezik kada pacijent počne njime da govori ili ga zatraži. Radi na OpenAI GPT-Live modelu, koji podržava više od 70 jezika, a cenovnik LobbyStack-a ne navodi doplatu za jezike.",
+            "Pacijenti mogu da govore na više od 70 jezika. Recepcioner prelazi na drugi jezik kada pacijent počne njime da govori ili ga zatraži, a Vi birate jezik pozdrava. Radi na OpenAI GPT-Live modelu, a cenovnik LobbyStack-a ne navodi doplatu za jezike.",
         },
         {
           question:
@@ -888,11 +888,11 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
       eyebrow: "Saloni i spa centri",
       h1: "AI recepcioner za salone koji zakazuje dok su Vam ruke zauzete",
       intro:
-        "Telefon zazvoni usred farbanja ili masaže, a LobbyStack se javi. Zakazuje u Google Calendar kod osobe koju klijent traži i odgovara iz Vašeg cenovnika usluga, pa se poziv završava terminom u kalendaru.",
+        "Telefon zazvoni usred farbanja ili masaže, a LobbyStack se javi. Zakazuje u Google Calendar, Cal.com ili Calendly kod osobe koju klijent traži i odgovara iz Vašeg cenovnika usluga, pa se poziv završava terminom u kalendaru.",
       imageAlt:
         "Dan jedne frizerke u LobbyStack-u, sa balayage tretmanom zakazanim telefonom u slobodnom terminu",
       proofPoints: [
-        "Zakazuje u Google Calendar prema trajanju usluge i radnom vremenu svakog frizera",
+        "Zakazuje u Google Calendar, Cal.com ili Calendly prema trajanju usluge i radnom vremenu svakog frizera",
         "Šalje SMS potvrdu i podsetnik 24 sata ranije klijentima koji pristanu",
         "Pomera i otkazuje termine kada pronađe klijentovu rezervaciju",
       ],
@@ -919,7 +919,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
           title: "Telefonska služba za salone koja zna Vaš cenovnik",
           body: "Svakoj usluzi dodelite trajanje i cenu: fiksnu, početnu, raspon ili cenu koja se određuje na licu mesta. LobbyStack navodi cenu koju ste uneli i ne izmišlja cenu koju ste ostavili praznu. Dodajte i svoj sajt i pravila u PDF-u, pa odgovara na pitanja o testu na alergiju, parkingu ili poklon-karticama.",
           points: [
-            "Daje iste odgovore telefonom, u četu na Vašem sajtu i u Instagram porukama",
+            "Svakom klijentu navodi cenu iz Vašeg cenovnika usluga",
             "Prima poruku za Vaš tim kada Vaše beleške ne pokrivaju pitanje",
           ],
         },
@@ -928,7 +928,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
           body: "U 21 čas klijentkinja primeti da joj je potreban izrastak. LobbyStack se tada javlja isto kao u podne i zakazuje u terminima koje ste otvorili. Sledećeg jutra na kontrolnoj tabli nalazite svaki poziv sa rezimeom, transkriptom i ishodom.",
           points: [
             "Šalje Vam obaveštenje imejlom ili SMS-om za pozive na koje Vaš tim treba da odgovori",
-            "Prelazi na jezik pozivaoca, od više od 70 jezika",
+            "Govori više od 70 jezika i prelazi na jezik pozivaoca",
           ],
         },
       ],
@@ -1172,7 +1172,6 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
           body: "Upišite početnu cenu odgušenja, cenu izlaska i doplatu za intervenciju van radnog vremena. LobbyStack navodi samo cene koje ste uneli, kao tačan iznos, početnu cenu ili raspon.",
           points: [
             "Za uslugu bez upisane cene zakazuje izlazak na procenu",
-            "Iste cene navodi i u četu na Vašem sajtu",
           ],
         },
       ],
@@ -1256,7 +1255,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
       proofPoints: [
         "Kvarove grejanja i klime i miris gasa preusmerava dežurnom tehničaru",
         "Zakazuje servise i procene za zamenu sistema u Google Calendar, Cal.com ili Calendly",
-        "Prelazi na jezik pozivaoca, a GPT-Live podržava više od 70 jezika",
+        "Govori više od 70 jezika uz GPT-Live",
       ],
       sections: [
         {
@@ -1285,10 +1284,10 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
           ],
         },
         {
-          title: "Razgovara sa pozivaocem na njegovom jeziku",
-          body: "Svaki poziv počinje na Vašem podrazumevanom jeziku. Kada pozivalac zatraži drugi jezik ili progovori na njemu, LobbyStack prelazi na taj jezik i zadržava Vaša pravila hitnosti i zakazivanja. Radi na OpenAI GPT-Live modelu, koji podržava više od 70 jezika.",
+          title: "Govori više od 70 jezika",
+          body: "LobbyStack govori više od 70 jezika uz OpenAI GPT-Live. Kada pozivalac zatraži drugi jezik ili progovori na njemu, prelazi na taj jezik i zadržava Vaša pravila hitnosti i zakazivanja.",
           points: [
-            "Podrazumevani jezik birate između 8, među kojima su srpski, engleski i španski",
+            "Vi birate jezik pozdrava",
             "Cene paketa iste su na svakom jeziku",
           ],
         },
@@ -1948,9 +1947,9 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         },
         {
           title: "Zakazuje razgledanja za Vašeg agenta za izdavanje",
-          body: "Kada neko želi da vidi stan, LobbyStack proverava Google Calendar Vašeg agenta, nudi slobodne termine i zakazuje razgledanje. Pozivaocu koji pristane šalje SMS potvrdu.",
+          body: "Kada neko želi da vidi stan, LobbyStack proverava kalendar Vašeg agenta, nudi slobodne termine i zakazuje razgledanje. Pozivaocu koji pristane šalje SMS potvrdu.",
           points: [
-            "Agent vidi razgledanje u svom Google Calendar-u",
+            "Agent vidi razgledanje u svom kalendaru",
             "Na pitanja o stanu pre razgledanja odgovara iz Vaših podataka",
           ],
         },
@@ -1982,7 +1981,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "Može li da zakazuje razgledanja?",
           answer:
-            "Da. LobbyStack proverava Google Calendar Vašeg agenta za izdavanje, nudi slobodne termine, zakazuje razgledanje i šalje SMS potvrdu ako zainteresovani pristane.",
+            "Da. LobbyStack proverava kalendar Vašeg agenta za izdavanje, nudi slobodne termine, zakazuje razgledanje i šalje SMS potvrdu ako zainteresovani pristane.",
         },
         {
           question: "Da li odgovara stanodavcima sa nekoliko stanova?",
@@ -2056,7 +2055,6 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
           body: "Vlasnici pitaju da li radite sa njihovim osiguranjem, da li ćete se sastati sa proceniteljem i koliko košta pregled. Odgovore napišete jednom, a LobbyStack ih daje u svakom pozivu.",
           points: [
             "Za pitanje van scenarija prima poruku za povratni poziv",
-            "Iste odgovore daje i u četu na Vašem sajtu",
           ],
         },
         {
@@ -2258,7 +2256,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
       imageAlt:
         "LobbyStack se na francuskom javlja na poziv firme iz Kvebeka i zakazuje termin",
       proofPoints: [
-        "Pozivi počinju na francuskom kada je to Vaš podrazumevani jezik",
+        "Pozdravlja pozivaoce na francuskom i govori više od 70 jezika",
         "Kanadski brojevi, sa pretragom po pozivnom broju",
         "Zakazuje u Google Calendar, Cal.com ili Calendly i šalje SMS potvrdu",
         "Besplatan paket, zatim US$30 mesečno za 150 minuta",
@@ -2266,10 +2264,9 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
       sections: [
         {
           title: "Vaši pozivi počinju na francuskom",
-          body: "Postavite francuski kao podrazumevani jezik firme i svaki poziv počinje na francuskom, od pozdrava do zakazivanja. Kada pozivalac zatraži engleski ili jasno govori neki drugi jezik, LobbyStack prelazi na taj jezik do kraja poziva i zadržava Vaša pravila.",
+          body: "Izaberite francuski za pozdrav i svaki poziv počinje na francuskom, od prve reči do zakazivanja. Kada pozivalac zatraži engleski ili jasno govori neki drugi jezik, LobbyStack prelazi na taj jezik do kraja poziva i zadržava Vaša pravila.",
           points: [
-            "Birate između osam podrazumevanih jezika, među njima francuskog i engleskog",
-            "Odgovara pozivaocima na više od 70 jezika uz OpenAI GPT-Live",
+            "Govori više od 70 jezika uz OpenAI GPT-Live",
             "Ista pravila za zakazivanje i prebacivanje važe na svakom jeziku",
           ],
         },
@@ -2312,7 +2309,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "Može li da odgovara i na engleskom?",
           answer:
-            "Da. Pozivi počinju na Vašem podrazumevanom jeziku, a LobbyStack prelazi na engleski ili neki drugi jezik kada pozivalac to zatraži ili ga jasno govori. Vaša pravila za zakazivanje, prebacivanje i poruke ostaju ista.",
+            "Da. LobbyStack govori više od 70 jezika. Prelazi na engleski ili neki drugi jezik kada pozivalac to zatraži ili ga jasno govori. Vaša pravila za zakazivanje, prebacivanje i poruke ostaju ista.",
         },
         {
           question: "Da li LobbyStack usklađuje moju firmu sa zakonom 96?",

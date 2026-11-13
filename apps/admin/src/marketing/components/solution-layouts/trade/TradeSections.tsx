@@ -304,7 +304,7 @@ export function TradeCompare({ details, locale }: SectionProps) {
     },
     {
       topic: "Languages",
-      ai: "Opens in your default language and switches to the caller's",
+      ai: "Speaks 70+ languages",
       live: "Varies by service",
     },
     {

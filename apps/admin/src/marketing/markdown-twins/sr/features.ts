@@ -26,7 +26,7 @@ LobbyStack je AI recepcioner otvorenog koda za male firme koje primaju mnogo poz
 - Predaja čoveku kroz preusmeravanje, poruke i obaveštenja timu.
 - Obaveštenja vlasniku e-poštom, uz opciona SMS obaveštenja na plaćenim paketima.
 - Kontrolna tabla, istorija poziva, snimci, transkripti, rezimei, profili kontakata, analitika i pregled stavki koje traže akciju.
-- Odgovori na jeziku pozivaoca.
+- Govori više od 70 jezika i prelazi na jezik pozivaoca.
 
 ${featureIndexMarkdown("sr")}
 ## Svaki paket uključuje

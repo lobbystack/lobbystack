@@ -24,9 +24,9 @@ LobbyStack es una recepcionista con IA de código abierto para pequeñas empresa
 - Gestión de presupuestos con precios exactos, precios desde, rangos de precios o un mensaje para que el equipo cotice después.
 - Calificación de clientes potenciales y registro estructurado de los datos de quien llama.
 - Traspaso a una persona mediante transferencias, mensajes y notificaciones al equipo.
-- Alertas al dueño por correo electrónico, con alertas por SMS opcionales en los planes de pago.
+- Alertas al dueño por correo electrónico, con notificaciones por SMS opcionales en los planes de pago.
 - Panel, historial de llamadas, grabaciones, transcripciones, resúmenes, perfiles de contacto, analíticas y vistas de acciones pendientes.
-- Respuestas en el idioma de quien llama.
+- Habla más de 70 idiomas y cambia al de quien llama.
 
 ${featureIndexMarkdown("es")}
 ## Incluido en todos los planes

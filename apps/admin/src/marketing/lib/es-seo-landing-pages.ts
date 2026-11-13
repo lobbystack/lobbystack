@@ -341,10 +341,10 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
         },
         {
           title: "Los pacientes hablan en su propio idioma",
-          body: "Cada llamada empieza en el idioma predeterminado de su clínica: inglés, francés, español, serbio, alemán, portugués de Brasil, italiano o neerlandés. Cuando un paciente habla otro idioma o lo pide, la recepcionista cambia de idioma. Funciona con OpenAI GPT-Live, que maneja más de 70 idiomas.",
+          body: "LobbyStack habla más de 70 idiomas. Cuando un paciente habla otro idioma o lo pide, la recepcionista cambia de idioma, y usted elige el idioma del saludo. Funciona con OpenAI GPT-Live.",
           points: [
             "Su panel y sus correos están disponibles en inglés, francés, español o serbio",
-            "Los SMS de confirmación y recordatorio salen en su idioma predeterminado",
+            "Los SMS de confirmación y recordatorio salen en el idioma de su clínica",
           ],
         },
         {
@@ -406,7 +406,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "¿En qué idiomas pueden hablar los pacientes?",
           answer:
-            "Cada llamada empieza en el idioma predeterminado de su clínica: inglés, francés, español, serbio, alemán, portugués de Brasil, italiano o neerlandés. La recepcionista cambia de idioma cuando un paciente habla otro o lo pide. Funciona con OpenAI GPT-Live, que maneja más de 70 idiomas, y la lista de precios de LobbyStack no incluye ningún cargo adicional por idioma.",
+            "Los pacientes pueden hablar más de 70 idiomas. La recepcionista cambia de idioma cuando un paciente habla otro o lo pide, y usted elige el idioma del saludo. Funciona con OpenAI GPT-Live, y la lista de precios de LobbyStack no incluye ningún cargo adicional por idioma.",
         },
         {
           question:
@@ -498,7 +498,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
           title: "Atención telefónica para salones que conoce su menú",
           body: "Asigne a cada servicio una duración y un precio: fijo, desde, un rango o a definir en persona. LobbyStack da el precio que usted escribió y no inventa uno si lo dejó en blanco. Agregue también su sitio web y sus políticas en PDF, y responde preguntas sobre pruebas de alergia, estacionamiento o tarjetas de regalo.",
           points: [
-            "Da las mismas respuestas por teléfono, en el chat de su sitio web y en los mensajes de Instagram",
+            "Da a cada cliente el precio de su menú de servicios",
             "Toma un mensaje para su equipo cuando sus notas no cubren una pregunta",
           ],
         },
@@ -507,7 +507,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
           body: "A las 9 de la noche, una clienta se da cuenta de que necesita retocarse la raíz. LobbyStack contesta a esa hora igual que al mediodía y reserva en los horarios que usted abrió. A la mañana siguiente, usted encuentra cada llamada en el panel con un resumen, la transcripción y lo que pasó.",
           points: [
             "Le envía una alerta por correo o SMS de las llamadas que su equipo debe devolver",
-            "Cambia al idioma de quien llama, entre más de 70",
+            "Habla más de 70 idiomas y cambia al de quien llama",
           ],
         },
       ],
@@ -832,7 +832,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
       proofPoints: [
         "Transfiere a su técnico de guardia las llamadas sin calefacción, sin aire o con olor a gas",
         "Reserva mantenimientos y presupuestos de reemplazo en Google Calendar, Cal.com o Calendly",
-        "Cambia al idioma de quien llama, entre más de 70 con GPT-Live",
+        "Habla más de 70 idiomas con GPT-Live",
       ],
       sections: [
         {
@@ -863,7 +863,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
         },
         {
           title: "Conteste en español o en el idioma de quien llama",
-          body: "Cada llamada empieza en su idioma predeterminado: inglés, francés, español, serbio, alemán, portugués de Brasil, italiano o neerlandés. Si el cliente pide otro idioma o lo habla, LobbyStack cambia a ese idioma y mantiene sus reglas de urgencia y de reservas. Funciona con OpenAI GPT-Live, que maneja más de 70 idiomas.",
+          body: "LobbyStack habla más de 70 idiomas con OpenAI GPT-Live. Si el cliente pide otro idioma o lo habla, cambia a ese idioma y mantiene sus reglas de urgencia y de reservas. Usted elige el idioma del saludo.",
           points: [],
         },
       ],
@@ -1499,7 +1499,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
         },
         {
           title: "Agende visitas para su agente de alquiler",
-          body: "Cuando un interesado quiere ver una unidad, LobbyStack revisa el Google Calendar de su agente de alquiler, ofrece horarios libres y reserva la visita. Si el interesado acepta, recibe una confirmación por SMS.",
+          body: "Cuando un interesado quiere ver una unidad, LobbyStack revisa el calendario de su agente de alquiler, ofrece horarios libres y reserva la visita. Si el interesado acepta, recibe una confirmación por SMS.",
           points: [],
         },
         {
@@ -1532,7 +1532,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "¿Puede agendar visitas?",
           answer:
-            "Sí. LobbyStack revisa el Google Calendar de su agente de alquiler, ofrece horarios libres, reserva la visita y envía una confirmación por SMS si el interesado acepta.",
+            "Sí. LobbyStack revisa el calendario de su agente de alquiler, ofrece horarios libres, reserva la visita y envía una confirmación por SMS si el interesado acepta.",
         },
         {
           question:
@@ -1806,7 +1806,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
       imageAlt:
         "LobbyStack contesta en francés la llamada a una empresa de Quebec y reserva la cita",
       proofPoints: [
-        "Las llamadas empiezan en francés cuando es su idioma predeterminado",
+        "Saluda en francés y habla más de 70 idiomas",
         "Números canadienses, con búsqueda por código de área",
         "Reserva en Google Calendar, Cal.com o Calendly y envía la confirmación por SMS",
         "Plan gratuito, luego USD 30 al mes por 150 minutos",
@@ -1814,10 +1814,9 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
       sections: [
         {
           title: "Sus llamadas empiezan en francés",
-          body: "Elija el francés como idioma predeterminado de su empresa: cada llamada empieza en francés, del saludo a la reserva. Cuando quien llama pide inglés o habla claramente otro idioma, LobbyStack cambia de idioma para el resto de la llamada y mantiene sus reglas.",
+          body: "Elija el francés para el saludo y cada llamada empieza en francés, de la primera palabra a la reserva. Cuando quien llama pide inglés o habla claramente otro idioma, LobbyStack cambia de idioma para el resto de la llamada y mantiene sus reglas.",
           points: [
-            "Ocho idiomas predeterminados para elegir, entre ellos el francés y el inglés",
-            "Más de 70 idiomas durante la llamada con GPT-Live de OpenAI",
+            "Habla más de 70 idiomas con GPT-Live de OpenAI",
             "Las mismas reglas de reserva y de transferencia en cada idioma",
           ],
         },
@@ -1860,7 +1859,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "¿También puede contestar en inglés?",
           answer:
-            "Sí. Las llamadas empiezan en su idioma predeterminado, y LobbyStack pasa al inglés, o a otro idioma, cuando quien llama lo pide o lo habla con claridad. Sus reglas de reserva, de transferencia y de mensajes no cambian.",
+            "Sí. LobbyStack habla más de 70 idiomas. Pasa al inglés, o a otro idioma, cuando quien llama lo pide o lo habla con claridad. Sus reglas de reserva, de transferencia y de mensajes no cambian.",
         },
         {
           question: "¿LobbyStack hace que mi empresa cumpla la Ley 96?",
@@ -2220,7 +2219,7 @@ const bespokeSolutionPagesEs: Record<string, SeoLandingPage> = {
         points: [
           "Los clientes nuevos, los habituales y quienes llaman fuera de horario pueden reservar en la primera llamada",
           "¿Prefiere aprobar cada visita? Haga que guarde el horario preferido de quien llama como una solicitud para su equipo",
-          "Cada llamada empieza en su idioma predeterminado y cambia cuando quien llama habla otro",
+          "Habla más de 70 idiomas y cambia al de quien llama",
         ],
       },
     ],
@@ -2300,7 +2299,7 @@ const bespokeSolutionPagesEs: Record<string, SeoLandingPage> = {
     ],
     ctaHeading: "Reserve a quien llama mientras sigue en la línea",
     ctaBody:
-      "Agregue sus servicios, conecte Google Calendar o Cal.com y llame a su número para reservar una cita de prueba. El plan gratuito incluye 30 minutos de voz.",
+      "Agregue sus servicios, conecte Google Calendar, Cal.com o Calendly y llame a su número para reservar una cita de prueba. El plan gratuito incluye 30 minutos de voz.",
     ctaPrimaryLabel: "Pruébelo gratis",
     ctaSecondaryLabel: "Ver precios",
   },

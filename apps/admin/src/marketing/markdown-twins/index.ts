@@ -2,6 +2,7 @@
 // Keys are the public path without the locale prefix or ".md": /fr/pricing.md is fr["pricing"].
 import type { Locale } from "@/marketing/i18n"
 import { blogCanonicalSlug, getBlogPosts } from "@/marketing/content/blog"
+import { featurePageTwins } from "./feature-pages"
 
 import { GET as en_about } from "./en/about"
 import { GET as en_affiliate_program } from "./en/affiliate-program"
@@ -62,6 +63,7 @@ const pages: Record<Locale, Record<string, () => Response | Promise<Response>>> 
     "docs/api": en_docs_api,
     "features": en_features,
     "features/mcp": en_features_mcp,
+    ...featurePageTwins("en"),
     "index": en_index,
     "missed-call-revenue-calculator/index": en_missed_call_revenue_calculator_index,
     "pricing": en_pricing,
@@ -75,6 +77,7 @@ const pages: Record<Locale, Record<string, () => Response | Promise<Response>>> 
     "docs/api": fr_docs_api,
     "features": fr_features,
     "features/mcp": fr_features_mcp,
+    ...featurePageTwins("fr"),
     "index": fr_index,
     "missed-call-revenue-calculator/index": fr_missed_call_revenue_calculator_index,
     "pricing": fr_pricing,
@@ -88,6 +91,7 @@ const pages: Record<Locale, Record<string, () => Response | Promise<Response>>> 
     "docs/api": es_docs_api,
     "features": es_features,
     "features/mcp": es_features_mcp,
+    ...featurePageTwins("es"),
     "index": es_index,
     "missed-call-revenue-calculator/index": es_missed_call_revenue_calculator_index,
     "pricing": es_pricing,
@@ -101,6 +105,7 @@ const pages: Record<Locale, Record<string, () => Response | Promise<Response>>> 
     "docs/api": sr_docs_api,
     "features": sr_features,
     "features/mcp": sr_features_mcp,
+    ...featurePageTwins("sr"),
     "index": sr_index,
     "missed-call-revenue-calculator/index": sr_missed_call_revenue_calculator_index,
     "pricing": sr_pricing,

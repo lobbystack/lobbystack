@@ -26,7 +26,7 @@ Upfirst facture chaque appel traité. LobbyStack facture les minutes et ajoute l
 | Usage payant | Quotas et dépassements par appel | Quotas et dépassements par minute |
 | Réservation | Calendrier pendant l'appel | Réservation, modifications et règles métier |
 | Transferts | Transferts assistés et en cascade | Transfert à l'aveugle vers un seul numéro |
-| Langues | Plus de 35 annoncées | Répond dans la langue de l'appelant |
+| Langues | Plus de 35 annoncées | Parle plus de 70 langues |
 | Déploiement | Service hébergé | Cloud géré ou auto-hébergement |
 | Code source | Non annoncé sur les pages consultées | Dépôt public sous licence MIT |
 

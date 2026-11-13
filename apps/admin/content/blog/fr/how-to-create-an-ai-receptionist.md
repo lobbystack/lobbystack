@@ -31,7 +31,7 @@ Pas de site ? Choisissez **Je n'ai pas de site web**, puis téléversez des docu
 
 ## Étape 2 : définir votre message d'accueil et votre langue
 
-Écrivez la première phrase que les appelants entendront, comme « Merci d'avoir appelé Northside Dental, comment puis-je vous aider ? ». Choisissez la langue dans laquelle les appels commencent : anglais, français, espagnol, serbe, allemand, portugais, italien ou néerlandais. La réceptionniste change de langue quand un appelant le demande ou parle une autre langue.
+Écrivez la première phrase que les appelants entendront, comme « Merci d'avoir appelé Northside Dental, comment puis-je vous aider ? ». Choisissez la langue de votre message d'accueil. LobbyStack parle plus de 70 langues, et la réceptionniste change de langue quand un appelant le demande ou parle une autre langue.
 
 Les nouvelles entreprises commencent avec la voix Marin, et vous pourrez choisir plus tard une autre des [voix de GPT-Live](/fr/blog/openai-voices/). LobbyStack ne clone pas de voix.
 

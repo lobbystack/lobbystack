@@ -57,7 +57,7 @@ Na nekoliko mesta i dalje piše LobbyStack, i odlučili smo da to kažemo na [Wh
 
 - **SMS poruke.** Svaka firma šalje poruke sa našeg verifikovanog besplatnog broja. Operateri očekuju verifikovani brend tog broja u prvoj poruci i u odgovorima na HELP, pa te poruke navode LobbyStack pored firme. Sve ostale poruke navode samo firmu.
 - **Prijava preko Google naloga.** Prikazala bi ime naše Google aplikacije, pa domeni partnera nude samo prijavu imejlom i lozinkom.
-- **Google Calendar i Instagram.** Njihovi ekrani za odobrenje prikazuju ime naše aplikacije. Povratni poziv se vraća na domen partnera.
+- **Google Calendar.** Njegov ekran za odobrenje prikazuje ime naše aplikacije. Povratni poziv se vraća na domen partnera.
 
 ## Jedan fond minuta za sve klijente
 
@@ -153,7 +153,7 @@ Možete. Kod je pod MIT licencom, a svaka partnerska funkcija radi na vašim ser
 
 ### Da li moji klijenti ikada vide ime LobbyStack?
 
-Na prijavi, kontrolnoj tabli, u imejlovima i u vidžetu vide vaš brend. Prva SMS poruka svakom kupcu i odgovori na HELP navode LobbyStack, kako operateri zahtevaju, a ekrani za odobrenje Google Calendar-a i Instagrama prikazuju ime naše aplikacije.
+Na prijavi, kontrolnoj tabli, u imejlovima i u vidžetu vide vaš brend. Prva SMS poruka svakom kupcu i odgovori na HELP navode LobbyStack, kako operateri zahtevaju, a ekran za odobrenje Google Calendar-a prikazuje ime naše aplikacije.
 
 ## Isprobajte
 

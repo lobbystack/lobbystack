@@ -78,7 +78,7 @@ Choose live agents when your calls need judgment: an angry customer, an on-call 
 
 Choose an AI receptionist when most of your calls look alike: questions about hours and prices, appointments to book, emergencies to pass on. It answers nights and weekends at the same price, takes several calls at once and books during the call.
 
-LobbyStack, for example, opens the call in French when French is your business's default language, and switches to English or another language when the caller speaks it. It books into Google Calendar, Cal.com or Calendly, texts a confirmation to customers who agree, and transfers the calls your rules mark as urgent to your cell. Its limits: it bills in US dollars, it connects only to Google Calendar, Cal.com and Calendly, and it doesn't replace a person on a sensitive call. Our page on the [AI receptionist for Quebec businesses](/solutions/ai-receptionist-quebec/) covers these settings.
+LobbyStack, for example, speaks 70+ languages, French and English included. It books into Google Calendar, Cal.com or Calendly, texts a confirmation to customers who agree, and transfers the calls your rules mark as urgent to your cell. Its limits: it bills in US dollars, it connects only to Google Calendar, Cal.com and Calendly, and it doesn't replace a person on a sensitive call. Our page on the [AI receptionist for Quebec businesses](/solutions/ai-receptionist-quebec/) covers these settings.
 
 ## How do you choose a phone answering service in Quebec?
 

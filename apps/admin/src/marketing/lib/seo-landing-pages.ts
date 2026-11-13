@@ -250,10 +250,10 @@ export const solutionPages: SeoLandingPage[] = [
       },
       {
         title: "Patients talk in their own language",
-        body: "Each call opens in your practice's default language: English, French, Spanish, Serbian, German, Brazilian Portuguese, Italian or Dutch. When a patient speaks another language or asks for one, the receptionist switches. It runs on OpenAI GPT-Live, which handles 70+ languages.",
+        body: "LobbyStack speaks 70+ languages. When a patient speaks another language or asks for one, the receptionist switches, and you pick the language the greeting uses. It runs on OpenAI GPT-Live.",
         points: [
           "Your dashboard and emails come in English, French, Spanish or Serbian",
-          "Confirmation and reminder texts go out in your default language",
+          "Confirmation and reminder texts go out in your practice's language",
         ],
       },
       {
@@ -316,11 +316,11 @@ export const solutionPages: SeoLandingPage[] = [
     eyebrow: "Salons and spas",
     h1: "An AI receptionist for salons that books while your hands are busy",
     intro:
-      "The phone rings while you're mid-color or mid-massage, and LobbyStack picks up. It books the stylist the client asks for into Google Calendar and answers from your service menu, so the call ends with an appointment on your books.",
+      "The phone rings while you're mid-color or mid-massage, and LobbyStack picks up. It books the stylist the client asks for into Google Calendar, Cal.com or Calendly and answers from your service menu, so the call ends with an appointment on your books.",
     image: "/illustrations/booking-flow.webp",
     imageAlt: "A stylist's day in LobbyStack, with a balayage booked by phone into an open slot",
     proofPoints: [
-      "Books into Google Calendar by service length and stylist hours",
+      "Books into Google Calendar, Cal.com or Calendly by service length and stylist hours",
       "Texts a confirmation and a 24-hour reminder to clients who agree",
       "Moves and cancels appointments after it finds the client's booking",
     ],
@@ -347,7 +347,7 @@ export const solutionPages: SeoLandingPage[] = [
         title: "A salon answering service that knows your menu",
         body: "Give each service a length and a price: fixed, a starting price, a range or priced in person. LobbyStack quotes what you entered and won't guess a price you left blank. Add your website and policy PDFs too, and it answers questions about patch tests, parking or gift cards.",
         points: [
-          "Gives the same answers on calls, in your website chat and in Instagram messages",
+          "Quotes every caller the price on your service menu",
           "Takes a message for your team when your notes don't cover a question",
         ],
       },
@@ -356,7 +356,7 @@ export const solutionPages: SeoLandingPage[] = [
         body: "A client remembers at 9 p.m. that her roots need doing. LobbyStack answers then the way it answers at noon and books into the times you've opened. You'll find each call in your dashboard the next morning, with a summary, a transcript and what happened.",
         points: [
           "Sends you an email or text alert for the calls your team should return",
-          "Switches to the caller's language, from more than 70",
+          "Speaks 70+ languages and switches to the caller's",
         ],
       },
     ],
@@ -516,7 +516,7 @@ export const solutionPages: SeoLandingPage[] = [
     proofPoints: [
       "Transfers no-heat, no-AC, and gas-smell calls to your on-call tech",
       "Books tune-ups and replacement estimates into Google Calendar, Cal.com or Calendly",
-      "Switches to the caller's language, including Spanish",
+      "Speaks 70+ languages, including Spanish",
     ],
     sections: [
       {
@@ -525,8 +525,8 @@ export const solutionPages: SeoLandingPage[] = [
         points: [],
       },
       {
-        title: "Answers in the caller's language",
-        body: "Each call opens in your default language. When a caller speaks Spanish or another language, LobbyStack switches to it and keeps your urgency rules and booking settings.",
+        title: "Speaks 70+ languages",
+        body: "LobbyStack speaks 70+ languages. When a caller speaks Spanish or another language, it switches and keeps your urgency rules and booking settings.",
         points: [],
       },
     ],
@@ -900,7 +900,7 @@ export const solutionPages: SeoLandingPage[] = [
     sections: [
       {
         title: "Books showings for your leasing agent",
-        body: "When a prospect wants to see a unit, LobbyStack books the showing into your leasing agent's Google Calendar and texts a confirmation if they agree.",
+        body: "When a prospect wants to see a unit, LobbyStack books the showing into your leasing agent's calendar and texts a confirmation if they agree.",
         points: [],
       },
       {
@@ -1077,7 +1077,7 @@ export const solutionPages: SeoLandingPage[] = [
     image: "/illustrations/call-capture.webp",
     imageAlt: "LobbyStack answering a Quebec business's call in French and booking the appointment",
     proofPoints: [
-      "Calls open in French when you make it your default language",
+      "Greets callers in French and speaks 70+ languages",
       "Canadian numbers, with a search by area code",
       "Books into Google Calendar, Cal.com or Calendly and texts a confirmation",
       "Free plan, then US$30 a month for 150 minutes",
@@ -1085,10 +1085,9 @@ export const solutionPages: SeoLandingPage[] = [
     sections: [
       {
         title: "Your calls open in French",
-        body: "Set French as your business's default language and every call starts in French, from the greeting to the booking. When a caller asks for English or clearly speaks another language, LobbyStack switches for the rest of the call and keeps your rules.",
+        body: "Pick French for your greeting and every call starts in French, from the first word to the booking. When a caller asks for English or clearly speaks another language, LobbyStack switches for the rest of the call and keeps your rules.",
         points: [
-          "Pick from eight default languages, French and English among them",
-          "Answers callers in more than 70 languages with OpenAI's GPT-Live",
+          "Speaks 70+ languages with OpenAI's GPT-Live",
           "Uses the same booking and transfer rules in every language",
         ],
       },
@@ -1131,7 +1130,7 @@ export const solutionPages: SeoLandingPage[] = [
       {
         question: "Can it answer in English too?",
         answer:
-          "Yes. Calls open in your default language, and LobbyStack switches to English, or to another language, when the caller asks or clearly speaks it. Your rules for booking, transfers and messages stay the same.",
+          "Yes. LobbyStack speaks 70+ languages. It switches to English, or to another language, when the caller asks or clearly speaks it. Your rules for booking, transfers and messages stay the same.",
       },
       {
         question: "Does LobbyStack make my business compliant with Bill 96?",

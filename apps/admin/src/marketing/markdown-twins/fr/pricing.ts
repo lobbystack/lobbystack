@@ -3,7 +3,7 @@ import { absoluteUrl } from "@/marketing/lib/seo"
 
 const markdown = `---
 title: Tarifs de réceptionniste IA pour petites entreprises
-description: Comparez les forfaits Free, Starter, Pro et Enterprise de LobbyStack, avec minutes vocales, facturation annuelle, SMS et dépassements transparents.
+description: Comparez les forfaits Free, Starter, Pro et Enterprise de LobbyStack, avec minutes vocales, facturation annuelle, notifications SMS et tarifs de dépassement.
 url: ${absoluteUrl("/fr/pricing/")}
 ---
 
@@ -34,5 +34,5 @@ export const GET = () =>
     canonical: absoluteUrl("/fr/pricing/"),
     title: "Tarifs de réceptionniste IA pour petites entreprises",
     description:
-      "Comparez les forfaits Free, Starter, Pro et Enterprise de LobbyStack, avec minutes vocales, facturation annuelle, SMS et dépassements transparents.",
+      "Comparez les forfaits Free, Starter, Pro et Enterprise de LobbyStack, avec minutes vocales, facturation annuelle, notifications SMS et tarifs de dépassement.",
   })

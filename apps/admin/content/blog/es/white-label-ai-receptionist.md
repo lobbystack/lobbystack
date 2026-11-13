@@ -57,7 +57,7 @@ En algunos sitios aún aparece LobbyStack, y preferimos decirlo en la [página d
 
 - **SMS.** Todos los negocios envían SMS desde nuestro número gratuito verificado. Los operadores esperan la marca verificada de ese número en el primer SMS y en las respuestas a HELP, así que esos mensajes nombran a LobbyStack junto al negocio. Los demás SMS solo nombran al negocio.
 - **Inicio de sesión con Google.** Mostraría el nombre de nuestra aplicación de Google, así que los dominios de socios solo ofrecen correo y contraseña.
-- **Google Calendar e Instagram.** Sus pantallas de consentimiento muestran el nombre de nuestra aplicación. La respuesta vuelve al dominio del socio.
+- **Google Calendar.** Su pantalla de consentimiento muestra el nombre de nuestra aplicación. La respuesta vuelve al dominio del socio.
 
 ## Una sola bolsa de minutos para todos los clientes
 
@@ -153,7 +153,7 @@ Sí. El código tiene licencia MIT, y cada función de socio funciona en sus pro
 
 ### ¿Ven mis clientes el nombre de LobbyStack en algún momento?
 
-En el inicio de sesión, el panel, los correos y el widget ven su marca. El primer SMS a cada cliente y las respuestas a HELP nombran a LobbyStack, como exigen los operadores, y las pantallas de consentimiento de Google Calendar e Instagram muestran el nombre de nuestra aplicación.
+En el inicio de sesión, el panel, los correos y el widget ven su marca. El primer SMS a cada cliente y las respuestas a HELP nombran a LobbyStack, como exigen los operadores, y la pantalla de consentimiento de Google Calendar muestra el nombre de nuestra aplicación.
 
 ## Pruébelo
 

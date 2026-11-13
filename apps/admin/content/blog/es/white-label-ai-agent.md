@@ -101,7 +101,7 @@ Un cliente también consume su propio paquete, así que se detiene en el límite
 Algunos lugares nombran a LobbyStack porque funcionan con sus cuentas:
 
 - Sus páginas de inicio de sesión ofrecen correo y contraseña, sin **Continuar con Google**.
-- Las pantallas de consentimiento de Google Calendar e Instagram nombran a LobbyStack cuando un negocio las conecta.
+- La pantalla de consentimiento de Google Calendar nombra a LobbyStack cuando un negocio lo conecta.
 - Los SMS salen del número verificado de LobbyStack. El primer SMS de cita de un cliente y la respuesta a HELP nombran a LobbyStack y al negocio.
 
 En una llamada, la recepcionista responde con el nombre del negocio.

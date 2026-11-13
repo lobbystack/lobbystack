@@ -1,3 +1,4 @@
+import { featurePageRoutes } from "@/marketing/lib/feature-pages"
 import type { LandingMessages } from "@/marketing/i18n/types"
 
 export const fr = {
@@ -30,6 +31,7 @@ export const fr = {
     blocked: "Votre navigateur a bloqué la copie. Copiez le prompt ici :",
   },
   routes: {
+    ...featurePageRoutes("fr"),
     "/": {
       title: "LobbyStack | Réceptionniste IA open source",
       description:
@@ -38,12 +40,12 @@ export const fr = {
     "/features/": {
       title: "Fonctionnalités de réceptionniste IA",
       description:
-        "Découvrez comment LobbyStack répond aux appels, qualifie les demandes, planifie les rendez-vous, envoie des alertes SMS et transfère les urgences.",
+        "Découvrez comment LobbyStack répond aux appels, qualifie les demandes, planifie les rendez-vous, envoie des notifications SMS et transfère les urgences.",
     },
     "/pricing/": {
       title: "Tarifs de réceptionniste IA pour petites entreprises",
       description:
-        "Comparez les forfaits Free, Starter, Pro et Enterprise de LobbyStack, avec minutes vocales, facturation annuelle, SMS et dépassements transparents.",
+        "Comparez les forfaits Free, Starter, Pro et Enterprise de LobbyStack, avec minutes vocales, facturation annuelle, notifications SMS et tarifs de dépassement.",
     },
     "/pricing/self-hosted/": {
       title: "Tarifs de la réceptionniste IA auto-hébergée | LobbyStack",

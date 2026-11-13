@@ -68,7 +68,7 @@ An AI receptionist is enough when most of your calls follow the same path: a que
 
 With LobbyStack, for example:
 
-- the call opens in French when French is your default language, and switches to English if the caller speaks it;
+- it speaks 70+ languages, French and English included;
 - it answers from your website, your documents and the prices you give it;
 - it books into Google Calendar, Cal.com or Calendly and texts a confirmation to customers who agree;
 - it transfers urgent calls to your cell and takes a message for everything else, with an email or text alert.

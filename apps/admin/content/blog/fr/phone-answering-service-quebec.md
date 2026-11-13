@@ -78,7 +78,7 @@ Choisissez des préposés si vos appels demandent du jugement : un client fâch�
 
 Choisissez un réceptionniste IA si la plupart de vos appels se ressemblent : des questions sur vos heures et vos prix, des rendez-vous à réserver, des urgences à faire suivre. Il répond la nuit et la fin de semaine au même prix, prend plusieurs appels en même temps et réserve pendant l'appel.
 
-LobbyStack, par exemple, commence l'appel en français quand le français est la langue par défaut de votre entreprise, et passe à l'anglais ou à une autre langue quand l'appelant la parle. Il réserve dans Google Calendar, Cal.com ou Calendly, texte la confirmation aux clients qui acceptent, et transfère à votre cellulaire les appels que vos règles jugent urgents. Ses limites : il facture en dollars américains, il se connecte seulement à Google Calendar, Cal.com et Calendly, et il ne remplace pas une personne pour un appel délicat. Notre page [réceptionniste IA au Québec](/fr/solutions/ai-receptionist-quebec/) détaille ces réglages.
+LobbyStack, par exemple, parle plus de 70 langues : il répond en français et passe à l'anglais ou à une autre langue quand l'appelant la parle. Il réserve dans Google Calendar, Cal.com ou Calendly, texte la confirmation aux clients qui acceptent, et transfère à votre cellulaire les appels que vos règles jugent urgents. Ses limites : il facture en dollars américains, il se connecte seulement à Google Calendar, Cal.com et Calendly, et il ne remplace pas une personne pour un appel délicat. Notre page [réceptionniste IA au Québec](/fr/solutions/ai-receptionist-quebec/) détaille ces réglages.
 
 ## Comment choisir un service de réponse téléphonique au Québec ?
 

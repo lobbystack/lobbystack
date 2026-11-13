@@ -1,41 +1,11 @@
-import {
-  ArrowRight,
-  ArrowUpRight,
-  BellRing,
-  CalendarCheck,
-  Code,
-  Inbox,
-  MessageCircle,
-  Pencil,
-  PhoneCall,
-  Plug,
-  Server,
-  Tag,
-  Terminal,
-  Webhook,
-  type LucideIcon,
-} from "lucide-react"
+import { ArrowRight, ArrowUpRight } from "lucide-react"
 
 import { IconTile } from "@/marketing/components/system/IconCards"
 import { SectionTitle } from "@/marketing/components/system/SectionTitle"
 import type { Locale } from "@/marketing/i18n"
 import { eyebrow } from "@/marketing/lib/eyebrows"
+import { featureIcons } from "@/marketing/lib/feature-icons"
 import { featureGroups, featureIndexCopy, featureLink, type FeatureId } from "@/marketing/lib/feature-index"
-
-const icons: Record<FeatureId, LucideIcon> = {
-  calls: PhoneCall,
-  booking: CalendarCheck,
-  rules: Pencil,
-  instagram: MessageCircle,
-  inbox: Inbox,
-  alerts: BellRing,
-  integrations: Webhook,
-  mcp: Plug,
-  api: Terminal,
-  selfHosting: Server,
-  whiteLabel: Tag,
-  source: Code,
-}
 
 function FeatureCard({ locale, id }: { locale: Locale; id: FeatureId }) {
   const { title, body } = featureIndexCopy[locale].features[id]
@@ -54,7 +24,7 @@ function FeatureCard({ locale, id }: { locale: Locale; id: FeatureId }) {
       className="group/card flex flex-col bg-background p-6 transition-colors duration-150 hover:bg-beige focus-visible:bg-beige focus-visible:outline-none"
     >
       <span className="flex items-start justify-between">
-        <IconTile icon={icons[id]} />
+        <IconTile icon={featureIcons[id]} />
         <Arrow
           className="size-4 text-muted-foreground transition-colors group-hover/card:text-foreground group-focus-visible/card:text-foreground"
           aria-hidden="true"

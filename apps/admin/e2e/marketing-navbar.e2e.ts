@@ -38,8 +38,9 @@ test("the Product menu opens the features index, and a feature card opens its pa
 
   const index = page.locator("#feature-index");
   await expect(index.getByRole("link")).toHaveCount(12);
-  await index.getByRole("link", { name: /MCP server/ }).click();
-  await expect(page).toHaveURL(`${site}/features/mcp/`);
+  await index.getByRole("link", { name: /SMS notifications/ }).click();
+  await expect(page).toHaveURL(`${site}/features/sms-notifications/`);
+  await expect(page.getByRole("heading", { level: 1, name: "Fewer no-shows and faster follow-ups" })).toBeVisible();
 });
 
 test("a signed-in visitor gets one Dashboard link in their language", async ({ page: signUpPage, context }, testInfo) => {
