@@ -12,14 +12,14 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@ai-sdk/openai": "4.0.106",
-    "@ai-sdk/openai-compatible": "^3.0.82",
+    "@ai-sdk/openai": "4.0.111",
+    "@ai-sdk/openai-compatible": "^3.0.87",
     "@lobbystack/domain": "workspace:*",
     "@lobbystack/shared": "workspace:*",
-    "ai": "^7.0.159",
+    "ai": "^7.0.166",
     "luxon": "^3.7.2",
     "openai": "^7.28.0",
-    "ws": "^8.22.1",
+    "ws": "^8.22.2",
     "zod": "^4.6.6"
   },
   "devDependencies": {
