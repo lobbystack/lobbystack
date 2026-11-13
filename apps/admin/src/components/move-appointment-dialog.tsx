@@ -7,7 +7,6 @@ import { toast } from "sonner";
 
 import { APPOINTMENT_ROLES, appointmentSummary, type CancellableAppointment } from "@/components/cancel-appointment-button";
 import { Button } from "@/components/ui/button";
-import { Spinner } from "@/components/ui/spinner";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { OpeningsPicker } from "@/components/openings-picker";
 import { useActiveBusiness } from "@/hooks/use-active-business";
@@ -113,7 +112,7 @@ function MoveAppointmentDialog({ appointment, requested: requestedTime, onOpenCh
         <OpeningsPicker date={date} failed={openings.isError} loading={openings.isLoading} onDateChange={(day) => { setDate(day); setChosen(null); }} onSelect={setChosen} selected={selected} timeZone={timeZone} times={times} today={today} />
         <DialogFooter>
           <DialogClose render={<Button disabled={move.isPending} type="button" variant="outline" />}>{t("appointments.move.keep")}</DialogClose>
-          <Button disabled={!selected} loading={move.isPending} loadingLabel={t("pending.moving")} onClick={() => { if (selected) move.mutate(selected); }} type="button">{t("appointments.move.confirm")}</Button>
+          <Button disabled={!selected} loading={move.isPending} loadingLabel={t("appointments.move.moving")} onClick={() => { if (selected) move.mutate(selected); }} type="button">{t("appointments.move.confirm")}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
