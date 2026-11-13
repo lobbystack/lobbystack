@@ -11,32 +11,32 @@ type HeroSectionProps = {
 
 const heroCopy = {
   en: {
-    h1Start: "LobbyStack turns",
+    h1Start: "LobbyStack is the AI receptionist that turns",
     h1Emphasis: "missed calls",
     h1End: "into booked work.",
     googleSignup: "Sign up with Google",
-    body: "LobbyStack is an AI receptionist for small businesses. It answers your phone, books appointments, and sends urgent calls to your team. Use it for every call, or only when you're busy.",
+    body: "It answers your phone, books appointments, and sends urgent calls to your team. Use it for every call, or only when you're busy.",
   },
   fr: {
-    h1Start: "LobbyStack transforme les",
+    h1Start: "LobbyStack est le réceptionniste IA qui transforme les",
     h1Emphasis: "appels manqués",
     h1End: "en rendez‑vous.",
     googleSignup: "S’inscrire avec Google",
-    body: "LobbyStack est un réceptionniste IA pour les petites entreprises. Il répond au téléphone, planifie les rendez‑vous et transfère les appels urgents à votre équipe. Activez-le pour tous vos appels ou seulement quand vous êtes occupé."
+    body: "Il répond au téléphone, planifie les rendez‑vous et transfère les appels urgents à votre équipe. Activez-le pour tous vos appels ou seulement quand vous êtes occupé."
   },
   es: {
-    h1Start: "LobbyStack convierte las",
+    h1Start: "LobbyStack es la recepcionista con IA que convierte las",
     h1Emphasis: "llamadas perdidas",
     h1End: "en citas confirmadas.",
     googleSignup: "Regístrese con Google",
-    body: "LobbyStack es una recepcionista con IA para pequeñas empresas. Atiende su teléfono, reserva citas y pasa las llamadas urgentes a su equipo. Úsela para todas las llamadas o solo cuando esté ocupado.",
+    body: "Atiende su teléfono, reserva citas y pasa las llamadas urgentes a su equipo. Úsela para todas las llamadas o solo cuando esté ocupado.",
   },
   sr: {
-    h1Start: "LobbyStack pretvara",
+    h1Start: "LobbyStack je AI recepcioner koji pretvara",
     h1Emphasis: "propuštene pozive",
     h1End: "u zakazane poslove.",
     googleSignup: "Registrujte se preko Google naloga",
-    body: "LobbyStack je AI recepcioner za mala preduzeća. Javlja se na Vaš telefon, zakazuje termine i preusmerava hitne pozive Vašem timu. Koristite ga za sve pozive ili samo kada ste zauzeti.",
+    body: "Javlja se na Vaš telefon, zakazuje termine i preusmerava hitne pozive Vašem timu. Koristite ga za sve pozive ili samo kada ste zauzeti.",
   },
 } satisfies Record<Locale, Record<string, string>>
 
