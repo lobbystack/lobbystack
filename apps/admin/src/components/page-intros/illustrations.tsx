@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { ArrowRight, Bot, CircleHelp, FileText, Globe, MessageCircle, MessageSquare, MessagesSquare, MoreHorizontal, Phone, Plus, type LucideIcon } from "lucide-react";
 import { intlLocale } from "@lobbystack/shared";
@@ -13,28 +13,70 @@ import { Surface } from "@/components/ui/surface";
 import { cn } from "@/lib/utils";
 
 // Each intro card opens on a miniature of its page: a few made-up rows drawn
-// with the dashboard's own components and tokens, scaled down and cropped by
-// the card's edge. They follow the theme and the language like the page does,
+// with the dashboard's own components and tokens at a fixed width, scaled to
+// fit the card and cut off by the bottom of its picture. They follow the theme and the language like the page does,
 // and nothing in them can be focused or clicked. The names, numbers and
 // addresses are made up; 555-01xx numbers and example.com are reserved for
 // fiction.
 
 type Tone = "blue" | "green" | "amber" | "rose";
 
-/** The gradient backdrop and the scaled page on it. */
+/** The width a scene is drawn at before it's scaled to fit the card. */
+const SCENE_WIDTH = 600;
+/** A compact scene is drawn wider, so it scales down further and more of its taller page stays above the card's edge. */
+const COMPACT_SCENE_WIDTH = 700;
+
+/**
+ * The gradient backdrop and the page on it: inset the same on the top and
+ * both sides, and cut off by the backdrop's bottom edge.
+ */
 function IntroScene({ tone, compact = false, children }: { tone: Tone; compact?: boolean; children: ReactNode }) {
   return (
-    <div aria-hidden="true" inert className="page-intro-scene relative h-52 shrink-0 overflow-hidden border-b sm:h-56" data-tone={tone}>
-      {/* A compact scene draws a taller page smaller, so what matters on it stays above the card's edge. */}
-      <div className={cn("pointer-events-none absolute top-7 left-1/2 w-[600px] origin-top -translate-x-1/2 select-none sm:top-8", compact ? "scale-[0.5] sm:scale-[0.62]" : "scale-[0.56] sm:scale-[0.72]")}>{children}</div>
+    <div aria-hidden="true" inert className="page-intro-scene relative h-52 shrink-0 overflow-hidden border-b px-8 pt-8 sm:h-56" data-tone={tone}>
+      <ScaledToFit width={compact ? COMPACT_SCENE_WIDTH : SCENE_WIDTH}>{children}</ScaledToFit>
     </div>
   );
 }
 
-/** A page's frame: its title, its main button and what's under them. */
+/**
+ * Lays its children out at a fixed width and scales them to the width it's
+ * given, so the miniature keeps its layout at every card width.
+ */
+function ScaledToFit({ width, children }: { width: number; children: ReactNode }) {
+  const frame = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    const element = frame.current;
+    if (!element) return;
+    const measure = () => {
+      // The layout width, not the drawn one: the card opens zoomed in, and a transformed width would shrink the picture for good.
+      const available = element.clientWidth;
+      setScale(available > 0 ? available / width : null);
+    };
+    measure();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [width]);
+  return (
+    <div className="relative h-full" ref={frame}>
+      {/* Hidden until measured, so the first frame never shows it at full size. */}
+      <div
+        className={cn("pointer-events-none absolute top-0 left-0 origin-top-left select-none", scale === null && "invisible")}
+        data-slot="page-intro-window"
+        style={{ width, transform: scale === null ? undefined : `scale(${scale})` }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/** A page's frame: its title, its main button and what's under them. Tall enough to always run past the card's edge. */
 function MiniPage({ title, action, children }: { title: string; action?: string; children: ReactNode }) {
   return (
-    <div className="flex flex-col gap-5 rounded-2xl border bg-background p-6 text-foreground shadow-xl">
+    <div className="flex min-h-[560px] flex-col gap-5 rounded-2xl border bg-background p-6 text-foreground shadow-xl">
       <div className="flex items-center justify-between gap-4">
         <span className="type-page-title truncate">{title}</span>
         {action ? <Button size="sm" tabIndex={-1}><Plus data-icon="inline-start" />{action}</Button> : null}
