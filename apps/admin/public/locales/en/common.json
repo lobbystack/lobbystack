@@ -198,6 +198,8 @@
       "more": "+{{count}} more",
       "allDay": "All day",
       "newAt": "New appointment at {{time}}",
+      "resizeColumn": "Resize the {{day}} column",
+      "resizeRows": "Resize hour rows",
       "block": "{{name}}, {{service}}, {{time}}",
       "blockCancelled": "{{name}}, {{service}}, {{time}}, cancelled"
     },

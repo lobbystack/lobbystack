@@ -200,6 +200,8 @@
       "more": "+{{count}} de plus",
       "allDay": "Toute la journée",
       "newAt": "Nouveau rendez-vous à {{time}}",
+      "resizeColumn": "Redimensionner la colonne {{day}}",
+      "resizeRows": "Redimensionner les lignes des heures",
       "block": "{{name}}, {{service}}, {{time}}",
       "blockCancelled": "{{name}}, {{service}}, {{time}}, annulé"
     },

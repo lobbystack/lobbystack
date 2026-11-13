@@ -200,6 +200,8 @@
       "more": "+{{count}} još",
       "allDay": "Ceo dan",
       "newAt": "Novi termin u {{time}}",
+      "resizeColumn": "Promeni širinu kolone {{day}}",
+      "resizeRows": "Promeni visinu redova sati",
       "block": "{{name}}, {{service}}, {{time}}",
       "blockCancelled": "{{name}}, {{service}}, {{time}}, otkazano"
     },

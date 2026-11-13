@@ -73,6 +73,29 @@ test("an owner books from the calendar's week, sees the booking as a block, and 
     await sheet.getByRole("button", { name: common.accessibility.close }).first().click();
     await expect(sheet).toBeHidden();
 
+    // Dragging the line under an hour resizes every row and dragging a day header's edge resizes that day. A double click puts each back.
+    const rowHeight = (await block.boundingBox())!.height;
+    const rowHandle = page.getByTestId("calendar-row-handle").first();
+    await rowHandle.scrollIntoViewIfNeeded();
+    const rowAt = (await rowHandle.boundingBox())!;
+    await page.mouse.move(rowAt.x + rowAt.width / 2, rowAt.y + rowAt.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(rowAt.x + rowAt.width / 2, rowAt.y + rowAt.height / 2 + 40, { steps: 4 });
+    await page.mouse.up();
+    expect((await block.boundingBox())!.height).toBeGreaterThan(rowHeight);
+    await rowHandle.dblclick();
+    expect((await block.boundingBox())!.height).toBeCloseTo(rowHeight, 0);
+    const columnHandle = page.getByTestId("calendar-column-handle").first();
+    const columnWidth = (await columnHandle.locator("xpath=..").boundingBox())!.width;
+    const columnAt = (await columnHandle.boundingBox())!;
+    await page.mouse.move(columnAt.x + columnAt.width / 2, columnAt.y + columnAt.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(columnAt.x + columnAt.width / 2 + 60, columnAt.y + columnAt.height / 2, { steps: 4 });
+    await page.mouse.up();
+    expect((await columnHandle.locator("xpath=..").boundingBox())!.width).toBeGreaterThan(columnWidth + 40);
+    await columnHandle.dblclick();
+    expect((await columnHandle.locator("xpath=..").boundingBox())!.width).toBeCloseTo(columnWidth, 0);
+
     // An empty slot tomorrow at 10 AM draws a draft there and opens a popover over the calendar on that time.
     const calendar = page.getByRole("region", { name: copy.views.calendar });
     const widthBefore = (await calendar.boundingBox())!.width;

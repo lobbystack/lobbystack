@@ -103,13 +103,16 @@ function MoveAppointmentDialog({ appointment, requested: requestedTime, onOpenCh
 
   return (
     <Dialog onOpenChange={(next) => { if (!move.isPending) onOpenChange(next); }} open>
-      <DialogContent forceOverlay>
+      <DialogContent className="max-h-[calc(100svh-2rem)] grid-rows-[auto_minmax(0,1fr)_auto]" forceOverlay>
         <DialogHeader>
           <DialogTitle>{t("appointments.move.title")}</DialogTitle>
           <DialogDescription className="ph-mask">{t("appointments.move.description", { appointment: appointmentSummary(appointment, i18n.language, t) })}</DialogDescription>
           {requested ? <p className="type-body-muted">{t("appointments.move.requested", { time: formatRequestedStart(requested, i18n.language) })}</p> : null}
         </DialogHeader>
-        <OpeningsPicker date={date} failed={openings.isError} loading={openings.isLoading} onDateChange={(day) => { setDate(day); setChosen(null); }} onSelect={setChosen} selected={selected} timeZone={timeZone} times={times} today={today} />
+        {/* The padding keeps the focus rings clear of the scroll edge. */}
+        <div className="-m-1 min-h-0 overflow-x-hidden overflow-y-auto p-1">
+          <OpeningsPicker date={date} failed={openings.isError} loading={openings.isLoading} onDateChange={(day) => { setDate(day); setChosen(null); }} onSelect={setChosen} selected={selected} timeZone={timeZone} times={times} today={today} />
+        </div>
         <DialogFooter>
           <DialogClose render={<Button disabled={move.isPending} type="button" variant="outline" />}>{t("appointments.move.keep")}</DialogClose>
           <Button disabled={!selected} loading={move.isPending} loadingLabel={t("appointments.move.moving")} onClick={() => { if (selected) move.mutate(selected); }} type="button">{t("appointments.move.confirm")}</Button>
