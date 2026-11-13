@@ -29,6 +29,7 @@ import { Footer } from "@/marketing/components/Footer"
 import { Navbar } from "@/marketing/components/Navbar"
 import { FeatureCard } from "@/marketing/components/features/FeatureIndex"
 import { SceneArt, type AnyScene } from "@/marketing/components/solution-layouts/solution/SolutionSections"
+import { AppFrame, Screenshot } from "@/marketing/components/system/AppFrame"
 import { ButtonLink } from "@/marketing/components/system/ButtonLink"
 import { ClosingCta } from "@/marketing/components/system/ClosingCta"
 import { FactStrip } from "@/marketing/components/system/FactStrip"
@@ -54,6 +55,7 @@ import {
   softwareApplicationJsonLd,
   webSiteJsonLd,
 } from "@/marketing/lib/seo"
+import { featureShot, type FeatureShotName } from "@/marketing/lib/screenshots"
 import { PageJsonLd, type MarketingPageSeo } from "@/marketing/seo/page-seo"
 
 const container = "mx-auto w-full max-w-site px-6"
@@ -80,6 +82,13 @@ const pageScenes: Record<FeaturePageSlug, [AnyScene, AnyScene, AnyScene]> = {
   notifications: [{ solution: "reminder" }, { product: "summary" }, { product: "booking" }],
   analytics: [{ product: "jobBooked" }, { product: "answeredBooked" }, { product: "summary" }],
   integrations: [{ product: "integrations" }, { product: "booking" }, { product: "guardrails" }],
+}
+
+/** The pages that show the real dashboard under their hero. */
+const pageShots: Partial<Record<FeaturePageSlug, FeatureShotName>> = {
+  inbox: "inbox",
+  analytics: "analytics",
+  knowledge: "knowledge",
 }
 
 /** The feature on the index that each page belongs to. */
@@ -176,6 +185,7 @@ export function FeatureDetailPage({ locale, slug: rawSlug }: { locale: Locale; s
   })
   const icons = benefitIcons[slug]
   const scenes = pageScenes[slug]
+  const shot = pageShots[slug]
 
   return (
     <>
@@ -209,6 +219,14 @@ export function FeatureDetailPage({ locale, slug: rawSlug }: { locale: Locale; s
             <FactStrip facts={page.facts} />
           </div>
         </div>
+
+        {shot && (
+          <div className={`${container} mt-12 md:mt-16`} id="product">
+            <AppFrame>
+              <Screenshot shot={featureShot(shot, locale)} alt={`${page.name} · LobbyStack`} />
+            </AppFrame>
+          </div>
+        )}
 
         <section className="section-spacing" id="benefits">
           <div className={container}>

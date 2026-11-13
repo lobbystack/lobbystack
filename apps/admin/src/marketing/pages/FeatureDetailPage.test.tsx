@@ -1,3 +1,6 @@
+import { existsSync } from "node:fs"
+import path from "node:path"
+
 import { renderToStaticMarkup } from "react-dom/server"
 import { describe, expect, it } from "vitest"
 
@@ -37,6 +40,15 @@ describe("feature pages", () => {
     expect(title?.length).toBeLessThanOrEqual(72)
     expect(description?.length).toBeLessThanOrEqual(165)
     expect(getRouteSeo({ locale, path: featurePagePath(slug) })?.title).toBe(title)
+  })
+
+  it.each(SUPPORTED_LOCALES)("shows a dashboard screenshot that exists on the %s Inbox, Analytics and Knowledge pages", (locale) => {
+    for (const slug of ["inbox", "analytics", "knowledge"] as const) {
+      const html = renderToStaticMarkup(<FeatureDetailPage locale={locale} slug={slug} />)
+      const src = /src="(\/screenshots\/feature-[^"]+)"/.exec(html)?.[1]
+      expect(src, `${locale} ${slug}`).toBeDefined()
+      expect(existsSync(path.join(process.cwd(), "public", src ?? ""))).toBe(true)
+    }
   })
 
   it("lists every page as translated, public and with a Markdown twin", async () => {
