@@ -1,12 +1,14 @@
 // Seeds a demo business into an account that already signed up. Each one has hours, services,
-// staff, contacts, appointments (past and upcoming), knowledge, rules and receptionist settings.
+// staff, contacts, appointments (past and upcoming), knowledge, rules and agent settings.
 //
-//   pnpm seed:business <business...> [--email you@example.com]
+//   pnpm seed:business <business...> --email you@example.com
 //   pnpm seed:business all
 //
 // A business is named by its key, its slug or its name, or any unique part of them:
 //   pnpm seed:business clinic "nail salon" dental
-// Run without arguments to list them. Without --email it uses the only account in the database.
+// Run without arguments to list them. --email is required. The script refuses to run unless the
+// database is local (localhost, 127.0.0.1, ::1 or the postgres service) or its name ends in _test,
+// and it never runs with NODE_ENV=production.
 // A business the account already owns is skipped, so a rerun never duplicates. Appointments are
 // written straight to the table, so seeding queues no texts, emails or calendar syncs.
 import { resolve } from "node:path";
@@ -14,7 +16,7 @@ import { parseArgs } from "node:util";
 
 import { eq, sql } from "drizzle-orm";
 
-import { appointments, businesses as businessTable, createDatabaseClient, users, withBusinessTransaction } from "@lobbystack/db";
+import { appointments, businesses as businessTable, createDatabaseClient, roleDatabaseUrl, users, withBusinessTransaction } from "@lobbystack/db";
 import {
   createAgentRule,
   createBusiness,
@@ -630,10 +632,24 @@ async function seedBusiness(seed: BusinessSeed, account: { id: string; email: st
   console.log(`${seed.name}: ${seed.services.length} services, ${seed.staff.length} staff, ${seed.contacts.length} contacts, ${rows.length} appointments, ${seed.faqs.length} FAQs, ${seed.rules.length} rules.`);
 }
 
+const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "[::1]", "postgres"]);
+
+// Demo data belongs in a development database. Checks every connection the script opens.
+function assertSafeDatabase() {
+  if (process.env.NODE_ENV === "production") throw new Error("Refusing to seed with NODE_ENV=production.");
+  for (const role of ["lobbystack_app", "lobbystack_auth"] as const) {
+    const url = new URL(roleDatabaseUrl(role));
+    const database = decodeURIComponent(url.pathname.slice(1));
+    if (!LOCAL_HOSTS.has(url.hostname) && !database.endsWith("_test")) {
+      throw new Error("Refusing to seed: the database is not local and its name does not end in _test.");
+    }
+  }
+}
+
 async function main() {
   const { values, positionals } = parseArgs({ allowPositionals: true, options: { email: { type: "string" } } });
   if (!positionals.length) {
-    console.log("Usage: pnpm seed:business <business...> [--email you@example.com]\n       pnpm seed:business all\n\nBusinesses:");
+    console.log("Usage: pnpm seed:business <business...> --email you@example.com\n       pnpm seed:business all\n\nBusinesses:");
     for (const business of businesses) console.log(`  ${business.key.padEnd(14)} ${business.name}`);
     return;
   }
@@ -653,16 +669,17 @@ async function main() {
     chosen.add(matches[0]!);
   }
 
+  if (!values.email) throw new Error("Pass --email with the address of the account to seed into.");
+  assertSafeDatabase();
   const auth = createDatabaseClient("lobbystack_auth");
   const app = createDatabaseClient("lobbystack_app");
   try {
-    const accounts = await auth.db.select({ id: users.id, email: users.email, normalizedEmail: users.normalizedEmail }).from(users);
-    const account = values.email
-      ? accounts.find((candidate) => candidate.normalizedEmail === values.email!.trim().toLowerCase())
-      : accounts.length === 1 ? accounts[0] : undefined;
-    if (!account) {
-      throw new Error(values.email ? `No account for ${values.email}.` : `Pass --email. Accounts: ${accounts.map((candidate) => candidate.email).join(", ") || "none"}.`);
-    }
+    const [account] = await auth.db
+      .select({ id: users.id, email: users.email })
+      .from(users)
+      .where(eq(users.normalizedEmail, values.email.trim().toLowerCase()))
+      .limit(1);
+    if (!account) throw new Error(`No account for ${values.email}.`);
     console.log(`Seeding into ${account.email}.`);
     for (const seed of businesses) {
       if (chosen.has(seed)) await seedBusiness(seed, account, { db: app.db }, businesses.indexOf(seed));
