@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 
 import { WorkspaceSwitcher } from "@/components/layout/workspace-switcher";
 import { NotificationBell } from "@/components/notifications/notification-bell";
-import { NumberTrialChip } from "@/components/number-trial-chip";
+import { NumberTrialCard } from "@/components/number-trial-card";
 import { accountItemLink, useAccountMenuGroups, type AccountMenuItem } from "@/components/nav-user";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -186,7 +186,7 @@ function SheetMenus({ closeThen, onFeedback, partnerConsole, user }: { closeThen
       </div>
       {shown === "root" ? <div className="flex flex-col">
         {/* The plans open once the sheet has closed, so they don't open under it. */}
-        <NumberTrialChip className="mx-4 mb-2" openWith={(openPlans) => closeThen(openPlans)} />
+        <NumberTrialCard className="mx-4 mb-2" openWith={(openPlans) => closeThen(openPlans)} />
         <Separator className="mx-5 w-auto! bg-sidebar-border" />
         <AccountSection closeThen={closeThen} onFeedback={onFeedback} partnerConsole={partnerConsole} user={user} />
       </div> : null}

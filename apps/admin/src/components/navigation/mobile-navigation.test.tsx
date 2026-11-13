@@ -137,7 +137,7 @@ describe("the phone menu sheet", () => {
     const onUpgrade = vi.fn(() => expect(screen.queryByRole("dialog")).toBeNull());
     setup({ trial: { status: "active", e164: "+15815550102", daysLeft: 9, minutesExhausted: false, forwardTo: null }, onUpgrade });
     const sheet = await openMenu();
-    expect(within(sheet).getByText("numberTrial.chip")).toBeTruthy();
+    expect(within(sheet).getByText("numberTrial.title")).toBeTruthy();
     await userEvent.click(within(sheet).getByRole("button", { name: "numberTrial.viewPlans" }));
     await waitFor(() => expect(onUpgrade).toHaveBeenCalledOnce());
     expect(screen.queryByRole("dialog")).toBeNull();
