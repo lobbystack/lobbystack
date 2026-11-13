@@ -3,7 +3,7 @@ import type { Locale } from "@/marketing/i18n"
 // The pricing page's words, shared by its sections and the homepage preview.
 export const pricingSectionCopy = {
   en: {
-    heading: "An AI receptionist from $30 a month",
+    heading: "An AI receptionist from $24 a month",
     intro:
       "Start free for 14 days. Starter and Pro add a dedicated number, more minutes and clear overage rates.",
     monthly: "Monthly",
@@ -23,7 +23,7 @@ export const pricingSectionCopy = {
     notIncluded: "Not included",
   },
   fr: {
-    heading: "Un réceptionniste IA dès 30 $ par mois",
+    heading: "Un réceptionniste IA dès 24 $ par mois",
     intro:
       "Commencez gratuitement pendant 14 jours. Starter et Pro ajoutent un numéro dédié, plus de minutes et des tarifs de dépassement clairs.",
     monthly: "Mensuel",
@@ -43,7 +43,7 @@ export const pricingSectionCopy = {
     notIncluded: "Non inclus",
   },
   es: {
-    heading: "Una recepcionista con IA desde $30 al mes",
+    heading: "Una recepcionista con IA desde $24 al mes",
     intro:
       "Empiece gratis durante 14 días. Starter y Pro añaden un número dedicado, más minutos y tarifas de excedente claras.",
     monthly: "Mensual",
@@ -63,7 +63,7 @@ export const pricingSectionCopy = {
     notIncluded: "No incluido",
   },
   sr: {
-    heading: "AI recepcioner od $30 mesečno",
+    heading: "AI recepcioner od $24 mesečno",
     intro:
       "Počnite besplatno na 14 dana. Starter i Pro donose namenski broj, više minuta i jasne cene prekoračenja.",
     monthly: "Mesečno",
