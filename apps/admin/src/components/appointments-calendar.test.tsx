@@ -14,12 +14,12 @@ const WEEK = ["2026-08-30", "2026-08-31", "2026-09-01", "2026-09-02", "2026-09-0
 const hours = Array.from({ length: 7 }, (_, dayOfWeek) => ({ dayOfWeek, openMinutes: 9 * 60, closeMinutes: 17 * 60 }));
 const haircut = { id: "booking", startsAt: "2026-09-02T10:00:00Z", endsAt: "2026-09-02T11:00:00Z", timezone: "UTC", status: "confirmed", sourceChannel: "voice", calendarSyncState: "not_required", contactName: "Milan", serviceName: "Haircut", staffName: "Sam", serviceId: "service" };
 
-async function setup(days = WEEK) {
+async function setup(days = WEEK, items: Array<typeof haircut> = [haircut]) {
   const i18n = createInstance();
   await i18n.init({ lng: "en", defaultNS: "common", resources: { en: { common: en } } });
   render(
     <I18nextProvider i18n={i18n}>
-      <AppointmentsCalendar anchor="2026-09-02" appointments={[haircut]} contactName={() => "Milan"} days={days} hours={hours} now={Date.parse("2026-09-02T08:00:00Z")} onAnchorChange={() => {}} onOpenAppointment={() => {}} onViewChange={() => {}} timeOff={[]} timeZone="UTC" today="2026-09-02" view={days.length > 1 ? "week" : "day"} />
+      <AppointmentsCalendar anchor="2026-09-02" appointments={items} contactName={() => "Milan"} days={days} hours={hours} now={Date.parse("2026-09-02T08:00:00Z")} onAnchorChange={() => {}} onOpenAppointment={() => {}} onViewChange={() => {}} timeOff={[]} timeZone="UTC" today="2026-09-02" view={days.length > 1 ? "week" : "day"} />
     </I18nextProvider>,
   );
   // jsdom lays nothing out, so each day header reports the width it would have.
@@ -76,6 +76,20 @@ describe("resizing a day column", () => {
     fireEvent.keyDown(columnHandle(0), { key: "ArrowRight" });
     fireEvent.keyDown(columnHandle(1), { key: "ArrowRight" });
     expect(templates(grid)[0]).toBe("56px 116px 116px minmax(0, 1fr)");
+  });
+
+  it("keeps the all-day row under its days once every column has a width", async () => {
+    const retreat = { ...haircut, id: "retreat", serviceName: "Retreat", startsAt: "2026-09-02T00:00:00Z", endsAt: "2026-09-03T00:00:00Z" };
+    const { grid } = await setup(WEEK.slice(2, 4), [retreat]);
+    fireEvent.keyDown(columnHandle(0), { key: "ArrowRight" });
+    fireEvent.keyDown(columnHandle(1), { key: "ArrowRight" });
+    const header = grid.querySelector<HTMLElement>(":scope > div > .grid")!;
+    const tracks = (header.style.gridTemplateColumns.match(/minmax\(0, 1fr\)|\d+px/g) ?? []).length;
+    expect(tracks).toBe(4);
+    // Every row fills its tracks, so a cell in the second row sits under the same track as its day in the first.
+    expect(header.children.length).toBe(tracks * 2);
+    const cell = screen.getByRole("button", { name: /Retreat/ }).parentElement!;
+    expect([...header.children].indexOf(cell) % tracks).toBe(2);
   });
 
   it("offers no handle on a single day", async () => {

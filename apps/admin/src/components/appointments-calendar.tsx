@@ -165,8 +165,10 @@ function TimeGrid(props: CalendarProps & { onOpenDay: (day: string) => void }) {
   const height = (range.end - range.start) * hourHeight;
   const hasAllDay = columns.some((column) => column.allDay.length);
   const sizedColumns = days.length > 1 && widths.some((width) => width != null);
-  // A resized column keeps its width. The others share the rest, and a filler takes it when every column has one.
-  const template: CSSProperties = { gridTemplateColumns: sizedColumns ? `${TIME_GUTTER}px ${days.map((_, index) => widths[index] != null ? `${widths[index]}px` : "minmax(0, 1fr)").join(" ")}${days.every((_, index) => widths[index] != null) ? " minmax(0, 1fr)" : ""}` : `3.5rem repeat(${days.length}, minmax(0, 1fr))` };
+  // A resized column keeps its width. The others share the rest, and a filler track takes it when every column has one.
+  // Rows that place their cells in order add a cell for the filler, or each cell after it lands one track late.
+  const hasFiller = sizedColumns && days.every((_, index) => widths[index] != null);
+  const template: CSSProperties = { gridTemplateColumns: sizedColumns ? `${TIME_GUTTER}px ${days.map((_, index) => widths[index] != null ? `${widths[index]}px` : "minmax(0, 1fr)").join(" ")}${hasFiller ? " minmax(0, 1fr)" : ""}` : `3.5rem repeat(${days.length}, minmax(0, 1fr))` };
   const minWidth = sizedColumns ? TIME_GUTTER + days.reduce((total, _, index) => total + (widths[index] ?? UNSIZED_COLUMN_MIN), 0) : undefined;
   const todayIndex = days.indexOf(props.today);
   const nowMinutes = todayIndex >= 0 ? minutesInDay(new Date(now).toISOString(), props.today, timeZone) : -1;
@@ -203,6 +205,7 @@ function TimeGrid(props: CalendarProps & { onOpenDay: (day: string) => void }) {
                 </div>
                 : <div className="flex items-center justify-center gap-1.5 border-l py-2" key={day}><span className="sr-only">{dayName}</span><span aria-hidden="true" className="flex items-center gap-1.5">{content}</span></div>;
             })}
+            {hasFiller ? <div aria-hidden="true" /> : null}
             {hasAllDay ? <>
               <div className="flex items-center justify-end border-t pr-2 type-caption text-muted-foreground">{t("appointments.calendarView.allDay")}</div>
               {columns.map((column) => (
@@ -213,6 +216,7 @@ function TimeGrid(props: CalendarProps & { onOpenDay: (day: string) => void }) {
                   })}
                 </div>
               ))}
+              {hasFiller ? <div aria-hidden="true" className="border-t" /> : null}
             </> : null}
           </div>
           <div className="grid" style={template}>
