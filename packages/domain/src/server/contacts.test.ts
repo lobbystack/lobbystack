@@ -56,7 +56,9 @@ describe("a dashboard contact edit", () => {
 
     await expect(updateContactDetails(context, { ...input, phone: "+14165550101" })).resolves.toEqual({ contactId: "contact-1", name: "Milan", phone: "+14165550101", email: null });
     expect(updates[0]).toMatchObject({ phone: "+14165550101" });
-    expect(Object.keys(updates[0]!)).toEqual(expect.arrayContaining(["smsConsentStatus", "smsConsentUpdatedAt", "smsOptInConfirmedAt"]));
+    expect(Object.keys(updates[0]!)).not.toContain("smsConsentStatus");
+    // The shared helper then starts the new number without the old number's consent.
+    expect(Object.keys(updates[1]!)).toEqual(expect.arrayContaining(["smsConsentStatus", "smsConsentUpdatedAt", "smsOptInConfirmedAt", "smsConsentStatusBeforeOptOut", "smsConsentSource"]));
     expect(inserted[0]?.values).toMatchObject({ payload: { fields: ["phone"] } });
   });
 

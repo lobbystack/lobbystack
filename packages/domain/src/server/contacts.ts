@@ -4,6 +4,7 @@ import { appointments, auditLogs, calls, contacts, conversations, enqueueOutbox,
 
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
 import { contactPasscodeStatusInTransaction } from "./contactPasscodes";
+import { resetSmsConsentForNewPhone } from "./contactSmsConsent";
 import type { DomainContext } from "./context";
 import { emitWebhookEventInTransaction } from "./publicApi/webhooks";
 
@@ -202,14 +203,9 @@ export async function updateContactDetails(
         const [taken] = await tx.select({ id: contacts.id }).from(contacts).where(and(eq(contacts.businessId, input.businessId), eq(contacts.phone, input.phone!))).limit(1);
         if (taken) throw new ContactPhoneTakenError(taken.id);
       }
-      // The database clock dates the change, so texts the old number sent stop counting as consent.
-      const consent = phoneChanged ? {
-        smsConsentStatus: sql<string | null>`case when ${contacts.smsConsentStatus} = 'subscribed' then null else ${contacts.smsConsentStatus} end`,
-        smsConsentUpdatedAt: sql<Date | null>`now()`,
-        smsOptInConfirmedAt: sql<Date | null>`null`,
-      } : {};
-      const [contact] = await tx.update(contacts).set({ ...patch, ...consent, updatedAt: new Date() }).where(and(eq(contacts.id, input.contactId), eq(contacts.businessId, input.businessId))).returning({ id: contacts.id, name: contacts.name, phone: contacts.phone, email: contacts.email });
+      const [contact] = await tx.update(contacts).set({ ...patch, updatedAt: new Date() }).where(and(eq(contacts.id, input.contactId), eq(contacts.businessId, input.businessId))).returning({ id: contacts.id, name: contacts.name, phone: contacts.phone, email: contacts.email });
       if (!contact) return null;
+      if (phoneChanged) await resetSmsConsentForNewPhone(tx, { businessId: input.businessId, contactId: contact.id, phone: contact.phone!, source: `operator:${input.userId}` });
       await tx.insert(auditLogs).values({ businessId: input.businessId, actorUserId: input.userId, eventType: "contact.updated", entityType: "contact", entityId: contact.id, payload: { fields: Object.keys(patch) } });
       await enqueueOutbox(tx, { topic: "realtime.publish", businessId: input.businessId, aggregateType: "contact", aggregateId: input.contactId, dedupeKey: `contact:${input.contactId}:updated:${Date.now()}`, payload: { type: "conversation.updated", entityId: input.contactId } });
       return { contactId: contact.id, name: contact.name, phone: contact.phone, email: contact.email };
