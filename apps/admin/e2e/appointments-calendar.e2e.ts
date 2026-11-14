@@ -150,10 +150,14 @@ test("an owner books from the calendar's week, sees the booking as a block, and 
     const timeOff = page.getByRole("dialog", { name: copy.timeOff.title });
     await timeOff.getByLabel(copy.timeOff.name, { exact: true }).fill("Staff training");
     // Each date field opens a calendar; the day picker stamps each day with its US-order date.
+    // Wait for each calendar to close before opening the next, so only one day button matches.
+    const picker = page.locator('[data-slot="popover-content"]');
     await timeOff.getByLabel(copy.timeOff.startDate, { exact: true }).click();
-    await page.locator(`[data-day="${tomorrow.toFormat("M/d/yyyy")}"]`).click();
+    await picker.locator(`[data-day="${tomorrow.toFormat("M/d/yyyy")}"]`).click();
+    await expect(picker).toHaveCount(0);
     await timeOff.getByLabel(copy.timeOff.endDate, { exact: true }).click();
-    await page.locator(`[data-day="${tomorrow.toFormat("M/d/yyyy")}"]`).click();
+    await picker.locator(`[data-day="${tomorrow.toFormat("M/d/yyyy")}"]`).click();
+    await expect(picker).toHaveCount(0);
     const added = page.waitForResponse((response) => new URL(response.url()).pathname === "/api/time-off" && response.request().method() === "POST");
     await timeOff.getByRole("button", { name: copy.timeOff.save, exact: true }).click();
     expect((await added).status()).toBe(201);
