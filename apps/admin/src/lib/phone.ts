@@ -325,24 +325,23 @@ const nationalPrefix = (country: CountryCode): string | undefined => numberingOf
 
 /**
  * The national digits grouped and separated the way that country writes them domestically, as typed:
- * "69 5021111" in Serbia, "(11) 98765-4321" in Brazil, "90-1234-5678" in Japan. The calling code is shown
- * beside the field, so the domestic prefix ("0" in Serbia and Germany) is never shown, whether it was typed or
- * only helps the library find the grouping. Undefined when the country is unknown.
+ * "69 5021111" in Serbia, "(11) 98765-4321" in Brazil, "90-1234-5678" in Japan. The typed digits are the
+ * source of truth, so a leading domestic prefix ("0" in Serbia and Germany, "8" in Russia) stays when the
+ * number starts with it. Only a prefix this function adds to find the grouping is hidden again. Undefined
+ * when the country is unknown.
  */
 function formatNationalDigits(nationalDigits: string, country: CountryCode | null | undefined): string | undefined {
   if (!country || !isSupportedCountry(country)) return undefined;
   const prefix = nationalPrefix(country);
   const asTyped = new AsYouType(country).input(nationalDigits);
+  if (!prefix || nationalDigits.startsWith(prefix)) return asTyped;
   let formatted = asTyped;
   // The library groups many countries' numbers only when they start with the domestic prefix.
-  if (asTyped === nationalDigits && prefix && !nationalDigits.startsWith(prefix)) {
+  if (asTyped === nationalDigits) {
     const withPrefix = new AsYouType(country).input(`${prefix}${nationalDigits}`);
     if (withPrefix !== `${prefix}${nationalDigits}`) formatted = withPrefix;
   }
-  if (prefix && formatted.startsWith(prefix)) {
-    return formatted.slice(prefix.length).replace(/^[\s\-./]+/, "");
-  }
-  return formatted;
+  return formatted.startsWith(prefix) ? formatted.slice(prefix.length).replace(/^[\s\-./]+/, "") : formatted;
 }
 
 export function getPhoneNationalInputValue(

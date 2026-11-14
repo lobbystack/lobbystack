@@ -21,9 +21,9 @@ describe("PhoneInput digit cap", () => {
     expect(digits(screen.getByLabelText("phone"))).toBe("612345678");
   });
 
-  it("allows a typed leading 0 on top of the cap and shows the number without it", async () => {
+  it("allows a typed leading 0 on top of the cap and keeps it in the field", async () => {
     render(<Field country="FR" />);
     await userEvent.type(screen.getByLabelText("phone"), "06123456789999");
-    expect(digits(screen.getByLabelText("phone"))).toBe("612345678");
+    expect(digits(screen.getByLabelText("phone"))).toBe("0612345678");
   });
 });

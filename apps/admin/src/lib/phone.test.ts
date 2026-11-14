@@ -13,9 +13,9 @@ describe("Puerto Rican phone numbers", () => {
     expect(getPhoneNationalDigitLimit("PR")).toBe(10);
   });
 
-  it("groups the digits of any other country the way it writes them domestically, without the domestic prefix", () => {
+  it("groups the digits of any other country the way it writes them domestically", () => {
     expect(formatPhoneNationalInput("695021111", "RS")).toBe("69 5021111");
-    expect(formatPhoneNationalInput("0695021111", "RS")).toBe("69 5021111");
+    expect(formatPhoneNationalInput("0695021111", "RS")).toBe("069 5021111");
     expect(formatPhoneNationalInput("15123456789", "DE")).toBe("1512 3456789");
     expect(formatPhoneNationalInput("612345678", "FR")).toBe("6 12 34 56 78");
     expect(formatPhoneNationalInput("11987654321", "BR")).toBe("(11) 98765-4321");
@@ -50,5 +50,22 @@ describe("Puerto Rican phone numbers", () => {
     expect(inferPhoneCountry("+17875550134")).toBe("PR");
     expect(inferPhoneCountry("+19395550134")).toBe("PR");
     expect(inferPhoneCountry("+14155550134")).toBe("US");
+  });
+});
+
+describe("typed digits stay as typed", () => {
+  it("keeps a leading 8 in Russia and Kazakhstan, so St Petersburg and 800 numbers can be typed", () => {
+    expect(formatPhoneNationalInput("8", "RU")).toBe("8");
+    expect(formatPhoneNationalInput("812", "RU")).toBe("812");
+    expect(formatPhoneNationalInput("800", "RU")).toBe("800");
+    expect(formatPhoneNationalInput("9123456789", "RU")).toBe("912 345-67-89");
+    expect(formatPhoneNationalInput("8701", "KZ")).toBe("8 (701)");
+  });
+
+  it("keeps a typed leading 0 in France, Serbia and Germany", () => {
+    expect(formatPhoneNationalInput("0", "FR")).toBe("0");
+    expect(formatPhoneNationalInput("0612345678", "FR")).toBe("06 12 34 56 78");
+    expect(formatPhoneNationalInput("0151", "DE")).toBe("0151");
+    expect(formatPhoneNationalInput("015123456789", "DE")).toBe("01512 3456789");
   });
 });
