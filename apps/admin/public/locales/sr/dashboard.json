@@ -286,6 +286,7 @@
     "callAgain": "Pozovite ponovo",
     "steps": {
       "fullScan": "Pročitajte ostatak sajta",
+      "website": "Dodajte sajt",
       "sources": "Dodajte još izvora",
       "hours": "Dodajte radno vreme",
       "testCall": "Čujte svog agenta",
@@ -296,6 +297,7 @@
     },
     "stepDescriptions": {
       "fullScan": "Agent je pročitao deo Vašeg sajta.",
+      "website": "Agent odgovara pozivaocima na osnovu onoga što tamo pročita.",
       "sources": "Otpremite pravila, česta pitanja ili cene.",
       "hours": "Agent zakazuje termine samo u ovom radnom vremenu.",
       "testCall": "Pitajte ono što Vas klijenti najčešće pitaju.",
@@ -306,6 +308,7 @@
     },
     "stepActions": {
       "fullScan": "Pročitaj ostatak",
+      "website": "Uvezi sajt",
       "sources": "Otpremi dokument",
       "hours": "Dodaj radno vreme",
       "testCall": "Započni poziv",

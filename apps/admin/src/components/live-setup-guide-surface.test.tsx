@@ -6,6 +6,7 @@ import { createInstance } from "i18next";
 import { I18nextProvider } from "react-i18next";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import agentEn from "../../public/locales/en/agent.json";
 import commonEn from "../../public/locales/en/common.json";
 import en from "../../public/locales/en/dashboard.json";
 import knowledgeEn from "../../public/locales/en/knowledge.json";
@@ -31,11 +32,14 @@ beforeEach(() => { telemetryRef.current = createRecordedBrowserTelemetry(); });
 afterEach(() => { cleanup(); clients.forEach((client) => client.clear()); clients.length = 0; vi.unstubAllGlobals(); vi.clearAllMocks(); search.value = ""; });
 
 const summary = (firstRealConversationAt: string | null) => ({ businessId: "business", kpis: { calls: { total: 0, deltaPercent: 0 }, appointments: { total: 0, deltaPercent: 0 }, averageDuration: { totalSeconds: 0, deltaSeconds: 0 } }, monthlyCalls: [], recentCalls: [], actionRequired: [], upcoming: [], firstRealConversationAt });
-type Setup = { firstRealConversationAt?: string | null; role?: string; capabilities?: Capability[]; activation?: Record<string, unknown>; numbers?: unknown[]; trial?: Record<string, unknown>; includedNumbers?: number | null; partnerNumbers?: Record<string, unknown> | null; complete?: string[]; skipped?: string[]; setupDown?: boolean; numberList?: { forwardedFrom?: string | null; numberLost?: boolean } };
+type Setup = { firstRealConversationAt?: string | null; role?: string; capabilities?: Capability[]; activation?: Record<string, unknown>; numbers?: unknown[]; trial?: Record<string, unknown>; includedNumbers?: number | null; partnerNumbers?: Record<string, unknown> | null; complete?: string[]; skipped?: string[]; setupDown?: boolean; numberList?: { forwardedFrom?: string | null; numberLost?: boolean }; noWebsite?: boolean };
 
 const numberOrder = ["fullScan", "callNumber", "forwardCalls", "sources"] as const;
+// Without a website read in onboarding, adding one takes the place of reading the rest.
+const noWebsiteOrder = ["website", "sources", "testCall", "phoneNumber"] as const;
+const noWebsiteNumberOrder = ["callNumber", "forwardCalls", "website", "sources"] as const;
 
-async function setup({ activation = {}, capabilities, complete = [], firstRealConversationAt = null, includedNumbers = 0, numberList, numbers = [], partnerNumbers = null, role = "business_owner", setupDown = false, skipped = [], trial = { status: "none" } }: Setup = {}) {
+async function setup({ activation = {}, capabilities, complete = [], firstRealConversationAt = null, includedNumbers = 0, noWebsite = false, numberList, numbers = [], partnerNumbers = null, role = "business_owner", setupDown = false, skipped = [], trial = { status: "none" } }: Setup = {}) {
   vi.stubGlobal("localStorage", { getItem: () => null, setItem: vi.fn(), removeItem: vi.fn() });
   vi.stubGlobal("EventSource", class { addEventListener() {} removeEventListener() {} close() {} });
   // Home's appointment details sheet picks its side from the screen width.
@@ -43,7 +47,7 @@ async function setup({ activation = {}, capabilities, complete = [], firstRealCo
   const skips = new Set(skipped);
   const done = new Set(complete);
   let confirmed = false;
-  const steps = () => (numberList ? numberOrder : order).map((id) => ({ id, documentId: id === "fullScan" ? "doc_1" : null, status: done.has(id) ? "complete" : skips.has(id) ? "skipped" : "needs setup" }));
+  const steps = () => (noWebsite ? (numberList ? noWebsiteNumberOrder : noWebsiteOrder) : numberList ? numberOrder : order).map((id) => ({ id, documentId: id === "fullScan" ? "doc_1" : null, status: done.has(id) ? "complete" : skips.has(id) ? "skipped" : "needs setup" }));
   const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
     if (url.startsWith("/api/setup/forwarding") && init?.method === "POST") { confirmed = true; done.add("forwardCalls"); return Response.json({ confirmed: true }); }
     if (url.startsWith("/api/setup") && init?.method === "PATCH") { skips.add(JSON.parse(String(init.body)).stepId); return Response.json({ skippedSteps: [...skips] }); }
@@ -53,12 +57,13 @@ async function setup({ activation = {}, capabilities, complete = [], firstRealCo
     if (url.startsWith("/api/phone-numbers")) return Response.json({ phoneNumbers: numbers, activeClaim: null, replacement: { usedAt: null, activeClaim: null }, partnerNumbers });
     if (url.startsWith("/api/billing")) return Response.json({ entitlement: { includedNumbers } });
     if (url.startsWith("/api/number-trial")) return Response.json({ trial });
+    if (url.startsWith("/api/knowledge?") && init?.method === "POST") { done.add("website"); return Response.json({ id: "doc_2" }); }
     if (url.startsWith("/api/knowledge/")) return Response.json({});
     return Response.json({ error: "Not found." }, { status: 404 });
   });
   vi.stubGlobal("fetch", fetchMock);
   const i18n = createInstance();
-  await i18n.init({ lng: "en", defaultNS: "dashboard", resources: { en: { dashboard: en, common: commonEn, knowledge: knowledgeEn, settings: settingsEn } } });
+  await i18n.init({ lng: "en", defaultNS: "dashboard", resources: { en: { dashboard: en, agent: agentEn, common: commonEn, knowledge: knowledgeEn, settings: settingsEn } } });
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
   clients.push(client);
   client.setQueryData(["dashboard"], summary(firstRealConversationAt));
@@ -294,6 +299,46 @@ describe("steps", () => {
     await userEvent.click(screen.getByRole("button", { name: copy.stepActions.tryAgain }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/knowledge/doc_1?businessId=business", expect.objectContaining({ method: "PATCH", body: JSON.stringify({ action: "expand" }) })));
     expect(router.push).not.toHaveBeenCalled();
+  });
+});
+
+describe("a business without a website", () => {
+  const titles = () => screen.getAllByRole("button").map((button) => button.textContent ?? "");
+
+  it("asks for a website in place of reading the rest, and doesn't count it", async () => {
+    await setup({ noWebsite: true });
+    await list();
+    expect(screen.getByText("0 of 4 setup steps complete.")).toBeTruthy();
+    expect(titles().some((text) => text.includes(copy.steps.fullScan))).toBe(false);
+    expect(titles().findIndex((text) => text.includes(copy.steps.website))).toBeLessThan(titles().findIndex((text) => text.includes(copy.steps.sources)));
+    expect(screen.getByText(copy.stepDescriptions.website)).toBeTruthy();
+  });
+
+  it("puts it right under keeping the existing number in the number list", async () => {
+    await setup({ noWebsite: true, numberList: {}, numbers: [number] });
+    await list();
+    const positions = [copy.steps.callNumber, copy.steps.forwardFromCurrent, copy.steps.website, copy.steps.sources].map((title) => titles().findIndex((text) => text.includes(title)));
+    expect(positions.every((position) => position >= 0)).toBe(true);
+    expect(positions).toEqual([...positions].sort((a, b) => a - b));
+    expect(positions[2]).toBe(positions[1]! + 1);
+    expect(titles().some((text) => text.includes(copy.steps.fullScan))).toBe(false);
+  });
+
+  it("imports the website from the step, and counts it once read", async () => {
+    const { fetchMock } = await setup({ noWebsite: true });
+    await userEvent.click(await screen.findByRole("button", { name: copy.stepActions.website }));
+    const dialog = await screen.findByRole("dialog");
+    await userEvent.type(within(dialog).getByLabelText(agentEn.sections.knowledge.fields.websiteUrl.label), "clinic.example");
+    await userEvent.click(within(dialog).getByRole("button", { name: agentEn.sections.knowledge.websiteImport.submit }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/knowledge?businessId=business", expect.objectContaining({ method: "POST", body: expect.stringContaining('"sourceUrl":"https://clinic.example"') })));
+    expect(await screen.findByText("1 of 4 setup steps complete.")).toBeTruthy();
+  });
+
+  it("can be skipped like the other steps", async () => {
+    const { fetchMock } = await setup({ noWebsite: true });
+    await screen.findByRole("button", { name: copy.stepActions.website });
+    await userEvent.click(screen.getByRole("button", { name: copy.skipStep }));
+    await waitFor(() => expect(skipRequests(fetchMock)).toEqual(["website"]));
   });
 });
 

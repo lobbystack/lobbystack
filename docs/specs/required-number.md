@@ -197,6 +197,7 @@ The v1 API keeps reading the classic step ids, which are part of its contract. T
 | `fullScan` | As today | As today |
 | `callNumber` | A phone call to the business carried audio and ended (`hasAnsweredPhoneCall`) | The number as a `tel:` link, and "Ask what your callers ask most." |
 | `forwardCalls` | An active number has `forwarding_detected_at` or `forwarding_confirmed_at` | **Set up forwarding**, which opens the forwarding dialog. Once done: "Forwarding from +1 …", or "Forwarding works" when the owner confirmed it |
+| `website` | Any website import completed, a sample or in full. Listed in place of `fullScan` when onboarding read no website (no crawl of `businesses.website_url`); the classic list puts it where `fullScan` sits | **Import website**, which opens the knowledge page's website import |
 | `hours` | As today | As today |
 | `sources` | As today | As today |
 

@@ -515,14 +515,14 @@ export const apiClaimLinkSchema = z.object({
   url: z.string().describe("The link that claims the business. LobbyStack emails it to the new owner; you can also send it yourself."),
 }).describe("A link that hands the business over to its owner.");
 
-const onboardingItems = ["business_details", "knowledge", "greeting", "plan", "phone_number", "full_site_read", "test_call"] as const;
-const onboardingSkippableSteps = ["knowledge", "phone_number", "full_site_read", "test_call"] as const;
+const onboardingItems = ["business_details", "knowledge", "greeting", "plan", "phone_number", "website", "full_site_read", "test_call"] as const;
+const onboardingSkippableSteps = ["knowledge", "phone_number", "website", "full_site_read", "test_call"] as const;
 
 export const apiOnboardingSchema = z.object({
   stage: z.string().describe("The step the dashboard's onboarding shows, for example website, phone_number or complete. The API doesn't follow these steps in order."),
   complete: z.boolean().describe("true once onboarding is finished, so the dashboard opens on the business itself."),
   checklist: z.array(z.object({
-    id: z.enum(onboardingItems).describe("business_details: a name and time zone. knowledge: a website or knowledge the receptionist answers from. greeting: a greeting, the default one included; change it with PATCH /receptionist. plan: a paid plan. phone_number: a live number. full_site_read: the whole website read, beyond the first sample, and done when there is no website. test_call: a call the receptionist answered."),
+    id: z.enum(onboardingItems).describe("business_details: a name and time zone. knowledge: a website or knowledge the receptionist answers from. greeting: a greeting, the default one included; change it with PATCH /receptionist. plan: a paid plan. phone_number: a live number. website: a website the receptionist has read, a sample or in full. full_site_read: the whole website read, beyond the first sample, and done when there is no website. test_call: a call the receptionist answered."),
     status: z.enum(["done", "missing", "skipped"]).describe("skipped: left out through PATCH /onboarding or the dashboard's setup guide. A business on the free plan, or self-hosted, shows plan as skipped."),
     required: z.boolean().describe("true when POST /onboarding/complete needs this done or skipped: the business details, and a phone number on a paid plan."),
   })),
@@ -530,7 +530,7 @@ export const apiOnboardingSchema = z.object({
 }).describe("How far the business is in setting up its receptionist.");
 
 export const apiOnboardingUpdateSchema = z.strictObject({
-  skip_steps: z.array(z.enum(onboardingSkippableSteps)).max(onboardingSkippableSteps.length).describe("The steps to skip, out of knowledge, phone_number, full_site_read and test_call. The list replaces the one before, so a step left out is no longer skipped."),
+  skip_steps: z.array(z.enum(onboardingSkippableSteps)).max(onboardingSkippableSteps.length).describe("The steps to skip, out of knowledge, phone_number, website, full_site_read and test_call. The list replaces the one before, so a step left out is no longer skipped."),
 });
 
 export const apiOnboardingCompleteSchema = z.strictObject({
