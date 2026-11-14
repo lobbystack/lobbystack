@@ -141,8 +141,29 @@ describe("opening hours editor", () => {
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/hours?businessId=business", expect.objectContaining({ method: "PUT" })));
     const body = JSON.parse(String(fetchMock.mock.calls.find(([, init]) => init?.method === "PUT")?.[1]?.body)) as Hours;
-    expect(body).toEqual({ hours: weekdays, closures: [{ startsAt: `${key(15)}T00:00`, endsAt: `${key(16)}T00:00`, reason: "Christmas Day" }] });
+    expect(body).toEqual({ hours: weekdays, closures: [{ startsAt: `${key(15)}T00:00`, endsAt: `${key(16)}T23:59`, reason: "Christmas Day" }] });
     await waitFor(() => expect(screen.getByTestId("closures-summary").textContent).toContain("(Christmas Day)"));
+  });
+
+  it("closes a single day when the same date is picked twice", async () => {
+    const fetchMock = stubFetch({ hoursSource: "operator", hours: weekdays });
+    const next = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 15);
+    const key = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}-15`;
+    const day = () => document.querySelector<HTMLElement>(`[data-day="${next.getMonth() + 1}/15/${next.getFullYear()}"]`)!;
+    render(<QueryClientProvider client={client()}><BusinessHoursSection businessId="business" canManage /></QueryClientProvider>);
+    await userEvent.click(await screen.findByRole("button", { name: "hours.edit" }));
+    await userEvent.click(screen.getByRole("button", { name: "hours.closures.add" }));
+    await userEvent.click(screen.getByLabelText("hours.closures.startsAt:1"));
+    await userEvent.click(screen.getByRole("button", { name: /next month/i }));
+    await userEvent.click(day());
+    // The end date's calendar opens on the month the start date is in.
+    await userEvent.click(screen.getByLabelText("hours.closures.endsAt:1"));
+    await userEvent.click(day());
+    await userEvent.click(screen.getByRole("button", { name: "hours.save" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/hours?businessId=business", expect.objectContaining({ method: "PUT" })));
+    const body = JSON.parse(String(fetchMock.mock.calls.find(([, init]) => init?.method === "PUT")?.[1]?.body)) as Hours;
+    expect(body.closures).toEqual([{ startsAt: `${key}T00:00`, endsAt: `${key}T23:59`, reason: "" }]);
   });
 
   it("flags a closure that doesn't end after it starts without saving", async () => {

@@ -172,7 +172,9 @@
           "hint": "Trajanje termina, za proveru slobodnih termina.",
           "required": "Izaberite trajanje od najmanje 1 minuta.",
           "hours": "Sati",
-          "minutes": "Minuti"
+          "minutes": "Minuti",
+          "hoursTitle": "HH",
+          "minutesTitle": "MM"
         },
         "price": {
           "label": "Cena",

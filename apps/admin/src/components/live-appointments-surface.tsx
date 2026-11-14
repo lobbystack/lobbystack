@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslation } from "react-i18next";
 
 import { AppointmentRowsSkeleton, AppointmentsCalendarSkeleton, TableSearchSkeleton, TabsListSkeleton } from "./loading-skeletons";
+import { matchesSearch } from "./data-table/search-match";
 import { TableSearch } from "./data-table/table-search";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { CancelAppointmentButton } from "./cancel-appointment-button";
@@ -139,8 +140,7 @@ export function LiveAppointmentsSurface() {
   const hours = useMemo(() => openingHours.data?.hours ?? [], [openingHours.data]);
   // Past appointments read newest first.
   const timeRows = when === "past" ? byEmployee.filter((appointment) => hasEnded(appointment)).reverse() : byEmployee.filter((appointment) => !hasEnded(appointment));
-  const needle = query.toLowerCase();
-  const listRows = needle ? timeRows.filter((appointment) => [appointment.contactName, appointment.contactPhone, appointment.contactEmail, appointment.serviceName, appointment.staffName, appointment.employeeName].some((value) => value?.toLowerCase().includes(needle))) : timeRows;
+  const listRows = query ? timeRows.filter((appointment) => matchesSearch(query, [appointment.contactName, appointment.contactPhone, appointment.contactEmail, appointment.serviceName, appointment.staffName, appointment.employeeName])) : timeRows;
   // An empty list drops its minimum width, so its message stays centered instead of scrolling sideways; below the lg breakpoint, where the sidebar leaves too little room for its headers, it hides them too.
   // Without a connected calendar every booking is not_required, so the column would say nothing.
   const showCalendar = rows.some((appointment) => appointment.calendarSyncState && appointment.calendarSyncState !== "not_required");

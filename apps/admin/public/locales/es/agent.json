@@ -172,7 +172,9 @@
           "hint": "Duración de la cita, para comprobar la disponibilidad.",
           "required": "Elija una duración de al menos 1 minuto.",
           "hours": "Horas",
-          "minutes": "Minutos"
+          "minutes": "Minutos",
+          "hoursTitle": "HH",
+          "minutesTitle": "MM"
         },
         "price": {
           "label": "Precio",

@@ -242,6 +242,7 @@
       "failed": "No se pudo guardar la ausencia.",
       "overlap": "Se superpone con otra ausencia.",
       "invalid": "Revise las fechas. Una ausencia no puede haber terminado ya ni acabar en más de dos años.",
+      "startsInPast": "Una ausencia no puede empezar en el pasado.",
       "label": "Cerrado: {{name}}, {{time}}",
       "employeeLabel": "{{employee}} ausente: {{name}}, {{time}}",
       "employeeTitle": "{{employee}}: {{name}}",

@@ -242,6 +242,7 @@
       "failed": "Impossible d’enregistrer le congé.",
       "overlap": "Ce congé chevauche un autre congé.",
       "invalid": "Vérifiez les dates. Un congé ne peut pas être déjà passé ni finir dans plus de deux ans.",
+      "startsInPast": "Un congé ne peut pas commencer dans le passé.",
       "label": "Fermé : {{name}}, {{time}}",
       "employeeLabel": "{{employee}} en congé : {{name}}, {{time}}",
       "employeeTitle": "{{employee}} : {{name}}",

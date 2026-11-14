@@ -100,7 +100,7 @@ export function TimeOffDialog({ businessId, timeZone, entry, day, onOpenChange }
       body: JSON.stringify({ staffId: values.scope === "employee" ? values.staffId : null, name: values.name.trim(), note: values.note.trim() || null, ...timeOffWindow(values) }),
     }),
     onSuccess: async () => { toast.success(t("appointments.timeOff.saved")); await refresh(); onOpenChange(false); },
-    onError: (error) => { toast.error(t((error as { code?: unknown }).code === "time_off_overlap" ? "appointments.timeOff.overlap" : (error as { payload?: unknown }).payload ? "appointments.timeOff.invalid" : "appointments.timeOff.failed")); },
+    onError: (error) => { toast.error(t(({ time_off_overlap: "appointments.timeOff.overlap", time_off_start_past: "appointments.timeOff.startsInPast" } as Record<string, string>)[String((error as { code?: unknown }).code)] ?? ((error as { payload?: unknown }).payload ? "appointments.timeOff.invalid" : "appointments.timeOff.failed"))); },
   });
   const remove = useMutation({
     mutationFn: async () => await requestJson(`/api/time-off/${entry!.id}?businessId=${encodeURIComponent(businessId)}`, { method: "DELETE" }),

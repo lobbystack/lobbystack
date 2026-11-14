@@ -105,6 +105,20 @@ function contactConversationIdsSql(businessId: string, contactId: SQL) {
   return sql`(select "owned_conversations"."id" from "conversations" as "owned_conversations" where "owned_conversations"."business_id" = ${businessId} and "owned_conversations"."contact_id" = ${contactId})`;
 }
 
+/** A search's words must each be found in the name, phone or email. A number matches however it is written: "416 555" finds "+14165550100". */
+export function contactSearchFilters(search: string | undefined): SQL[] {
+  return (search?.split(/\s+/u).filter(Boolean) ?? []).map((word) => {
+    const like = `%${word.replace(/[\\%_]/gu, "\\$&")}%`;
+    const digits = word.replace(/\D/gu, "");
+    return or(
+      ilike(contacts.name, like),
+      ilike(contacts.phone, like),
+      ilike(contacts.email, like),
+      ...(digits ? [sql`regexp_replace(${contacts.phone}, '[^0-9]', '', 'g') like ${`%${digits}%`}`] : []),
+    )!;
+  });
+}
+
 export async function listContacts(
   context: DomainContext,
   input: { userId: string; businessId: string; search?: string; limit?: number; offset?: number },
@@ -114,7 +128,7 @@ export async function listContacts(
     const limit = Math.min(Math.max(Math.trunc(input.limit ?? 50), 1), 100);
     const offset = Math.max(Math.trunc(input.offset ?? 0), 0);
     const search = input.search?.trim();
-    const filter = and(eq(contacts.businessId, input.businessId), ...(search ? [or(ilike(contacts.name, `%${search}%`), ilike(contacts.phone, `%${search}%`), ilike(contacts.email, `%${search}%`))!] : []));
+    const filter = and(eq(contacts.businessId, input.businessId), ...contactSearchFilters(search));
     const contactConversationIds = contactConversationIdsSql(input.businessId, sql`"contacts"."id"`);
     // Match the original contact activity order; profile edits are not interactions.
     const lastInteractionAt = sql<Date>`greatest(

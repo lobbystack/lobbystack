@@ -240,6 +240,7 @@
       "failed": "Couldn't save the time off.",
       "overlap": "This overlaps other time off.",
       "invalid": "Check the dates. Time off can't be over already or end more than two years out.",
+      "startsInPast": "Time off can't start in the past.",
       "label": "Closed: {{name}}, {{time}}",
       "employeeLabel": "{{employee}} off: {{name}}, {{time}}",
       "employeeTitle": "{{employee}}: {{name}}",

@@ -1,4 +1,5 @@
 import { and, asc, count, eq, gt, isNull, lt, ne, type SQL } from "drizzle-orm";
+import { DateTime } from "luxon";
 
 import { businesses, closures, enqueueOutbox, staff, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 
@@ -41,8 +42,9 @@ type TimeOffFields = {
 /**
  * Adds time off, or changes it with `id`. It follows the closures' rules: it
  * must end after it starts, not be over already, end within two years, and
- * not overlap other time off for the same business or employee. Takes the
- * admin role, like the hours and employee editors.
+ * not overlap other time off for the same business or employee. It also can't
+ * start before today in the business's timezone, though time off already under
+ * way keeps its own start. Takes the admin role, like the hours and employee editors.
  */
 export async function saveTimeOff(context: DomainContext, input: { userId: string; businessId: string; id?: string | undefined } & TimeOffFields): Promise<TimeOffEntry | null> {
   return await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: "operator" }, async (tx) => {
@@ -58,7 +60,12 @@ export async function saveTimeOff(context: DomainContext, input: { userId: strin
       const [employee] = await tx.select({ id: staff.id }).from(staff).where(and(eq(staff.businessId, input.businessId), eq(staff.id, input.staffId), eq(staff.isEmployee, true), eq(staff.active, true))).limit(1);
       if (!employee) throw Object.assign(new Error("Employee not found."), { status: 404, code: "not_found" });
     }
-    const [window] = normalizeClosures([{ startsAt: input.startsAt, endsAt: input.endsAt, reason: name }], business.timezone, new Date());
+    const now = new Date();
+    const [window] = normalizeClosures([{ startsAt: input.startsAt, endsAt: input.endsAt, reason: name }], business.timezone, now);
+    if (window!.startsAt < DateTime.fromJSDate(now, { zone: business.timezone }).startOf("day").toJSDate()) {
+      const [saved] = input.id ? await tx.select({ startsAt: closures.startsAt }).from(closures).where(and(eq(closures.businessId, input.businessId), eq(closures.id, input.id))).limit(1) : [];
+      if (saved?.startsAt.getTime() !== window!.startsAt.getTime()) throw invalid("Time off can't start in the past.", "time_off_start_past");
+    }
     const scope = and(eq(closures.businessId, input.businessId), input.staffId ? eq(closures.staffId, input.staffId) : isNull(closures.staffId), ...(input.id ? [ne(closures.id, input.id)] : []) as SQL[]);
     const [overlap] = await tx.select({ id: closures.id }).from(closures).where(and(scope, lt(closures.startsAt, window!.endsAt), gt(closures.endsAt, window!.startsAt))).limit(1);
     if (overlap) throw invalid("This time off overlaps other time off.", "time_off_overlap");

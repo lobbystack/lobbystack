@@ -242,6 +242,7 @@
       "failed": "Odsustvo nije sačuvano.",
       "overlap": "Ovo se preklapa sa drugim odsustvom.",
       "invalid": "Proverite datume. Odsustvo ne može već biti prošlo niti se završiti za više od dve godine.",
+      "startsInPast": "Odsustvo ne može početi u prošlosti.",
       "label": "Zatvoreno: {{name}}, {{time}}",
       "employeeLabel": "{{employee}} odsutan: {{name}}, {{time}}",
       "employeeTitle": "{{employee}}: {{name}}",

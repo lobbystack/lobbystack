@@ -172,7 +172,9 @@
           "hint": "Durée du rendez-vous, pour vérifier les disponibilités.",
           "required": "Choisissez une durée d'au moins 1 minute.",
           "hours": "Heures",
-          "minutes": "Minutes"
+          "minutes": "Minutes",
+          "hoursTitle": "HH",
+          "minutesTitle": "MM"
         },
         "price": {
           "label": "Prix",

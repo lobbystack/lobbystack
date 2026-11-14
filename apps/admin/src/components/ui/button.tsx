@@ -29,7 +29,7 @@ const buttonVariants = cva(
         destructive:
           "border-destructive/30 bg-destructive/10 text-destructive shadow-xs hover:bg-destructive/20 dark:border-destructive/40 dark:bg-destructive/20 dark:hover:bg-destructive/30",
         success:
-          "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 shadow-xs hover:bg-emerald-500/20 dark:border-emerald-500/40 dark:bg-emerald-500/20 dark:text-emerald-400 dark:hover:bg-emerald-500/30",
+          "border-status-success-foreground/30 bg-status-success text-status-success-foreground shadow-xs hover:bg-status-success/80",
         link: "text-primary underline-offset-4 hover:underline",
       },
       // Polar's Orbit Button sizes (github.com/polarsource/polar, clients/packages/orbit/src/components/Button.tsx):

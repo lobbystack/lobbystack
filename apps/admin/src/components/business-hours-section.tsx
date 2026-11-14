@@ -21,7 +21,7 @@ import { intlLocale } from "@/lib/locale";
 import { requestJson } from "@/lib/request-json";
 
 export type HoursSource = "none" | "generated" | "operator";
-/** A dated closure, such as Christmas Day, in local times like 2026-12-25T00:00 in the business's timezone. */
+/** A dated closure, such as Christmas Day, in local times like 2026-12-25T00:00 to 2026-12-25T23:59 in the business's timezone. */
 export type Closure = { startsAt: string; endsAt: string; reason: string };
 export type BusinessHoursState = { timezone: string; hoursSource: HoursSource; bookingMode: BookingMode; hours: HoursWindow[]; closures: Closure[] };
 
@@ -238,8 +238,8 @@ export function BusinessHoursSection({ businessId, canManage, bookingMode }: { b
                 return (
                   <div className="flex items-start gap-2" key={index}>
                     <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-2">
-                      <ClosureMoment dateLabel={t("hours.closures.startsAt", { number })} describedBy={describedBy} disabled={disabled} invalid={invalid} onChange={(startsAt) => edit({ startsAt })} timeLabel={t("hours.closures.startTime", { number })} value={closure.startsAt} />
-                      <ClosureMoment dateLabel={t("hours.closures.endsAt", { number })} describedBy={describedBy} disabled={disabled} invalid={invalid} min={closure.startsAt.slice(0, 10)} onChange={(endsAt) => edit({ endsAt })} timeLabel={t("hours.closures.endTime", { number })} value={closure.endsAt} />
+                      <ClosureMoment dateLabel={t("hours.closures.startsAt", { number })} defaultTime="00:00" describedBy={describedBy} disabled={disabled} invalid={invalid} onChange={(startsAt) => edit({ startsAt })} timeLabel={t("hours.closures.startTime", { number })} value={closure.startsAt} />
+                      <ClosureMoment dateLabel={t("hours.closures.endsAt", { number })} defaultTime="23:59" describedBy={describedBy} disabled={disabled} invalid={invalid} min={closure.startsAt.slice(0, 10)} onChange={(endsAt) => edit({ endsAt })} timeLabel={t("hours.closures.endTime", { number })} value={closure.endsAt} />
                       <Input aria-label={t("hours.closures.reason", { number })} className="sm:col-span-2" disabled={disabled} maxLength={MAX_CLOSURE_REASON_LENGTH} onChange={(event) => edit({ reason: event.target.value })} placeholder={t("hours.closures.reasonPlaceholder")} value={closure.reason} />
                     </div>
                     <Button aria-label={t("hours.closures.remove", { number })} disabled={disabled} onClick={() => updateClosures(closures.filter((_, position) => position !== index))} size="icon-sm" type="button" variant="ghost"><X /></Button>
@@ -273,17 +273,18 @@ export function useDayNames(): [string[], string[]] {
 
 /**
  * A closure's start or end: a date picker and a time picker for "YYYY-MM-DDTHH:mm".
- * The time starts at midnight and stays disabled until a date is picked.
+ * The time starts at `defaultTime` and stays disabled until a date is picked. A start opens the day at 00:00 and an end
+ * closes it at 23:59, so the dates alone cover whole days: the same date twice closes that day, and Mon to Tue closes both.
  */
-function ClosureMoment({ value, onChange, dateLabel, timeLabel, describedBy, disabled, invalid, min }: { value: string; onChange: (value: string) => void; dateLabel: string; timeLabel: string; describedBy: string | undefined; disabled: boolean; invalid: true | undefined; min?: string }) {
+function ClosureMoment({ value, onChange, dateLabel, timeLabel, describedBy, disabled, invalid, min, defaultTime }: { value: string; onChange: (value: string) => void; dateLabel: string; timeLabel: string; describedBy: string | undefined; disabled: boolean; invalid: true | undefined; min?: string; defaultTime: string }) {
   const { i18n, t } = useTranslation("agent");
   const hourCycle = useTimeFormatPreference() ?? "24h";
-  const [date = "", time = "00:00"] = value.split("T");
+  const [date = "", time = defaultTime] = value.split("T");
   const pickerLabels = { hours: t("hours.picker.hours"), minutes: t("hours.picker.minutes"), period: t("hours.picker.period") };
   const pickerTitles = { hours: t("hours.picker.hoursTitle"), minutes: t("hours.picker.minutesTitle") };
   return (
     <div className="flex min-w-0 gap-2">
-      <DatePicker aria-describedby={describedBy} aria-label={dateLabel} className="min-w-0 flex-1" disabled={disabled} invalid={Boolean(invalid)} language={i18n.language} locale={intlLocale(i18n.language)} {...(min ? { min } : {})} onChange={(day) => onChange(`${day}T${time || "00:00"}`)} value={date} />
+      <DatePicker aria-describedby={describedBy} aria-label={dateLabel} className="min-w-0 flex-1" disabled={disabled} invalid={Boolean(invalid)} language={i18n.language} locale={intlLocale(i18n.language)} {...(min ? { min } : {})} onChange={(day) => onChange(`${day}T${time || defaultTime}`)} value={date} />
       <TimePicker aria-label={timeLabel} className="w-28 shrink-0" columnLabels={pickerLabels} columnTitles={pickerTitles} disabled={disabled || !date} hourCycle={hourCycle} locale={intlLocale(i18n.language)} onChange={(next) => onChange(`${date}T${next}`)} value={time} />
     </div>
   );

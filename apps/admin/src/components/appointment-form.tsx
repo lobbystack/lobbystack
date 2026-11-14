@@ -266,7 +266,7 @@ export function AppointmentForm({ businessId, timeZone: fallbackTimeZone, initia
           </Field>}
           <Field data-invalid={durationInvalid || undefined}>
             <FieldLabel htmlFor={durationId}>{t("appointments.create.duration")}</FieldLabel>
-            <DurationPicker aria-describedby={durationInvalid ? `${durationId}-error` : undefined} className="w-40" columnLabels={{ hours: t("appointments.timeOff.picker.hours"), minutes: t("appointments.timeOff.picker.minutes") }} id={durationId} invalid={durationInvalid} locale={intlLocale(i18n.language)} onChange={(next) => setDuration(String(next))} value={typedMinutes ?? minutes} />
+            <DurationPicker aria-describedby={durationInvalid ? `${durationId}-error` : undefined} className="w-40" columnLabels={{ hours: t("appointments.timeOff.picker.hours"), minutes: t("appointments.timeOff.picker.minutes") }} columnTitles={{ hours: t("appointments.timeOff.picker.hoursTitle"), minutes: t("appointments.timeOff.picker.minutesTitle") }} id={durationId} invalid={durationInvalid} locale={intlLocale(i18n.language)} maxMinutes={MAX_MINUTES} minMinutes={MIN_MINUTES} onChange={(next) => setDuration(String(next))} value={typedMinutes ?? minutes} />
             {durationInvalid ? <FieldError id={`${durationId}-error`}>{t("appointments.create.durationInvalid", { min: MIN_MINUTES, max: MAX_MINUTES })}</FieldError> : null}
           </Field>
           {/* Always shown, so the form asks for a time from the start and keeps its height once a service is picked. */}
