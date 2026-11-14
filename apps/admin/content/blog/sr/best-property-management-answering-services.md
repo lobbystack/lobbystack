@@ -78,7 +78,7 @@ Specialty Answering Service (SAS) naplaćuje po sekundi, od $44 mesečno plus $1
 
 ### Ambs Call Center: najniže prekoračenje, uz portal za dežurstva
 
-Prema [Ambs stranici za upravljanje nekretninama](https://www.ambscallcenter.com/property-management-answering-service), poplava ili stanar zaključan napolju idu pravo dežurnom osoblju, dok redovan zahtev čeka na red. Raspored dežurstava sami menjate u myAmbs portalu. Agenti kvalifikuju i potencijalne zakupce i zakazuju razgledanja. Stranica navodi LeadSimple, PropertyBase i Salesforce, uz Zapier, ali ne i AppFolio, Buildium, Yardi ili Rent Manager.
+Prema [Ambs stranici za upravljanje nekretninama](https://www.ambscallcenter.com/property-management-answering-service/), poplava ili stanar zaključan napolju idu pravo dežurnom osoblju, dok redovan zahtev čeka na red. Raspored dežurstava sami menjate u myAmbs portalu. Agenti kvalifikuju i potencijalne zakupce i zakazuju razgledanja. Stranica navodi LeadSimple, PropertyBase i Salesforce, uz Zapier, ali ne i AppFolio, Buildium, Yardi ili Rent Manager.
 
 Paketi počinju od $149 za 100 minuta, uz prekoračenje od $1.29, i padaju na $1.20 po minutu u paketu od 2,500 minuta ([stranica sa cenama](https://www.ambscallcenter.com/answering-service-pricing)). Ambs naplaćuje u koracima od 30 sekundi, uključuje engleski i španski i ne naplaćuje praznike. Naplaćuje i $85 za aktivaciju, a pozivi prodavaca i prekinuti pozivi troše Vaše minute. Uslovi pominju minimalno trajanje ugovora bez navedene dužine, pa pitajte.
 
@@ -275,7 +275,7 @@ Izvori:
 - PATLive: [cene](https://www.patlive.com/pricing/), [stranica za upravljanje nekretninama](https://www.patlive.com/industries/property-management)
 - MAP Communications: [cene](https://www.mapcommunications.com/pricing/), [uslovi korišćenja](https://www.mapcommunications.com/terms/), [stranica za upravljanje nekretninama](https://www.mapcommunications.com/industries/property-management/)
 - Specialty Answering Service: [cene](https://www.specialtyansweringservice.net/pricing/), [stranica za upravljanje nekretninama](https://www.specialtyansweringservice.net/industries/real-estate/property-management-answering-service/)
-- Ambs Call Center: [cene](https://www.ambscallcenter.com/answering-service-pricing), [stranica za upravljanje nekretninama](https://www.ambscallcenter.com/property-management-answering-service)
+- Ambs Call Center: [cene](https://www.ambscallcenter.com/answering-service-pricing), [stranica za upravljanje nekretninama](https://www.ambscallcenter.com/property-management-answering-service/)
 - Continental Message Solution: [cene](https://www.continentalmessage.com/pricing/), [članak o upravljanju nekretninama](https://www.continentalmessage.com/blog/best-property-management-answering-services/), [unos u Rent Manager imeniku](https://www.rentmanager.com/integrations/continental-message-solution/)
 - Smith.ai: [cene za Virtual Front Desk](https://smith.ai/pricing/receptionists), [cene za AI Receptionist](https://smith.ai/pricing/ai-receptionist), [stranica za upravljanje nekretninama](https://smith.ai/industries/property-management-answering-service)
 - Buildium: [Maintenance Contact Center](https://www.buildium.com/maintenance-contact-center/)

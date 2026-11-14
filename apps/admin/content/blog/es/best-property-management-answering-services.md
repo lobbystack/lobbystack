@@ -78,7 +78,7 @@ Specialty Answering Service (SAS) cobra por segundo, desde $44 al mes más $1.54
 
 ### Ambs Call Center: el excedente más bajo, con portal de guardias
 
-Según la [página de Ambs para administración de propiedades](https://www.ambscallcenter.com/property-management-answering-service), una inundación o un inquilino que se quedó afuera van directo al personal de guardia, mientras que una solicitud de rutina espera su turno. Usted cambia el calendario de guardias en el portal myAmbs. Los agentes también califican prospectos y agendan visitas. La página nombra LeadSimple, PropertyBase y Salesforce, además de Zapier, pero no AppFolio, Buildium, Yardi ni Rent Manager.
+Según la [página de Ambs para administración de propiedades](https://www.ambscallcenter.com/property-management-answering-service/), una inundación o un inquilino que se quedó afuera van directo al personal de guardia, mientras que una solicitud de rutina espera su turno. Usted cambia el calendario de guardias en el portal myAmbs. Los agentes también califican prospectos y agendan visitas. La página nombra LeadSimple, PropertyBase y Salesforce, además de Zapier, pero no AppFolio, Buildium, Yardi ni Rent Manager.
 
 Los planes empiezan en $149 por 100 minutos con excedente de $1.29 y bajan a $1.20 por minuto en el plan de 2,500 minutos ([página de precios](https://www.ambscallcenter.com/answering-service-pricing)). Ambs cobra en tramos de 30 segundos, incluye inglés y español y no cobra días festivos. También cobra $85 de configuración y descuenta de sus minutos las llamadas de vendedores y las que cuelgan. Sus términos mencionan un periodo mínimo de contrato sin indicar cuánto dura, así que pregunte.
 
@@ -275,7 +275,7 @@ Fuentes:
 - PATLive: [precios](https://www.patlive.com/pricing/), [página para administración de propiedades](https://www.patlive.com/industries/property-management)
 - MAP Communications: [precios](https://www.mapcommunications.com/pricing/), [términos](https://www.mapcommunications.com/terms/), [página para administración de propiedades](https://www.mapcommunications.com/industries/property-management/)
 - Specialty Answering Service: [precios](https://www.specialtyansweringservice.net/pricing/), [página para administración de propiedades](https://www.specialtyansweringservice.net/industries/real-estate/property-management-answering-service/)
-- Ambs Call Center: [precios](https://www.ambscallcenter.com/answering-service-pricing), [página para administración de propiedades](https://www.ambscallcenter.com/property-management-answering-service)
+- Ambs Call Center: [precios](https://www.ambscallcenter.com/answering-service-pricing), [página para administración de propiedades](https://www.ambscallcenter.com/property-management-answering-service/)
 - Continental Message Solution: [precios](https://www.continentalmessage.com/pricing/), [artículo sobre administración de propiedades](https://www.continentalmessage.com/blog/best-property-management-answering-services/), [ficha en Rent Manager](https://www.rentmanager.com/integrations/continental-message-solution/)
 - Smith.ai: [precios de Virtual Front Desk](https://smith.ai/pricing/receptionists), [precios de AI Receptionist](https://smith.ai/pricing/ai-receptionist), [página para administración de propiedades](https://smith.ai/industries/property-management-answering-service)
 - Buildium: [Maintenance Contact Center](https://www.buildium.com/maintenance-contact-center/)
