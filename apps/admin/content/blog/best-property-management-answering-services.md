@@ -78,7 +78,7 @@ Specialty Answering Service (SAS) bills by the second, from $44 a month plus $1.
 
 ### Ambs Call Center: best low overage with an on-call portal
 
-Ambs's [property management page](https://www.ambscallcenter.com/property-management-answering-service) says "a flood or a lockout goes straight to your on-call staff, while a routine HVAC request waits its turn." You change the on-call schedule yourself in the myAmbs portal. Agents also qualify leasing prospects and book showings. The page names LeadSimple, PropertyBase and Salesforce, plus Zapier, but not AppFolio, Buildium, Yardi or Rent Manager.
+Ambs's [property management page](https://www.ambscallcenter.com/property-management-answering-service/) says "a flood or a lockout goes straight to your on-call staff, while a routine HVAC request waits its turn." You change the on-call schedule yourself in the myAmbs portal. Agents also qualify leasing prospects and book showings. The page names LeadSimple, PropertyBase and Salesforce, plus Zapier, but not AppFolio, Buildium, Yardi or Rent Manager.
 
 Plans start at $149 for 100 minutes with $1.29 overage and drop to $1.20 a minute on the 2,500-minute plan ([pricing page](https://www.ambscallcenter.com/answering-service-pricing)). Ambs bills in 30-second steps, includes English and Spanish, and charges no holiday fees. It also charges $85 for setup and counts solicitor calls and hang-ups against your minutes. Its terms mention a minimum contract period without stating the length, so ask.
 
@@ -275,7 +275,7 @@ Sources:
 - PATLive: [pricing](https://www.patlive.com/pricing/), [property management page](https://www.patlive.com/industries/property-management)
 - MAP Communications: [pricing](https://www.mapcommunications.com/pricing/), [terms](https://www.mapcommunications.com/terms/), [property management page](https://www.mapcommunications.com/industries/property-management/)
 - Specialty Answering Service: [pricing](https://www.specialtyansweringservice.net/pricing/), [property management page](https://www.specialtyansweringservice.net/industries/real-estate/property-management-answering-service/)
-- Ambs Call Center: [pricing](https://www.ambscallcenter.com/answering-service-pricing), [property management page](https://www.ambscallcenter.com/property-management-answering-service)
+- Ambs Call Center: [pricing](https://www.ambscallcenter.com/answering-service-pricing), [property management page](https://www.ambscallcenter.com/property-management-answering-service/)
 - Continental Message Solution: [pricing](https://www.continentalmessage.com/pricing/), [property management article](https://www.continentalmessage.com/blog/best-property-management-answering-services/), [Rent Manager listing](https://www.rentmanager.com/integrations/continental-message-solution/)
 - Smith.ai: [Virtual Front Desk pricing](https://smith.ai/pricing/receptionists), [AI Receptionist pricing](https://smith.ai/pricing/ai-receptionist), [property management page](https://smith.ai/industries/property-management-answering-service)
 - Buildium: [Maintenance Contact Center](https://www.buildium.com/maintenance-contact-center/)

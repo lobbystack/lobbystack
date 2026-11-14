@@ -78,7 +78,7 @@ Specialty Answering Service (SAS) facture à la seconde, dès 44 $ par mois plu
 
 ### Ambs Call Center : le dépassement le plus bas, avec un portail d'astreinte
 
-Selon la [page d'Ambs dédiée à la gestion locative](https://www.ambscallcenter.com/property-management-answering-service), une inondation ou un locataire enfermé dehors part directement vers l'équipe d'astreinte, tandis qu'une demande d'entretien courante attend son tour. Vous modifiez vous-même le planning d'astreinte dans le portail myAmbs. Les agents qualifient aussi les candidats locataires et réservent les visites. La page cite LeadSimple, PropertyBase, Salesforce et Zapier, mais ni AppFolio, ni Buildium, ni Yardi, ni Rent Manager.
+Selon la [page d'Ambs dédiée à la gestion locative](https://www.ambscallcenter.com/property-management-answering-service/), une inondation ou un locataire enfermé dehors part directement vers l'équipe d'astreinte, tandis qu'une demande d'entretien courante attend son tour. Vous modifiez vous-même le planning d'astreinte dans le portail myAmbs. Les agents qualifient aussi les candidats locataires et réservent les visites. La page cite LeadSimple, PropertyBase, Salesforce et Zapier, mais ni AppFolio, ni Buildium, ni Yardi, ni Rent Manager.
 
 Les forfaits commencent à 149 $ pour 100 minutes avec un dépassement à 1,29 $, qui descend à 1,20 $ la minute sur le forfait de 2 500 minutes ([page tarifaire](https://www.ambscallcenter.com/answering-service-pricing)). Ambs facture par tranches de 30 secondes, inclut l'anglais et l'espagnol et ne facture pas les jours fériés. Ambs facture aussi 85 $ de mise en service et décompte les démarchages et les appels raccrochés de vos minutes. Ses conditions mentionnent une durée minimale de contrat sans la préciser : posez la question.
 
@@ -275,7 +275,7 @@ Sources :
 - PATLive : [tarifs](https://www.patlive.com/pricing/), [page gestion locative](https://www.patlive.com/industries/property-management)
 - MAP Communications : [tarifs](https://www.mapcommunications.com/pricing/), [conditions](https://www.mapcommunications.com/terms/), [page gestion locative](https://www.mapcommunications.com/industries/property-management/)
 - Specialty Answering Service : [tarifs](https://www.specialtyansweringservice.net/pricing/), [page gestion locative](https://www.specialtyansweringservice.net/industries/real-estate/property-management-answering-service/)
-- Ambs Call Center : [tarifs](https://www.ambscallcenter.com/answering-service-pricing), [page gestion locative](https://www.ambscallcenter.com/property-management-answering-service)
+- Ambs Call Center : [tarifs](https://www.ambscallcenter.com/answering-service-pricing), [page gestion locative](https://www.ambscallcenter.com/property-management-answering-service/)
 - Continental Message Solution : [tarifs](https://www.continentalmessage.com/pricing/), [article gestion locative](https://www.continentalmessage.com/blog/best-property-management-answering-services/), [fiche Rent Manager](https://www.rentmanager.com/integrations/continental-message-solution/)
 - Smith.ai : [tarifs Virtual Front Desk](https://smith.ai/pricing/receptionists), [tarifs AI Receptionist](https://smith.ai/pricing/ai-receptionist), [page gestion locative](https://smith.ai/industries/property-management-answering-service)
 - Buildium : [Maintenance Contact Center](https://www.buildium.com/maintenance-contact-center/)
