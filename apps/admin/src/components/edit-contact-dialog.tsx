@@ -53,12 +53,14 @@ export function EditContactDialog({ businessId, contact, onOpenChange }: { busin
   // Only a field that differs from the saved contact is sent, so an unchanged save writes nothing.
   const nextName = name.trim() || null;
   const nextEmail = email.trim() || null;
+  // A cleared or half-typed number is an edit too: Save stays enabled so it can say why that number can't be saved.
+  const phoneEdited = contact ? phone.incomplete || phone.phone !== (contact.phone ?? "") : false;
   const changes = contact ? {
     ...(nextName !== (contact.name ?? null) ? { name: nextName } : {}),
     ...(phone.phone && phone.phone !== (contact.phone ?? "") ? { phone: phone.phone } : {}),
     ...(nextEmail !== (contact.email ?? null) ? { email: nextEmail } : {}),
   } : {};
-  const changed = Object.keys(changes).length > 0;
+  const changed = Object.keys(changes).length > 0 || phoneEdited;
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
