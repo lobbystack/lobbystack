@@ -79,7 +79,10 @@ function Button({
       {loading ? (
         <>
           <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
-          {loadingLabel ?? children}
+          {/* A square icon button has no room for text: the spinner takes the icon's place, and the label is read aloud only. */}
+          {size?.startsWith("icon")
+            ? loadingLabel ? <span className="sr-only">{loadingLabel}</span> : null
+            : loadingLabel ?? children}
         </>
       ) : (
         children
