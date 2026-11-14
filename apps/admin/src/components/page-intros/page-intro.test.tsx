@@ -163,6 +163,25 @@ describe("a page's intro card", () => {
     telemetryRef.current!.expectEvent("web.page.intro_dismissed", { businessId: "business", pageId: "services", method: "guide" });
   });
 
+  it("scales the page's picture to the width the card gives it", async () => {
+    // jsdom lays nothing out, so the card reports the 384px a 448px card leaves inside the picture's 32px inset.
+    const measured = vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(384);
+    try {
+      await renderPages(["channels"]);
+      const dialog = await screen.findByRole("dialog");
+      const scene = dialog.querySelector(".page-intro-scene")!;
+      expect(scene.className).toContain("px-8");
+      expect(scene.className).toContain("pt-8");
+      expect(scene.className).toContain("overflow-hidden");
+      const window = scene.querySelector<HTMLElement>('[data-slot="page-intro-window"]')!;
+      expect(window.style.width).toBe("600px");
+      expect(window.style.transform).toBe("scale(0.64)");
+      expect(window.className).not.toContain("invisible");
+    } finally {
+      measured.mockRestore();
+    }
+  });
+
   it.each(PAGE_INTRO_IDS)("has copy, a picture and a guide for %s", async (page) => {
     await renderPages([page]);
     const dialog = await screen.findByRole("dialog");
