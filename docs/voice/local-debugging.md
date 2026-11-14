@@ -71,6 +71,8 @@ Any other `DEPLOYMENT_MODE` makes it a cloud business on the free plan, whose mi
 
 `pnpm db:seed` only adds a Demo Business that no one owns, so you can't sign in to it.
 
+To seed demo businesses into an account you signed up with, run `pnpm seed:business <business...> --email you@example.com`, for example `pnpm seed:business clinic dental --email you@example.com`. `pnpm seed:business all` adds every one, and no arguments lists them. It skips a business the account already owns, and it refuses to run against a database that isn't local or named `*_test`.
+
 To read the emails the worker sends, start Mailpit with `docker compose --profile development up -d mailpit`, set `SMTP_HOST=127.0.0.1` and `SMTP_PORT=1025` in `.env.local`, restart `pnpm dev`, and open `http://localhost:8025`.
 
 To start over with an empty database, run `docker compose down -v`, then start again from `docker compose up -d postgres redis`.
