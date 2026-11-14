@@ -241,7 +241,7 @@ export const partnerMcpTools: PartnerMcpTool[] = [
   partnerTool({
     name: "get_partner",
     title: "Get the agency",
-    description: "Returns the partner (agency) this connection acts for: its name, subdomain, own domain, the dashboard address its clients use, its tier, and this month's shared pool when the connection may read billing. Call this first.",
+    description: "Returns the partner (agency) this connection acts for: its name, subdomain, own domain, the dashboard address its clients use, its tier, and this month's shared pool when the connection may read billing.",
     operation: "getPartner",
     annotations: readOnly,
     inputSchema: z.object({}),
@@ -253,7 +253,7 @@ export const partnerMcpTools: PartnerMcpTool[] = [
   partnerTool({
     name: "list_businesses",
     title: "List the agency's businesses",
-    description: "Lists the partner's businesses by name, with each one's owner or pending owner invitation, access level, onboarding stage and this month's minutes and chats. Owners and admins also see each business's billing. Use a business id as business_id with the per-business tools. Demos nobody claimed are listed by list_demos instead.",
+    description: "Lists the partner's businesses by name, with each one's owner or pending owner invitation, access level, onboarding stage and this month's minutes and chats. Owners and admins also see each business's billing. Each business id works as business_id on the per-business tools. Demos nobody claimed aren't listed.",
     operation: "listBusinesses",
     scope: "partner:read",
     annotations: readOnly,
@@ -264,7 +264,7 @@ export const partnerMcpTools: PartnerMcpTool[] = [
   partnerTool({
     name: "create_business",
     title: "Create a business",
-    description: "Creates a business for a client, with no owner yet, and emails owner_email an invitation to own it under the partner's brand. A platform key can leave owner_email out for a business it runs itself: nobody is invited, and the business can't be sold a package or released. Pass template_id (from list_templates) to set it up from a saved template, and package_id (from list_packages) to sell it a package; without one, it's billed outside LobbyStack. template_id also needs the partner:read scope and package_id the partner.businesses:write scope. Confirm the name, owner email, template and package with the person first.",
+    description: "Creates a business for a client, with no owner yet, and emails owner_email an invitation to own it under the partner's brand. A platform key can leave owner_email out for a business it runs itself: nobody is invited, and the business can't be sold a package or released. template_id sets it up from one of the partner's saved templates, and package_id sells it one of the partner's packages; without a package, it's billed outside LobbyStack. template_id also needs the partner:read scope and package_id the partner.businesses:write scope.",
     operation: "createBusiness",
     annotations: creates,
     inputSchema: z.object({
@@ -272,8 +272,8 @@ export const partnerMcpTools: PartnerMcpTool[] = [
       owner_email: z.string().optional().describe("Who will own the business. They get an invitation by email. An agency connection has to send it. A platform key can leave it out."),
       timezone: z.string().describe("IANA time zone, for example America/Toronto."),
       access_level: z.enum(partnerAccessLevels).optional().describe("What the business's own team can use once someone owns it. full (the default) lets them run the receptionist; activity shows them calls, messages and appointments, and the agency sets up the receptionist."),
-      template_id: z.uuid().optional().describe("A template from list_templates to set the business up from."),
-      package_id: z.uuid().optional().describe("A package from list_packages to sell the business."),
+      template_id: z.uuid().optional().describe("One of the partner's saved templates to set the business up from."),
+      package_id: z.uuid().optional().describe("One of the partner's packages to sell the business."),
       business_type: z.string().optional().describe("The kind of business, for example hvac or dental."),
       locale: z.enum(runtimeLocales).optional().describe("The language callers hear first."),
       website_url: z.string().optional().describe("The business's website."),
@@ -296,7 +296,7 @@ export const partnerMcpTools: PartnerMcpTool[] = [
   partnerTool({
     name: "list_phone_numbers",
     title: "List a business's phone numbers",
-    description: "Every number the business has or had, newest first. Use a number's id with replace_phone_number. Only a platform key gets this tool.",
+    description: "Every number the business has or had, newest first, with each one's id. Only a platform key gets this tool.",
     operation: "listPhoneNumbers",
     platformKeysOnly: true,
     annotations: readOnly,
@@ -325,7 +325,7 @@ export const partnerMcpTools: PartnerMcpTool[] = [
   partnerTool({
     name: "claim_phone_number",
     title: "Claim a number",
-    description: "Buys a number from search_phone_numbers for a business with no number, and connects it to the receptionist. It costs money, so confirm the number with the person first. Numbers past the tier's included ones are charged to the partner each month. Returns the claim at once: poll get_phone_number_claim until its status is claimed or failed. Only a platform key gets this tool.",
+    description: "Buys an available number for a business with no number, and connects it to the receptionist. It costs money. Numbers past the tier's included ones are charged to the partner each month. Returns the claim at once with status pending; the status later becomes claimed or failed. Only a platform key gets this tool.",
     operation: "createPhoneNumberClaim",
     scope: "phone_numbers:purchase",
     platformKeysOnly: true,
@@ -337,7 +337,7 @@ export const partnerMcpTools: PartnerMcpTool[] = [
   partnerTool({
     name: "replace_phone_number",
     title: "Replace a number",
-    description: "Claims a replacement offer from search_phone_numbers with replaces. The old number keeps working until 30 days after the new one goes live, then is released. A business can replace its number once. It costs money, so confirm the number with the person first. Only a platform key gets this tool.",
+    description: "Claims a replacement number offer for a business's current number. The old number keeps working until 30 days after the new one goes live, then is released. A business can replace its number once. It costs money. Only a platform key gets this tool.",
     operation: "replacePhoneNumber",
     scope: "phone_numbers:purchase",
     platformKeysOnly: true,
@@ -361,7 +361,7 @@ export const partnerMcpTools: PartnerMcpTool[] = [
   partnerTool({
     name: "release_business",
     title: "Release a business to its owner",
-    description: "Hands a business over to the owner who accepted its invitation: it leaves the partner, its package ends and it moves to the host's Free plan. The partner loses all access, and this can't be undone here. A business whose package subscription is live fails with subscription_active until it's cancelled in Stripe. Confirm with the person before calling.",
+    description: "Hands a business over to the owner who accepted its invitation: it leaves the partner, its package ends and it moves to the host's Free plan. The partner loses all access, and this can't be undone here. A business whose package subscription is live fails with subscription_active until it's cancelled in Stripe.",
     operation: "releasePartnerBusiness",
     annotations: destroys,
     inputSchema: z.object({ business_id: uuid("business") }),
@@ -371,7 +371,7 @@ export const partnerMcpTools: PartnerMcpTool[] = [
   partnerTool({
     name: "delete_business",
     title: "Delete a business",
-    description: "Deletes one of the partner's businesses and everything in it: calls, contacts, appointments, its audit log, and its phone numbers, which go back to the carrier. It can't be undone. Confirm the business by name with the person before calling.",
+    description: "Deletes one of the partner's businesses and everything in it: calls, contacts, appointments, its audit log, and its phone numbers, which go back to the carrier. It can't be undone.",
     operation: "deletePartnerBusiness",
     annotations: destroys,
     inputSchema: z.object({ business_id: uuid("business") }),
@@ -415,7 +415,7 @@ export const partnerMcpTools: PartnerMcpTool[] = [
   partnerTool({
     name: "create_demo",
     title: "Make a demo from a website",
-    description: "Makes a prospect demo: a receptionist that reads the prospect's website, on a demo page under the partner's brand. It starts preparing; poll get_demo until every ready flag is true, then publish_demo with the token returned here. The url is the page to send the prospect once it's published.",
+    description: "Makes a prospect demo: a receptionist that reads the prospect's website, on a demo page under the partner's brand. It starts preparing, and returns a token and the url of the page to send the prospect once it's ready and published.",
     operation: "createPartnerDemo",
     annotations: creates,
     inputSchema: z.object({
@@ -458,7 +458,7 @@ export const partnerMcpTools: PartnerMcpTool[] = [
   partnerTool({
     name: "publish_demo",
     title: "Publish a demo",
-    description: "Opens a ready demo's page to the prospect. Pass the token create_demo or rotate_demo_link returned. Returns when the demo expires.",
+    description: "Opens a ready demo's page to the prospect, by the demo's current token. Returns when the demo expires.",
     operation: "publishPartnerDemo",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     inputSchema: z.object({
@@ -485,7 +485,7 @@ export const partnerMcpTools: PartnerMcpTool[] = [
   partnerTool({
     name: "revoke_demo",
     title: "Turn a demo off",
-    description: "Turns a demo off: its page and link stop working. A claimed demo can't be turned off. Confirm with the person before calling.",
+    description: "Turns a demo off: its page and link stop working. A claimed demo can't be turned off.",
     operation: "revokePartnerDemo",
     annotations: destroys,
     inputSchema: z.object({ demo_id: uuid("demo") }),
@@ -495,7 +495,7 @@ export const partnerMcpTools: PartnerMcpTool[] = [
   partnerTool({
     name: "delete_demo",
     title: "Delete a demo",
-    description: "Deletes a demo that's turned off or expired and nobody claimed, with its business. An open demo fails with demo_open; turn it off with revoke_demo first. Confirm with the person before calling.",
+    description: "Deletes a demo that's turned off or expired and nobody claimed, with its business. An open demo fails with demo_open.",
     operation: "deletePartnerDemo",
     annotations: destroys,
     inputSchema: z.object({ demo_id: uuid("demo") }),
@@ -507,7 +507,7 @@ export const partnerMcpTools: PartnerMcpTool[] = [
   partnerTool({
     name: "list_packages",
     title: "List packages",
-    description: "Lists the packages the partner sells its businesses through its Stripe account, with each one's monthly price, setup fee and allowance. Use a package id as package_id with create_business or set_business_billing.",
+    description: "Lists the packages the partner sells its businesses through its Stripe account, with each one's monthly price, setup fee and allowance.",
     operation: "listPartnerPackages",
     annotations: readOnly,
     inputSchema: z.object({}),
@@ -517,7 +517,7 @@ export const partnerMcpTools: PartnerMcpTool[] = [
   partnerTool({
     name: "create_package",
     title: "Make a package",
-    description: "Makes a package to sell businesses, in the connected Stripe account's currency. Prices are whole numbers of the currency's smallest unit, such as cents: 9900 is 99.00. A package's price and allowance never change once made. Confirm the price with the person before calling.",
+    description: "Makes a package to sell businesses, in the connected Stripe account's currency. Prices are whole numbers of the currency's smallest unit, such as cents: 9900 is 99.00. A package's price and allowance never change once made.",
     operation: "createPartnerPackage",
     annotations: creates,
     inputSchema: z.object({
@@ -543,7 +543,7 @@ export const partnerMcpTools: PartnerMcpTool[] = [
   partnerTool({
     name: "archive_package",
     title: "Stop selling a package",
-    description: "Takes a package off sale. Businesses that already pay for it keep it. Confirm with the person before calling.",
+    description: "Takes a package off sale. Businesses that already pay for it keep it.",
     operation: "archivePartnerPackage",
     annotations: destroys,
     inputSchema: z.object({ package_id: uuid("package") }),
@@ -608,7 +608,7 @@ export const partnerMcpTools: PartnerMcpTool[] = [
   partnerTool({
     name: "remove_domain",
     title: "Remove the agency's own domain",
-    description: "Removes the partner's own domain. Its clients' dashboards move back to the subdomain. Confirm with the person before calling.",
+    description: "Removes the partner's own domain. Its clients' dashboards move back to the subdomain.",
     operation: "removePartnerDomain",
     annotations: destroys,
     inputSchema: z.object({}),
@@ -620,7 +620,7 @@ export const partnerMcpTools: PartnerMcpTool[] = [
   partnerTool({
     name: "save_template",
     title: "Save a business as a template",
-    description: "Copies one of the partner's businesses' setup, with its documents, into a template that create_business can start a new business from. Details that belong to one business, such as its phone number and website, are left out.",
+    description: "Copies one of the partner's businesses' setup, with its documents, into a template that new businesses can start from. Details that belong to one business, such as its phone number and website, are left out.",
     operation: "createPartnerTemplate",
     annotations: creates,
     inputSchema: z.object({ business_id: uuid("business").describe("The business whose setup to copy."), name: z.string().describe("The template's name, for example HVAC.") }),
@@ -635,7 +635,7 @@ export const partnerMcpTools: PartnerMcpTool[] = [
   partnerTool({
     name: "list_templates",
     title: "List templates",
-    description: "Lists the partner's saved templates by id and name, with the setup each one copies. Pass a template id as template_id to create_business.",
+    description: "Lists the partner's saved templates by id and name, with the setup each one copies.",
     operation: "listPartnerTemplates",
     annotations: readOnly,
     inputSchema: z.object({}),
@@ -645,7 +645,7 @@ export const partnerMcpTools: PartnerMcpTool[] = [
   partnerTool({
     name: "delete_template",
     title: "Delete a template",
-    description: "Deletes a template and its copies of documents. Businesses already set up from it keep their setup. Confirm with the person before calling.",
+    description: "Deletes a template and its copies of documents. Businesses already set up from it keep their setup.",
     operation: "deletePartnerTemplate",
     annotations: destroys,
     inputSchema: z.object({ template_id: uuid("template") }),
@@ -682,7 +682,7 @@ export const partnerMcpTools: PartnerMcpTool[] = [
   partnerTool({
     name: "change_team_member_role",
     title: "Change someone's role",
-    description: "Makes someone on the team an admin or a member. Use the membership id from get_team. Owners are changed from the console.",
+    description: "Makes someone on the team an admin or a member, by membership id. Owners are changed from the console.",
     operation: "updatePartnerTeamMember",
     annotations: updates,
     inputSchema: z.object({ member_id: uuid("membership"), role: z.enum(["admin", "member"]) }),
@@ -692,7 +692,7 @@ export const partnerMcpTools: PartnerMcpTool[] = [
   partnerTool({
     name: "remove_team_member",
     title: "Remove someone from the team",
-    description: "Removes someone from the partner's team. They lose access to the console and every client business at once. Use the membership id from get_team. Confirm with the person before calling.",
+    description: "Removes someone from the partner's team. They lose access to the console and every client business at once. Takes a membership id.",
     operation: "removePartnerTeamMember",
     annotations: destroys,
     inputSchema: z.object({ member_id: uuid("membership") }),
@@ -714,7 +714,7 @@ export const partnerMcpTools: PartnerMcpTool[] = [
   partnerTool({
     name: "get_stripe_status",
     title: "Get the Stripe connection",
-    description: "Returns whether the partner's Stripe account is connected and takes payments, and its currency. Only owners reach Stripe. Pass refresh true to ask Stripe again.",
+    description: "Returns whether the partner's Stripe account is connected and takes payments, and its currency. Only owners reach Stripe. refresh true asks Stripe again.",
     operation: "getPartnerStripe",
     annotations: readOnly,
     inputSchema: z.object({ refresh: z.boolean().optional().describe("Ask Stripe for the account's current state.") }),
@@ -744,7 +744,7 @@ export const partnerMcpTools: PartnerMcpTool[] = [
   partnerTool({
     name: "set_pool_overage",
     title: "Set the pool's overage",
-    description: "Turns overage past the shared pool on or off, and sets a monthly cap in US cents, or none. Only owners change billing. Confirm with the person before calling.",
+    description: "Turns overage past the shared pool on or off, and sets a monthly cap in US cents, or none. Only owners change billing.",
     operation: "updatePartnerPoolOverage",
     annotations: updates,
     inputSchema: z.object({ enabled: z.boolean(), cap_cents: z.number().int().nullable().optional().describe("The monthly cap in US cents, or null for none.") }),
@@ -754,7 +754,7 @@ export const partnerMcpTools: PartnerMcpTool[] = [
   partnerTool({
     name: "create_tier_checkout",
     title: "Start a tier checkout",
-    description: "Asks for a Polar checkout page where the owner pays for a tier. It starts pending; call get_tier_checkout until status is ready, then give the person checkout_url to open. Only owners pay for tiers.",
+    description: "Asks for a Polar checkout page where the owner pays for a tier. It starts pending; once its status is ready, checkout_url is the page the owner opens to pay. Only owners pay for tiers.",
     operation: "createPartnerTierCheckout",
     annotations: creates,
     inputSchema: z.object({ tier: z.enum(paidPartnerTierSlugs), interval: z.enum(billingIntervals) }),

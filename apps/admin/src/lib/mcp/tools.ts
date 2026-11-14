@@ -160,7 +160,7 @@ export const mcpTools: McpTool[] = [
   tool({
     name: "get_business",
     title: "Get business profile",
-    description: "Returns the business name, time zone, default caller language, website, opening hours and booking_mode. Call this first: other tools return times in UTC, and booking_mode decides whether book_appointment and reschedule_appointment can work (they need instant).",
+    description: "Returns the business name, time zone, default caller language, website, opening hours and booking_mode. Other times on this server are in UTC. Appointments can be booked and moved directly only when booking_mode is instant.",
     operation: "getBusiness",
     annotations: readOnly,
     inputSchema: z.object({}),
@@ -170,7 +170,7 @@ export const mcpTools: McpTool[] = [
   tool({
     name: "list_services",
     title: "List services",
-    description: "Lists the active services customers can book, with each service's id and duration in minutes. Use a service id with check_availability and book_appointment.",
+    description: "Lists the active services customers can book, with each service's id and duration in minutes.",
     operation: "listServices",
     annotations: readOnly,
     inputSchema: z.object({}),
@@ -180,7 +180,7 @@ export const mcpTools: McpTool[] = [
   tool({
     name: "list_staff",
     title: "List staff",
-    description: "Lists the people who take appointments, with the services each one can be booked for. Only active staff take bookings. Pass a staff id as staff_id to check_availability, book_appointment or reschedule_appointment when the customer asks for someone.",
+    description: "Lists the people who take appointments, with each one's id and the services they can be booked for. Only active staff take bookings.",
     operation: "listStaff",
     annotations: readOnly,
     inputSchema: z.object({}),
@@ -190,7 +190,7 @@ export const mcpTools: McpTool[] = [
   tool({
     name: "update_business_hours",
     title: "Replace opening hours",
-    description: "Replaces the whole week of opening hours. Send every day that should be open; any day you leave out becomes closed. Read the current hours with get_business first and change only what the owner asked for. Times are in the business time zone. Returns the updated business.",
+    description: "Replaces the whole week of opening hours. Every day that should be open must be sent; any day left out becomes closed. Times are in the business time zone. Returns the updated business.",
     operation: "updateBusiness",
     annotations: updates,
     inputSchema: z.object({
@@ -202,7 +202,7 @@ export const mcpTools: McpTool[] = [
   tool({
     name: "list_calls",
     title: "List calls",
-    description: "Lists calls the receptionist handled, newest first, with outcome, summary and caller details. Filter by start time to read a given day: take the business time zone from get_business and pass that day's local midnight bounds with their offset. outcome is appointment_booked, booking_incomplete, message_taken, conversation, answered_by_team or none. Use get_call for the transcript.",
+    description: "Lists calls the receptionist handled, newest first, with outcome, summary and caller details. Filter by start time; a day in the business time zone runs from its local midnight to the next, with the zone's offset. outcome is appointment_booked, booking_incomplete, message_taken, conversation, answered_by_team or none. Transcripts aren't included.",
     operation: "listCalls",
     annotations: readOnly,
     inputSchema: z.object({
@@ -231,7 +231,7 @@ export const mcpTools: McpTool[] = [
   tool({
     name: "search_contacts",
     title: "Search contacts",
-    description: "Finds contacts, newest first. Filter by exact phone number (E.164, for example +14165550134), exact email, or part of the name. With no filter it lists every contact. Use it to find a caller before booking or updating their details.",
+    description: "Finds contacts, newest first. Filter by exact phone number (E.164, for example +14165550134), exact email, or part of the name. With no filter it lists every contact.",
     operation: "listContacts",
     annotations: readOnly,
     inputSchema: z.object({
@@ -294,14 +294,14 @@ export const mcpTools: McpTool[] = [
   tool({
     name: "list_appointments",
     title: "List appointments",
-    description: "Lists appointments, most recently booked first. Filter by status (confirmed or cancelled) and by start time to see a day or a week. Times are UTC; convert them to the business time zone before showing them.",
+    description: "Lists appointments, most recently booked first. Filter by status (confirmed or cancelled) and by start time to see a day or a week. Times are UTC.",
     operation: "listAppointments",
     annotations: readOnly,
     inputSchema: z.object({
       status: z.enum(["confirmed", "cancelled"]).optional().describe("Only appointments with this status."),
       starts_after: timestampInput("Only appointments starting at or after this time."),
       starts_before: timestampInput("Only appointments starting before this time."),
-      contact_id: z.uuid().optional().describe("Only this contact's appointments, from search_contacts."),
+      contact_id: z.uuid().optional().describe("Only this contact's appointments."),
       ...pageInput,
     }),
     outputSchema: contractSchema(apiPageSchema(apiAppointmentSchema)),
@@ -327,14 +327,14 @@ export const mcpTools: McpTool[] = [
   tool({
     name: "check_availability",
     title: "Check open times",
-    description: `Lists open start times for one service, in 30-minute steps within opening hours, checked against staff calendars and existing bookings. Dates are YYYY-MM-DD in the business time zone; the range can span up to ${PUBLIC_API_AVAILABILITY_MAX_DAYS} days. Returned times are UTC. Pass a starts_at value unchanged to book_appointment or reschedule_appointment.`,
+    description: `Lists open start times for one service, in 30-minute steps within opening hours, checked against staff calendars and existing bookings. Dates are YYYY-MM-DD in the business time zone; the range can span up to ${PUBLIC_API_AVAILABILITY_MAX_DAYS} days. Returned times are UTC, and each starts_at value can be used as is to book or move an appointment.`,
     operation: "getAvailability",
     annotations: readOnly,
     inputSchema: z.object({
-      service_id: uuid("service").describe("The service to book, from list_services."),
+      service_id: uuid("service").describe("The service to book."),
       start_date: z.string().describe("First day, YYYY-MM-DD, in the business time zone."),
       end_date: z.string().optional().describe(`Last day, YYYY-MM-DD. Defaults to start_date. At most ${PUBLIC_API_AVAILABILITY_MAX_DAYS} days after start_date, counting both.`),
-      staff_id: z.uuid().optional().describe("Only times when this staff member is free, from list_staff."),
+      staff_id: z.uuid().optional().describe("Only times when this staff member is free."),
     }),
     outputSchema: contractSchema(apiPageSchema(apiAvailabilitySlotSchema)),
     run: async ({ context, caller, operations }, input) => ({ data: await operations.getAvailabilityForApi(context, caller, { serviceId: input.service_id, startDate: input.start_date, endDate: input.end_date, staffId: input.staff_id }), next_cursor: null, has_more: false }),
@@ -342,12 +342,12 @@ export const mcpTools: McpTool[] = [
   tool({
     name: "book_appointment",
     title: "Book an appointment",
-    description: "Books an appointment at an open time from check_availability. Works only when booking_mode is instant; otherwise it fails with booking_requires_confirmation or booking_disabled, and you should tell the owner instead of retrying. Identify the customer with contact_id (a contact that has a phone number) or contact_phone. Fails with slot_unavailable if the time was taken; check availability again and offer another time. Confirm the service, time and customer with the owner before calling.",
+    description: "Books an appointment at an open start time. Works only when booking_mode is instant; otherwise it fails with booking_requires_confirmation or booking_disabled. Identify the customer with contact_id (a contact that has a phone number) or contact_phone. Fails with slot_unavailable if the time was taken.",
     operation: "createAppointment",
     annotations: creates,
     inputSchema: z.object({
       service_id: uuid("service"),
-      starts_at: z.string().describe("A starts_at value from check_availability, unchanged."),
+      starts_at: z.string().describe("An open start time, exactly as the availability list returned it."),
       contact_id: z.uuid().optional().describe("An existing contact that has a phone number. Give contact_id or contact_phone."),
       contact_phone: z.string().optional().describe("Customer phone in E.164 format. A new contact is created if none has this number."),
       contact_name: z.string().optional().describe("Customer name, used when a new contact is created."),
@@ -362,7 +362,7 @@ export const mcpTools: McpTool[] = [
   tool({
     name: "cancel_appointment",
     title: "Cancel an appointment",
-    description: "Cancels an appointment, removes it from the staff calendar and stops its reminders. When the customer agreed to texts, LobbyStack texts them that it's cancelled. Cancelling an appointment that is already cancelled returns it unchanged. Confirm with the owner before calling.",
+    description: "Cancels an appointment, removes it from the staff calendar and stops its reminders. When the customer agreed to texts, LobbyStack texts them that it's cancelled. Cancelling an appointment that is already cancelled returns it unchanged.",
     operation: "cancelAppointment",
     annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
     inputSchema: z.object({ appointment_id: uuid("appointment") }),
@@ -372,13 +372,13 @@ export const mcpTools: McpTool[] = [
   tool({
     name: "reschedule_appointment",
     title: "Reschedule an appointment",
-    description: "Moves an appointment to a new open time for the same service, with the same staff member unless you pass staff_id. Works only when booking_mode is instant. Find the new time with check_availability for the appointment's service_id. Fails with slot_unavailable if the time is taken.",
+    description: "Moves an appointment to a new open time for the same service, with the same staff member unless you pass staff_id. Works only when booking_mode is instant. The new time must be an open start time for the appointment's service. Fails with slot_unavailable if the time is taken.",
     operation: "rescheduleAppointment",
     annotations: updates,
     inputSchema: z.object({
       appointment_id: uuid("appointment"),
-      starts_at: z.string().describe("A starts_at value from check_availability, unchanged."),
-      staff_id: z.uuid().optional().describe("Move the appointment to this active staff member. Defaults to the current one. Check availability with the same staff_id first."),
+      starts_at: z.string().describe("An open start time, exactly as the availability list returned it."),
+      staff_id: z.uuid().optional().describe("Move the appointment to this active staff member. Defaults to the current one. The new time must be open for that staff member."),
     }),
     outputSchema: contractSchema(apiAppointmentSchema),
     run: async ({ context, caller, operations }, input) => await operations.rescheduleAppointmentForApi(context, caller, input.appointment_id, contractBody(apiAppointmentRescheduleSchema, defined({ starts_at: input.starts_at, staff_id: input.staff_id }))),
@@ -399,7 +399,7 @@ export const mcpTools: McpTool[] = [
   tool({
     name: "add_knowledge",
     title: "Add knowledge",
-    description: "Teaches the receptionist something it can use to answer callers. For type faq, send question and answer. For type text, send title and content, for example a policy or a price list. Write it as a fact about the business, not as an instruction to the receptionist.",
+    description: "Teaches the receptionist something it can use to answer callers. For type faq, send question and answer. For type text, send title and content, for example a policy or a price list. The receptionist reads each entry as a fact about the business.",
     operation: "createKnowledgeEntry",
     annotations: creates,
     inputSchema: z.object({
