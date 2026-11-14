@@ -77,8 +77,9 @@ test("an owner picks the required number, goes on with the trial, and finds the 
       await expect(page.getByRole("button", { name: new RegExp(step) })).toBeVisible();
     }
     await expect(page.getByRole("button", { name: new RegExp(dashboard.setupGuide.steps.testCall) })).toHaveCount(0);
-    await expect(page.getByText(/^Free trial · \d+d left$/)).toBeVisible();
-    await expect(page.getByRole("button", { name: common.numberTrial.viewPlans })).toBeVisible();
+    const trialCard = page.getByRole("status").filter({ hasText: common.numberTrial.title });
+    await expect(trialCard.getByText(/^\d+ days? left$/)).toBeVisible();
+    await expect(trialCard.getByRole("button", { name: common.numberTrial.viewPlans })).toBeVisible();
 
     // The carrier here sends no forwarding header, so the owner says it works after the test call.
     await page.getByRole("button", { name: new RegExp(dashboard.setupGuide.steps.forwardFromCurrent) }).click();

@@ -137,7 +137,12 @@ describe("the phone menu sheet", () => {
     const onUpgrade = vi.fn(() => expect(screen.queryByRole("dialog")).toBeNull());
     setup({ trial: { status: "active", e164: "+15815550102", daysLeft: 9, minutesExhausted: false, forwardTo: null }, onUpgrade });
     const sheet = await openMenu();
-    expect(within(sheet).getByText("numberTrial.chip")).toBeTruthy();
+    const card = within(sheet).getByText("numberTrial.title").closest("[data-trial-footer]")!;
+    // Pinned below the scrolling rows, after Sign out, as the sheet's last element.
+    expect(card).toBeTruthy();
+    expect(card.closest(".overflow-y-auto")).toBeNull();
+    expect(card.parentElement?.lastElementChild).toBe(card);
+    expect(within(sheet).getByRole("button", { name: "sidebar.signOut" }).compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     await userEvent.click(within(sheet).getByRole("button", { name: "numberTrial.viewPlans" }));
     await waitFor(() => expect(onUpgrade).toHaveBeenCalledOnce());
     expect(screen.queryByRole("dialog")).toBeNull();

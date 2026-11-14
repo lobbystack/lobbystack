@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 
 import { WorkspaceSwitcher } from "@/components/layout/workspace-switcher";
 import { NotificationBell } from "@/components/notifications/notification-bell";
-import { NumberTrialChip } from "@/components/number-trial-chip";
+import { NumberTrialCard } from "@/components/number-trial-card";
 import { accountItemLink, useAccountMenuGroups, type AccountMenuItem } from "@/components/nav-user";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -179,18 +179,25 @@ function SheetMenus({ closeThen, onFeedback, partnerConsole, user }: { closeThen
     </>;
   }
   return (
-    <div className="flex min-h-full flex-col pb-[env(safe-area-inset-bottom)]">
-      {/* Keyed by level, so each swap replays the slide. Reduced motion drops it. */}
-      <div className={`flex flex-col duration-200 ease-out motion-reduce:animate-none ${state.direction ? SLIDE[state.direction] : ""}`} data-menu-level={shown} key={shown}>
-        {menu}
+    <>
+      {/* Rows are a phone's tap height, and their links close the sheet as the page opens. The trial footer takes the safe area when it shows. */}
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain [&_[data-sidebar=menu-button]]:h-11">
+        <div className="flex min-h-full flex-col pb-[env(safe-area-inset-bottom)] group-has-[[data-trial-footer]:not(:empty)]/menu:pb-2">
+          {/* Keyed by level, so each swap replays the slide. Reduced motion drops it. */}
+          <div className={`flex flex-col duration-200 ease-out motion-reduce:animate-none ${state.direction ? SLIDE[state.direction] : ""}`} data-menu-level={shown} key={shown}>
+            {menu}
+          </div>
+          {shown === "root" ? <div className="flex flex-col">
+            <Separator className="mx-5 w-auto! bg-sidebar-border" />
+            <AccountSection closeThen={closeThen} onFeedback={onFeedback} partnerConsole={partnerConsole} user={user} />
+          </div> : null}
+        </div>
       </div>
-      {shown === "root" ? <div className="flex flex-col">
-        {/* The plans open once the sheet has closed, so they don't open under it. */}
-        <NumberTrialChip className="mx-4 mb-2" openWith={(openPlans) => closeThen(openPlans)} />
-        <Separator className="mx-5 w-auto! bg-sidebar-border" />
-        <AccountSection closeThen={closeThen} onFeedback={onFeedback} partnerConsole={partnerConsole} user={user} />
+      {/* Pinned to the bottom edge, below the rows that scroll above it. The plans open once the sheet has closed, so they don't open under it. */}
+      {shown === "root" ? <div className="shrink-0 border-t border-sidebar-border px-4 pt-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] empty:hidden" data-trial-footer="">
+        <NumberTrialCard openWith={(openPlans) => closeThen(openPlans)} />
       </div> : null}
-    </div>
+    </>
   );
 }
 
@@ -210,14 +217,15 @@ type MobileMenuSheetProps = {
 /**
  * The phone's menu: a full-screen sheet that slides up, with the business
  * switcher and a close button on top. It holds what the sidebar does beyond
- * the tab bar, with the same menus, and the account menu at the bottom.
+ * the tab bar, with the same menus and the account menu below them. While a
+ * trial runs, its card is pinned to the bottom edge.
  */
 export function MobileMenuSheet({ closeThen, finalFocus, navigate, onFeedback, open, partnerConsole, user }: MobileMenuSheetProps) {
   const { t } = useTranslation(["nav", "common"]);
   return (
     <Sheet onOpenChange={(next) => { if (!next) closeThen(); }} open={open}>
       <SheetContent
-        className="inset-0 h-dvh max-h-dvh gap-0 border-t-0 bg-sidebar p-0 text-sidebar-foreground duration-300 ease-out motion-reduce:transition-none data-[side=bottom]:data-ending-style:translate-y-full data-[side=bottom]:data-starting-style:translate-y-full"
+        className="group/menu inset-0 h-dvh max-h-dvh gap-0 border-t-0 bg-sidebar p-0 text-sidebar-foreground duration-300 ease-out motion-reduce:transition-none data-[side=bottom]:data-ending-style:translate-y-full data-[side=bottom]:data-starting-style:translate-y-full"
         data-mobile-menu=""
         finalFocus={finalFocus}
         showCloseButton={false}
@@ -232,12 +240,9 @@ export function MobileMenuSheet({ closeThen, finalFocus, navigate, onFeedback, o
             <span className="sr-only">{t("common:accessibility.close")}</span>
           </SheetClose>
         </div>
-        {/* Rows are a phone's tap height, and their links close the sheet as the page opens. */}
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain [&_[data-sidebar=menu-button]]:h-11">
-          <MenuNavigationContext.Provider value={navigate}>
-            <SheetMenus closeThen={closeThen} onFeedback={onFeedback} partnerConsole={partnerConsole} user={user} />
-          </MenuNavigationContext.Provider>
-        </div>
+        <MenuNavigationContext.Provider value={navigate}>
+          <SheetMenus closeThen={closeThen} onFeedback={onFeedback} partnerConsole={partnerConsole} user={user} />
+        </MenuNavigationContext.Provider>
       </SheetContent>
     </Sheet>
   );
