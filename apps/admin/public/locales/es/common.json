@@ -106,10 +106,15 @@
     "stillAvailable": "El {{number}} sigue disponible. Suscríbase ahora para recuperarlo.",
     "getReceptionistBack": "Recuperar a mi agente",
     "getNumberBack": "Recuperar mi número",
-    "chip_one": "Prueba gratuita · queda {{count}} d",
-    "chip_other": "Prueba gratuita · quedan {{count}} d",
-    "viewPlans": "Ver planes",
-    "chip_many": "Prueba gratuita · quedan {{count}} d"
+    "title": "Prueba gratuita",
+    "daysLeft_one": "Queda {{days}} día",
+    "daysLeft_many": "Quedan {{days}} días",
+    "daysLeft_other": "Quedan {{days}} días",
+    "noMinutesLeft": "Sin minutos",
+    "keepNumber": "Suscríbase para conservar su número.",
+    "callsGoTo": "Las llamadas van al {{forwardTo}} hasta que se suscriba.",
+    "answerAgain": "Suscríbase para que su agente vuelva a contestar.",
+    "viewPlans": "Ver planes"
   },
   "testWindow": {
     "orCall": "O llame al",

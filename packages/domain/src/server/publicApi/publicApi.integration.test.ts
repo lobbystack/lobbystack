@@ -1235,6 +1235,7 @@ describe.skipIf(!testUrl)("public API against PostgreSQL with RLS", () => {
           { id: "greeting", status: "done", required: false },
           { id: "plan", status: "skipped", required: false },
           { id: "phone_number", status: "missing", required: false },
+          { id: "website", status: "missing", required: false },
           // With no website crawl there is nothing more to read.
           { id: "full_site_read", status: "done", required: false },
           { id: "test_call", status: "missing", required: false },

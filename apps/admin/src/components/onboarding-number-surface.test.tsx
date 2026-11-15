@@ -70,14 +70,14 @@ describe("onboarding number API adapter", () => {
     setup("phone_number", false, false, () => Response.json({ error: "No trial here.", code: "dedicated_number_requires_paid_plan" }, { status: 402 }));
     expect(await screen.findByText("number.refusals.paidPlan")).toBeTruthy();
     expect(screen.getByText("plans")).toBeTruthy();
-    telemetryRef.current!.expectEvent("web.onboarding.number_unavailable", { businessId: "business-1", code: "dedicated_number_requires_paid_plan" });
+    await waitFor(() => telemetryRef.current!.expectEvent("web.onboarding.number_unavailable", { businessId: "business-1", code: "dedicated_number_requires_paid_plan" }));
   });
   it("shows the paid plans before a search when the trial is already used, with no way on but a country without numbers", async () => {
     const fetchMock = setup("phone_number", false, false, undefined, "trial_already_used");
     expect(await screen.findByText("number.refusals.trialUsed")).toBeTruthy();
     expect(screen.getByText("plans")).toBeTruthy();
     expect(fetchMock.mock.calls.some(([url]) => url.includes("/suggestion?"))).toBe(false);
-    telemetryRef.current!.expectEvent("web.onboarding.number_unavailable", { businessId: "business-1", code: "trial_already_used" });
+    await waitFor(() => telemetryRef.current!.expectEvent("web.onboarding.number_unavailable", { businessId: "business-1", code: "trial_already_used" }));
     expect(screen.queryByRole("button", { name: "number.skipLater" })).toBeNull();
     // The way on without a number waits for a country we sell none in.
     expect(screen.queryByRole("button", { name: "number.country.continue" })).toBeNull();
@@ -161,7 +161,7 @@ describe("onboarding number API adapter", () => {
   it("names an unverified email the search refuses", async () => {
     setup("phone_number", false, false, () => Response.json({ error: "Verify your email.", code: "email_verification_required" }, { status: 409 }));
     expect(await screen.findByText("number.refusals.emailVerification")).toBeTruthy();
-    telemetryRef.current!.expectEvent("web.onboarding.number_unavailable", { businessId: "business-1", code: "email_verification_required" });
+    await waitFor(() => telemetryRef.current!.expectEvent("web.onboarding.number_unavailable", { businessId: "business-1", code: "email_verification_required" }));
   });
   it("names the network limit, and the market without a trial", async () => {
     setup("phone_number", false, false, undefined, "trial_ip_limited");

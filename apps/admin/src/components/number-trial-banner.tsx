@@ -34,7 +34,7 @@ export function useNumberTrial(): TrialState | undefined {
  * Across the top of every dashboard page while the trial number needs the
  * owner: it ran out of minutes, so calls already go to them, or the trial
  * ended and the number is still theirs to keep. The days left show in the
- * sidebar's chip instead, so the banner never counts down.
+ * sidebar's trial card instead, so the banner never counts down.
  */
 export function NumberTrialBanner() {
   const { t } = useTranslation("common");

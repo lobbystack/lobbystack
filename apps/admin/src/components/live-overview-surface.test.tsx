@@ -14,7 +14,7 @@ import fr from "../../public/locales/fr/dashboard.json";
 import type { Capability } from "@lobbystack/domain";
 import { ALL_CAPABILITIES, BusinessCapabilitiesProvider } from "./business-capabilities-provider";
 import { LiveOverviewSurface } from "./live-overview-surface";
-import { SETUP_STEP_ORDER } from "@/lib/setup-guide";
+import { SETUP_SKELETON_STEPS } from "@/lib/setup-guide";
 vi.mock("next/dynamic", () => ({ default: () => () => null }));
 // The activation card has its own suite; this one covers follow-up parity.
 vi.mock("./dashboard-activation-card", () => ({ DashboardActivationCard: () => null }));
@@ -297,7 +297,7 @@ describe("Home while it loads", () => {
     const { container } = render(<I18nextProvider i18n={i18n}><QueryClientProvider client={client}><BusinessCapabilitiesProvider initial={ALL_CAPABILITIES}><LiveOverviewSurface /></BusinessCapabilitiesProvider></QueryClientProvider></I18nextProvider>);
 
     expect(screen.getByText(i18n.t("setupGuide.title")).closest("[data-slot='skeleton']")).toBeTruthy();
-    for (const step of SETUP_STEP_ORDER) expect(screen.getByText(i18n.t(`setupGuide.steps.${step}`)).closest("[data-slot='skeleton']")).toBeTruthy();
+    for (const step of SETUP_SKELETON_STEPS) expect(screen.getByText(i18n.t(`setupGuide.steps.${step}`)).closest("[data-slot='skeleton']")).toBeTruthy();
     expect(screen.getByText(i18n.t("setupGuide.skip")).closest("[data-slot='skeleton']")).toBeTruthy();
     expect(container.querySelector("[aria-busy='true']")).toBeTruthy();
   });

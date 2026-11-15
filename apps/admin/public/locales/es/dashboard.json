@@ -286,6 +286,7 @@
     "callAgain": "Llamar de nuevo",
     "steps": {
       "fullScan": "Leer el resto de su sitio",
+      "website": "Añadir su sitio web",
       "sources": "Añadir más fuentes",
       "hours": "Añadir su horario",
       "testCall": "Escuchar a su agente",
@@ -296,6 +297,7 @@
     },
     "stepDescriptions": {
       "fullScan": "Su agente ha leído una parte de su sitio.",
+      "website": "Su agente responde a quienes llaman con lo que lee allí.",
       "sources": "Suba sus políticas, preguntas frecuentes o precios.",
       "hours": "Su agente reserva citas solo dentro de este horario.",
       "testCall": "Pregúntele lo que más le preguntan quienes llaman.",
@@ -306,6 +308,7 @@
     },
     "stepActions": {
       "fullScan": "Leer el resto",
+      "website": "Importar sitio web",
       "sources": "Subir documento",
       "hours": "Añadir horario",
       "testCall": "Iniciar una llamada",

@@ -72,13 +72,16 @@ test("an owner picks the required number, goes on with the trial, and finds the 
     await expect(page).toHaveURL("/");
 
     // Home's Getting started is the list for a business with a number, and the sidebar counts the trial down.
+    // Onboarding skipped the website, so the list asks for one instead of reading the rest of it.
     await expect(page.getByRole("heading", { name: dashboard.setupGuide.title })).toBeVisible();
-    for (const step of [dashboard.setupGuide.steps.fullScan, dashboard.setupGuide.steps.callNumber, dashboard.setupGuide.steps.forwardFromCurrent, dashboard.setupGuide.steps.sources]) {
+    await expect(page.getByRole("button", { name: new RegExp(dashboard.setupGuide.steps.fullScan) })).toHaveCount(0);
+    for (const step of [dashboard.setupGuide.steps.callNumber, dashboard.setupGuide.steps.forwardFromCurrent, dashboard.setupGuide.steps.website, dashboard.setupGuide.steps.sources]) {
       await expect(page.getByRole("button", { name: new RegExp(step) })).toBeVisible();
     }
     await expect(page.getByRole("button", { name: new RegExp(dashboard.setupGuide.steps.testCall) })).toHaveCount(0);
-    await expect(page.getByText(/^Free trial · \d+d left$/)).toBeVisible();
-    await expect(page.getByRole("button", { name: common.numberTrial.viewPlans })).toBeVisible();
+    const trialCard = page.getByRole("status").filter({ hasText: common.numberTrial.title });
+    await expect(trialCard.getByText(/^\d+ days? left$/)).toBeVisible();
+    await expect(trialCard.getByRole("button", { name: common.numberTrial.viewPlans })).toBeVisible();
 
     // The carrier here sends no forwarding header, so the owner says it works after the test call.
     await page.getByRole("button", { name: new RegExp(dashboard.setupGuide.steps.forwardFromCurrent) }).click();

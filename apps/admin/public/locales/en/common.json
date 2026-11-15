@@ -106,8 +106,13 @@
     "stillAvailable": "{{number}} is still available. Subscribe now to get it back.",
     "getReceptionistBack": "Get my agent back",
     "getNumberBack": "Get my number back",
-    "chip_one": "Free trial · {{count}}d left",
-    "chip_other": "Free trial · {{count}}d left",
+    "title": "Free trial",
+    "daysLeft_one": "{{days}} day left",
+    "daysLeft_other": "{{days}} days left",
+    "noMinutesLeft": "No minutes left",
+    "keepNumber": "Subscribe to keep your number.",
+    "callsGoTo": "Calls go to {{forwardTo}} until you subscribe.",
+    "answerAgain": "Subscribe so your agent answers again.",
     "viewPlans": "View plans"
   },
   "testWindow": {

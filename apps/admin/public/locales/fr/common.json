@@ -106,10 +106,15 @@
     "stillAvailable": "Le {{number}} est encore disponible. Abonnez-vous pour le récupérer.",
     "getReceptionistBack": "Retrouver mon agent",
     "getNumberBack": "Récupérer mon numéro",
-    "chip_one": "Essai gratuit · {{count}} j restant",
-    "chip_other": "Essai gratuit · {{count}} j restants",
-    "viewPlans": "Voir les forfaits",
-    "chip_many": "Essai gratuit · {{count}} j restants"
+    "title": "Essai gratuit",
+    "daysLeft_one": "{{days}} jour restant",
+    "daysLeft_many": "{{days}} jours restants",
+    "daysLeft_other": "{{days}} jours restants",
+    "noMinutesLeft": "Plus de minutes",
+    "keepNumber": "Abonnez-vous pour garder votre numéro.",
+    "callsGoTo": "Les appels vont au {{forwardTo}} jusqu'à votre abonnement.",
+    "answerAgain": "Abonnez-vous pour que votre agent réponde de nouveau.",
+    "viewPlans": "Voir les forfaits"
   },
   "testWindow": {
     "orCall": "Ou appelez le",

@@ -106,9 +106,14 @@
     "stillAvailable": "{{number}} je i dalje dostupan. Pretplatite se sada da biste ga vratili.",
     "getReceptionistBack": "Vrati mog agenta",
     "getNumberBack": "Vrati moj broj",
-    "chip_one": "Besplatna proba · još {{count}} d",
-    "chip_few": "Besplatna proba · još {{count}} d",
-    "chip_other": "Besplatna proba · još {{count}} d",
+    "title": "Besplatna proba",
+    "daysLeft_one": "Još {{days}} dan",
+    "daysLeft_few": "Još {{days}} dana",
+    "daysLeft_other": "Još {{days}} dana",
+    "noMinutesLeft": "Nema više minuta",
+    "keepNumber": "Pretplatite se da zadržite broj.",
+    "callsGoTo": "Pozivi idu na {{forwardTo}} dok se ne pretplatite.",
+    "answerAgain": "Pretplatite se da bi agent ponovo odgovarao.",
     "viewPlans": "Pogledajte pakete"
   },
   "testWindow": {
