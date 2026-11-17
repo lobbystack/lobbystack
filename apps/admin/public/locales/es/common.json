@@ -3,7 +3,9 @@
     "close": "Cerrar",
     "toggleSidebar": "Mostrar u ocultar la barra lateral",
     "skipToContent": "Ir al contenido principal",
-    "clearSearch": "Borrar búsqueda"
+    "clearSearch": "Borrar búsqueda",
+    "decrease": "Disminuir",
+    "increase": "Aumentar"
   },
   "errors": {
     "unexpected": "Algo salió mal. Inténtelo de nuevo."
@@ -203,6 +205,8 @@
       "more": "+{{count}} más",
       "allDay": "Todo el día",
       "newAt": "Nueva cita a las {{time}}",
+      "resizeColumn": "Cambiar el ancho de la columna {{day}}",
+      "resizeRows": "Cambiar la altura de las filas de horas",
       "block": "{{name}}, {{service}}, {{time}}",
       "blockCancelled": "{{name}}, {{service}}, {{time}}, cancelada"
     },
@@ -230,6 +234,7 @@
       "endBeforeStart": "Elija un fin posterior al inicio.",
       "datesRequired": "Elija una fecha de inicio y de fin.",
       "reason": "Motivo (opcional)",
+      "reasonPlaceholder": "p. ej. Fiesta del equipo, Mantenimiento del edificio",
       "save": "Guardar",
       "saving": "Guardando…",
       "cancel": "Cancelar",
@@ -242,6 +247,7 @@
       "failed": "No se pudo guardar la ausencia.",
       "overlap": "Se superpone con otra ausencia.",
       "invalid": "Revise las fechas. Una ausencia no puede haber terminado ya ni acabar en más de dos años.",
+      "startsInPast": "Una ausencia no puede empezar en el pasado.",
       "label": "Cerrado: {{name}}, {{time}}",
       "employeeLabel": "{{employee}} ausente: {{name}}, {{time}}",
       "employeeTitle": "{{employee}}: {{name}}",
@@ -339,6 +345,7 @@
       "newContact": "Nuevo contacto",
       "chooseContact": "Elegir un contacto",
       "name": "Nombre",
+      "namePlaceholder": "p. ej. Ana García",
       "nameRequired": "Introduzca un nombre.",
       "phone": "Teléfono",
       "phoneCountry": "País del número",
@@ -361,8 +368,10 @@
       "duration": "Duración (minutos)",
       "durationInvalid": "Introduzca de {{min}} a {{max}} minutos.",
       "notes": "Notas",
+      "notesPlaceholder": "p. ej. Primera visita, prefiere por la mañana",
       "notesHint": "Visibles para su agente",
       "internalNotes": "Notas internas",
+      "internalNotesPlaceholder": "p. ej. Depósito pagado por teléfono",
       "internalNotesHint": "Solo el equipo",
       "notOpen": "Este horario no está abierto. Elija otro.",
       "timeOff": "Este horario no está disponible: {{name}}."
@@ -396,5 +405,40 @@
     "failedHint": "Añada los datos de su negocio a mano o vuelva a intentar la importación desde su panel.",
     "inlineRunning": "Leyendo {{host}}. Páginas leídas hasta ahora: {{count}}",
     "stalledTitle": "No pudimos terminar de leer {{host}}"
+  },
+  "pending": {
+    "saving": "Guardando...",
+    "updating": "Actualizando...",
+    "adding": "Añadiendo...",
+    "creating": "Creando...",
+    "deleting": "Eliminando...",
+    "removing": "Quitando...",
+    "sending": "Enviando...",
+    "inviting": "Invitando...",
+    "continuing": "Cargando...",
+    "finishing": "Finalizando...",
+    "confirming": "Confirmando...",
+    "moving": "Moviendo...",
+    "retrying": "Reintentando...",
+    "testing": "Probando...",
+    "connecting": "Conectando...",
+    "disconnecting": "Desconectando...",
+    "cancelling": "Cancelando...",
+    "rescheduling": "Reprogramando...",
+    "blocking": "Bloqueando...",
+    "unblocking": "Desbloqueando...",
+    "revoking": "Revocando...",
+    "rotating": "Rotando...",
+    "archiving": "Archivando...",
+    "releasing": "Liberando..."
+  },
+  "tableSearch": {
+    "contacts": "Buscar contactos",
+    "appointments": "Buscar citas",
+    "knowledge": "Buscar conocimiento",
+    "services": "Buscar servicios",
+    "employees": "Buscar empleados",
+    "rules": "Buscar reglas",
+    "noResults": "Sin resultados para «{{query}}»"
   }
 }

@@ -2,7 +2,6 @@
 
 import { FormEvent, useState } from "react";
 
-import { LoaderCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -130,15 +129,8 @@ export function ImportWebsiteKnowledgeSheet({
 
           <DialogFooter>
             <DialogClose render={<Button disabled={isSubmitting} type="button" variant="outline" />}>{t("actions.cancel")}</DialogClose>
-            <Button disabled={isSubmitting} type="submit">
-              {isSubmitting ? (
-                <>
-                  <LoaderCircle className="size-4 animate-spin" />
-                  {t("sections.knowledge.websiteImport.submitting")}
-                </>
-              ) : (
-                t("sections.knowledge.websiteImport.submit")
-              )}
+            <Button loading={isSubmitting} loadingLabel={t("sections.knowledge.websiteImport.submitting")} type="submit">
+              {t("sections.knowledge.websiteImport.submit")}
             </Button>
           </DialogFooter>
         </form>

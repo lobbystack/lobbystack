@@ -112,7 +112,7 @@ export function useSourceActions({ act, cancelImport }: { act: (input: { action:
     }
   };
   const dialog = (
-    <ConfirmActionDialog
+    <ConfirmActionDialog pendingLabel={t(confirming?.action === "cancel" ? "common:pending.cancelling" : "common:pending.deleting")}
       cancelLabel={t("actions.deleteCancel")}
       confirmLabel={t(confirming?.action === "cancel" ? "actions.cancelImport" : "actions.delete")}
       confirmVariant="destructive"

@@ -62,7 +62,7 @@ export function PartnerAgencyConnectionsSurface() {
         )}
       </SectionBlock>
 
-      <ConfirmActionDialog
+      <ConfirmActionDialog pendingLabel={t("common:pending.revoking")}
         cancelLabel={t("agencyConnections.revoke.cancel")}
         confirmLabel={t("agencyConnections.revoke.confirm")}
         confirmVariant="destructive"

@@ -227,6 +227,7 @@
       "nameLabel": "Nom",
       "namePlaceholder": "Accueil",
       "priceLabel": "Prix mensuel",
+      "pricePlaceholder": "ex. 49",
       "setupFeeLabel": "Frais d'installation",
       "optional": "Facultatif",
       "minutesLabel": "Minutes par mois",
@@ -457,6 +458,7 @@
       "title": "Marque"
     },
     "nameLabel": "Nom",
+    "namePlaceholder": "ex. Northwind Voix",
     "logoLabel": "Logo",
     "logoHelp": "PNG, JPEG, WebP ou SVG, jusqu'à 256 Ko.",
     "faviconLabel": "Favicon",
@@ -787,6 +789,7 @@
     "nameLabel": "Nom de l'entreprise",
     "namePlaceholder": "Accueil Acme",
     "subdomainLabel": "Adresse du tableau de bord",
+    "subdomainPlaceholder": "ex. northwind",
     "subdomainHelp": "Utilisez de 3 à 40 lettres minuscules, chiffres et traits d'union.",
     "submit": "Créer le compte partenaire",
     "submitting": "Création…",

@@ -123,10 +123,10 @@ export function visibleHours(input: { hours: readonly HoursWindow[]; days: reado
   return { start, end: Math.max(end, start + 1) };
 }
 
-/** A segment's top and height in pixels on a grid that starts at `startHour`. */
-export function blockPosition(segment: Pick<Segment, "start" | "end">, startHour: number): { top: number; height: number } {
-  const top = ((segment.start - startHour * 60) * HOUR_HEIGHT) / 60;
-  return { top, height: Math.max(((segment.end - segment.start) * HOUR_HEIGHT) / 60, MIN_BLOCK_HEIGHT) };
+/** A segment's top and height in pixels on a grid that starts at `startHour`, where an hour is `hourHeight` pixels tall. */
+export function blockPosition(segment: Pick<Segment, "start" | "end">, startHour: number, hourHeight: number = HOUR_HEIGHT): { top: number; height: number } {
+  const top = ((segment.start - startHour * 60) * hourHeight) / 60;
+  return { top, height: Math.max(((segment.end - segment.start) * hourHeight) / 60, MIN_BLOCK_HEIGHT) };
 }
 
 /** The slots a day column offers, in minutes from midnight, from `startHour` to `endHour`. */

@@ -72,7 +72,7 @@ export function AgentIdentitySection({ agentId, businessId, canManage }: AgentSe
     <section aria-busy={loading || undefined} className="flex flex-col gap-3">
       <h2 className="type-title">{t("agent:identity.title")}</h2>
       <Surface className="flex flex-col">
-        <TextSettingRow description={t("agent:fields.name.hint")} disabled={disabled} id="agent-name" label={t("agent:fields.name.label")} maxLength={AGENT_NAME_MAX_LENGTH} onSave={(value) => saveText("name", value)} singleLine value={profile?.name ?? ""} />
+        <TextSettingRow description={t("agent:fields.name.hint")} disabled={disabled} id="agent-name" label={t("agent:fields.name.label")} maxLength={AGENT_NAME_MAX_LENGTH} onSave={(value) => saveText("name", value)} placeholder={t("agent:fields.name.placeholder")} singleLine value={profile?.name ?? ""} />
         <TextSettingRow description={t("agent:fields.greeting.hint")} disabled={disabled} id="agent-greeting" label={t("agent:fields.greeting.label")} maxLength={AGENT_TEXT_MAX_LENGTH} onSave={(value) => saveText("greeting", value)} placeholder={t("agent:fields.greeting.placeholder")} value={profile?.greeting ?? ""} />
         <Item className={settingRowClassName} variant="default">
           <ItemContent>

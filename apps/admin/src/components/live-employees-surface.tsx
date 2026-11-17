@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 
 import { isTransferCountry, type HoursWindow } from "@lobbystack/shared";
 import { requestJson } from "@/lib/request-json";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
@@ -27,7 +28,8 @@ import { HeaderActions } from "@/components/header-actions";
 import { toDays, useBusinessHours, useDayNames, WeeklyHoursEditor, windowsForSave, type HoursWindowInput } from "@/components/business-hours-section";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { DataTablePagination, paginationFeatures, useDataTablePaginationLabels } from "@/components/data-table/pagination";
-import { DataTablePaginationSkeleton, EmployeeRowsSkeleton, HeaderButtonSkeleton } from "@/components/loading-skeletons";
+import { TableSearch } from "@/components/data-table/table-search";
+import { DataTablePaginationSkeleton, EmployeeRowsSkeleton, HeaderButtonSkeleton, TableSearchSkeleton } from "@/components/loading-skeletons";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -64,7 +66,7 @@ type Employee = {
 
 type ServiceOption = { id: string; name: string };
 
-const PICKER_TRIGGER_CLASS = "flex h-9 w-full items-center justify-between gap-1.5 rounded-xl border border-input bg-input/30 px-3 py-2 type-body whitespace-nowrap transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 data-invalid:border-destructive data-invalid:ring-[3px] data-invalid:ring-destructive/20";
+const PICKER_TRIGGER_CLASS = "flex h-9 w-full items-center justify-between gap-1.5 rounded-xl border border-input bg-input/30 px-3 py-2 text-base md:text-sm whitespace-nowrap transition-colors outline-none enabled:hover:bg-input/50 group-has-[[data-slot=field-label]:hover]/field:enabled:bg-input/50 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 data-invalid:border-destructive data-invalid:ring-[3px] data-invalid:ring-destructive/20";
 const DAY_PICKER_LOCALES = { en: enUS, fr, es, sr: srLatn } as const;
 
 // Time off days are calendar dates, YYYY-MM-DD, read and written in local time so they don't shift a day.
@@ -91,17 +93,20 @@ function errorCode(error: unknown): string | undefined {
 
 export function LiveEmployeesSurface() {
   const { i18n, t } = useTranslation("employees");
+  const { t: tCommon } = useTranslation("common");
   const paginationLabels = useDataTablePaginationLabels("employees");
   const locale = i18n.resolvedLanguage ?? i18n.language;
   const queryClient = useQueryClient();
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
+  const [search, setSearch] = useState("");
+  const query = useDebouncedValue(search.trim());
   const [pendingDelete, setPendingDelete] = useState<Employee | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const { businesses, business } = useActiveBusiness();
   const employees = useQuery({
-    queryKey: ["employees", business?.businessId, pagination.pageIndex, pagination.pageSize],
-    queryFn: () => requestJson<{ employees: Employee[]; services: ServiceOption[]; today: string; pagination: { total: number } }>(`/api/employees?businessId=${encodeURIComponent(business!.businessId)}&limit=${pagination.pageSize}&offset=${pagination.pageIndex * pagination.pageSize}`),
+    queryKey: ["employees", business?.businessId, pagination.pageIndex, pagination.pageSize, query],
+    queryFn: () => requestJson<{ employees: Employee[]; services: ServiceOption[]; today: string; pagination: { total: number } }>(`/api/employees?businessId=${encodeURIComponent(business!.businessId)}&limit=${pagination.pageSize}&offset=${pagination.pageIndex * pagination.pageSize}${query ? `&search=${encodeURIComponent(query)}` : ""}`),
     enabled: Boolean(business),
     // Keep the current rows on screen while the next page loads.
     placeholderData: keepPreviousForBusiness(business?.businessId),
@@ -204,6 +209,7 @@ export function LiveEmployeesSurface() {
       <HeaderActions>
         {loading && (businesses.isLoading || canMutate) ? <HeaderButtonSkeleton label={t("add.button")} /> : canMutate ? <Button onClick={() => openEditor(null)}><Plus data-icon="inline-start" />{t("add.button")}</Button> : null}
       </HeaderActions>
+      {loading ? <TableSearchSkeleton /> : <TableSearch label={tCommon("tableSearch.employees")} onValueChange={(value) => { setSearch(value); setPagination((current) => ({ ...current, pageIndex: 0 })); }} value={search} />}
       <TableCard>
         <Table className={cn("w-full table-fixed", (loading || table.getRowModel().rows.length > 0) && "min-w-[60rem]")}>
           <colgroup><col className="w-[16%]" /><col className="w-[15%]" /><col className="w-[22%]" /><col className="w-[25%]" /><col className="w-[22%]" /><TableActionsColumn /></colgroup>
@@ -211,13 +217,13 @@ export function LiveEmployeesSurface() {
           <TableBody aria-busy={loading || undefined}>
             {loading ? <EmployeeRowsSkeleton rows={Math.min(pagination.pageSize, 10)} /> : null}
             {loading ? null : table.getRowModel().rows.map((row) => <TableRow className={canMutate ? "cursor-pointer" : undefined} key={row.id} onClick={() => { if (canMutate) openEditor(row.original); }}>{row.getAllCells().map((cell) => <TableCell className={cell.column.id === "added" ? "text-right type-body-muted" : cell.column.id === "actions" ? undefined : "max-w-0"} key={cell.id} onClick={cell.column.id === "actions" ? (event) => event.stopPropagation() : undefined}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>)}</TableRow>)}
-            {!loading && table.getRowModel().rows.length === 0 ? <TableRow><TableCell className="h-24 text-center whitespace-normal text-muted-foreground" colSpan={6}>{t("table.emptyState")}</TableCell></TableRow> : null}
+            {!loading && table.getRowModel().rows.length === 0 ? <TableRow><TableCell className="h-24 text-center whitespace-normal text-muted-foreground" colSpan={6}>{query ? tCommon("tableSearch.noResults", { query }) : t("table.emptyState")}</TableCell></TableRow> : null}
           </TableBody>
         </Table>
       </TableCard>
       {loading ? <DataTablePaginationSkeleton rowsPerPage={paginationLabels.rowsPerPage} /> : <DataTablePagination labels={paginationLabels} table={table} />}
       {business ? <EmployeeDialog businessId={business.businessId} employee={editingEmployee} onOpenChange={setDialogOpen} open={dialogOpen} services={services} today={today} /> : null}
-      <ConfirmActionDialog confirmVariant="destructive" cancelLabel={t("table.actions.deleteCancel")} confirmLabel={t("table.actions.deleteConfirm")} description={t("table.actions.deleteDescription")} onConfirm={async () => { if (!pendingDelete) return; await remove.mutateAsync(pendingDelete); setPendingDelete(null); toast.success(t("table.actions.deleted")); }} onOpenChange={(open) => { if (!open && !remove.isPending) setPendingDelete(null); }} open={Boolean(pendingDelete)} pending={remove.isPending} title={t("table.actions.deleteTitle")} />
+      <ConfirmActionDialog confirmVariant="destructive" cancelLabel={t("table.actions.deleteCancel")} confirmLabel={t("table.actions.deleteConfirm")} description={t("table.actions.deleteDescription")} onConfirm={async () => { if (!pendingDelete) return; await remove.mutateAsync(pendingDelete); setPendingDelete(null); toast.success(t("table.actions.deleted")); }} onOpenChange={(open) => { if (!open && !remove.isPending) setPendingDelete(null); }} open={Boolean(pendingDelete)} pending={remove.isPending} pendingLabel={t("common:pending.deleting")} title={t("table.actions.deleteTitle")} />
     </div>
   );
 }
@@ -376,7 +382,7 @@ function EmployeeDialog({ businessId, employee, open, onOpenChange, services, to
             <Field data-invalid={phoneError ? true : undefined}>
               <FieldContent><FieldLabel htmlFor={phoneId}>{t("add.fields.phone.label")}</FieldLabel><FieldDescription>{t("add.fields.phone.hint")}</FieldDescription></FieldContent>
               <div className="flex min-w-0">
-                <PhoneCountrySelect ariaLabel={t("add.fields.phone.country")} className="rounded-r-none px-4 font-medium text-muted-foreground" countries={countries.filter((option) => isTransferCountry(option.code))} onChange={(next) => { setCountry(next as Country); setPhone(""); setPhoneDraft(""); setPhoneProblem(null); }} value={country} />
+                <PhoneCountrySelect ariaLabel={t("add.fields.phone.country")} className="rounded-r-none px-4 font-medium" countries={countries.filter((option) => isTransferCountry(option.code))} onChange={(next) => { setCountry(next as Country); setPhone(""); setPhoneDraft(""); setPhoneProblem(null); }} value={country} />
                 <PhoneInput aria-describedby={phoneError ? `${phoneId}-error` : undefined} aria-invalid={phoneError ? true : undefined} className="rounded-l-none border-l-0" containerClassName="min-w-0 flex-1" country={country} id={phoneId} limitNationalDigits locale={locale} onChange={(value) => { setPhone(value ?? ""); setPhoneProblem(null); }} onRawValueChange={(raw) => { setPhoneDraft(raw); if (raw.trim().startsWith("+")) { const inferred = inferPhoneCountry(raw, country); if (inferred && inferred !== country) setCountry(inferred as Country); } }} value={phone} />
               </div>
               {phoneError ? <FieldError id={`${phoneId}-error`}>{phoneError}</FieldError> : null}
@@ -412,7 +418,7 @@ function EmployeeDialog({ businessId, employee, open, onOpenChange, services, to
             </Field>
           </FieldGroup>
         </div>
-        <DialogFooter><Button disabled={save.isPending} onClick={() => onOpenChange(false)} type="button" variant="outline">{t("add.cancel")}</Button><Button disabled={save.isPending || !services.length} type="submit">{save.isPending ? t("add.saving") : t(employee ? "edit.save" : "add.save")}</Button></DialogFooter>
+        <DialogFooter><Button disabled={save.isPending} onClick={() => onOpenChange(false)} type="button" variant="outline">{t("add.cancel")}</Button><Button disabled={!services.length} loading={save.isPending} loadingLabel={t("add.saving")} type="submit">{t(employee ? "edit.save" : "add.save")}</Button></DialogFooter>
       </form>
     </DialogContent>
   </Dialog>;

@@ -81,7 +81,7 @@ function ReadingStatus({ documentId, job, onRetried }: { documentId?: string | u
     return (
       <div aria-live="polite" className="flex flex-col items-center gap-3">
         <p className="truncate text-center type-body text-muted-foreground">{t("reading.stalled", { host: websiteImportHost(job.websiteUrl) })}</p>
-        {documentId && business ? <Button disabled={retry.isPending} onClick={() => retry.mutate()} size="sm" type="button" variant="outline">{t("reading.tryAgain")}</Button> : null}
+        {documentId && business ? <Button loading={retry.isPending} loadingLabel={t("common:pending.retrying")} onClick={() => retry.mutate()} size="sm" type="button" variant="outline">{t("reading.tryAgain")}</Button> : null}
       </div>
     );
   }

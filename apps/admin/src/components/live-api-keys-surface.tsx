@@ -255,9 +255,9 @@ export function ApiKeysSurface({ namespace, layout, loading, canManage, scopes: 
               <DialogFooter>
                 <Button onClick={() => closeDialog(false)} type="button" variant="outline">{t("apiKeys.create.cancel")}</Button>
                 {dialog?.mode === "update" ? (
-                  <Button disabled={update.isPending} type="submit">{update.isPending ? t("apiKeys.update.saving") : t("apiKeys.update.submit")}</Button>
+                  <Button loading={update.isPending} loadingLabel={t("apiKeys.update.saving")} type="submit">{t("apiKeys.update.submit")}</Button>
                 ) : (
-                  <Button disabled={create.isPending} type="submit">{create.isPending ? t("apiKeys.create.creating") : t("apiKeys.create.submit")}</Button>
+                  <Button loading={create.isPending} loadingLabel={t("apiKeys.create.creating")} type="submit">{t("apiKeys.create.submit")}</Button>
                 )}
               </DialogFooter>
               </form>
@@ -266,7 +266,7 @@ export function ApiKeysSurface({ namespace, layout, loading, canManage, scopes: 
         </DialogContent>
       </Dialog>
 
-      <ConfirmActionDialog
+      <ConfirmActionDialog pendingLabel={t("common:pending.revoking")}
         cancelLabel={t("apiKeys.revoke.cancel")}
         confirmLabel={t("apiKeys.revoke.confirm")}
         confirmVariant="destructive"

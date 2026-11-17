@@ -19,12 +19,12 @@ export function PhoneField({ id, countryLabel, value, onChange, errorId }: { id:
   const { i18n } = useTranslation();
   const locale = i18n.resolvedLanguage ?? i18n.language;
   const countries = useMemo(() => getPhoneCountryOptions(locale), [locale]);
-  const [country, setCountry] = useState<Country>(() => getDefaultPhoneCountry(locale) as Country);
+  const [country, setCountry] = useState<Country>(() => (value ? inferPhoneCountry(value, getDefaultPhoneCountry(locale)) : getDefaultPhoneCountry(locale)) as Country);
   // What was typed, read when the number changes, so a blank field can be told apart from an incomplete one.
   const draft = useRef("");
   return (
     <div className="flex min-w-0">
-      <PhoneCountrySelect ariaLabel={countryLabel} className="rounded-r-none px-4 font-medium text-muted-foreground" countries={countries} onChange={(next) => { setCountry(next as Country); draft.current = ""; onChange({ phone: "", incomplete: false }); }} value={country} />
+      <PhoneCountrySelect ariaLabel={countryLabel} className="rounded-r-none px-4 font-medium" countries={countries} onChange={(next) => { setCountry(next as Country); draft.current = ""; onChange({ phone: "", incomplete: false }); }} value={country} />
       <PhoneInput
         aria-describedby={errorId}
         aria-invalid={errorId ? true : undefined}

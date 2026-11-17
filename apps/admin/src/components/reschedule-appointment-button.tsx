@@ -48,7 +48,7 @@ export function RescheduleAppointmentButton({ appointment, className, newStartsA
   return (
     <>
       <Button className={className} onClick={() => setOpen(true)} size={size} type="button" variant={variant}>{t("appointments.reschedule.approve")}</Button>
-      <ConfirmActionDialog
+      <ConfirmActionDialog pendingLabel={t("common:pending.rescheduling")}
         cancelLabel={t("appointments.reschedule.keep")}
         confirmLabel={t("appointments.reschedule.confirm")}
         description={t("appointments.reschedule.description", { appointment: appointmentSummary(appointment, i18n.language, t), time })}

@@ -168,7 +168,6 @@ export function SpendingCapSection({
               </div>
               <div className="flex flex-wrap gap-2">
                 <Button
-                  size="sm"
                   onClick={() => void saveCap()}
                   disabled={saving !== null || capInput.trim().length === 0}
                   loading={saving === "save"}
@@ -178,7 +177,6 @@ export function SpendingCapSection({
                 </Button>
                 {capCents !== null && (
                   <Button
-                    size="sm"
                     variant="outline"
                     onClick={() => void removeCap()}
                     disabled={saving !== null}

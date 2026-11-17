@@ -16,7 +16,7 @@ const clients: QueryClient[] = [];
 beforeEach(() => { vi.stubGlobal("localStorage", { getItem: () => null, setItem: vi.fn() }); });
 afterEach(() => { cleanup(); clients.forEach((client) => client.clear()); clients.length = 0; vi.unstubAllGlobals(); vi.clearAllMocks(); });
 
-async function setup() {
+async function setup(saved: typeof contact & { phone?: string } = contact) {
   const i18n = createInstance();
   await i18n.init({ lng: "en", defaultNS: "contacts", resources: { en: { contacts: en } } });
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
@@ -24,7 +24,7 @@ async function setup() {
   const fetchMock = vi.fn(async () => Response.json({ contactId: contact.id, name: "Alexandra", email: contact.email }));
   vi.stubGlobal("fetch", fetchMock);
   const onOpenChange = vi.fn();
-  render(<I18nextProvider i18n={i18n}><QueryClientProvider client={client}><EditContactDialog businessId="business" contact={contact} onOpenChange={onOpenChange} /></QueryClientProvider></I18nextProvider>);
+  render(<I18nextProvider i18n={i18n}><QueryClientProvider client={client}><EditContactDialog businessId="business" contact={saved} onOpenChange={onOpenChange} /></QueryClientProvider></I18nextProvider>);
   return { fetchMock, onOpenChange };
 }
 
@@ -66,5 +66,44 @@ describe("EditContactDialog", () => {
     await userEvent.click(save());
     expect(await screen.findByText(en.edit.invalidEmail)).toBeTruthy();
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  describe("a phone number", () => {
+    const withPhone = { ...contact, phone: "+14165550100" };
+    const phoneInput = async () => await screen.findByLabelText(en.create.phone);
+
+    it("keeps Save enabled when the number is cleared, and says it can't be removed", async () => {
+      const { fetchMock } = await setup(withPhone);
+      await userEvent.clear(await phoneInput());
+      expect(save().disabled).toBe(false);
+      await userEvent.click(save());
+      expect(await screen.findByText(en.create.phoneInvalid)).toBeTruthy();
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it("keeps Save enabled when only part of a new number is typed, and says it is invalid", async () => {
+      const { fetchMock } = await setup(withPhone);
+      await userEvent.clear(await phoneInput());
+      await userEvent.type(await phoneInput(), "416555");
+      expect(save().disabled).toBe(false);
+      await userEvent.click(save());
+      expect(await screen.findByText(en.create.phoneInvalid)).toBeTruthy();
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it("keeps Save enabled for a half-typed number on a contact that has none", async () => {
+      const { fetchMock } = await setup();
+      await userEvent.type(await phoneInput(), "416");
+      expect(save().disabled).toBe(false);
+      await userEvent.click(save());
+      expect(await screen.findByText(en.create.phoneInvalid)).toBeTruthy();
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it("leaves Save disabled while the number is as saved", async () => {
+      await setup(withPhone);
+      await phoneInput();
+      expect(save().disabled).toBe(true);
+    });
   });
 });

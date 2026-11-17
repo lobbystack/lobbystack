@@ -115,7 +115,7 @@ export function PartnerSignupSurface({ baseDomain, blocked, invitation, invitedE
             <Field>
               <FieldLabel htmlFor="partner-subdomain">{t("signup.subdomainLabel")}</FieldLabel>
               <InputGroup>
-                <InputGroupInput autoCapitalize="none" autoComplete="off" id="partner-subdomain" maxLength={40} onChange={(event) => setSubdomain(event.target.value.toLowerCase())} spellCheck={false} value={shownSubdomain} />
+                <InputGroupInput autoCapitalize="none" autoComplete="off" id="partner-subdomain" maxLength={40} onChange={(event) => setSubdomain(event.target.value.toLowerCase())} placeholder={t("signup.subdomainPlaceholder")} spellCheck={false} value={shownSubdomain} />
                 <InputGroupAddon align="inline-end"><InputGroupText>.{baseDomain}</InputGroupText></InputGroupAddon>
               </InputGroup>
               <FieldDescription>{t("signup.subdomainHelp")}</FieldDescription>

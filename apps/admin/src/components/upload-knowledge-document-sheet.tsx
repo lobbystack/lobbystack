@@ -281,8 +281,8 @@ export function UploadKnowledgeDocumentSheet({
 
           <DialogFooter>
             <DialogClose render={<Button disabled={isUploading} type="button" variant="outline" />}>{t("actions.cancel")}</DialogClose>
-            <Button disabled={isUploading} type="submit">
-              {isUploading ? t("actions.uploading") : t("actions.upload")}
+            <Button loading={isUploading} loadingLabel={t("actions.uploading")} type="submit">
+              {t("actions.upload")}
             </Button>
           </DialogFooter>
         </form>

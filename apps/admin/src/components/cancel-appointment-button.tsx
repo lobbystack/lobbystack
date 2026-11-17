@@ -63,7 +63,7 @@ export function CancelAppointmentButton({ appointment, approve, className, rende
       {renderTrigger ? renderTrigger(() => setOpen(true)) : <Button aria-label={approve ? undefined : t("appointments.cancel.actionLabel", { time: formatDateTime(appointment.startsAt, i18n.language, { dateStyle: "medium", timeStyle: "short", timeZone: appointment.timezone }) })} className={className} onClick={() => setOpen(true)} size={size} variant={variant}>
         {approve ? t("appointments.cancel.approve") : t("appointments.cancel.action")}
       </Button>}
-      <ConfirmActionDialog
+      <ConfirmActionDialog pendingLabel={t("common:pending.cancelling")}
         cancelLabel={t("appointments.cancel.keep")}
         confirmLabel={t("appointments.cancel.confirm")}
         confirmVariant="destructive"

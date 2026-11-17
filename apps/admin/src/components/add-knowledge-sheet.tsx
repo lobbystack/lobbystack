@@ -182,8 +182,8 @@ export function AddKnowledgeSheet({
 
           <DialogFooter>
             <DialogClose render={<Button disabled={isSaving} type="button" variant="outline" />}>{t("agent:actions.cancel")}</DialogClose>
-            <Button disabled={isSaving} type="submit">
-              {isSaving ? t("agent:actions.saving") : submitLabel}
+            <Button loading={isSaving} loadingLabel={t("agent:actions.saving")} type="submit">
+              {submitLabel}
             </Button>
           </DialogFooter>
         </form>

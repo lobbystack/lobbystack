@@ -210,7 +210,7 @@ export function PartnerTeamSurface() {
           </Table>
         )}
       </Surface>
-      <ConfirmActionDialog
+      <ConfirmActionDialog pendingLabel={t(shown?.kind === "remove" ? "common:pending.removing" : "common:pending.updating")}
         cancelLabel={t("team.confirm.cancel")}
         confirmLabel={t(shown?.kind === "remove" ? "team.confirm.removeAction" : "team.confirm.ownerAction")}
         confirmVariant={shown?.kind === "remove" ? "destructive" : "default"}

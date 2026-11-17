@@ -54,6 +54,6 @@ export function CheckInSurface({ answer, token }: { answer: CheckInAnswer | null
 
   return <div className="ph-no-capture"><ReplacementOnboardingShell description={t(`checkIn.answers.${answer}`)} progress={null} title={t("checkIn.confirm.title")} width="sm"><div className="flex flex-col gap-4">
     {state === "failed" ? <p className="text-center type-body text-destructive" role="alert">{t("checkIn.confirm.failed")}</p> : null}
-    <Button className="w-full" disabled={state === "saving"} onClick={() => void confirm()} type="button">{state === "saving" ? t("checkIn.confirm.saving") : t("checkIn.confirm.action")}</Button>
+    <Button className="w-full" loading={state === "saving"} loadingLabel={t("checkIn.confirm.saving")} onClick={() => void confirm()} type="button">{t("checkIn.confirm.action")}</Button>
   </div></ReplacementOnboardingShell></div>;
 }

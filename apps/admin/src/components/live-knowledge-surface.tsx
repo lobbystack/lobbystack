@@ -8,7 +8,7 @@ import { useActiveBusiness } from "@/hooks/use-active-business";
 import { useKnowledgeSources, type KnowledgeSource } from "@/hooks/use-knowledge-sources";
 import { useSetupAction } from "@/lib/use-setup-action";
 import { AddKnowledgeMenu, FileContent, KnowledgeForms, SourceMenu, useSourceActions, type KnowledgeForm } from "./knowledge/knowledge-parts";
-import { isImporting, KnowledgeSourcesTable } from "./knowledge/knowledge-sources-table";
+import { isImporting, KnowledgeSourcesTable, useKnowledgeSearch } from "./knowledge/knowledge-sources-table";
 import { SelectionBar, useSelection } from "./knowledge/selection";
 import { WebsitePagesDialog } from "./knowledge/website-pages-dialog";
 import { useDataTablePaginationLabels } from "./data-table/pagination";
@@ -36,7 +36,8 @@ export function LiveKnowledgeSurface() {
   const [website, setWebsite] = useState<string | null>(null);
   useSetupAction(canManage, useCallback((action: string) => { if (!["upload", "website", "text"].includes(action)) return false; setEditing(null); setForm(action as KnowledgeForm); return true; }, []));
   const { sources, act, cancelImport, invalidate } = useKnowledgeSources(businessId);
-  const rows = useMemo(() => sources.data?.shared ?? [], [sources.data]);
+  const all = useMemo(() => sources.data?.shared ?? [], [sources.data]);
+  const { rows, search } = useKnowledgeSearch(all);
   const ids = useMemo(() => rows.map((row) => row.id), [rows]);
   const selection = useSelection(ids);
   const actions = useSourceActions({ act: act.mutateAsync, cancelImport: cancelImport.mutateAsync });
@@ -66,7 +67,7 @@ export function LiveKnowledgeSurface() {
         { id: "disable", label: t("sections.knowledge.batch.disable"), onClick: () => void actions.run("disable", selected()).then(selection.stop) },
         { id: "enable", label: t("sections.knowledge.batch.enable"), onClick: () => void actions.run("enable", selected()).then(selection.stop) },
         { id: "reimport", label: t("sections.knowledge.batch.reimport"), disabled: !selected().some((row) => row.kind === "website"), onClick: () => void actions.run("reimport", selected()).then(selection.stop) },
-      ]} disabled={loading || !rows.length || actions.pending} selection={selection} />
+      ]} disabled={loading || !all.length || actions.pending} selection={selection} />
     </div> : null}
     <KnowledgeSourcesTable
       emptyText={t("sections.knowledge.emptyState")}
@@ -79,6 +80,7 @@ export function LiveKnowledgeSurface() {
       onOpen={(source) => { if (!isImporting(source) || source.kind === "website") open(source); }}
       onRetry={canManage && !actions.pending ? (source) => void actions.run("reimport", [source]) : undefined}
       rows={rows}
+      search={search}
       selection={canManage ? selection : undefined}
     />
     <UnansweredQuestionsSection businessId={businessId} canManage={canManage} layoutSettled={!loading} />

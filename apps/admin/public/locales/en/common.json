@@ -3,7 +3,9 @@
     "close": "Close",
     "toggleSidebar": "Toggle sidebar",
     "skipToContent": "Skip to main content",
-    "clearSearch": "Clear search"
+    "clearSearch": "Clear search",
+    "decrease": "Decrease",
+    "increase": "Increase"
   },
   "errors": {
     "unexpected": "Something went wrong. Please try again."
@@ -201,6 +203,8 @@
       "more": "+{{count}} more",
       "allDay": "All day",
       "newAt": "New appointment at {{time}}",
+      "resizeColumn": "Resize the {{day}} column",
+      "resizeRows": "Resize hour rows",
       "block": "{{name}}, {{service}}, {{time}}",
       "blockCancelled": "{{name}}, {{service}}, {{time}}, cancelled"
     },
@@ -228,6 +232,7 @@
       "endBeforeStart": "Pick an end after the start.",
       "datesRequired": "Pick a start and end date.",
       "reason": "Reason (optional)",
+      "reasonPlaceholder": "e.g. Staff holiday party, Building maintenance",
       "save": "Save",
       "saving": "Saving…",
       "cancel": "Cancel",
@@ -240,6 +245,7 @@
       "failed": "Couldn't save the time off.",
       "overlap": "This overlaps other time off.",
       "invalid": "Check the dates. Time off can't be over already or end more than two years out.",
+      "startsInPast": "Time off can't start in the past.",
       "label": "Closed: {{name}}, {{time}}",
       "employeeLabel": "{{employee}} off: {{name}}, {{time}}",
       "employeeTitle": "{{employee}}: {{name}}",
@@ -337,6 +343,7 @@
       "newContact": "New contact",
       "chooseContact": "Choose a contact",
       "name": "Name",
+      "namePlaceholder": "e.g. Jane Smith",
       "nameRequired": "Enter a name.",
       "phone": "Phone",
       "phoneCountry": "Phone country",
@@ -359,8 +366,10 @@
       "duration": "Duration (minutes)",
       "durationInvalid": "Enter {{min}} to {{max}} minutes.",
       "notes": "Notes",
+      "notesPlaceholder": "e.g. First visit, prefers mornings",
       "notesHint": "Visible to your agent",
       "internalNotes": "Internal notes",
+      "internalNotesPlaceholder": "e.g. Deposit paid by phone",
       "internalNotesHint": "Staff only",
       "notOpen": "This time isn't open. Pick another.",
       "timeOff": "This time is unavailable: {{name}}."
@@ -393,5 +402,40 @@
     "failedHint": "Add your business details by hand, or try the import again from your dashboard.",
     "inlineRunning": "Reading {{host}}. Pages read so far: {{count}}",
     "stalledTitle": "We couldn't finish reading {{host}}"
+  },
+  "pending": {
+    "saving": "Saving...",
+    "updating": "Updating...",
+    "adding": "Adding...",
+    "creating": "Creating...",
+    "deleting": "Deleting...",
+    "removing": "Removing...",
+    "sending": "Sending...",
+    "inviting": "Inviting...",
+    "continuing": "Continuing...",
+    "finishing": "Finishing...",
+    "confirming": "Confirming...",
+    "moving": "Moving...",
+    "retrying": "Retrying...",
+    "testing": "Testing...",
+    "connecting": "Connecting...",
+    "disconnecting": "Disconnecting...",
+    "cancelling": "Cancelling...",
+    "rescheduling": "Rescheduling...",
+    "blocking": "Blocking...",
+    "unblocking": "Unblocking...",
+    "revoking": "Revoking...",
+    "rotating": "Rotating...",
+    "archiving": "Archiving...",
+    "releasing": "Releasing..."
+  },
+  "tableSearch": {
+    "contacts": "Search contacts",
+    "appointments": "Search appointments",
+    "knowledge": "Search knowledge",
+    "services": "Search services",
+    "employees": "Search employees",
+    "rules": "Search rules",
+    "noResults": "No results for “{{query}}”"
   }
 }

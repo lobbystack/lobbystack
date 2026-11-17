@@ -65,7 +65,7 @@ export function AddAgentDialog({ copyFromAgentId, trigger }: { copyFromAgentId?:
             </Field>
             <DialogFooter>
               <Button onClick={() => setOpen(false)} type="button" variant="outline">{t("agents.cancel")}</Button>
-              <Button disabled={!name.trim()} loading={create.isPending} type="submit">{t("agents.add")}</Button>
+              <Button disabled={!name.trim()} loading={create.isPending} loadingLabel={t("common:pending.adding")} type="submit">{t("agents.add")}</Button>
             </DialogFooter>
           </form>
         </DialogContent>

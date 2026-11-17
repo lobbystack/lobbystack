@@ -112,6 +112,7 @@ import { deleteServiceInTransaction, insertServiceInTransaction, replaceBusiness
 import { NUMBER_BEING_REPLACED_MESSAGE, schedulePhoneNumberReleaseInTransaction } from "../compliance";
 import { ContactPasscodeHashesBusyError, hashContactPasscodes, removeContactPasscodesInTransaction, saveContactPasscodesInTransaction } from "../contactPasscodes";
 import { ContactPhoneTakenError, insertContactInTransaction } from "../contacts";
+import { resetSmsConsentForNewPhone } from "../contactSmsConsent";
 import type { BusinessSetupDependencies } from "../businessTemplates";
 import type { DomainContext } from "../context";
 import { loadEntitlement } from "../entitlement";
@@ -1844,15 +1845,12 @@ export async function updateContactForApi(context: DomainContext, caller: ApiCal
   if (!Object.keys(patch).length) throw invalidRequest("Send at least one field to update.");
   try {
     return await inBusiness(context, caller, async (tx) => {
-      // Consent belongs to the number that gave it: a new number starts without it. An opt-out stays.
-      // The database clock dates the change, so texts the old number sent stop counting as consent (see loadSmsReach).
-      const consent = input.phone !== undefined ? {
-        smsConsentStatus: sql<string | null>`case when ${contacts.phone} is distinct from ${input.phone} and ${contacts.smsConsentStatus} = 'subscribed' then null else ${contacts.smsConsentStatus} end`,
-        smsConsentUpdatedAt: sql<Date | null>`case when ${contacts.phone} is distinct from ${input.phone} then now() else ${contacts.smsConsentUpdatedAt} end`,
-        smsOptInConfirmedAt: sql<Date | null>`case when ${contacts.phone} is distinct from ${input.phone} then null else ${contacts.smsOptInConfirmedAt} end`,
-      } : {};
-      const [row] = await tx.update(contacts).set({ ...patch, ...consent, updatedAt: new Date() }).where(and(eq(contacts.businessId, caller.businessId), eq(contacts.id, contactId))).returning({ id: contacts.id });
+      const [current] = await tx.select({ phone: contacts.phone }).from(contacts).where(and(eq(contacts.businessId, caller.businessId), eq(contacts.id, contactId))).limit(1).for("update");
+      if (!current) throw notFound("Contact");
+      const [row] = await tx.update(contacts).set({ ...patch, updatedAt: new Date() }).where(and(eq(contacts.businessId, caller.businessId), eq(contacts.id, contactId))).returning({ id: contacts.id, phone: contacts.phone });
       if (!row) throw notFound("Contact");
+      // Consent belongs to the number that gave it: a new number starts without it. An opt-out stays.
+      if (input.phone !== undefined && input.phone !== current.phone) await resetSmsConsentForNewPhone(tx, { businessId: caller.businessId, contactId: row.id, phone: input.phone, source: `api:${String(callerAudit(caller).payload.actor)}` });
       await audit(tx, caller, { eventType: "api.contact.updated", entityType: "contact", entityId: row.id, payload: { fields: Object.keys(patch) } });
       const contact = await loadContactResource(tx, caller.businessId, row.id);
       if (!contact) throw notFound("Contact");

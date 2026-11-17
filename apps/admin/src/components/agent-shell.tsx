@@ -33,7 +33,7 @@ export function AgentShell({ agent, children }: { agent: { id: string; name: str
   const [actionsSlot, setActionsSlot] = useState<HTMLElement | null>(null);
   return (
     <section className="flex flex-1 flex-col gap-6">
-      <PageHeader actions={<>{/* Adding, removing and the default belong to the agent's own page, not each section. */}{canManage && !page?.section ? <AgentActionsMenu agentId={agent.id} /> : null}<TestCallButton agentId={agent.id} /><div className="contents" ref={setActionsSlot} />{hasActions && !actionsSlot ? page?.section === "knowledge" ? <HeaderButtonSkeleton label={t("agent:sections.knowledge.addKnowledge")} trailingIcon /> : <HeaderButtonSkeleton label={t("agent:sections.rules.addKnowledge")} /> : null}</>} title={page && page.section ? t(`nav:${page.titleKey}`) : name} />
+      <PageHeader actions={<>{/* Adding, removing and the default belong to the agent's own page, not each section. */}{canManage && !page?.section ? <AgentActionsMenu agentId={agent.id} /> : null}<TestCallButton agentId={agent.id} variant="default" /><div className="contents" ref={setActionsSlot} />{hasActions && !actionsSlot ? page?.section === "knowledge" ? <HeaderButtonSkeleton label={t("agent:sections.knowledge.addKnowledge")} trailingIcon /> : <HeaderButtonSkeleton label={t("agent:sections.rules.addKnowledge")} /> : null}</>} title={page && page.section ? t(`nav:${page.titleKey}`) : name} />
       <PausedAgentNotice agentId={agent.id} />
       <div className="w-full"><HeaderActionsSlotContext.Provider value={actionsSlot}><NestedPageSurfaceProvider>{children}</NestedPageSurfaceProvider></HeaderActionsSlotContext.Provider></div>
     </section>

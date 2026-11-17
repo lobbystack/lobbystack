@@ -53,7 +53,7 @@ export function CancelPlanDialog({ businessId, plan, periodEnd, onCanceled }: { 
         </FieldSet>
         <Field>
           <FieldLabel htmlFor="cancel-plan-comment">{t("billing.cancel.commentLabel")}</FieldLabel>
-          <Textarea disabled={cancel.isPending} id="cancel-plan-comment" maxLength={2_000} onChange={(event) => setComment(event.target.value)} value={comment} />
+          <Textarea disabled={cancel.isPending} id="cancel-plan-comment" maxLength={2_000} onChange={(event) => setComment(event.target.value)} placeholder={t("billing.cancel.commentPlaceholder")} value={comment} />
         </Field>
         {cancel.isError ? <FieldError>{t("billing.cancel.failed")}</FieldError> : null}
         <DialogFooter>

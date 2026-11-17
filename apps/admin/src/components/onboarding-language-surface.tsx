@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { normalizeRuntimeLocale, resolveOnboardingRoute, runtimeLocales, stageAfterWebsite, type RuntimeLocale } from "@lobbystack/shared";
-import { LoaderCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { useTelemetry } from "@/components/product-analytics";
@@ -60,7 +59,7 @@ export function OnboardingLanguageSurface() {
           )}
         </Field>
         {error ? <FieldError>{error}</FieldError> : null}
-        <Button className="mt-2 w-full" disabled={!business || save.isPending || navigating} type="submit">{save.isPending || navigating ? <><LoaderCircle className="size-4 animate-spin" />{t("language.saving")}</> : t("language.continue")}</Button>
+        <Button className="mt-2 w-full" disabled={!business} loading={save.isPending || navigating} loadingLabel={t("language.saving")} type="submit">{t("language.continue")}</Button>
       </FieldGroup>
     </form>
   );

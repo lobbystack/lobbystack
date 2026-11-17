@@ -309,6 +309,7 @@
         "other": "Something else"
       },
       "commentLabel": "Tell us more (optional)",
+      "commentPlaceholder": "e.g. We no longer need the call volume",
       "keep": "Keep my plan",
       "confirm": "Cancel plan",
       "canceling": "Canceling plan...",

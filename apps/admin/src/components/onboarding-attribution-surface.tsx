@@ -8,7 +8,6 @@ import {
   Briefcase,
   createLucideIcon,
   GraduationCap,
-  LoaderCircle,
   MessageCircleQuestion,
   Mic,
   Music2,
@@ -117,7 +116,7 @@ export function OnboardingAttributionSurface() {
         </div>
       )}
       {error ? <FieldError>{error}</FieldError> : null}
-      <Button className="w-full" disabled={!business || selected === null || finish.isPending} onClick={() => { if (selected) void submit(selected); }} type="button">{finish.isPending ? <><LoaderCircle className="size-4 animate-spin" />{t("attribution.saving")}</> : t("attribution.continue")}</Button>
+      <Button className="w-full" disabled={!business || selected === null} loading={finish.isPending} loadingLabel={t("attribution.saving")} onClick={() => { if (selected) void submit(selected); }} type="button">{t("attribution.continue")}</Button>
     </div>
   );
 }

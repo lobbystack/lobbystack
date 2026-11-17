@@ -6,7 +6,7 @@ import { useActiveBusiness } from "@/hooks/use-active-business";
 import { useStepNavigation } from "@/lib/use-step-navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { brandLinks, contactEmailFor } from "@lobbystack/shared";
-import { ArrowRight, Check, LoaderCircle } from "lucide-react";
+import { ArrowRight, Check } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { planCards, billingErrorCodes } from "@lobbystack/shared";
 
@@ -161,7 +161,7 @@ export function OnboardingPlanSurface({ variant }: { variant: "trial" | "paid" }
           return <section className={cn("relative flex flex-col rounded-xl border bg-background p-8", tier.featured ? "border-foreground/30" : "border-border/60")} key={tier.slug}>
             {tier.featured ? <div className="absolute -top-3 left-8 rounded-full bg-foreground px-3 py-0.5 type-label text-background">{t("plan.popular")}</div> : null}
             <div className="mb-6"><h3 className="type-section-title">{tier.name}</h3><div className="mt-3 flex items-baseline gap-1"><span className="type-metric">{price}</span><span className="type-body-muted">{tier.period}</span></div><p className="mt-3 type-body-muted">{description}</p></div>
-            <Button className="mb-6 w-full rounded-full" disabled={!business || Boolean(pendingPlan) || (paid && (!billing.data?.checkoutAvailable || (configuredIntervals && !configuredIntervals[tier.slug as "starter" | "pro"].includes(interval))))} onClick={() => act(tier.slug)} type="button" variant={tier.featured ? "default" : "outline"}>{busy ? <LoaderCircle className="size-4 animate-spin" /> : <>{cta}<ArrowRight className="ml-1 size-4" /></>}</Button>
+            <Button className="mb-6 w-full rounded-full" disabled={!business || Boolean(pendingPlan) || (paid && (!billing.data?.checkoutAvailable || (configuredIntervals && !configuredIntervals[tier.slug as "starter" | "pro"].includes(interval))))} loading={busy} loadingLabel={t("common:pending.continuing")} onClick={() => act(tier.slug)} type="button" variant={tier.featured ? "default" : "outline"}>{cta}<ArrowRight className="ml-1 size-4" /></Button>
             <div className="flex-1 border-t border-border/50 pt-5"><ul className="space-y-2.5">{tier.lines.map((line) => <li className="flex items-start gap-2.5 type-body" key={line.label}><Check className="mt-0.5 size-3.5 shrink-0 text-foreground/60" /><span className="whitespace-pre-line">{line.sublabel ? `${line.label}\n${line.sublabel}` : line.label}</span></li>)}</ul></div>
           </section>;
         })}

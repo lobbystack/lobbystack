@@ -163,7 +163,7 @@ export function VoiceDialog({ open, onOpenChange, current, preview, saving, onSa
         </div>
         <DialogFooter>
           <Button onClick={() => close(false)} type="button" variant="outline">{t("fields.voice.dialog.cancel")}</Button>
-          <Button disabled={picked === current || saving} onClick={() => { void onSave(picked).then((saved) => { if (saved) close(false); }); }} type="button">{t("fields.voice.dialog.use")}</Button>
+          <Button disabled={picked === current} loading={saving} loadingLabel={t("common:pending.saving")} onClick={() => { void onSave(picked).then((saved) => { if (saved) close(false); }); }} type="button">{t("fields.voice.dialog.use")}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

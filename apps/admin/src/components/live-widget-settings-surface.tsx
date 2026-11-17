@@ -236,7 +236,7 @@ export function LiveWidgetSettingsSurface({ agentId, startAdding = false }: { ag
         </DialogContent>
       </Dialog>
 
-      <ConfirmActionDialog
+      <ConfirmActionDialog pendingLabel={t("common:pending.revoking")}
         cancelLabel={t("widget:manage.cancel")}
         confirmLabel={t("widget.keys.revoke")}
         confirmVariant="destructive"
@@ -375,7 +375,7 @@ function WidgetKeyForm({ editing, name, businessName, embedOrigin, pending, erro
                       <span className="sr-only">{t("widget:manage.pickColor")}</span>
                       <input className="absolute inset-0 cursor-pointer opacity-0" type="color" value={draft.color.length === 4 ? `#${[...draft.color.slice(1)].map((digit) => digit + digit).join("")}` : draft.color} onChange={(event) => { set({ color: event.target.value }); setColorText(event.target.value); }} />
                     </label>
-                    <Input id={`${id}-color`} className="font-mono" value={colorText} maxLength={7} spellCheck={false} dir="ltr" onChange={(event) => { setColorText(event.target.value); if (HEX_COLOR.test(event.target.value)) set({ color: event.target.value }); }} onBlur={() => setColorText(draft.color)} />
+                    <Input id={`${id}-color`} className="font-mono" placeholder="#4f46e5" value={colorText} maxLength={7} spellCheck={false} dir="ltr" onChange={(event) => { setColorText(event.target.value); if (HEX_COLOR.test(event.target.value)) set({ color: event.target.value }); }} onBlur={() => setColorText(draft.color)} />
                   </div>
                 </Field>
                 <Field>
@@ -451,7 +451,7 @@ function WidgetKeyForm({ editing, name, businessName, embedOrigin, pending, erro
       <DialogFooter className="items-center border-t px-6 py-4">
         {error ? <p className="mr-auto type-body text-destructive" role="alert">{error}</p> : null}
         <Button type="button" variant="outline" onClick={onCancel}>{t("widget:manage.cancel")}</Button>
-        <Button type="submit" loading={pending} disabled={!draft.origins.trim()}>{row ? t("widget.keys.save") : t("widget.create.action")}</Button>
+        <Button type="submit" loading={pending} loadingLabel={t(editing.mode === "edit" ? "common:pending.saving" : "common:pending.creating")} disabled={!draft.origins.trim()}>{row ? t("widget.keys.save") : t("widget.create.action")}</Button>
       </DialogFooter>
     </form>
   );

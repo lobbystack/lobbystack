@@ -12,8 +12,8 @@ function PhoneInputHarness({
   limitNationalDigits = false,
   locale = "en-US",
 }: {
-  country?: "US" | "CA" | "FR" | "GB" | "AU";
-  defaultCountry?: "US" | "CA" | "FR" | "GB" | "AU";
+  country?: "US" | "CA" | "FR" | "GB" | "AU" | "RU" | "DE";
+  defaultCountry?: "US" | "CA" | "FR" | "GB" | "AU" | "RU" | "DE";
   limitNationalDigits?: boolean;
   locale?: string;
 }) {
@@ -263,6 +263,71 @@ describe("PhoneInput", () => {
 
     expect(input.value).toBe("07123 123499");
     expect(screen.getByTestId("phone-value").textContent).toBe("+447123123499");
+  });
+
+  it("stops at the most digits a French number has when a country is picked", async () => {
+    const user = userEvent.setup();
+
+    render(<PhoneInputHarness country="FR" limitNationalDigits />);
+
+    const input = screen.getByRole("textbox", { name: "Phone" }) as HTMLInputElement;
+    await user.type(input, "6123456789012345");
+
+    expect(input.value.replace(/\D/g, "")).toBe("612345678");
+    expect(screen.getByTestId("phone-value").textContent).toBe("+33612345678");
+  });
+
+  it("keeps a typed leading 0 in France and allows it on top of the digit limit", async () => {
+    const user = userEvent.setup();
+
+    render(<PhoneInputHarness country="FR" limitNationalDigits />);
+
+    const input = screen.getByRole("textbox", { name: "Phone" }) as HTMLInputElement;
+    await user.type(input, "0");
+    expect(input.value).toBe("0");
+
+    await user.type(input, "6123456789999");
+
+    expect(input.value).toBe("06 12 34 56 78");
+    expect(screen.getByTestId("phone-value").textContent).toBe("+33612345678");
+  });
+
+  it("keeps a typed leading 0 in Germany", async () => {
+    const user = userEvent.setup();
+
+    render(<PhoneInputHarness country="DE" limitNationalDigits />);
+
+    const input = screen.getByRole("textbox", { name: "Phone" }) as HTMLInputElement;
+    await user.type(input, "015123456789");
+
+    expect(input.value).toBe("01512 3456789");
+    expect(screen.getByTestId("phone-value").textContent).toBe("+4915123456789");
+  });
+
+  it("lets a Russian number start with 8, such as St Petersburg's 812 and the 800 numbers", async () => {
+    const user = userEvent.setup();
+
+    render(<PhoneInputHarness country="RU" limitNationalDigits />);
+
+    const input = screen.getByRole("textbox", { name: "Phone" }) as HTMLInputElement;
+    await user.type(input, "812");
+    expect(input.value).toBe("812");
+
+    await user.clear(input);
+    await user.type(input, "800");
+    expect(input.value).toBe("800");
+  });
+
+  it("still groups a Russian number typed without the 8", async () => {
+    const user = userEvent.setup();
+
+    render(<PhoneInputHarness country="RU" limitNationalDigits />);
+
+    const input = screen.getByRole("textbox", { name: "Phone" }) as HTMLInputElement;
+    await user.type(input, "9123456789");
+
+    expect(input.value).toBe("912 345-67-89");
+    expect(screen.getByTestId("phone-value").textContent).toBe("+79123456789");
   });
 });
 

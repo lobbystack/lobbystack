@@ -1,17 +1,18 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LiveContactDetailSurface } from "./live-contact-detail-surface";
 
 const language = vi.hoisted(() => ({ current: "sr" }));
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+const navigation = vi.hoisted(() => ({ replace: vi.fn(), search: "" }));
+vi.mock("next/navigation", () => ({ usePathname: () => "/contacts/contact", useRouter: () => ({ push: vi.fn(), replace: navigation.replace }), useSearchParams: () => new URLSearchParams(navigation.search) }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { language: language.current }, t: (key: string) => key }) }));
 
 const clients: QueryClient[] = [];
 beforeEach(() => { vi.stubGlobal("localStorage", { getItem: () => null, setItem: vi.fn() }); });
-afterEach(() => { cleanup(); clients.forEach((client) => client.clear()); clients.length = 0; vi.unstubAllGlobals(); });
+afterEach(() => { navigation.search = ""; navigation.replace.mockClear(); cleanup(); clients.forEach((client) => client.clear()); clients.length = 0; vi.unstubAllGlobals(); });
 
 const appointment = { startsAt: "2026-09-02T15:00:00Z", endsAt: "2026-09-02T15:30:00Z", timezone: "UTC", status: "confirmed", sourceChannel: "web_chat", serviceName: "Consultation", staffName: "Sam" };
 
@@ -189,5 +190,35 @@ describe("contact detail loading state", () => {
     expect(await screen.findByRole("heading", { level: 1, name: "Ana" })).toBeTruthy();
     expect(skeletons()).toBe(0);
     expect(screen.getAllByRole("tab").length).toBe(3);
+  });
+});
+
+describe("contact detail edit", () => {
+  it("opens the edit dialog from the menu with the contact's phone filled in", async () => {
+    language.current = "en";
+    renderDetail("en");
+    await userEvent.click(await screen.findByRole("button", { name: "table.actions.moreOptions" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "table.actions.editContact" }));
+    const dialog = await screen.findByRole("dialog");
+    expect((await within(dialog).findByLabelText("edit.name") as HTMLInputElement).value).toBe("Ana");
+    expect((await within(dialog).findByLabelText("create.phone") as HTMLInputElement).value.replace(/\D/g, "")).toBe("4155550100");
+  });
+});
+
+describe("contact detail tab in the URL", () => {
+  it("writes the chosen tab to the query string and leaves Activity out", async () => {
+    language.current = "en";
+    renderDetail("en");
+    await userEvent.click(await screen.findByRole("tab", { name: "detail.tabs.appointments" }));
+    expect(navigation.replace).toHaveBeenLastCalledWith("/contacts/contact?tab=appointments", { scroll: false });
+    await userEvent.click(screen.getByRole("tab", { name: "detail.tabs.activity" }));
+    expect(navigation.replace).toHaveBeenLastCalledWith("/contacts/contact", { scroll: false });
+  });
+
+  it("opens on the tab the URL names", async () => {
+    language.current = "en";
+    navigation.search = "tab=details";
+    renderDetail("en");
+    expect((await screen.findByRole("tab", { name: "detail.tabs.details" })).getAttribute("aria-selected")).toBe("true");
   });
 });

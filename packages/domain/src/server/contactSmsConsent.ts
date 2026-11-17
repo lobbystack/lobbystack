@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 
 import { contacts, smsConsentEvents, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 
@@ -45,6 +45,31 @@ export async function recordSmsConsentAnswerInTransaction(
   await tx.update(contacts).set({ smsConsentStatus: status, smsConsentSource: input.source, smsConsentUpdatedAt: now, ...(status === "declined" ? { smsOptInConfirmedAt: null } : {}), updatedAt: now }).where(and(eq(contacts.id, input.contactId), eq(contacts.businessId, input.businessId)));
   await tx.insert(smsConsentEvents).values({ businessId: input.businessId, contactId: input.contactId, phone: input.phone, recipientType: "contact", action: status === "subscribed" ? "reminder_consent_granted" : "reminder_consent_declined", source: input.source });
   return status;
+}
+
+/**
+ * Starts a contact whose phone number just changed without the old number's consent. A yes to texts is
+ * dropped and an opt-out stays, but what the old number's STOP replaced and where its answer came from
+ * go too, so a START from the new number can't restore the old number's consent. The database clock dates
+ * the change, so texts the old number sent stop counting as consent. A contact that had nothing on file
+ * leaves no event. Call it after the phone is written, in the same transaction.
+ */
+export async function resetSmsConsentForNewPhone(
+  tx: DatabaseTransaction,
+  input: { businessId: string; contactId: string; phone: string; source: string },
+): Promise<void> {
+  const match = and(eq(contacts.id, input.contactId), eq(contacts.businessId, input.businessId));
+  const [before] = await tx.select({ status: contacts.smsConsentStatus, beforeOptOut: contacts.smsConsentStatusBeforeOptOut, confirmedAt: contacts.smsOptInConfirmedAt, source: contacts.smsConsentSource }).from(contacts).where(match).limit(1);
+  await tx.update(contacts).set({
+    smsConsentStatus: sql<string | null>`case when ${contacts.smsConsentStatus} = 'subscribed' then null else ${contacts.smsConsentStatus} end`,
+    smsConsentUpdatedAt: sql<Date | null>`now()`,
+    smsOptInConfirmedAt: null,
+    smsConsentStatusBeforeOptOut: null,
+    smsConsentSource: null,
+  }).where(match);
+  if (before && (before.status !== null || before.beforeOptOut !== null || before.confirmedAt !== null || before.source !== null)) {
+    await tx.insert(smsConsentEvents).values({ businessId: input.businessId, contactId: input.contactId, phone: input.phone, recipientType: "contact", action: "consent_reset_phone_changed", source: input.source });
+  }
 }
 
 /** The answer on file for a phone number. Only call it with a number the caller is verified to hold. */

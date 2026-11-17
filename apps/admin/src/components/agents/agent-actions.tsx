@@ -28,7 +28,7 @@ export function RemoveAgentDialog({ agent, onOpenChange, open }: { agent: AgentL
   const [chosen, setChosen] = useState<string | null>(null);
   const destination = others.find((item) => item.id === chosen) ?? others.find((item) => item.id === primary?.id) ?? others[0];
   return (
-    <ConfirmActionDialog
+    <ConfirmActionDialog pendingLabel={t("common:pending.removing")}
       cancelLabel={t("agents.cancel")}
       confirmLabel={t("agents.remove")}
       confirmVariant="destructive"
@@ -74,7 +74,7 @@ export function AgentActionsMenu({ agentId }: { agentId: string }) {
   const [removing, setRemoving] = useState(false);
   const agent = find(agentId);
   if (!agent) return null;
-  // With one agent, adding one is the only action, so it gets a quiet button.
+  // With one agent, adding one is the only action, so it gets a quiet button; Test call beside it is the accent.
   if (!hasChoice) return <AddAgentDialog copyFromAgentId={agent.id} trigger={(open) => <Button onClick={open} type="button" variant="outline"><Plus data-icon="inline-start" />{t("agents.add")}</Button>} />;
   async function makeDefault() {
     try {

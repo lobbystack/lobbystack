@@ -414,17 +414,12 @@ export function PhoneNumberChooser({
         <Button
           className="w-full sm:w-auto"
           disabled={isSearching}
+          loading={isSearching && searchSource === "search"}
+          loadingLabel={labels.searching}
           onClick={() => void handleSearch()}
           type="button"
         >
-          {searchSource === "search" ? (
-            <>
-              <LoaderCircle className="size-4 animate-spin" />
-              {labels.searching}
-            </>
-          ) : (
-            labels.search
-          )}
+          {labels.search}
         </Button>
       </div>
 
@@ -462,16 +457,12 @@ export function PhoneNumberChooser({
                     </div>
                     <Button
                       className="rounded-full"
-                      disabled={isThisLoading}
+                      loading={isThisLoading}
                       onClick={() => void handleSelect(number)}
                       size="sm"
                       type="button"
                     >
-                      {isThisLoading ? (
-                        <LoaderCircle className="size-4 animate-spin" />
-                      ) : (
-                        labels.select
-                      )}
+                      {labels.select}
                     </Button>
                   </li>
                 );

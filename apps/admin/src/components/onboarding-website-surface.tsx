@@ -6,7 +6,7 @@ import { useActiveBusiness } from "@/hooks/use-active-business";
 import { useStepNavigation } from "@/lib/use-step-navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ONBOARDING_READING_ROUTE } from "@lobbystack/shared";
-import { Globe, LoaderCircle } from "lucide-react";
+import { Globe } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { getSafeOnboardingErrorMessage } from "@/lib/onboarding-errors";
@@ -77,7 +77,7 @@ export function OnboardingWebsiteSurface() {
           )}
         </Field>
         {error ? <FieldError>{error}</FieldError> : null}
-        <Button className="mt-2 w-full" disabled={!business || websiteUrl.trim().length === 0 || working} type="submit">{working ? <><LoaderCircle className="size-4 animate-spin" />{t(action === "skip" ? "website.skippingImport" : "website.submitting")}</> : t("website.continue")}</Button>
+        <Button className="mt-2 w-full" disabled={!business || websiteUrl.trim().length === 0} loading={working} loadingLabel={t(action === "skip" ? "website.skippingImport" : "website.submitting")} type="submit">{t("website.continue")}</Button>
       </FieldGroup>
       </form>
       <div className="mt-6 flex flex-col items-center gap-3">

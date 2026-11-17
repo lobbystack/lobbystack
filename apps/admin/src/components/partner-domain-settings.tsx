@@ -251,7 +251,7 @@ export function PartnerDomainSettings() {
         </div>
       </FieldSet>
       {custom ? (
-        <ConfirmActionDialog
+        <ConfirmActionDialog pendingLabel={t("common:pending.removing")}
           cancelLabel={t("branding.domain.own.cancel")}
           confirmLabel={t("branding.domain.own.remove")}
           confirmVariant="destructive"

@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useAppearancePreference } from "@/components/appearance-provider";
+import { useTheme } from "@/components/theme-provider";
 import { useLocalePreference } from "@/components/replacement-locale-provider";
 import { Item, ItemActions, ItemContent, ItemDescription, ItemTitle } from "@/components/ui/item";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -20,6 +21,7 @@ export default function AppearancePage() {
   const { t } = useTranslation(["settings", "common"]);
   const { locale, setLocale, isSaving: isLocaleSaving } = useLocalePreference();
   const { ready: timeFormatReady, timeFormatPreference, setTimeFormatPreference } = useAppearancePreference();
+  const { resolvedTheme, setTheme } = useTheme();
   const queryClient = useQueryClient();
   const { businesses, business } = useActiveBusiness();
   const businessId = business?.businessId;
@@ -45,7 +47,7 @@ export default function AppearancePage() {
     },
     onSettled: async (_result, _error, input) => { await queryClient.invalidateQueries({ queryKey: ["appearance-preferences", input.businessId] }); },
   });
-  // The saved telemetry choice comes from the server and the time format from the browser, so the three rows turn real together.
+  // The saved telemetry choice comes from the server and the time format from the browser, so the four rows turn real together.
   const loading = businesses.isLoading || appearance.isLoading || !timeFormatReady;
   return (
     <div className="w-full overflow-y-auto pb-12">
@@ -66,6 +68,15 @@ export default function AppearancePage() {
               {loading ? <Skeleton aria-hidden="true" className="h-9 w-full sm:w-36" /> : <Select items={[{ value: "24h", label: t("appearance.timeFormat.twentyFourHour") }, { value: "ampm", label: t("appearance.timeFormat.ampm") }]} onValueChange={(value) => { if (value) { setTimeFormatPreference(value as TimeFormatPreference); toast.success(t("appearance.saved")); } }} value={timeFormatPreference}>
                 <SelectTrigger aria-label={t("appearance.timeFormat.label")} className="w-full sm:w-36"><SelectValue /></SelectTrigger>
                 <SelectContent><SelectGroup><SelectItem value="24h">{t("appearance.timeFormat.twentyFourHour")}</SelectItem><SelectItem value="ampm">{t("appearance.timeFormat.ampm")}</SelectItem></SelectGroup></SelectContent>
+              </Select>}
+            </ItemActions>
+          </Item>
+          <Item className="rounded-none border-x-0 border-t-0 border-b border-border last:border-b-0" variant="default">
+            <RowText description={t("appearance.theme.description")} label={t("appearance.theme.label")} loading={loading} />
+            <ItemActions className="w-full sm:w-auto">
+              {loading ? <Skeleton aria-hidden="true" className="h-9 w-full sm:w-36" /> : <Select items={[{ value: "light", label: t("appearance.theme.light") }, { value: "dark", label: t("appearance.theme.dark") }]} onValueChange={(value) => { if (value) { setTheme(value); toast.success(t("appearance.saved")); } }} value={resolvedTheme === "dark" ? "dark" : "light"}>
+                <SelectTrigger aria-label={t("appearance.theme.label")} className="w-full sm:w-36"><SelectValue /></SelectTrigger>
+                <SelectContent><SelectGroup><SelectItem value="light">{t("appearance.theme.light")}</SelectItem><SelectItem value="dark">{t("appearance.theme.dark")}</SelectItem></SelectGroup></SelectContent>
               </Select>}
             </ItemActions>
           </Item>
