@@ -384,6 +384,8 @@ A malformed setting, such as an unknown carrier or a country listed twice, stops
 
 Countries outside the US, Canada and Puerto Rico appear in the number picker only when the carrier `TELEPHONY_NUMBERS` sends them to has their registration: a Twilio bundle, or a Telnyx requirement group.
 
+A country neither carrier sells numbers in can use a number the business already has, from a local carrier or a reseller. The carrier sends its calls to a SIP server you run, and an operator attaches the number to the business by hand. [Answer calls on a number from another carrier](./external-numbers.md) explains it.
+
 ## Use Telnyx
 
 A Telnyx number reaches GPT-Live through an FQDN connection of its own, texts through a messaging profile, and falls back to a TeXML application. Telnyx's [GPT-Live configuration guide](https://developers.telnyx.com/docs/voice/sip-trunking/gpt-live-configuration-guide) covers the connection. To set it up:

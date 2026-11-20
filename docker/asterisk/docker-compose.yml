@@ -1,0 +1,13 @@
+# Runs the SIP server on a host with a public address. Host networking keeps the audio's addresses honest,
+# which NAT between a container and the carrier would not.
+#
+#   cp asterisk.env.example asterisk.env   # then edit it
+#   docker compose up -d --build
+services:
+  asterisk:
+    build: .
+    network_mode: host
+    restart: unless-stopped
+    env_file: asterisk.env
+    volumes:
+      - ./certs:/certs:ro
