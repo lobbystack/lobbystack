@@ -1,9 +1,10 @@
 /**
  * The carriers LobbyStack can buy numbers from, text through and take calls
  * on. Adding one means a new adapter that implements the capabilities below,
- * plus its id here.
+ * plus its id here. The order is the order a number search tries them in when
+ * TELEPHONY_NUMBERS doesn't name any for a country.
  */
-export const CARRIER_IDS = ["twilio", "telnyx"] as const;
+export const CARRIER_IDS = ["twilio", "telnyx", "zadarma"] as const;
 export type CarrierId = (typeof CARRIER_IDS)[number];
 
 export function isCarrierId(value: unknown): value is CarrierId {
@@ -52,6 +53,8 @@ export type OwnedPhoneNumber = { providerPhoneId: string; e164: string; friendly
 /** Searching, buying and releasing numbers. Each adapter applies its own regulatory documents and webhooks. */
 export interface NumberInventory {
   readonly carrier: CarrierId;
+  /** How long an order may stay pending before the claim fails, when the carrier takes longer than the worker's default. */
+  readonly orderMaxWaitMs?: number;
   listAvailablePhoneNumbers(input: NumberSearch): Promise<AvailablePhoneNumber[]>;
   /** What the carrier charges each month for a number of this kind in this country, in US cents. */
   getPhoneNumberMonthlyPrice(input: { countryCode: string; kind: NumberKind }): Promise<{ monthlyCents: number }>;

@@ -106,6 +106,17 @@ describe("createTelephony", () => {
       expect(JSON.parse(warn.mock.calls[0]![0] as string)).toMatchObject({ carrier: "twilio", reason: "search failed", next: "telnyx" });
     });
 
+    it("walks all three: Twilio and Telnyx have none, so Zadarma sells the number", async () => {
+      const warn = logged();
+      const zadarma = searching("zadarma", "numbers");
+      const telephony = createTelephony({ ZADARMA_DOCUMENTS_GROUP_ID: "5" }, { twilio: () => searching("twilio", "none"), telnyx: () => searching("telnyx", new Error("unsupported country")), zadarma: () => zadarma });
+      expect(await telephony.numbers.listAvailablePhoneNumbers(search)).toEqual([expect.objectContaining({ phoneE164: "+381820000000", carrier: "zadarma" })]);
+      expect(warn.mock.calls.map(([line]) => JSON.parse(line as string))).toEqual([
+        { event: "telephony.number_search_fallback", country: "RS", carrier: "twilio", reason: "no numbers", next: "telnyx" },
+        { event: "telephony.number_search_fallback", country: "RS", carrier: "telnyx", reason: "search failed", next: "zadarma" },
+      ]);
+    });
+
     it("skips a carrier that has no credentials without asking it", async () => {
       const telnyx = searching("telnyx", "numbers");
       const telephony = createTelephony({}, { twilio: () => undefined, telnyx: () => telnyx });

@@ -59,7 +59,7 @@ Le modèle GPT-Live d'OpenAI répond aux appels dans le navigateur et aux appels
 | `LIVE_PROTOTYPE_ENABLED` | Définissez-la à `true` sur l'admin et le worker. Compose la définit par défaut. Les appels dans le navigateur échouent sans elle. |
 | `OPENAI_WEBHOOK_SECRET` | Vérifie le webhook d'appel entrant d'OpenAI à `/api/webhooks/openai/live`. Appels téléphoniques seulement. |
 | `TWILIO_SIP_TRUNK_SID` | Le trunk Twilio Elastic SIP qui envoie les appels à votre projet OpenAI. Les nouveaux numéros s'y ajoutent, et le worker ne provisionne pas de numéro sans lui. |
-| `TELEPHONY_NUMBERS` | Les opérateurs qui vendent les numéros de chaque pays, dans l'ordre où les essayer, par exemple `US:telnyx,*:twilio>telnyx`. Laissez-la vide pour essayer Twilio d'abord, puis chaque autre opérateur dont vous avez configuré les identifiants. Une valeur mal formée empêche le worker de démarrer. |
+| `TELEPHONY_NUMBERS` | Les opérateurs qui vendent les numéros de chaque pays, dans l'ordre où les essayer, par exemple `US:telnyx,*:twilio>telnyx`. Laissez-la vide pour essayer Twilio, puis Telnyx, puis Zadarma, en sautant ceux dont vous n'avez pas configuré les identifiants. Une valeur mal formée empêche le worker de démarrer. |
 | `TELEPHONY_VERIFY`, `TELEPHONY_LOOKUP`, `TELEPHONY_ALERT_SMS` | L'opérateur du code de vérification à l'inscription, de la vérification du type de ligne et des textos de l'expéditeur partagé. Chacune vaut `twilio` par défaut. |
 | `TELEPHONY_ALERT_SMS_FROM` | Le numéro de l'expéditeur partagé. À défaut, `TWILIO_ALERT_SMS_FROM`. |
 | `OPENAI_PROJECT_ID` | L'ID de votre projet OpenAI (`proj_…`). Le worker donne à chaque numéro Telnyx sa propre connexion SIP vers ce projet, et n'achète aucun numéro Telnyx sans lui. L'application d'administration et le worker en ont tous deux besoin pour Le personnel répond d'abord sur les numéros Twilio. Sans lui dans l'application d'administration, le réglage ne peut pas être activé. |
@@ -142,6 +142,7 @@ Un point de terminaison OTLP vide ne désactive ni les journaux stdout des conte
 | --- | --- |
 | `TWILIO_*` | Voix, vérification, provisionnement des numéros et authentification des webhooks. |
 | `TELNYX_*` | La même chose pour Telnyx : `TELNYX_API_KEY`, `TELNYX_PUBLIC_KEY` pour les signatures des webhooks, `TELNYX_MESSAGING_PROFILE_ID`, `TELNYX_VERIFY_PROFILE_ID`, et `TELNYX_GB_REQUIREMENT_GROUP_ID`, `TELNYX_AU_REQUIREMENT_GROUP_ID` ou `TELNYX_NZ_REQUIREMENT_GROUP_ID` pour ces pays. |
+| `ZADARMA_*` | Des numéros fixes dans les pays que Twilio et Telnyx ne couvrent pas : `ZADARMA_API_KEY`, `ZADARMA_API_SECRET`, `ZADARMA_DOCUMENTS_GROUP_ID`, et `ZADARMA_SIP_HOST` pour le serveur SIP qui transmet les appels à OpenAI. |
 | `OPENAI_API_KEY` | Appels GPT-Live et clé de repli pour `AI_CHAT_*` et `AI_EMBEDDING_*`. |
 | `AI_CHAT_API_KEY`, `AI_CHAT_BASE_URL`, `AI_CHAT_MODEL`, `AI_CHAT_PROVIDER_NAME` | L'agent pour le clavardage du site Web et les appels. Laissez `AI_CHAT_MODEL` vide sur OpenAI pour utiliser `gpt-6-luna`. Définissez-la pour tout autre point de terminaison compatible OpenAI. |
 | `AI_CHAT_REASONING_EFFORT` | OpenAI seulement : `none`, `minimal`, `low`, `medium`, `high` ou `xhigh`. Vaut `high` par défaut. |

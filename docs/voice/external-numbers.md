@@ -2,7 +2,7 @@
 
 Twilio and Telnyx sell the numbers LobbyStack answers today. Some countries have neither. A business there can keep a number it gets from a local carrier or a reseller such as Zadarma, and have that carrier send the calls to a SIP server you run. The server passes each call to OpenAI, and LobbyStack answers it like any other. This page explains how that works, how to run the server, and what such a number can't do.
 
-Use it when LobbyStack can't buy a number in the business's country. It is manual work for each number, and it carries voice only.
+Use it when LobbyStack can't buy a number in the business's country. It is manual work for each number, and it carries voice only. For Zadarma numbers LobbyStack orders itself, see [Use Zadarma](./runtime.md#use-zadarma); the SIP server below is the same one.
 
 ## How a call reaches the agent
 

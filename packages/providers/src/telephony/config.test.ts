@@ -13,10 +13,10 @@ describe("sipAddress", () => {
 });
 
 describe("telephony routing settings", () => {
-  it("tries Twilio, then Telnyx, when nothing is set", () => {
+  it("tries Twilio, then Telnyx, then Zadarma, when nothing is set", () => {
     const routes = telephonyRoutes({});
-    expect(routes).toEqual({ numbers: { byCountry: {}, fallback: ["twilio", "telnyx"] }, verify: "twilio", lookup: "twilio", alertSms: "twilio" });
-    expect(numbersCarriersFor(routes, "US")).toEqual(["twilio", "telnyx"]);
+    expect(routes).toEqual({ numbers: { byCountry: {}, fallback: ["twilio", "telnyx", "zadarma"] }, verify: "twilio", lookup: "twilio", alertSms: "twilio" });
+    expect(numbersCarriersFor(routes, "US")).toEqual(["twilio", "telnyx", "zadarma"]);
   });
 
   it("routes number search and purchase by country, with * for the rest", () => {
@@ -32,11 +32,11 @@ describe("telephony routing settings", () => {
     const routes = telephonyRoutes({ TELEPHONY_NUMBERS: "GB:telnyx > twilio, US:twilio>telnyx,*:twilio" });
     expect(routes.numbers).toEqual({ byCountry: { GB: ["telnyx", "twilio"], US: ["twilio", "telnyx"] }, fallback: ["twilio"] });
     // A country that isn't listed keeps the default order.
-    expect(telephonyRoutes({ TELEPHONY_NUMBERS: "GB:telnyx" }).numbers.fallback).toEqual(["twilio", "telnyx"]);
+    expect(telephonyRoutes({ TELEPHONY_NUMBERS: "GB:telnyx" }).numbers.fallback).toEqual(["twilio", "telnyx", "zadarma"]);
   });
 
   it("refuses an unknown carrier, a malformed entry, a country listed twice and a carrier repeated in one list", () => {
-    expect(() => parseCountryRoutes("US:vonage")).toThrow('TELEPHONY_NUMBERS must be one of twilio, telnyx, not "vonage".');
+    expect(() => parseCountryRoutes("US:vonage")).toThrow('TELEPHONY_NUMBERS must be one of twilio, telnyx, zadarma, not "vonage".');
     expect(() => parseCountryRoutes("USA:telnyx")).toThrow("malformed entry");
     expect(() => parseCountryRoutes("telnyx")).toThrow("malformed entry");
     expect(() => parseCountryRoutes("US:twilio>")).toThrow("malformed entry");
@@ -52,6 +52,8 @@ describe("telephony routing settings", () => {
     expect(countryRegistration("twilio", "AU", { TWILIO_AU_BUNDLE_SID: "BU1" })).toEqual({ missing: ["TWILIO_AU_ADDRESS_SID"] });
     expect(countryRegistration("telnyx", "GB", {})).toEqual({ missing: ["TELNYX_GB_REQUIREMENT_GROUP_ID"] });
     expect(countryRegistration("telnyx", "GB", { TELNYX_GB_REQUIREMENT_GROUP_ID: "rg_1" })).toEqual({ missing: [] });
+    expect(countryRegistration("zadarma", "RS", {})).toEqual({ missing: ["ZADARMA_DOCUMENTS_GROUP_ID"] });
+    expect(countryRegistration("zadarma", "RS", { ZADARMA_DOCUMENTS_GROUP_ID: "5" })).toEqual({ missing: [] });
     // A UK number from Telnyx needs Telnyx's requirement group, not Twilio's bundle.
     expect(numberCountryReady("GB", { TWILIO_GB_BUNDLE_SID: "BU1", TELEPHONY_NUMBERS: "GB:telnyx" })).toBe(false);
     expect(numberCountryReady("GB", { TELNYX_GB_REQUIREMENT_GROUP_ID: "rg_1", TELEPHONY_NUMBERS: "GB:telnyx" })).toBe(true);
@@ -59,9 +61,10 @@ describe("telephony routing settings", () => {
   });
 
   it("is ready for a country when any carrier it tries has the registration", () => {
-    // The default order tries Twilio then Telnyx, so either one's papers are enough.
+    // The default order tries Twilio, then Telnyx, then Zadarma, so any one's papers are enough.
     expect(numberCountryReady("GB", {})).toBe(false);
     expect(numberCountryReady("GB", { TELNYX_GB_REQUIREMENT_GROUP_ID: "rg_1" })).toBe(true);
+    expect(numberCountryReady("GB", { ZADARMA_DOCUMENTS_GROUP_ID: "5" })).toBe(true);
     expect(numberCountryReady("GB", { TWILIO_GB_BUNDLE_SID: "BU1" })).toBe(true);
     expect(numberCountryReady("GB", { TELNYX_GB_REQUIREMENT_GROUP_ID: "rg_1", TELEPHONY_NUMBERS: "GB:twilio" })).toBe(false);
   });
@@ -72,6 +75,8 @@ describe("telephony routing settings", () => {
     // Telnyx is in the default order, so its credentials alone are enough.
     expect(numberCarriersConfigured({ TELNYX_API_KEY: "KEY" })).toBe(true);
     expect(numberCarriersConfigured({ TELNYX_API_KEY: "KEY", TELEPHONY_NUMBERS: "*:twilio" })).toBe(false);
+    expect(numberCarriersConfigured({ ZADARMA_API_KEY: "KEY", ZADARMA_API_SECRET: "SECRET" })).toBe(true);
+    expect(numberCarriersConfigured({ ZADARMA_API_KEY: "KEY" })).toBe(false);
     expect(numberCarriersConfigured({ TELNYX_API_KEY: "KEY", TELEPHONY_NUMBERS: "US:telnyx,*:twilio" })).toBe(true);
     expect(numberCarriersConfigured({ TELNYX_API_KEY: "KEY", TELEPHONY_NUMBERS: "US:twilio>telnyx,*:twilio" })).toBe(true);
   });

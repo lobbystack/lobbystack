@@ -1,5 +1,6 @@
 import { telnyxConfigured, telnyxRegistration } from "../telnyx/registration";
 import { twilioConfigured, twilioRegistration } from "../twilio/registration";
+import { zadarmaConfigured, zadarmaRegistration } from "../zadarma/registration";
 import { CARRIER_IDS, isCarrierId, type CarrierId } from "./types";
 
 type Env = Record<string, string | undefined>;
@@ -77,6 +78,7 @@ export function carrierConfigured(carrier: CarrierId, env: Env = process.env): b
   switch (carrier) {
     case "twilio": return twilioConfigured(env);
     case "telnyx": return telnyxConfigured(env);
+    case "zadarma": return zadarmaConfigured(env);
   }
 }
 
@@ -96,6 +98,7 @@ export function countryRegistration(carrier: CarrierId, countryCode: string, env
   switch (carrier) {
     case "twilio": return twilioRegistration(countryCode, env);
     case "telnyx": return telnyxRegistration(countryCode, env);
+    case "zadarma": return zadarmaRegistration(countryCode, env);
   }
 }
 

@@ -1,5 +1,6 @@
 import { createTelnyxCarrier, createTelnyxAlertSms } from "../telnyx/telnyxCarrier";
 import { createTwilioAlertSms, createTwilioCarrier } from "../twilio/twilioCarrier";
+import { createZadarmaCarrier } from "../zadarma/zadarmaCarrier";
 import { countryRegistration, numbersCarriersFor, telephonyRoutes, type TelephonyRoutes } from "./config";
 import { CARRIER_IDS, isCarrierId, type AlertSmsSender, type AvailablePhoneNumber, type CarrierAdapters, type CarrierId, type LineTypeLookup, type NumberSearch, type PhoneVerifier } from "./types";
 
@@ -58,8 +59,9 @@ export type TelephonyFactories = {
   [K in CarrierId]: (env: Env) => CarrierAdapters | undefined;
 };
 
-const defaultFactories: TelephonyFactories = { twilio: (env) => createTwilioCarrier(env), telnyx: (env) => createTelnyxCarrier(env) };
-const alertFactories: { [K in CarrierId]: (env: Env) => AlertSmsSender | undefined } = { twilio: createTwilioAlertSms, telnyx: createTelnyxAlertSms };
+const defaultFactories: TelephonyFactories = { twilio: (env) => createTwilioCarrier(env), telnyx: (env) => createTelnyxCarrier(env), zadarma: (env) => createZadarmaCarrier(env) };
+// Zadarma sells numbers that take calls only, so it has no shared sender.
+const alertFactories: { [K in CarrierId]: (env: Env) => AlertSmsSender | undefined } = { twilio: createTwilioAlertSms, telnyx: createTelnyxAlertSms, zadarma: () => undefined };
 
 /**
  * Asks each carrier for numbers in turn and returns the first answer that has any, tagged with the carrier that
