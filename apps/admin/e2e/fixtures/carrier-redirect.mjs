@@ -1,13 +1,13 @@
 // Loaded with `node --import` into the admin server and the worker on the
 // full-stack e2e run. Neither carrier has a base URL setting, so this sends
 // their REST calls to the local fake at the network boundary, and the real
-// adapters run unchanged. Twilio's SDK uses https.request; Telnyx uses fetch.
+// adapters run unchanged. Twilio's SDK uses https.request; Telnyx and Zadarma use fetch.
 import http from "node:http";
 import https from "node:https";
 import { syncBuiltinESMExports } from "node:module";
 
 const fake = new URL(process.env.E2E_CARRIER_FAKE_URL);
-const isCarrier = (host) => /(^|\.)(twilio|telnyx)\.com$/i.test(host ?? "");
+const isCarrier = (host) => /(^|\.)(twilio|telnyx|zadarma)\.com$/i.test(host ?? "");
 const fakePath = (host, path) => `/carrier/${host}${path}`;
 
 const realFetch = globalThis.fetch;
