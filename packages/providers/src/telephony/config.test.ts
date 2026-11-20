@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { alertSmsFrom, countryRegistration, numberCarriersConfigured, numberCountryReady, numbersCarriersFor, parseCountryRoutes, sipAddress, telephonyRoutes } from "./config";
+import { alertSmsFrom, carrierSellsIn, countryRegistration, numberCarriersConfigured, numberCountryReady, numbersCarriersFor, parseCountryRoutes, sipAddress, telephonyRoutes } from "./config";
 
 describe("sipAddress", () => {
   it("asks for TLS and SRTP in the URI", () => {
@@ -61,12 +61,31 @@ describe("telephony routing settings", () => {
   });
 
   it("is ready for a country when any carrier it tries has the registration", () => {
-    // The default order tries Twilio, then Telnyx, then Zadarma, so any one's papers are enough.
+    // The default order tries Twilio, then Telnyx, so either one's papers are enough.
     expect(numberCountryReady("GB", {})).toBe(false);
     expect(numberCountryReady("GB", { TELNYX_GB_REQUIREMENT_GROUP_ID: "rg_1" })).toBe(true);
-    expect(numberCountryReady("GB", { ZADARMA_DOCUMENTS_GROUP_ID: "5" })).toBe(true);
     expect(numberCountryReady("GB", { TWILIO_GB_BUNDLE_SID: "BU1" })).toBe(true);
     expect(numberCountryReady("GB", { TELNYX_GB_REQUIREMENT_GROUP_ID: "rg_1", TELEPHONY_NUMBERS: "GB:twilio" })).toBe(false);
+  });
+
+  it("knows Twilio has no numbers in Serbia, so Serbia is ready only through another carrier", () => {
+    expect(carrierSellsIn("twilio", "RS")).toBe(false);
+    expect(carrierSellsIn("twilio", "rs")).toBe(false);
+    expect(carrierSellsIn("twilio", "US")).toBe(true);
+    expect(carrierSellsIn("telnyx", "RS")).toBe(true);
+    expect(carrierSellsIn("zadarma", "RS")).toBe(true);
+    // Zadarma is wanted for Serbia only, so its papers don't make the UK or Australia ready.
+    expect(carrierSellsIn("zadarma", "GB")).toBe(false);
+    expect(numberCountryReady("GB", { ZADARMA_DOCUMENTS_GROUP_ID: "5" })).toBe(false);
+    expect(numberCountryReady("US", { ZADARMA_DOCUMENTS_GROUP_ID: "5" })).toBe(true);
+    // Twilio asks for no registration in Serbia, but it doesn't make the country ready.
+    expect(numberCountryReady("RS", {})).toBe(false);
+    expect(numberCountryReady("RS", { TWILIO_ACCOUNT_SID: "AC1", TWILIO_AUTH_TOKEN: "t" })).toBe(false);
+    expect(numberCountryReady("RS", { ZADARMA_DOCUMENTS_GROUP_ID: "5" })).toBe(true);
+    expect(numberCountryReady("RS", { TELNYX_RS_REQUIREMENT_GROUP_ID: "rg_1" })).toBe(true);
+    expect(countryRegistration("telnyx", "RS", {})).toEqual({ missing: ["TELNYX_RS_REQUIREMENT_GROUP_ID"] });
+    // A route that names only Twilio leaves Serbia unsold.
+    expect(numberCountryReady("RS", { ZADARMA_DOCUMENTS_GROUP_ID: "5", TELEPHONY_NUMBERS: "RS:twilio" })).toBe(false);
   });
 
   it("can search numbers when any carrier the routes name has credentials", () => {

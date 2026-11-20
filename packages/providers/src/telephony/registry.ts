@@ -1,7 +1,7 @@
 import { createTelnyxCarrier, createTelnyxAlertSms } from "../telnyx/telnyxCarrier";
 import { createTwilioAlertSms, createTwilioCarrier } from "../twilio/twilioCarrier";
 import { createZadarmaCarrier } from "../zadarma/zadarmaCarrier";
-import { countryRegistration, numbersCarriersFor, telephonyRoutes, type TelephonyRoutes } from "./config";
+import { carrierSellsIn, countryRegistration, numbersCarriersFor, telephonyRoutes, type TelephonyRoutes } from "./config";
 import { CARRIER_IDS, isCarrierId, type AlertSmsSender, type AvailablePhoneNumber, type CarrierAdapters, type CarrierId, type LineTypeLookup, type NumberSearch, type PhoneVerifier } from "./types";
 
 type Env = Record<string, string | undefined>;
@@ -81,6 +81,8 @@ async function searchInOrder(
   for (const [position, carrier] of order.entries()) {
     const inventory = carriers[carrier]?.inventory;
     if (!inventory) continue;
+    // A carrier with no numbers in the country isn't asked, and isn't a fallback worth logging.
+    if (!carrierSellsIn(carrier, input.countryCode)) continue;
     // A carrier whose papers for this country aren't in place can't sell there yet, whatever it would answer.
     if ((countryRegistration(carrier, input.countryCode, env)?.missing.length ?? 0) > 0) continue;
     asked += 1;
@@ -136,7 +138,7 @@ export function createTelephony(env: Env = process.env, factories: Partial<Telep
     forNumber,
     numbersCarriers,
     numbers: {
-      canSearch: (countryCode) => numbersCarriers(countryCode).some((carrier) => Boolean(carriers[carrier]?.inventory)),
+      canSearch: (countryCode) => numbersCarriers(countryCode).some((carrier) => carrierSellsIn(carrier, countryCode) && Boolean(carriers[carrier]?.inventory)),
       listAvailablePhoneNumbers: async (input) => await searchInOrder(numbersCarriers(input.countryCode), carriers, input, env),
     },
     ...(verifier ? { verifier } : {}),

@@ -81,7 +81,7 @@ describe("createTelephony", () => {
   });
 
   describe("trying the carriers in order", () => {
-    const search = { countryCode: "RS", kind: "local" as const, limit: 5 };
+    const search = { countryCode: "US", kind: "local" as const, limit: 5 };
     afterEach(() => vi.restoreAllMocks());
     const logged = () => vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
@@ -96,7 +96,7 @@ describe("createTelephony", () => {
       const warn = logged();
       const telephony = createTelephony({}, { twilio: () => searching("twilio", "none"), telnyx: () => searching("telnyx", "numbers") });
       expect(await telephony.numbers.listAvailablePhoneNumbers(search)).toEqual([expect.objectContaining({ phoneE164: "+381820000000", carrier: "telnyx" })]);
-      expect(JSON.parse(warn.mock.calls[0]![0] as string)).toEqual({ event: "telephony.number_search_fallback", country: "RS", carrier: "twilio", reason: "no numbers", next: "telnyx" });
+      expect(JSON.parse(warn.mock.calls[0]![0] as string)).toEqual({ event: "telephony.number_search_fallback", country: "US", carrier: "twilio", reason: "no numbers", next: "telnyx" });
     });
 
     it("moves to the next carrier when the first fails", async () => {
@@ -106,15 +106,22 @@ describe("createTelephony", () => {
       expect(JSON.parse(warn.mock.calls[0]![0] as string)).toMatchObject({ carrier: "twilio", reason: "search failed", next: "telnyx" });
     });
 
-    it("walks all three: Twilio and Telnyx have none, so Zadarma sells the number", async () => {
+    it("doesn't ask Twilio about Serbia, which it has no numbers in, and doesn't log that as a fallback", async () => {
       const warn = logged();
-      const zadarma = searching("zadarma", "numbers");
-      const telephony = createTelephony({ ZADARMA_DOCUMENTS_GROUP_ID: "5" }, { twilio: () => searching("twilio", "none"), telnyx: () => searching("telnyx", new Error("unsupported country")), zadarma: () => zadarma });
-      expect(await telephony.numbers.listAvailablePhoneNumbers(search)).toEqual([expect.objectContaining({ phoneE164: "+381820000000", carrier: "zadarma" })]);
-      expect(warn.mock.calls.map(([line]) => JSON.parse(line as string))).toEqual([
-        { event: "telephony.number_search_fallback", country: "RS", carrier: "twilio", reason: "no numbers", next: "telnyx" },
-        { event: "telephony.number_search_fallback", country: "RS", carrier: "telnyx", reason: "search failed", next: "zadarma" },
-      ]);
+      const twilio = searching("twilio", "numbers"); const telnyx = searching("telnyx", "none"); const zadarma = searching("zadarma", "numbers");
+      const telephony = createTelephony({ TELNYX_RS_REQUIREMENT_GROUP_ID: "rg_1", ZADARMA_DOCUMENTS_GROUP_ID: "5" }, { twilio: () => twilio, telnyx: () => telnyx, zadarma: () => zadarma });
+      expect(await telephony.numbers.listAvailablePhoneNumbers({ ...search, countryCode: "RS" })).toEqual([expect.objectContaining({ carrier: "zadarma" })]);
+      expect(twilio.inventory!.listAvailablePhoneNumbers).not.toHaveBeenCalled();
+      expect(warn.mock.calls.map(([line]) => JSON.parse(line as string))).toEqual([{ event: "telephony.number_search_fallback", country: "RS", carrier: "telnyx", reason: "no numbers", next: "zadarma" }]);
+    });
+
+    it("can't search Serbia with only Twilio, and says so without asking it", async () => {
+      const twilio = searching("twilio", "numbers");
+      const telephony = createTelephony({}, { twilio: () => twilio, telnyx: () => undefined, zadarma: () => undefined });
+      expect(telephony.numbers.canSearch("RS")).toBe(false);
+      expect(telephony.numbers.canSearch("US")).toBe(true);
+      await expect(telephony.numbers.listAvailablePhoneNumbers({ ...search, countryCode: "RS" })).rejects.toMatchObject({ code: "phone_numbers_unavailable" });
+      expect(twilio.inventory!.listAvailablePhoneNumbers).not.toHaveBeenCalled();
     });
 
     it("skips a carrier that has no credentials without asking it", async () => {
@@ -147,8 +154,8 @@ describe("createTelephony", () => {
 
     it("tries only the carriers a country lists, in the order written", async () => {
       const twilio = searching("twilio", "numbers"); const telnyx = searching("telnyx", "none");
-      const telephony = createTelephony({ TELEPHONY_NUMBERS: "RS:telnyx>twilio,*:telnyx" }, { twilio: () => twilio, telnyx: () => telnyx });
-      expect(telephony.numbersCarriers("RS")).toEqual(["telnyx", "twilio"]);
+      const telephony = createTelephony({ TELEPHONY_NUMBERS: "US:telnyx>twilio,*:telnyx" }, { twilio: () => twilio, telnyx: () => telnyx });
+      expect(telephony.numbersCarriers("US")).toEqual(["telnyx", "twilio"]);
       logged();
       expect(await telephony.numbers.listAvailablePhoneNumbers(search)).toEqual([expect.objectContaining({ carrier: "twilio" })]);
       expect(telnyx.inventory!.listAvailablePhoneNumbers).toHaveBeenCalledBefore(twilio.inventory!.listAvailablePhoneNumbers as never);
@@ -156,7 +163,7 @@ describe("createTelephony", () => {
 
     it("doesn't fall back from a country that lists one carrier", async () => {
       const twilio = searching("twilio", "numbers"); const telnyx = searching("telnyx", "none");
-      const telephony = createTelephony({ TELEPHONY_NUMBERS: "RS:telnyx" }, { twilio: () => twilio, telnyx: () => telnyx });
+      const telephony = createTelephony({ TELEPHONY_NUMBERS: "US:telnyx" }, { twilio: () => twilio, telnyx: () => telnyx });
       logged();
       expect(await telephony.numbers.listAvailablePhoneNumbers(search)).toEqual([]);
       expect(twilio.inventory!.listAvailablePhoneNumbers).not.toHaveBeenCalled();

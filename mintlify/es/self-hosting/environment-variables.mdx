@@ -141,7 +141,7 @@ Un endpoint OTLP vacío no desactiva los registros stdout de los contenedores, l
 | Grupo de variables | Función |
 | --- | --- |
 | `TWILIO_*` | Voz, verificación, aprovisionamiento de números y autenticación de webhooks. |
-| `TELNYX_*` | Lo mismo para Telnyx: `TELNYX_API_KEY`, `TELNYX_PUBLIC_KEY` para las firmas de los webhooks, `TELNYX_MESSAGING_PROFILE_ID`, `TELNYX_VERIFY_PROFILE_ID`, y `TELNYX_GB_REQUIREMENT_GROUP_ID`, `TELNYX_AU_REQUIREMENT_GROUP_ID` o `TELNYX_NZ_REQUIREMENT_GROUP_ID` para esos países. |
+| `TELNYX_*` | Lo mismo para Telnyx: `TELNYX_API_KEY`, `TELNYX_PUBLIC_KEY` para las firmas de los webhooks, `TELNYX_MESSAGING_PROFILE_ID`, `TELNYX_VERIFY_PROFILE_ID`, y `TELNYX_GB_REQUIREMENT_GROUP_ID`, `TELNYX_AU_REQUIREMENT_GROUP_ID`, `TELNYX_NZ_REQUIREMENT_GROUP_ID` o `TELNYX_RS_REQUIREMENT_GROUP_ID` para esos países. |
 | `ZADARMA_*` | Números fijos en los países que Twilio y Telnyx no cubren: `ZADARMA_API_KEY`, `ZADARMA_API_SECRET`, `ZADARMA_DOCUMENTS_GROUP_ID` y `ZADARMA_SIP_HOST` para el servidor SIP que pasa las llamadas a OpenAI. |
 | `OPENAI_API_KEY` | Llamadas de GPT-Live y clave de respaldo para `AI_CHAT_*` y `AI_EMBEDDING_*`. |
 | `AI_CHAT_API_KEY`, `AI_CHAT_BASE_URL`, `AI_CHAT_MODEL`, `AI_CHAT_PROVIDER_NAME` | El agente para el chat del sitio web y las llamadas. Deje `AI_CHAT_MODEL` en blanco con OpenAI para usar `gpt-6-luna`. Configúrela para cualquier otro endpoint compatible con OpenAI. |

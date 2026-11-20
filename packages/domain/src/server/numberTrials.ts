@@ -18,17 +18,18 @@ import { isDisposableTrialEmail, trialNeedsPhoneVerification } from "./trialElig
 import { getVoiceSecondsLeftInTransaction, readEndedVoiceSecondsLeftInTransaction } from "./usage";
 import { greetingName } from "./emailGreeting";
 
-export type NumberCountry = "US" | "CA" | "PR" | "GB" | "AU" | "NZ";
+export type NumberCountry = "US" | "CA" | "PR" | "GB" | "AU" | "NZ" | "RS";
 
 export const NUMBER_TRIAL_DAYS = 14;
 
-const NUMBER_COUNTRIES: NumberCountry[] = ["US", "CA", "PR", "GB", "AU", "NZ"];
+const NUMBER_COUNTRIES: NumberCountry[] = ["US", "CA", "PR", "GB", "AU", "NZ", "RS"];
 
 /**
  * Countries we sell numbers in. The US, Canada and Puerto Rico need no
  * registration; the others need what the country's carrier asks for, such as
- * the regulatory bundle Twilio approved for LobbyStack and its address, or a
- * Telnyx requirement group. See docs/voice/runtime.md.
+ * the regulatory bundle Twilio approved for LobbyStack and its address, a
+ * Telnyx requirement group, or the Zadarma documents group that sells Serbia's
+ * numbers, which Twilio doesn't. See docs/voice/runtime.md.
  */
 export function numberCountries(env: NodeJS.ProcessEnv = process.env): NumberCountry[] {
   return NUMBER_COUNTRIES.filter((country) => numberCountryReady(country, env));

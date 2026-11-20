@@ -311,7 +311,7 @@ The admin and worker read these variables:
 | `ZADARMA_DOCUMENTS_GROUP_ID` | admin, worker | The id of the documents group in the Zadarma account that a number order goes under. Without it, a search skips Zadarma. |
 | `ZADARMA_SIP_HOST` | worker | The host, and port when it isn't 5060, of the SIP server in `docker/asterisk` that Zadarma sends each number's calls to. |
 | `ZADARMA_NUMBER_PURPOSE` | worker | Optional. The purpose each Zadarma order states. Defaults to answering business calls with an AI voice receptionist. |
-| `TELNYX_GB_REQUIREMENT_GROUP_ID`, `TELNYX_AU_REQUIREMENT_GROUP_ID`, `TELNYX_NZ_REQUIREMENT_GROUP_ID` | admin, worker | The approved Telnyx requirement group a number order in that country goes under, when `TELEPHONY_NUMBERS` sends the country to Telnyx. |
+| `TELNYX_GB_REQUIREMENT_GROUP_ID`, `TELNYX_AU_REQUIREMENT_GROUP_ID`, `TELNYX_NZ_REQUIREMENT_GROUP_ID`, `TELNYX_RS_REQUIREMENT_GROUP_ID` | admin, worker | The approved Telnyx requirement group a number order in that country goes under, when `TELEPHONY_NUMBERS` sends the country to Telnyx. |
 
 The admin also reads the bundle variables: it offers numbers only in the countries whose bundle is set. Set `TWILIO_GB_BUNDLE_SID`, `TWILIO_AU_BUNDLE_SID` and `TWILIO_AU_ADDRESS_SID` on the admin too.
 | `WEB_CALL_MAX_DURATION_MS` | admin | Optional cap on browser call length. |
@@ -403,7 +403,7 @@ A Telnyx number reaches GPT-Live through an FQDN connection of its own, texts th
 
 For Telnyx Verify, create a Verify profile, set it as `TELNYX_VERIFY_PROFILE_ID` on the admin, and set `TELEPHONY_VERIFY=telnyx`. To check line types with Telnyx Number Lookup, set `TELEPHONY_LOOKUP=telnyx`. To send the shared sender's texts through Telnyx, put that number on the messaging profile and set `TELEPHONY_ALERT_SMS=telnyx` and `TELEPHONY_ALERT_SMS_FROM`.
 
-To sell UK, Australian or New Zealand numbers through Telnyx, create a requirement group for the country and number type in the portal, wait for Telnyx to approve it, and set its ID as `TELNYX_GB_REQUIREMENT_GROUP_ID`, `TELNYX_AU_REQUIREMENT_GROUP_ID` or `TELNYX_NZ_REQUIREMENT_GROUP_ID` on the admin and the worker.
+To sell UK, Australian, New Zealand or Serbian numbers through Telnyx, create a requirement group for the country and number type in the portal, wait for Telnyx to approve it, and set its ID as `TELNYX_GB_REQUIREMENT_GROUP_ID`, `TELNYX_AU_REQUIREMENT_GROUP_ID`, `TELNYX_NZ_REQUIREMENT_GROUP_ID` or `TELNYX_RS_REQUIREMENT_GROUP_ID` on the admin and the worker.
 
 ### What differs from Twilio
 
@@ -423,7 +423,7 @@ Run `pnpm voice:call` against a staging Telnyx number before you send production
 
 ## Use Zadarma
 
-Zadarma sells landline numbers in countries Twilio and Telnyx don't, such as Serbia. It can't send a call to OpenAI, so each Zadarma number points at the SIP server in `docker/asterisk`, which passes the call on. [Answer calls on a number from another carrier](./external-numbers.md) explains that server. To set it up:
+LobbyStack buys numbers from Zadarma in Serbia only. Twilio has none there, so a search for Serbia skips Twilio, and it asks Telnyx before Zadarma when `TELNYX_RS_REQUIREMENT_GROUP_ID` is set. Serbia is in the number picker once Telnyx or Zadarma can sell there, and it has the free trial. Zadarma can't send a call to OpenAI, so each Zadarma number points at the SIP server in `docker/asterisk`, which passes the call on. [Answer calls on a number from another carrier](./external-numbers.md) explains that server. To set it up:
 
 1. In the Zadarma account, create a documents group with the company's registration papers and address, which the country's regulator asks for. The group's id is in the list from `GET /v1/documents/groups/list/`. Set it as `ZADARMA_DOCUMENTS_GROUP_ID` on the admin and the worker.
 2. Create API keys at **my.zadarma.com/api**. Set them as `ZADARMA_API_KEY` and `ZADARMA_API_SECRET` on the admin and the worker.
@@ -434,6 +434,7 @@ A Zadarma number differs from the other carriers' numbers in these ways:
 
 - **Orders take days.** Zadarma activates a number only after it checks the documents, and its order page says that takes 1 to 20 business days. The worker checks the order every 10 minutes and waits up to 30 days, where other carriers get 5.
 - **Voice only.** None of its numbers text, and Zadarma has no Verify, Lookup or shared sender.
+- **A free trial costs real money.** A trial number is ordered like any other, and Zadarma charges the connection fee and the first month up front, about €17.50 on its order page in Serbia. A trial that doesn't convert releases the number, which ends when its paid period does, so budget that much for each trial.
 - **No cancel.** Releasing a number turns off its auto-renewal, so it keeps billing until the period it paid for ends.
 - **No refused-call forwarding.** Zadarma can't forward a call the agent refuses and has no webhook to ask. The admin refuses such a call, and the SIP server answers Zadarma with busy or congestion. Nothing reaches the owner.
 - **No staff answers first, and no call cost lookup.**

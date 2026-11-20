@@ -58,6 +58,25 @@ export function parseCountryRoutes(value: string | undefined, name = "TELEPHONY_
   return { byCountry, fallback: fallback ?? [...DEFAULT_NUMBER_CARRIERS] };
 }
 
+/**
+ * Countries a carrier has no numbers in, so a search doesn't ask it and the country list doesn't count on it.
+ * Twilio sells no numbers in Serbia.
+ */
+const NO_NUMBERS_IN: Partial<Record<CarrierId, readonly string[]>> = { twilio: ["RS"] };
+
+/**
+ * The only countries LobbyStack buys from a carrier in. Zadarma sells landline numbers in many countries, but
+ * only Serbia's are wanted: the UK and Australia sell mobile numbers, which Zadarma doesn't have.
+ */
+const ONLY_NUMBERS_IN: Partial<Record<CarrierId, readonly string[]>> = { zadarma: ["RS"] };
+
+/** Whether LobbyStack buys numbers in the country from the carrier at all, before its registration or credentials are looked at. */
+export function carrierSellsIn(carrier: CarrierId, countryCode: string): boolean {
+  const country = countryCode.trim().toUpperCase();
+  const only = ONLY_NUMBERS_IN[carrier];
+  return (!only || only.includes(country)) && !NO_NUMBERS_IN[carrier]?.includes(country);
+}
+
 /** The routing settings. Each defaults to Twilio, so a deployment that sets none behaves as before. */
 export function telephonyRoutes(env: Env = process.env): TelephonyRoutes {
   return {
@@ -103,12 +122,12 @@ export function countryRegistration(carrier: CarrierId, countryCode: string, env
 }
 
 /**
- * Whether any carrier tried for the country has the country's registration.
- * Credentials aren't checked here: a search without them answers that phone
- * numbers aren't set up.
+ * Whether any carrier tried for the country sells there and has the country's
+ * registration. Credentials aren't checked here: a search without them
+ * answers that phone numbers aren't set up.
  */
 export function numberCountryReady(countryCode: string, env: Env = process.env): boolean {
-  return numbersCarriersFor(telephonyRoutes(env), countryCode).some((carrier) => (countryRegistration(carrier, countryCode, env)?.missing.length ?? 0) === 0);
+  return numbersCarriersFor(telephonyRoutes(env), countryCode).some((carrier) => carrierSellsIn(carrier, countryCode) && (countryRegistration(carrier, countryCode, env)?.missing.length ?? 0) === 0);
 }
 
 /** The shared sender's number: TELEPHONY_ALERT_SMS_FROM, or the older TWILIO_ALERT_SMS_FROM. */

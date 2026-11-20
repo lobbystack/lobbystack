@@ -180,6 +180,7 @@ const COUNTRY_OPTIONS: Array<{
   { code: "GB", label: "UK" },
   { code: "AU", label: "AU" },
   { code: "NZ", label: "NZ" },
+  { code: "RS", label: "RS" },
 ];
 
 function getNumberLocationLabel(number: AvailableNumberSummary): string | null {

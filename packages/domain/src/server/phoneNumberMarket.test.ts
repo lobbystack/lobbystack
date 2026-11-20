@@ -62,7 +62,8 @@ describe("countryCodeForTimezone", () => {
   });
 
   it("keeps the number market to the countries with numbers", () => {
-    expect(countryCodeForBusinessTimezone("Europe/Belgrade")).toBeUndefined();
+    expect(countryCodeForBusinessTimezone("Europe/Belgrade")).toBe("RS");
+    expect(countryCodeForBusinessTimezone("Europe/Paris")).toBeUndefined();
     expect(countryCodeForBusinessTimezone("Pacific/Honolulu")).toBe("US");
   });
 });
