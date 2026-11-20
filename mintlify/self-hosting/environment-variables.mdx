@@ -59,7 +59,7 @@ OpenAI's GPT-Live model answers browser calls and phone calls. Phone calls reach
 | `LIVE_PROTOTYPE_ENABLED` | Set to `true` on admin and worker. Compose sets it by default. Browser calls fail without it. |
 | `OPENAI_WEBHOOK_SECRET` | Verifies OpenAI's incoming-call webhook at `/api/webhooks/openai/live`. Phone calls only. |
 | `TWILIO_SIP_TRUNK_SID` | The Twilio Elastic SIP trunk that sends calls to your OpenAI project. New numbers join it, and the worker won't provision a number without it. |
-| `TELEPHONY_NUMBERS` | The carrier that sells numbers in each country, such as `US:telnyx,*:twilio`. Leave it empty to buy every number from Twilio. A malformed value stops the worker at startup. |
+| `TELEPHONY_NUMBERS` | The carriers that sell numbers in each country, in the order to try them, such as `US:telnyx,*:twilio>telnyx`. Leave it empty to try Twilio first, then each other carrier whose credentials you set. A malformed value stops the worker at startup. |
 | `TELEPHONY_VERIFY`, `TELEPHONY_LOOKUP`, `TELEPHONY_ALERT_SMS` | The carrier for the onboarding phone code, the line type check, and the shared sender's texts. Each defaults to `twilio`. |
 | `TELEPHONY_ALERT_SMS_FROM` | The shared sender's number. Falls back to `TWILIO_ALERT_SMS_FROM`. |
 | `OPENAI_PROJECT_ID` | Your OpenAI project ID (`proj_…`). The worker gives each Telnyx number its own SIP connection to that project, and won't buy a Telnyx number without it. The admin app and the worker both need it for Staff answers first on Twilio numbers. Without it on the admin app, the setting can't be turned on. |

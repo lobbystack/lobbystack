@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { alertSmsFrom, countryRegistration, numberCarriersConfigured, numberCountryReady, numbersCarrierFor, parseCountryRoutes, sipAddress, telephonyRoutes } from "./config";
+import { alertSmsFrom, countryRegistration, numberCarriersConfigured, numberCountryReady, numbersCarriersFor, parseCountryRoutes, sipAddress, telephonyRoutes } from "./config";
 
 describe("sipAddress", () => {
   it("asks for TLS and SRTP in the URI", () => {
@@ -13,27 +13,37 @@ describe("sipAddress", () => {
 });
 
 describe("telephony routing settings", () => {
-  it("sends everything to Twilio when nothing is set", () => {
+  it("tries Twilio, then Telnyx, when nothing is set", () => {
     const routes = telephonyRoutes({});
-    expect(routes).toEqual({ numbers: { byCountry: {}, fallback: "twilio" }, verify: "twilio", lookup: "twilio", alertSms: "twilio" });
-    expect(numbersCarrierFor(routes, "US")).toBe("twilio");
+    expect(routes).toEqual({ numbers: { byCountry: {}, fallback: ["twilio", "telnyx"] }, verify: "twilio", lookup: "twilio", alertSms: "twilio" });
+    expect(numbersCarriersFor(routes, "US")).toEqual(["twilio", "telnyx"]);
   });
 
   it("routes number search and purchase by country, with * for the rest", () => {
     const routes = telephonyRoutes({ TELEPHONY_NUMBERS: " us:Telnyx, AU:twilio ,*:telnyx", TELEPHONY_VERIFY: "telnyx", TELEPHONY_LOOKUP: "TWILIO", TELEPHONY_ALERT_SMS: "" });
-    expect(routes.numbers).toEqual({ byCountry: { US: "telnyx", AU: "twilio" }, fallback: "telnyx" });
-    expect(numbersCarrierFor(routes, "us")).toBe("telnyx");
-    expect(numbersCarrierFor(routes, "AU")).toBe("twilio");
-    expect(numbersCarrierFor(routes, "GB")).toBe("telnyx");
+    expect(routes.numbers).toEqual({ byCountry: { US: ["telnyx"], AU: ["twilio"] }, fallback: ["telnyx"] });
+    expect(numbersCarriersFor(routes, "us")).toEqual(["telnyx"]);
+    expect(numbersCarriersFor(routes, "AU")).toEqual(["twilio"]);
+    expect(numbersCarriersFor(routes, "GB")).toEqual(["telnyx"]);
     expect([routes.verify, routes.lookup, routes.alertSms]).toEqual(["telnyx", "twilio", "twilio"]);
   });
 
-  it("refuses an unknown carrier, a malformed entry and a country listed twice", () => {
+  it("reads the carriers to try for a country in the order they are written", () => {
+    const routes = telephonyRoutes({ TELEPHONY_NUMBERS: "GB:telnyx > twilio, US:twilio>telnyx,*:twilio" });
+    expect(routes.numbers).toEqual({ byCountry: { GB: ["telnyx", "twilio"], US: ["twilio", "telnyx"] }, fallback: ["twilio"] });
+    // A country that isn't listed keeps the default order.
+    expect(telephonyRoutes({ TELEPHONY_NUMBERS: "GB:telnyx" }).numbers.fallback).toEqual(["twilio", "telnyx"]);
+  });
+
+  it("refuses an unknown carrier, a malformed entry, a country listed twice and a carrier repeated in one list", () => {
     expect(() => parseCountryRoutes("US:vonage")).toThrow('TELEPHONY_NUMBERS must be one of twilio, telnyx, not "vonage".');
     expect(() => parseCountryRoutes("USA:telnyx")).toThrow("malformed entry");
     expect(() => parseCountryRoutes("telnyx")).toThrow("malformed entry");
+    expect(() => parseCountryRoutes("US:twilio>")).toThrow("malformed entry");
+    expect(() => parseCountryRoutes("US:>twilio")).toThrow("malformed entry");
     expect(() => parseCountryRoutes("US:telnyx,us:twilio")).toThrow("lists US twice");
     expect(() => parseCountryRoutes("*:telnyx,*:twilio")).toThrow("lists * twice");
+    expect(() => parseCountryRoutes("GB:twilio>telnyx>twilio")).toThrow("lists twilio twice for GB");
     expect(() => telephonyRoutes({ TELEPHONY_VERIFY: "plivo" })).toThrow("TELEPHONY_VERIFY");
   });
 
@@ -48,11 +58,22 @@ describe("telephony routing settings", () => {
     expect(numberCountryReady("GB", { TWILIO_GB_BUNDLE_SID: "BU1" })).toBe(true);
   });
 
+  it("is ready for a country when any carrier it tries has the registration", () => {
+    // The default order tries Twilio then Telnyx, so either one's papers are enough.
+    expect(numberCountryReady("GB", {})).toBe(false);
+    expect(numberCountryReady("GB", { TELNYX_GB_REQUIREMENT_GROUP_ID: "rg_1" })).toBe(true);
+    expect(numberCountryReady("GB", { TWILIO_GB_BUNDLE_SID: "BU1" })).toBe(true);
+    expect(numberCountryReady("GB", { TELNYX_GB_REQUIREMENT_GROUP_ID: "rg_1", TELEPHONY_NUMBERS: "GB:twilio" })).toBe(false);
+  });
+
   it("can search numbers when any carrier the routes name has credentials", () => {
     expect(numberCarriersConfigured({})).toBe(false);
     expect(numberCarriersConfigured({ TWILIO_ACCOUNT_SID: "AC1", TWILIO_AUTH_TOKEN: "t" })).toBe(true);
-    expect(numberCarriersConfigured({ TELNYX_API_KEY: "KEY" })).toBe(false);
-    expect(numberCarriersConfigured({ TELNYX_API_KEY: "KEY", TELEPHONY_NUMBERS: "US:telnyx" })).toBe(true);
+    // Telnyx is in the default order, so its credentials alone are enough.
+    expect(numberCarriersConfigured({ TELNYX_API_KEY: "KEY" })).toBe(true);
+    expect(numberCarriersConfigured({ TELNYX_API_KEY: "KEY", TELEPHONY_NUMBERS: "*:twilio" })).toBe(false);
+    expect(numberCarriersConfigured({ TELNYX_API_KEY: "KEY", TELEPHONY_NUMBERS: "US:telnyx,*:twilio" })).toBe(true);
+    expect(numberCarriersConfigured({ TELNYX_API_KEY: "KEY", TELEPHONY_NUMBERS: "US:twilio>telnyx,*:twilio" })).toBe(true);
   });
 
   it("reads the shared sender from TELEPHONY_ALERT_SMS_FROM, then the older Twilio name", () => {

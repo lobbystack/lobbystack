@@ -6,14 +6,23 @@ type Env = Record<string, string | undefined>;
 
 /** Which carrier each capability that isn't tied to a number goes to. Number operations go to the number's own carrier. */
 export type TelephonyRoutes = {
-  /** Number search and purchase, by country, with `*` for every other country. */
-  numbers: { byCountry: Record<string, CarrierId>; fallback: CarrierId };
+  /**
+   * Number search and purchase, by country, with `fallback` for every other country. Each country has carriers in
+   * the order to try them: a search asks the first, and moves to the next when the first can't serve it.
+   */
+  numbers: { byCountry: Record<string, CarrierId[]>; fallback: CarrierId[] };
   verify: CarrierId;
   lookup: CarrierId;
   alertSms: CarrierId;
 };
 
 const DEFAULT_CARRIER: CarrierId = "twilio";
+
+/**
+ * The carriers a country without a route tries, in order: Twilio, then Telnyx, then Zadarma. This is the order of
+ * CARRIER_IDS. A carrier without credentials is skipped, so a deployment with only Twilio searches only Twilio.
+ */
+const DEFAULT_NUMBER_CARRIERS: readonly CarrierId[] = CARRIER_IDS;
 
 function carrierSetting(value: string | undefined, name: string): CarrierId {
   const trimmed = value?.trim().toLowerCase();
@@ -23,27 +32,29 @@ function carrierSetting(value: string | undefined, name: string): CarrierId {
 }
 
 /**
- * Reads `US:telnyx,AU:twilio,*:twilio`. A country listed twice, an unknown
- * carrier or a malformed entry throws, so a typo fails at startup instead of
- * buying from the wrong carrier.
+ * Reads `US:telnyx,AU:twilio>telnyx,*:twilio>telnyx>zadarma`. Each country names the carriers to try, in order,
+ * joined with `>`; a single carrier is the only one tried. A country listed twice, a carrier twice in one list,
+ * an unknown carrier or a malformed entry throws, so a typo fails at startup instead of buying from the wrong carrier.
  */
 export function parseCountryRoutes(value: string | undefined, name = "TELEPHONY_NUMBERS"): TelephonyRoutes["numbers"] {
-  const byCountry: Record<string, CarrierId> = {};
-  let fallback: CarrierId | undefined;
+  const byCountry: Record<string, CarrierId[]> = {};
+  let fallback: CarrierId[] | undefined;
   for (const entry of (value ?? "").split(",").map((part) => part.trim()).filter(Boolean)) {
-    const match = /^([A-Za-z]{2}|\*)\s*:\s*([a-z]+)$/i.exec(entry);
-    if (!match) throw new Error(`${name} has a malformed entry "${entry}". Use COUNTRY:carrier pairs, such as US:telnyx,*:twilio.`);
+    const match = /^([A-Za-z]{2}|\*)\s*:\s*([a-z]+(?:\s*>\s*[a-z]+)*)$/i.exec(entry);
+    if (!match) throw new Error(`${name} has a malformed entry "${entry}". Use COUNTRY:carrier pairs, such as US:telnyx,*:twilio>telnyx.`);
     const country = match[1]!.toUpperCase();
-    const carrier = carrierSetting(match[2], name);
+    const carriers = match[2]!.split(">").map((part) => carrierSetting(part, name));
+    const repeated = carriers.find((carrier, index) => carriers.indexOf(carrier) !== index);
+    if (repeated) throw new Error(`${name} lists ${repeated} twice for ${country}.`);
     if (country === "*") {
       if (fallback) throw new Error(`${name} lists * twice.`);
-      fallback = carrier;
+      fallback = carriers;
     } else {
       if (byCountry[country]) throw new Error(`${name} lists ${country} twice.`);
-      byCountry[country] = carrier;
+      byCountry[country] = carriers;
     }
   }
-  return { byCountry, fallback: fallback ?? DEFAULT_CARRIER };
+  return { byCountry, fallback: fallback ?? [...DEFAULT_NUMBER_CARRIERS] };
 }
 
 /** The routing settings. Each defaults to Twilio, so a deployment that sets none behaves as before. */
@@ -56,7 +67,8 @@ export function telephonyRoutes(env: Env = process.env): TelephonyRoutes {
   };
 }
 
-export function numbersCarrierFor(routes: TelephonyRoutes, countryCode: string): CarrierId {
+/** The carriers to try for a country, in order. */
+export function numbersCarriersFor(routes: TelephonyRoutes, countryCode: string): CarrierId[] {
   return routes.numbers.byCountry[countryCode.trim().toUpperCase()] ?? routes.numbers.fallback;
 }
 
@@ -71,7 +83,7 @@ export function carrierConfigured(carrier: CarrierId, env: Env = process.env): b
 /** Whether any carrier TELEPHONY_NUMBERS names has credentials, so a number search can run. */
 export function numberCarriersConfigured(env: Env = process.env): boolean {
   const { numbers } = telephonyRoutes(env);
-  return [numbers.fallback, ...Object.values(numbers.byCountry)].some((carrier) => carrierConfigured(carrier, env));
+  return [numbers.fallback, ...Object.values(numbers.byCountry)].flat().some((carrier) => carrierConfigured(carrier, env));
 }
 
 /**
@@ -88,13 +100,12 @@ export function countryRegistration(carrier: CarrierId, countryCode: string, env
 }
 
 /**
- * Whether the country's carrier has the country's registration. Credentials
- * aren't checked here: a search without them answers that phone numbers
- * aren't set up.
+ * Whether any carrier tried for the country has the country's registration.
+ * Credentials aren't checked here: a search without them answers that phone
+ * numbers aren't set up.
  */
 export function numberCountryReady(countryCode: string, env: Env = process.env): boolean {
-  const carrier = numbersCarrierFor(telephonyRoutes(env), countryCode);
-  return (countryRegistration(carrier, countryCode, env)?.missing.length ?? 0) === 0;
+  return numbersCarriersFor(telephonyRoutes(env), countryCode).some((carrier) => (countryRegistration(carrier, countryCode, env)?.missing.length ?? 0) === 0);
 }
 
 /** The shared sender's number: TELEPHONY_ALERT_SMS_FROM, or the older TWILIO_ALERT_SMS_FROM. */

@@ -289,7 +289,7 @@ The admin and worker read these variables:
 | `OPENAI_WEBHOOK_SECRET` | admin | Verifies OpenAI's incoming-call webhook. Phone path only. |
 | `INTERNAL_SERVICE_TOKEN` | admin, worker | Authenticates the admin's attach request to the worker. |
 | `WORKER_INTERNAL_URL` | admin | Private URL of the worker's HTTP port, for example `http://worker:3002`. |
-| `TELEPHONY_NUMBERS` | admin, worker | The carrier that sells numbers in each country, such as `US:telnyx,*:twilio`. Defaults to `*:twilio`. See [Choose carriers](#choose-carriers). |
+| `TELEPHONY_NUMBERS` | admin, worker | The carriers that may sell numbers in each country, in the order to try them, such as `US:telnyx,*:twilio>telnyx`. Defaults to Twilio first, then each other carrier that has credentials. See [Choose carriers](#choose-carriers). |
 | `TELEPHONY_VERIFY`, `TELEPHONY_LOOKUP` | admin | The carrier for the onboarding phone code and the line type check. Each defaults to `twilio`. |
 | `TELEPHONY_ALERT_SMS`, `TELEPHONY_ALERT_SMS_FROM` | admin, worker | The carrier and number of the shared sender. The number falls back to `TWILIO_ALERT_SMS_FROM`, and the carrier defaults to `twilio`. |
 | `TWILIO_SIP_TRUNK_SID` | worker | Adds new phone numbers to the SIP trunk. The worker refuses to provision a number without it. |
@@ -372,17 +372,17 @@ Until you set a country's bundle, number claims there fail with an error that in
 
 ## Choose carriers
 
-One deployment can buy numbers from Twilio and Telnyx at once and send each capability to either. Every setting defaults to Twilio, so a deployment that sets none works as it did before carriers were configurable.
+One deployment can buy numbers from Twilio and Telnyx at once and send each capability to either. Every setting defaults to Twilio. A deployment with credentials for only Twilio works as it did before carriers were configurable, and one with both falls back to Telnyx when a number search finds nothing at Twilio.
 
 Requests go to a carrier by these rules:
 
 - **Operations on a number**: texts from it, its webhooks, routing it, releasing it, pricing its calls and its fallback all go to the carrier that owns it. `phone_numbers.carrier` records the owner, and `messages.carrier` and `calls.carrier` record the carrier each text and phone call used.
-- **Number search and purchase**: `TELEPHONY_NUMBERS` picks the carrier by country, with `*` for the countries it doesn't list. The signed number offer names the carrier, so the worker buys from the carrier that showed the number.
+- **Number search and purchase**: `TELEPHONY_NUMBERS` lists the carriers to try for each country, joined with `>`, with `*` for the countries it doesn't list. A country with one carrier uses only that one. A search asks the first carrier and moves to the next when the first has no credentials, has no registration for the country, fails, or has no numbers. A country the setting doesn't list tries Twilio first, then each other carrier. Each number comes from the carrier that showed it. The signed number offer names the carrier, so the worker buys from it, and a purchase that fails doesn't move to another carrier. The search logs `telephony.number_search_fallback` each time it gives up on a carrier.
 - **Verify, Lookup and the shared sender**: `TELEPHONY_VERIFY`, `TELEPHONY_LOOKUP` and `TELEPHONY_ALERT_SMS` each name one carrier.
 
 A malformed setting, such as an unknown carrier or a country listed twice, stops the worker at boot and fails the admin's first telephony request. Each carrier lives in `packages/providers/src/<carrier>/` behind the interfaces in `packages/providers/src/telephony/types.ts`, and `createTelephony` builds every carrier that has credentials. Adding a carrier means an adapter, its id in `CARRIER_IDS`, and its webhook routes under `/api/webhooks/<carrier>/`.
 
-Countries outside the US, Canada and Puerto Rico appear in the number picker only when the carrier `TELEPHONY_NUMBERS` sends them to has their registration: a Twilio bundle, or a Telnyx requirement group.
+Countries outside the US, Canada and Puerto Rico appear in the number picker only when a carrier `TELEPHONY_NUMBERS` tries for them has their registration: a Twilio bundle, or a Telnyx requirement group.
 
 A country neither carrier sells numbers in can use a number the business already has, from a local carrier or a reseller. The carrier sends its calls to a SIP server you run, and an operator attaches the number to the business by hand. [Answer calls on a number from another carrier](./external-numbers.md) explains it.
 
