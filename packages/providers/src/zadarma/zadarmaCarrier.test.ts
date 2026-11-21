@@ -35,11 +35,20 @@ const belgrade = { numbers: [{ id: "n1", direction_id: "100", number: "381111234
 const noviSad = { numbers: [{ id: "n3", direction_id: "101", number: "381211234567" }] };
 const catalog = {
   "GET /v1/direct_numbers/country/": () => directions,
+  "GET /v1/direct_numbers/": () => ({ status: "success", info: [] }),
   "GET /v1/direct_numbers/available/100/": () => belgrade,
   "GET /v1/direct_numbers/available/101/": () => noviSad,
   "GET /v1/direct_numbers/available/102/": () => ({ numbers: [{ id: "n4", direction_id: "102", number: "0800123456" }] }),
 };
 const owning = (status: string, extra: Record<string, unknown> = {}) => ({ "GET /v1/direct_numbers/": () => ({ status: "success", info: [{ number: "381211234567", status, ...extra }] }) });
+/** An account that lists the number only once the order is placed, as Zadarma does. */
+function afterOrder(status: () => string, reply: Record<string, unknown> = { status: "success" }) {
+  let ordered = false;
+  return {
+    "POST /v1/direct_numbers/order/": () => { ordered = true; return reply; },
+    "GET /v1/direct_numbers/": () => ({ status: "success", info: ordered ? [{ number: "381211234567", status: status() }] : [] }),
+  };
+}
 
 describe("Zadarma numbers", () => {
   it("is built only with credentials, and offers no texts, Verify or Lookup", () => {
@@ -105,7 +114,7 @@ describe("Zadarma numbers", () => {
 
 describe("ordering a Zadarma number", () => {
   it("orders by Zadarma's own number and destination ids, under the documents group, and returns an active number", async () => {
-    const { client, calls } = fakeZadarma({ ...catalog, "POST /v1/direct_numbers/order/": () => ({ status: "success", is_activated: "true" }), ...owning("on") });
+    const { client, calls } = fakeZadarma({ ...catalog, ...afterOrder(() => "on", { status: "success", is_activated: "true" }) });
     const inventory = createZadarmaCarrier(env, { client })!.inventory!;
     expect(await inventory.purchasePhoneNumber({ e164: "+381211234567", countryCode: "RS", kind: "local", label: "LobbyStack business" })).toEqual({ providerPhoneId: "381211234567", e164: "+381211234567" });
     const order = calls.find((call) => call.path === "/v1/direct_numbers/order/")!;
@@ -113,14 +122,14 @@ describe("ordering a Zadarma number", () => {
   });
 
   it("states its own purpose when the deployment sets one", async () => {
-    const { client, calls } = fakeZadarma({ ...catalog, "POST /v1/direct_numbers/order/": () => ({ status: "success" }), ...owning("on") });
+    const { client, calls } = fakeZadarma({ ...catalog, ...afterOrder(() => "on") });
     await createZadarmaCarrier({ ...env, ZADARMA_NUMBER_PURPOSE: "Clinic reception" }, { client })!.inventory!.purchasePhoneNumber({ e164: "+381211234567", countryCode: "RS", kind: "local", label: "x" });
     expect(calls.find((call) => call.path === "/v1/direct_numbers/order/")!.params.get("purpose")).toBe("Clinic reception");
   });
 
   it("stays pending while Zadarma checks the documents, then checks the same number again", async () => {
     let status = "checking";
-    const { client, calls } = fakeZadarma({ ...catalog, "POST /v1/direct_numbers/order/": () => ({ status: "success", is_activated: "false" }), "GET /v1/direct_numbers/": () => ({ info: [{ number: "381211234567", status }] }) });
+    const { client, calls } = fakeZadarma({ ...catalog, ...afterOrder(() => status, { status: "success", is_activated: "false" }) });
     const inventory = createZadarmaCarrier(env, { client })!.inventory!;
     const pending = await inventory.purchasePhoneNumber({ e164: "+381211234567", countryCode: "RS", kind: "local", label: "x" }).catch((error: unknown) => error);
     expect(pending).toBeInstanceOf(NumberOrderPendingError);
@@ -170,6 +179,50 @@ describe("ordering a Zadarma number", () => {
   it("asks for the documents group in every country", () => {
     expect(zadarmaRegistration("RS", {})).toEqual({ missing: ["ZADARMA_DOCUMENTS_GROUP_ID"] });
     expect(zadarmaRegistration("RS", { ZADARMA_DOCUMENTS_GROUP_ID: " 5 " })).toEqual({ missing: [] });
+  });
+});
+
+describe("ordering a Zadarma number by city", () => {
+  const orderReply = { status: "success", number: "381211234567", is_reserved: "false", is_activated: "false" };
+
+  it("orders in the matching destination without choosing a number, and returns the number Zadarma assigned", async () => {
+    const { client, calls } = fakeZadarma({ ...catalog, "POST /v1/direct_numbers/order/": () => orderReply });
+    const inventory = createZadarmaCarrier(env, { client })!.inventory!;
+    expect(await inventory.orderAssignedPhoneNumber!({ countryCode: "RS", kind: "local", city: "Novi Sad", label: "x" })).toEqual({ providerPhoneId: "381211234567", e164: "+381211234567" });
+    const order = calls.find((call) => call.path === "/v1/direct_numbers/order/")!;
+    expect(Object.fromEntries(order.params)).toEqual({ direction_id: "101", documents_group_id: "5", purpose: "Answering incoming business calls with an AI voice receptionist.", format: "json" });
+    expect(calls.filter((call) => call.method === "POST")).toHaveLength(1);
+  });
+
+  it("reads a number Zadarma writes in national form", async () => {
+    const { client } = fakeZadarma({ ...catalog, "POST /v1/direct_numbers/order/": () => ({ ...orderReply, number: "0211234567" }) });
+    expect((await createZadarmaCarrier(env, { client })!.inventory!.orderAssignedPhoneNumber!({ countryCode: "RS", kind: "local", city: "Novi Sad", label: "x" })).e164).toBe("+381211234567");
+  });
+
+  it("orders nothing for a city Zadarma doesn't sell in, and says it is unavailable", async () => {
+    const { client, calls } = fakeZadarma(catalog);
+    const inventory = createZadarmaCarrier(env, { client })!.inventory!;
+    const error = await inventory.orderAssignedPhoneNumber!({ countryCode: "RS", kind: "local", city: "Subotica", label: "x" }).catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(ZadarmaNumberOrderError);
+    expect(inventory.isNumberUnavailableError(error)).toBe(true);
+    expect(calls.some((call) => call.method === "POST")).toBe(false);
+  });
+
+  it("fails loudly when Zadarma takes the order but names no number", async () => {
+    const { client } = fakeZadarma({ ...catalog, "POST /v1/direct_numbers/order/": () => ({ status: "success" }) });
+    await expect(createZadarmaCarrier(env, { client })!.inventory!.orderAssignedPhoneNumber!({ countryCode: "RS", kind: "local", city: "Belgrade", label: "x" })).rejects.toMatchObject({ name: "ZadarmaNumberOrderError", unavailable: false, message: expect.stringContaining("named no number") });
+  });
+
+  it("refuses to order without the documents group or the SIP server", async () => {
+    const order = (settings: Record<string, string>) => createZadarmaCarrier(settings, { client: fakeZadarma(catalog).client })!.inventory!.orderAssignedPhoneNumber!({ countryCode: "RS", kind: "local", city: "Belgrade", label: "x" });
+    await expect(order({ ...env, ZADARMA_DOCUMENTS_GROUP_ID: "" })).rejects.toThrow("ZADARMA_DOCUMENTS_GROUP_ID is required");
+    await expect(order({ ...env, ZADARMA_SIP_HOST: "" })).rejects.toThrow("ZADARMA_SIP_HOST is required");
+  });
+
+  it("checks a number it already ordered instead of ordering it again when the claim buys it", async () => {
+    const { client, calls } = fakeZadarma({ ...catalog, ...owning("checking") });
+    await expect(createZadarmaCarrier(env, { client })!.inventory!.purchasePhoneNumber({ e164: "+381211234567", countryCode: "RS", kind: "local", label: "x" })).rejects.toBeInstanceOf(NumberOrderPendingError);
+    expect(calls.some((call) => call.method === "POST")).toBe(false);
   });
 });
 

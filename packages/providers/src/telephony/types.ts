@@ -67,6 +67,12 @@ export interface NumberInventory {
    */
   purchasePhoneNumber(input: { e164: string; countryCode: string; kind: NumberKind; label: string; pendingOrderId?: string }): Promise<{ providerPhoneId: string; e164: string; smsUrl?: string; carrierConnectionId?: string }>;
   releasePhoneNumber(input: { providerPhoneId: string }): Promise<void>;
+  /**
+   * For a carrier that names the number when it takes the order, so the buyer can't pick one from a list. Orders a
+   * number in the city and returns the one the carrier gave. The order is placed and paid when this returns, even if
+   * the carrier hasn't activated the number: purchasePhoneNumber on the returned number reports when it has.
+   */
+  orderAssignedPhoneNumber?(input: { countryCode: string; kind: NumberKind; city?: string | undefined; label: string }): Promise<{ providerPhoneId: string; e164: string }>;
   /** Whether a purchase failed because the number is no longer for sale. */
   isNumberUnavailableError(error: unknown): boolean;
 }

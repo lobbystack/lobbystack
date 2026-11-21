@@ -131,6 +131,8 @@ export function createZadarmaCarrier(env: Env = process.env, options: ZadarmaCar
       if (missing) throw new Error(`${missing} is required to buy a Zadarma number. See docs/voice/runtime.md.`);
       const setup = routing.missingSetup();
       if (setup) throw new Error(setup);
+      // A number ordered by city is already on the account, so check it instead of ordering again.
+      if (await owned(e164)) return await finishOrder(e164, false);
       // The order names the number by Zadarma's own id and its destination, so find both.
       let wanted: { id: string; directionId: string } | undefined;
       for (const direction of (await directions({ countryCode, kind })).slice(0, maxDirectionsPerSearch)) {
@@ -140,6 +142,25 @@ export function createZadarmaCarrier(env: Env = process.env, options: ZadarmaCar
       if (!wanted) throw new ZadarmaNumberOrderError(`Zadarma no longer has ${e164} for sale.`, true);
       await client.post("/v1/direct_numbers/order/", { number_id: wanted.id, direction_id: wanted.directionId, documents_group_id: zadarmaDocumentsGroupId(env), purpose });
       return await finishOrder(e164, true);
+    },
+    /**
+     * Orders a number in a city without choosing one. Zadarma lists no landline numbers to pick from in Serbia and
+     * names the number in its reply to the order, which is placed and charged to the account's balance right away.
+     * The first destination whose name matches the city takes the order.
+     */
+    orderAssignedPhoneNumber: async ({ countryCode, kind, city }) => {
+      assertCertificationOperationAllowed();
+      const missing = zadarmaRegistration(countryCode, env).missing[0];
+      if (missing) throw new Error(`${missing} is required to buy a Zadarma number. See docs/voice/runtime.md.`);
+      const setup = routing.missingSetup();
+      if (setup) throw new Error(setup);
+      const direction = (await directions({ countryCode, kind, city }))[0];
+      if (!direction) throw new ZadarmaNumberOrderError(`Zadarma sells no ${kind} numbers${city ? ` in ${city}` : ""} in ${countryCode.toUpperCase()}.`, true);
+      const reply = await client.post<{ number?: string }>("/v1/direct_numbers/order/", { direction_id: String(direction.id), documents_group_id: zadarmaDocumentsGroupId(env), purpose });
+      const e164 = reply.number ? zadarmaE164(reply.number, direction) : "";
+      // The order went through, so a reply with no usable number leaves a number billed that nothing tracks.
+      if (!E164.test(e164)) throw new ZadarmaNumberOrderError(`Zadarma took an order in destination ${direction.id} but named no number. Check the account's numbers.`, false);
+      return { providerPhoneId: digits(e164), e164 };
     },
     /**
      * Zadarma has no call to cancel a number. Turning off its auto-renewal ends it when the period it paid for
