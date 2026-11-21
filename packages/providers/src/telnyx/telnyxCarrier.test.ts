@@ -250,8 +250,8 @@ describe("Telnyx texts, Verify, Lookup and call cost", () => {
 
   it("routes a mixed deployment: Telnyx for US numbers and Verify, Twilio for the rest", () => {
     const telephony = createTelephony({ ...env, TWILIO_ACCOUNT_SID: "AC1", TWILIO_AUTH_TOKEN: "t", TELNYX_VERIFY_PROFILE_ID: "vp_1", TELEPHONY_NUMBERS: "US:telnyx,*:twilio", TELEPHONY_VERIFY: "telnyx" });
-    expect(telephony.numbersCarrier("US")).toBe("telnyx");
-    expect(telephony.numbersCarrier("CA")).toBe("twilio");
+    expect(telephony.numbersCarriers("US")).toEqual(["telnyx"]);
+    expect(telephony.numbersCarriers("CA")).toEqual(["twilio"]);
     expect(telephony.verifier?.carrier).toBe("telnyx");
     expect(telephony.lineTypes?.carrier).toBe("twilio");
     expect(telephony.forNumber("telnyx")?.sms?.carrier).toBe("telnyx");

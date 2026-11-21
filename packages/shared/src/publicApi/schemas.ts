@@ -251,7 +251,7 @@ export const apiManagedPlanCreateSchema = z.strictObject({
   plan: z.literal("enterprise"),
 });
 
-const phoneNumberCountries = ["US", "CA", "PR", "GB", "AU", "NZ"] as const;
+const phoneNumberCountries = ["US", "CA", "PR", "GB", "AU", "NZ", "RS"] as const;
 const phoneNumberKinds = ["local", "mobile", "toll_free"] as const;
 
 export const apiPhoneNumberSchema = z.object({
@@ -267,7 +267,7 @@ export const apiPhoneNumberSchema = z.object({
 
 export const apiExtraPhoneNumberSearchSchema = z.strictObject({
   country: z.enum(phoneNumberCountries).optional().describe("Defaults to the country of the business's time zone, or US."),
-  kind: z.enum(phoneNumberKinds).optional().describe("Defaults to local. GB and AU numbers are always mobile, and NZ numbers local. A kind a country doesn't sell as an extra number is a 400."),
+  kind: z.enum(phoneNumberKinds).optional().describe("Defaults to local. GB and AU numbers are always mobile, and NZ and RS numbers local. A kind a country doesn't sell as an extra number is a 400."),
   area_code: z.string().trim().regex(/^\d{1,6}$/, "Use digits only.").optional(),
   city: z.string().trim().min(1).max(100).optional(),
   region: z.string().trim().min(1).max(64).optional().describe("A state or province, such as ON or NY."),
@@ -309,8 +309,8 @@ export const apiExtraNumbersCheckoutSchema = z.object({
 }).describe("A Polar checkout for the extra phone numbers add-on.");
 
 export const apiPhoneNumberSearchSchema = z.strictObject({
-  country: z.enum(phoneNumberCountries).optional().describe("Defaults to the country of the business's time zone, or US. When the account the key acts as verified a mobile number for this business, that number's country decides. A deployment offers US, CA and PR, and GB, AU and NZ once its carrier is set up for them."),
-  kind: z.enum(phoneNumberKinds).optional().describe("Defaults to local. GB and AU numbers are always mobile, and NZ numbers local."),
+  country: z.enum(phoneNumberCountries).optional().describe("Defaults to the country of the business's time zone, or US. When the account the key acts as verified a mobile number for this business, that number's country decides. A deployment offers US, CA and PR, and GB, AU, NZ and RS once its carrier is set up for them."),
+  kind: z.enum(phoneNumberKinds).optional().describe("Defaults to local. GB and AU numbers are always mobile, and NZ and RS numbers local."),
   area_code: z.string().trim().regex(/^\d{1,6}$/, "Use digits only.").optional(),
   city: z.string().trim().min(1).max(100).optional(),
   region: z.string().trim().min(1).max(64).optional().describe("A state or province, such as ON or NY."),

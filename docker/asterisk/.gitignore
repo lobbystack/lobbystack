@@ -1,0 +1,3 @@
+# The settings and certificates of a running SIP server. Never commit them.
+asterisk.env
+certs/

@@ -1,14 +1,19 @@
 import { createTelnyxCarrier, createTelnyxAlertSms } from "../telnyx/telnyxCarrier";
 import { createTwilioAlertSms, createTwilioCarrier } from "../twilio/twilioCarrier";
-import { numbersCarrierFor, telephonyRoutes, type TelephonyRoutes } from "./config";
+import { createZadarmaCarrier } from "../zadarma/zadarmaCarrier";
+import { carrierSellsIn, countryRegistration, numbersCarriersFor, telephonyRoutes, type TelephonyRoutes } from "./config";
 import { CARRIER_IDS, isCarrierId, type AlertSmsSender, type AvailablePhoneNumber, type CarrierAdapters, type CarrierId, type LineTypeLookup, type NumberSearch, type PhoneVerifier } from "./types";
 
 type Env = Record<string, string | undefined>;
 
-/** Number search across carriers: each country goes to the carrier TELEPHONY_NUMBERS names for it. */
+/**
+ * Number search across carriers. Each country tries the carriers TELEPHONY_NUMBERS lists for it, in order, and
+ * answers with the first one's numbers. A carrier that can't serve the country is skipped: it has no credentials,
+ * the country's registration isn't set up for it, the search failed, or it had no numbers.
+ */
 export type NumberSearchRouter = {
   listAvailablePhoneNumbers(input: NumberSearch): Promise<AvailablePhoneNumber[]>;
-  /** Whether the carrier that sells numbers in this country has credentials. */
+  /** Whether a carrier that may sell numbers in this country has credentials. */
   canSearch(countryCode: string): boolean;
 };
 
@@ -41,8 +46,8 @@ export type Telephony = {
    * one a newer build wrote, has no adapters rather than Twilio's.
    */
   forNumber(carrier: string | null | undefined): CarrierAdapters | undefined;
-  /** The carrier that sells numbers in this country. */
-  numbersCarrier(countryCode: string): CarrierId;
+  /** The carriers that may sell numbers in this country, in the order a search tries them. */
+  numbersCarriers(countryCode: string): CarrierId[];
   numbers: NumberSearchRouter;
   verifier?: PhoneVerifier;
   lineTypes?: LineTypeLookup;
@@ -54,8 +59,52 @@ export type TelephonyFactories = {
   [K in CarrierId]: (env: Env) => CarrierAdapters | undefined;
 };
 
-const defaultFactories: TelephonyFactories = { twilio: (env) => createTwilioCarrier(env), telnyx: (env) => createTelnyxCarrier(env) };
-const alertFactories: { [K in CarrierId]: (env: Env) => AlertSmsSender | undefined } = { twilio: createTwilioAlertSms, telnyx: createTelnyxAlertSms };
+const defaultFactories: TelephonyFactories = { twilio: (env) => createTwilioCarrier(env), telnyx: (env) => createTelnyxCarrier(env), zadarma: (env) => createZadarmaCarrier(env) };
+// Zadarma sells numbers that take calls only, so it has no shared sender.
+const alertFactories: { [K in CarrierId]: (env: Env) => AlertSmsSender | undefined } = { twilio: createTwilioAlertSms, telnyx: createTelnyxAlertSms, zadarma: () => undefined };
+
+/**
+ * Asks each carrier for numbers in turn and returns the first answer that has any, tagged with the carrier that
+ * sells them. Throws phone_numbers_unavailable when no carrier could be asked. When every carrier that was asked
+ * failed, the first failure is thrown, so a dead country doesn't read as "no numbers". When one answered with
+ * none and the rest failed or answered with none, the answer is empty.
+ */
+async function searchInOrder(
+  order: readonly CarrierId[],
+  carriers: Partial<Record<CarrierId, CarrierAdapters>>,
+  input: NumberSearch,
+  env: Env,
+): Promise<AvailablePhoneNumber[]> {
+  let asked = 0;
+  let answeredEmpty = false;
+  let firstFailure: unknown;
+  for (const [position, carrier] of order.entries()) {
+    const inventory = carriers[carrier]?.inventory;
+    if (!inventory) continue;
+    // A carrier with no numbers in the country isn't asked, and isn't a fallback worth logging.
+    if (!carrierSellsIn(carrier, input.countryCode)) continue;
+    // A carrier whose papers for this country aren't in place can't sell there yet, whatever it would answer.
+    if ((countryRegistration(carrier, input.countryCode, env)?.missing.length ?? 0) > 0) continue;
+    asked += 1;
+    try {
+      const numbers = await inventory.listAvailablePhoneNumbers(input);
+      if (numbers.length) return numbers.map((number) => ({ ...number, carrier }));
+      answeredEmpty = true;
+      noteFallback(input.countryCode, carrier, order[position + 1], "no numbers");
+    } catch (error) {
+      firstFailure ??= error;
+      noteFallback(input.countryCode, carrier, order[position + 1], "search failed");
+    }
+  }
+  if (!asked) throw phoneNumbersUnavailable();
+  if (answeredEmpty || firstFailure === undefined) return [];
+  throw firstFailure;
+}
+
+/** One line per carrier a search gave up on, with no number or user in it, so a country that always falls through shows up in the logs. */
+function noteFallback(countryCode: string, carrier: CarrierId, next: CarrierId | undefined, reason: string): void {
+  console.warn(JSON.stringify({ event: "telephony.number_search_fallback", country: countryCode.toUpperCase(), carrier, reason, ...(next ? { next } : {}) }));
+}
 
 /** An error the dashboard and the API answer as 503 phone_numbers_unavailable. */
 export function phoneNumbersUnavailable(message = "Phone numbers aren't set up on this deployment."): Error & { status: number; code: string } {
@@ -79,7 +128,7 @@ export function createTelephony(env: Env = process.env, factories: Partial<Telep
     const id = carrier ?? "twilio";
     return isCarrierId(id) ? carriers[id] : undefined;
   };
-  const numbersCarrier = (countryCode: string) => numbersCarrierFor(routes, countryCode);
+  const numbersCarriers = (countryCode: string) => numbersCarriersFor(routes, countryCode);
   const alertSms = alertFactories[routes.alertSms](env);
   const verifier = carriers[routes.verify]?.verifier;
   const lineTypes = carriers[routes.lookup]?.lineTypes;
@@ -87,15 +136,10 @@ export function createTelephony(env: Env = process.env, factories: Partial<Telep
     routes,
     carriers,
     forNumber,
-    numbersCarrier,
+    numbersCarriers,
     numbers: {
-      canSearch: (countryCode) => Boolean(carriers[numbersCarrier(countryCode)]?.inventory),
-      listAvailablePhoneNumbers: async (input) => {
-        const carrier = numbersCarrier(input.countryCode);
-        const inventory = carriers[carrier]?.inventory;
-        if (!inventory) throw phoneNumbersUnavailable();
-        return (await inventory.listAvailablePhoneNumbers(input)).map((number) => ({ ...number, carrier }));
-      },
+      canSearch: (countryCode) => numbersCarriers(countryCode).some((carrier) => carrierSellsIn(carrier, countryCode) && Boolean(carriers[carrier]?.inventory)),
+      listAvailablePhoneNumbers: async (input) => await searchInOrder(numbersCarriers(input.countryCode), carriers, input, env),
     },
     ...(verifier ? { verifier } : {}),
     ...(lineTypes ? { lineTypes } : {}),

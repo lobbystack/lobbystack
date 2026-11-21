@@ -6,6 +6,10 @@ export const THIRD_PARTY_PORT = 18092;
 export const THIRD_PARTY_ORIGIN = `http://127.0.0.1:${THIRD_PARTY_PORT}`;
 export const TWILIO_AUTH_TOKEN = "full-stack-e2e-twilio-auth-token";
 export const TWILIO_TRUNK_SID = `TK${"e2e0".repeat(8)}`;
+export const ZADARMA_API_KEY = "full-stack-e2e-zadarma-key";
+export const ZADARMA_API_SECRET = "full-stack-e2e-zadarma-secret";
+export const ZADARMA_DOCUMENTS_GROUP_ID = "e2e-documents-group-5";
+export const ZADARMA_SIP_HOST = "sip.e2e.invalid:5060";
 export const POLAR_WEBHOOK_SECRET = "full-stack-e2e-polar-webhook-secret";
 export const POLAR_EXTRA_NUMBERS_PRODUCT_ID = "e2e-extra-numbers-monthly";
 
@@ -30,6 +34,11 @@ export function fullStackEnvironment(baseURL: string, carrierRedirect: string): 
     POLAR_EXTRA_NUMBERS_PRODUCT_ID: POLAR_EXTRA_NUMBERS_PRODUCT_ID,
     OPENAI_PROJECT_ID: "proj_full_stack_e2e",
     NUMBER_CLAIM_TOKEN_SECRET: "full-stack-e2e-number-claim-secret-0123456789",
+    // Zadarma sells Serbia only, and the fake in third-parties.ts checks its request signatures.
+    ZADARMA_API_KEY,
+    ZADARMA_API_SECRET,
+    ZADARMA_DOCUMENTS_GROUP_ID,
+    ZADARMA_SIP_HOST,
     TWILIO_ACCOUNT_SID: `AC${"e2e0".repeat(8)}`,
     TWILIO_AUTH_TOKEN,
     TWILIO_SIP_TRUNK_SID: TWILIO_TRUNK_SID,

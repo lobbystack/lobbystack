@@ -20,7 +20,7 @@ import { isTransferCountry, normalizeInterfaceLocale } from "@lobbystack/shared"
 import type { SupportedLocale } from "./locale";
 
 const DEFAULT_PHONE_COUNTRY = "US" satisfies CountryCode;
-const SUPPORTED_ONBOARDING_PHONE_COUNTRIES = ["US", "CA", "PR", "GB", "AU", "NZ"] as const;
+const SUPPORTED_ONBOARDING_PHONE_COUNTRIES = ["US", "CA", "PR", "GB", "AU", "NZ", "RS"] as const;
 
 export type SupportedOnboardingPhoneCountry =
   (typeof SUPPORTED_ONBOARDING_PHONE_COUNTRIES)[number];

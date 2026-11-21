@@ -1,0 +1,63 @@
+; Rendered by entrypoint.sh, which fills in the variables from docker/asterisk/asterisk.env.
+; Two sides: the carrier that sends calls in (zadarma) and OpenAI, which the calls go out to (openai).
+
+[global]
+type=global
+user_agent=LobbyStack SIP server
+; A request from an address no endpoint lists is answered with a challenge, never with a call.
+endpoint_identifier_order=ip
+
+[transport-udp]
+type=transport
+protocol=udp
+bind=0.0.0.0:${SIP_UDP_PORT}
+#include pjsip_transport_local.conf
+
+#include pjsip_transport_tls.conf
+
+; --- The carrier --------------------------------------------------------------------------
+
+[zadarma]
+type=endpoint
+context=from-zadarma
+disallow=all
+allow=alaw
+allow=ulaw
+direct_media=no
+dtmf_mode=rfc4733
+rtp_symmetric=yes
+force_rport=yes
+rewrite_contact=yes
+media_encryption=${CARRIER_MEDIA_ENCRYPTION}
+; Take the caller from P-Asserted-Identity or Remote-Party-ID when the carrier sends one. Otherwise From, which
+; is where Zadarma puts it. extensions.conf sends a call whose caller reads as the dialled number as anonymous.
+trust_id_inbound=yes
+send_diversion=no
+
+[zadarma]
+type=identify
+endpoint=zadarma
+match=${CARRIER_IPS}
+
+; --- OpenAI -------------------------------------------------------------------------------
+
+[openai]
+type=endpoint
+transport=transport-${OPENAI_TRANSPORT}
+context=from-openai
+disallow=all
+allow=alaw
+allow=ulaw
+direct_media=no
+dtmf_mode=rfc4733
+rtp_symmetric=yes
+force_rport=yes
+; The offer lists encrypted audio only, which OpenAI requires. A peer that answered without it would still be accepted,
+; so the TLS check on OpenAI's certificate (verify_server in the TLS transport) is what keeps the call private.
+media_encryption=${OPENAI_MEDIA_ENCRYPTION}
+media_encryption_optimistic=no
+aors=openai
+
+[openai]
+type=aor
+contact=sip:${OPENAI_HOST}:${OPENAI_PORT};transport=${OPENAI_TRANSPORT}

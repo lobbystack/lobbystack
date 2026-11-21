@@ -1239,7 +1239,7 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       } catch (error) {
         if (error instanceof NumberOrderPendingError && inventory) {
           // The carrier is still working on the order, such as a review of a country's documents. Check it again later.
-          if (Date.now() - claim.reservedAt.getTime() < NUMBER_ORDER_MAX_WAIT_MS) {
+          if (Date.now() - claim.reservedAt.getTime() < (inventory.orderMaxWaitMs ?? NUMBER_ORDER_MAX_WAIT_MS)) {
             const retryAt = await deferNumberProvisioning(dependencies.domain, { businessId, claimId, providerOrderId: error.orderId });
             return { status: "deferred", entityId: claimId, retryAt };
           }

@@ -418,7 +418,8 @@ export async function claimNumberProvisioning(context: DomainContext, input: { b
 
 /**
  * How long a claim waits on a carrier order before it fails. Telnyx can take
- * days to review a regulated country's documents.
+ * days to review a regulated country's documents. A carrier that takes longer
+ * sets its own limit, as Zadarma does (`orderMaxWaitMs`).
  */
 export const NUMBER_ORDER_MAX_WAIT_MS = 5 * 86_400_000;
 

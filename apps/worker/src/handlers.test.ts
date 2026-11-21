@@ -654,6 +654,26 @@ describe("worker handlers", () => {
     expect(failNumberProvisioning).toHaveBeenCalledWith(domain, expect.objectContaining({ businessId, claimId, unavailable: false }));
   });
 
+  it("keeps waiting past the default limit on a carrier that sets a longer one, and gives up at its own", async () => {
+    const businessId = randomUUID(); const claimId = randomUUID(); const domain = { db: undefined as never }; const retryAt = new Date(Date.now() + 600_000);
+    const day = 86_400_000;
+    const claim = { id: claimId, e164: "+381211234567", selection: { countryCode: "RS", kind: "local" }, carrier: "zadarma" as const, countsForPartner: false, providerOrderId: "381211234567" };
+    const inventory = { orderMaxWaitMs: 30 * day, findOwnedPhoneNumber: vi.fn().mockResolvedValue(null), purchasePhoneNumber: vi.fn().mockRejectedValue(new NumberOrderPendingError("still checking", "381211234567")), releasePhoneNumber: vi.fn().mockResolvedValue(undefined), isNumberUnavailableError: () => false };
+    const routing = { carrier: "zadarma", forwardsRefusedCalls: false, missingSetup: () => undefined, routeNumber: vi.fn() };
+    const telephony = { forNumber: () => ({ carrier: "zadarma", inventory, routing }) } as never;
+    const job = { jobId: randomUUID(), type: "phoneNumber.provision", queue: "critical", businessId, payload: { claimId }, trace: {}, idempotencyKey: `claim:${claimId}`, scheduled: false } as const;
+    vi.mocked(deferNumberProvisioning).mockResolvedValue(retryAt);
+
+    // Ten days in is past the default five, and still inside Zadarma's month.
+    vi.mocked(claimNumberProvisioning).mockResolvedValueOnce({ ...claim, reservedAt: new Date(Date.now() - 10 * day) });
+    await expect(handleJob(job, { domain, telephony })).resolves.toEqual({ status: "deferred", entityId: claimId, retryAt });
+    expect(failNumberProvisioning).not.toHaveBeenCalled();
+
+    vi.mocked(claimNumberProvisioning).mockResolvedValueOnce({ ...claim, reservedAt: new Date(Date.now() - 31 * day) });
+    await expect(handleJob(job, { domain, telephony })).rejects.toThrow(/still checking/);
+    expect(failNumberProvisioning).toHaveBeenCalledWith(domain, expect.objectContaining({ businessId, claimId, unavailable: false }));
+  });
+
   it("refuses to provision a number when no SIP trunk is configured", async () => {
     const businessId = randomUUID(); const claimId = randomUUID(); const domain = { db: undefined as never };
     vi.stubEnv("APP_BASE_URL", "https://app.example.test");
