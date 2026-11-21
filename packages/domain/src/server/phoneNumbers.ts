@@ -308,21 +308,63 @@ export async function orderOnboardingNumberClaim(context: DomainContext, input: 
   const city = input.selection.city?.trim();
   if (!city) throw numberClaimError(400, "city_required", "Choose a city for the number.");
   const kind = soldNumberKind(market.countryCode, input.selection.kind);
-  // An error listing what the account holds stops here: ordering without knowing could buy a number it already has.
-  const idle = await firstUnusedNumber(context, input, await provider.listReusable({ countryCode: market.countryCode, kind, city }));
-  if (idle) await provider.take({ carrier: idle.carrier, providerPhoneId: idle.providerPhoneId });
-  const ordered = idle ?? await provider.order({ countryCode: market.countryCode, kind, city, label: `LobbyStack ${input.businessId}` });
-  try {
-    const [offer] = await offerBusinessNumbers({ userId: input.userId, businessId: input.businessId, purpose: "onboarding", eligibility: eligibility!, selection: { countryCode: market.countryCode, kind, city }, limit: 1, claimTokenSecret: input.claimTokenSecret }, {
-      listAvailablePhoneNumbers: async () => [{ phoneE164: ordered.e164, countryCode: market.countryCode, capabilities: { sms: false, voice: true }, carrier: ordered.carrier }],
-    });
+  return await giveAssignedNumber(context, input, { countryCode: market.countryCode, kind, city }, provider, async (number) => {
+    const [offer] = await offerBusinessNumbers({ userId: input.userId, businessId: input.businessId, purpose: "onboarding", eligibility: eligibility!, selection: { countryCode: market.countryCode, kind, city }, limit: 1, claimTokenSecret: input.claimTokenSecret }, listingOnly(number, market.countryCode));
     if (!offer) throw numberClaimError(409, "city_order_unusable", "The number that was ordered can't be used by this workspace.");
     return await reserveOnboardingNumberClaim(context, { userId: input.userId, businessId: input.businessId, claimToken: offer.claimToken, claimTokenSecret: input.claimTokenSecret, idempotencyKey: input.idempotencyKey, ipHash: input.ipHash ?? null });
+  });
+}
+
+/** A provider whose only number is the one already chosen, so the usual offer code can sign it. */
+export function listingOnly(number: { e164: string; carrier: CarrierId }, countryCode: string): NumberInventoryProvider {
+  return { listAvailablePhoneNumbers: async () => [{ phoneE164: number.e164, countryCode, capabilities: { sms: false, voice: true }, carrier: number.carrier }] };
+}
+
+/**
+ * The step the three city-order flows share. A live number the account already holds in the city, which no business
+ * uses, is given out first, since buying another would cost money for nothing. Otherwise one is ordered. Then
+ * `reserve` signs it into an offer and reserves its claim. A claim that is refused afterwards releases the number,
+ * which ends its renewal, and an order's charge is lost. An error listing what the account holds stops here:
+ * ordering without knowing could buy a number it already has.
+ */
+export async function giveAssignedNumber(context: DomainContext, scope: { userId: string; businessId: string }, request: { countryCode: NumberCountry; kind: NumberSelection["kind"]; city: string }, provider: AssignedNumberProvider, reserve: (number: { carrier: CarrierId; providerPhoneId: string; e164: string }) => Promise<string>): Promise<string> {
+  const idle = await firstUnusedNumber(context, scope, await provider.listReusable(request));
+  if (idle) await provider.take({ carrier: idle.carrier, providerPhoneId: idle.providerPhoneId });
+  const number = idle ?? await provider.order({ ...request, label: `LobbyStack ${scope.businessId}` });
+  try {
+    return await reserve(number);
   } catch (error) {
-    // The number is on the account and billed, with no claim to track it, so end its renewal. An order's charge is lost.
-    await provider.release({ carrier: ordered.carrier, providerPhoneId: ordered.providerPhoneId }).catch((releaseError: unknown) => console.error("[numbers] couldn't release a number ordered for a refused claim", ordered.carrier, releaseError instanceof Error ? releaseError.message : releaseError));
+    await provider.release({ carrier: number.carrier, providerPhoneId: number.providerPhoneId }).catch((releaseError: unknown) => console.error("[numbers] couldn't release a number given out for a refused claim", number.carrier, releaseError instanceof Error ? releaseError.message : releaseError));
     throw error;
   }
+}
+
+/**
+ * Gives a replacement number in a city, the way orderOnboardingNumberClaim gives a first one. The replacement's own
+ * checks run before anything is ordered: the business has a number to replace, hasn't used its replacement, and none
+ * is already being set up.
+ */
+export async function orderReplacementNumberClaim(context: DomainContext, input: { userId: string; businessId: string; selection: Partial<NumberSelection>; claimTokenSecret: string; idempotencyKey: string; phoneNumberId?: string | null | undefined; ipHash?: string | null | undefined; ipCountry?: string | null | undefined }, provider: AssignedNumberProvider): Promise<string> {
+  const { eligibility, existing } = await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: "operator" }, async (tx) => {
+    await requireBusinessAdmin(tx, input);
+    const earlier = (await tx.select({ id: onboardingNumberClaimEvents.id }).from(onboardingNumberClaimEvents).where(and(eq(onboardingNumberClaimEvents.businessId, input.businessId), eq(onboardingNumberClaimEvents.idempotencyKey, input.idempotencyKey))).limit(1))[0];
+    if (earlier) return { eligibility: undefined, existing: earlier.id };
+    const inFlight = await tx.select({ id: onboardingNumberClaimEvents.id }).from(onboardingNumberClaimEvents).where(and(eq(onboardingNumberClaimEvents.businessId, input.businessId), eq(onboardingNumberClaimEvents.purpose, "replacement"), inArray(onboardingNumberClaimEvents.status, ["reserved", "provisioning"]))).limit(1);
+    const [reserved] = await tx.select({ at: businesses.phoneNumberReplacementReservedAt }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1);
+    if (inFlight.length || reserved?.at) throw refused("replacement_already_reserved");
+    return { eligibility: await numberEligibilityInTransaction(tx, { userId: input.userId, businessId: input.businessId, purpose: "replacement", selection: input.selection, via: "dashboard", ipHash: input.ipHash, ipCountry: input.ipCountry }), existing: undefined };
+  });
+  if (existing) return existing;
+  const { market } = eligibility!;
+  if (!isNumberCountry(market.countryCode) || !provider.assignsOnOrder(market.countryCode)) throw numberClaimError(400, "city_order_unsupported", "Numbers in this country are picked from a list, not ordered by city.");
+  const city = input.selection.city?.trim();
+  if (!city) throw numberClaimError(400, "city_required", "Choose a city for the number.");
+  const kind = soldNumberKind(market.countryCode, input.selection.kind);
+  return await giveAssignedNumber(context, input, { countryCode: market.countryCode, kind, city }, provider, async (number) => {
+    const [offer] = await offerBusinessNumbers({ userId: input.userId, businessId: input.businessId, purpose: "replacement", eligibility: eligibility!, selection: { countryCode: market.countryCode, kind, city }, limit: 1, claimTokenSecret: input.claimTokenSecret }, listingOnly(number, market.countryCode));
+    if (!offer) throw numberClaimError(409, "city_order_unusable", "The number that was ordered can't be used by this workspace.");
+    return await reserveReplacementNumberClaim(context, { userId: input.userId, businessId: input.businessId, claimToken: offer.claimToken, claimTokenSecret: input.claimTokenSecret, idempotencyKey: input.idempotencyKey, phoneNumberId: input.phoneNumberId ?? null });
+  });
 }
 
 /**

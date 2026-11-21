@@ -185,18 +185,21 @@ export function phoneNumberChooserApi(replacement: boolean, target: { phoneNumbe
 }
 
 /**
- * The onboarding calls for a country whose number is named when it is ordered. The order is charged at once, so this
- * waits only until the carrier has taken it: active gives the number, and an order still being checked, which can
- * take days, returns pending so the owner can move on.
+ * The calls for a country whose number is named when it is ordered. A first number, a replacement and an extra number
+ * each have their own order endpoint and name their target the way their search does. The order is charged at once,
+ * so this waits only until the carrier has taken it: active gives the number, and an order still being checked, which
+ * can take days, returns pending so the owner can move on.
  */
-export function onboardingCityOrderApi(): Pick<CityOrder, "loadCities" | "orderCity"> {
-  const prefix = "/api/onboarding/phone-numbers";
+export function cityOrderApi(replacement: boolean, target: { phoneNumberId?: string | undefined; extraForAgentId?: string | undefined } = {}): Pick<CityOrder, "loadCities" | "orderCity"> {
+  const extra = Boolean(target.extraForAgentId);
+  const prefix = extra ? "/api/phone-numbers/extra" : replacement ? "/api/phone-numbers/replacement" : "/api/onboarding/phone-numbers";
+  const orderTarget = extra ? { agentId: target.extraForAgentId } : replacement && target.phoneNumberId ? { phoneNumberId: target.phoneNumberId } : {};
   return {
     async loadCities({ businessId, country }) {
-      return (await requestJson<{ cities: string[] }>(`${prefix}/cities?businessId=${encodeURIComponent(businessId)}&country=${encodeURIComponent(country)}`)).cities;
+      return (await requestJson<{ cities: string[] }>(`/api/onboarding/phone-numbers/cities?businessId=${encodeURIComponent(businessId)}&country=${encodeURIComponent(country)}`)).cities;
     },
     async orderCity({ businessId, country, city }) {
-      const { claimId } = await requestJson<{ claimId: string }>(`${prefix}/order?businessId=${encodeURIComponent(businessId)}`, { method: "POST", body: JSON.stringify({ selection: { countryCode: country, kind: "local", city }, idempotencyKey: crypto.randomUUID() }) });
+      const { claimId } = await requestJson<{ claimId: string }>(`${prefix}/order?businessId=${encodeURIComponent(businessId)}`, { method: "POST", body: JSON.stringify({ selection: { countryCode: country, kind: "local", city }, idempotencyKey: crypto.randomUUID(), ...orderTarget }) });
       const deadline = Date.now() + 60_000;
       while (Date.now() < deadline) {
         const { claim } = await requestJson<{ claim: { status: string; requestedE164: string; phoneNumberId: string | null; providerOrderId: string | null } | null }>(`${prefix}/claim/${encodeURIComponent(claimId)}?businessId=${encodeURIComponent(businessId)}`);
@@ -208,6 +211,11 @@ export function onboardingCityOrderApi(): Pick<CityOrder, "loadCities" | "orderC
       return { status: "failed" };
     },
   };
+}
+
+/** The same calls for a first number. */
+export function onboardingCityOrderApi(): Pick<CityOrder, "loadCities" | "orderCity"> {
+  return cityOrderApi(false);
 }
 
 const COUNTRY_OPTIONS: Array<{
@@ -297,6 +305,9 @@ export function PhoneNumberChooser({
     setIsClaiming(true);
     setError(null);
     try {
+      // The number isn't known until it is ordered, so the price confirmation stands on the city.
+      const chosen: AvailableNumberSummary = { e164: `city:${city}`, display: city, locality: city, countryCode: country, kind: "local", capabilities: { sms: false, voice: true }, selectionContext: { mode: "city", countryCode: country, city } };
+      if (confirmClaim && !await confirmClaim(chosen)) return;
       const result = await cityOrder.orderCity({ businessId, country, city });
       if (result.status === "pending") { onOrderPending?.(); return; }
       if (result.status === "claimed") {

@@ -10,7 +10,12 @@ vi.mock("@/hooks/use-active-business", () => ({ useActiveBusiness: () => ({ busi
 vi.mock("./business-capabilities-provider", () => ({ useBusinessCan: () => (capability: string) => fixture.capabilities.includes(capability) }));
 vi.mock("./upgrade-plan-dialog-context", () => ({ useOpenUpgradePlanDialog: () => vi.fn() }));
 vi.mock("@/lib/number-step", () => ({ useOpenNumberStep: () => vi.fn() }));
-vi.mock("./phone-number-chooser", () => ({ PhoneNumberChooser: () => <p>number chooser</p>, phoneNumberChooserApi: () => ({}) }));
+const chooserProps = vi.hoisted(() => ({ latest: undefined as Record<string, unknown> | undefined }));
+vi.mock("./phone-number-chooser", () => ({
+  PhoneNumberChooser: (props: Record<string, unknown>) => { chooserProps.latest = props; return <p>number chooser</p>; },
+  phoneNumberChooserApi: () => ({}),
+  cityOrderApi: () => ({ loadCities: async () => [], orderCity: async () => ({ status: "failed" }) }),
+}));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 import { LivePhoneNumberSettingsSurface } from "./live-phone-number-settings-surface";
@@ -76,6 +81,26 @@ describe("a partner's business on the phone number settings", () => {
     await userEvent.type(await screen.findByRole("textbox"), "123456");
     expect(await screen.findByText("number chooser")).toBeTruthy();
     expect(paths).toEqual(expect.arrayContaining(["POST /api/onboarding/phone-verification", "POST /api/onboarding/phone-verification/check"]));
+  });
+
+  it("gives the chooser a city list for the countries whose number is named when it is ordered, and closes on an order still being checked", async () => {
+    renderWith({ partnerNumbers: { available: true, trial: true, refusal: null, phoneVerified: true }, cityCountries: ["RS"] });
+    await waitFor(() => expect(screen.getByRole("button", { name: "phoneNumber.actions.getNumber" }).hasAttribute("disabled")).toBe(false));
+    await userEvent.click(screen.getByRole("button", { name: "phoneNumber.actions.getNumber" }));
+    expect(await screen.findByText("number chooser")).toBeTruthy();
+    const props = chooserProps.latest as { cityOrder?: { countries: string[]; labels: Record<string, string> }; onOrderPending?: () => void };
+    expect(props.cityOrder?.countries).toEqual(["RS"]);
+    expect(props.cityOrder?.labels).toMatchObject({ header: "phoneNumber.city.header", empty: "phoneNumber.city.empty", failed: "phoneNumber.city.failed" });
+    props.onOrderPending?.();
+    await waitFor(() => expect(screen.queryByText("number chooser")).toBeNull());
+  });
+
+  it("gives the chooser no city list where every country lists numbers", async () => {
+    renderWith({ partnerNumbers: { available: true, trial: true, refusal: null, phoneVerified: true }, cityCountries: [] });
+    await waitFor(() => expect(screen.getByRole("button", { name: "phoneNumber.actions.getNumber" }).hasAttribute("disabled")).toBe(false));
+    await userEvent.click(screen.getByRole("button", { name: "phoneNumber.actions.getNumber" }));
+    expect(await screen.findByText("number chooser")).toBeTruthy();
+    expect((chooserProps.latest as { cityOrder?: unknown }).cityOrder).toBeUndefined();
   });
 
   it("goes straight to the chooser for someone whose mobile is verified in the business", async () => {

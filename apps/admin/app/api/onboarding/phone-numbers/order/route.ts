@@ -1,9 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 
-import { orderOnboardingNumberClaim, type AssignedNumberProvider, type NumberSelection } from "@lobbystack/domain";
+import { orderOnboardingNumberClaim, type NumberSelection } from "@lobbystack/domain";
 import { operatorRoute } from "@/lib/operator-request";
-import { getNumberClaimTokenSecret, getTelephony, requestIpHash, requireNumberSearch } from "@/lib/telephony";
+import { assignedNumberProvider } from "@/lib/assigned-number-provider";
+import { getNumberClaimTokenSecret, requestIpHash, requireNumberSearch } from "@/lib/telephony";
 import { assertPhoneNumberSearchAllowed } from "@/lib/phone-number-search-limit";
 import { trustedClientCountry } from "@/lib/trusted-client-ip";
 
@@ -13,14 +14,6 @@ export const POST = operatorRoute(async ({ request, userId, businessId, body: in
   const body = input as { selection?: Partial<NumberSelection>; idempotencyKey?: unknown };
   requireNumberSearch();
   await assertPhoneNumberSearchAllowed({ userId, initial: false });
-  const telephony = getTelephony();
-  const provider: AssignedNumberProvider = {
-    assignsOnOrder: (countryCode) => telephony.assignedNumbers.assignsOnOrder(countryCode),
-    listReusable: (search) => telephony.assignedNumbers.listReusable(search),
-    take: (number) => telephony.assignedNumbers.takeReusable(number),
-    order: (order) => telephony.assignedNumbers.order(order),
-    release: async ({ carrier, providerPhoneId }) => { await telephony.forNumber(carrier)?.inventory?.releasePhoneNumber({ providerPhoneId }); },
-  };
-  const claimId = await orderOnboardingNumberClaim(domain, { userId, businessId, selection: body.selection ?? {}, claimTokenSecret: getNumberClaimTokenSecret(), idempotencyKey: typeof body.idempotencyKey === "string" && body.idempotencyKey ? body.idempotencyKey : randomUUID(), ipHash: requestIpHash(request), ipCountry: trustedClientCountry(request) }, provider);
+  const claimId = await orderOnboardingNumberClaim(domain, { userId, businessId, selection: body.selection ?? {}, claimTokenSecret: getNumberClaimTokenSecret(), idempotencyKey: typeof body.idempotencyKey === "string" && body.idempotencyKey ? body.idempotencyKey : randomUUID(), ipHash: requestIpHash(request), ipCountry: trustedClientCountry(request) }, assignedNumberProvider());
   return NextResponse.json({ claimId }, { status: 202 });
 });

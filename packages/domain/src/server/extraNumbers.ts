@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 
 import { and, desc, eq, gt, inArray, isNull, sql } from "drizzle-orm";
 
-import { agents, billingAccounts, billingCheckoutRequests, businesses, businessNumberCharges, enqueueOutbox, phoneNumbers, users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { agents, billingAccounts, billingCheckoutRequests, businesses, businessNumberCharges, enqueueOutbox, onboardingNumberClaimEvents, phoneNumbers, users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { extraNumberMonthlyCents, isExtraNumberCountry, planSellsExtraNumbers, soldNumberKind, type ExtraNumberKind } from "@lobbystack/shared";
 
 import { requireBusinessAdmin } from "../authz";
@@ -10,7 +10,7 @@ import type { DomainContext } from "./context";
 import { loadBusinessBilling } from "./entitlement";
 import { extraNumbersSubscriptionLiveInTransaction } from "./extraNumbersSubscription";
 import { resolveBusinessNumberMarket } from "./phoneNumberMarket";
-import { claimRefusal, offerBusinessNumbers, readNumberOffer, refused, type NumberInventoryProvider, type NumberOffer, type NumberSelection } from "./phoneNumbers";
+import { claimRefusal, giveAssignedNumber, listingOnly, offerBusinessNumbers, readNumberOffer, refused, type AssignedNumberProvider, type NumberInventoryProvider, type NumberOffer, type NumberSelection } from "./phoneNumbers";
 
 // Extra numbers (migrations 0216 and 0217). Starter, Pro and Enterprise
 // include one number, and a business on any of them buys more, each for one of
@@ -127,6 +127,44 @@ export async function reserveExtraNumberClaim(context: DomainContext, input: { u
     const result = await tx.execute(sql`SELECT app.reserve_extra_number_claim(${input.businessId}::uuid, ${input.userId}::uuid, ${input.agentId}::uuid, ${offer.e164}::text, ${JSON.stringify(offer.selection)}::jsonb, ${tokenHash}::text, ${input.idempotencyKey}::text, ${price}::integer) AS id`);
     return await queueExtraNumberPurchase(tx, input.businessId, result.rows[0]);
   }).catch((error: unknown) => { throw claimRefusal(error) ?? error; });
+}
+
+/**
+ * Gives an extra number for one agent in a city, for a country whose carrier names the number only when it takes the
+ * order. The claim's own checks run before anything is ordered, because an order can't be undone for free: the agent
+ * is the business's, the business can buy an extra number, the country is priced, and a priced number's add-on bills.
+ * Then it is given out like a first number: an idle number the account holds first, otherwise a new order.
+ */
+export async function orderExtraNumberClaim(context: DomainContext, input: { userId: string; businessId: string; agentId: string; selection: Partial<NumberSelection>; claimTokenSecret: string; idempotencyKey: string }, provider: AssignedNumberProvider): Promise<string> {
+  const found = await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: "operator" }, async (tx) => {
+    await requireBusinessAdmin(tx, input);
+    const [earlier] = await tx.select({ id: onboardingNumberClaimEvents.id }).from(onboardingNumberClaimEvents).where(and(eq(onboardingNumberClaimEvents.businessId, input.businessId), eq(onboardingNumberClaimEvents.idempotencyKey, input.idempotencyKey))).limit(1);
+    if (earlier) return { existing: earlier.id };
+    const [agent] = await tx.select({ id: agents.id }).from(agents).where(and(eq(agents.businessId, input.businessId), eq(agents.id, input.agentId), isNull(agents.archivedAt))).limit(1);
+    if (!agent) throw refused("agent_not_found");
+    const inFlight = await tx.select({ id: onboardingNumberClaimEvents.id }).from(onboardingNumberClaimEvents).where(and(eq(onboardingNumberClaimEvents.businessId, input.businessId), eq(onboardingNumberClaimEvents.purpose, "extra"), inArray(onboardingNumberClaimEvents.status, ["reserved", "provisioning"]))).limit(1);
+    if (inFlight.length) throw refused("number_claim_in_progress");
+    const { availability, timezone } = await extraNumberSearchInTransaction(tx, input.businessId);
+    if (!availability.available) throw refused(availability.refusal);
+    const market = resolveBusinessNumberMarket({ selection: input.selection, timezone });
+    if (!isExtraNumberCountry(market.countryCode)) throw Object.assign(new Error("Phone numbers aren't available in this country yet."), { status: 400, code: "unsupported_country" });
+    const price = extraNumberPriceFor(availability, market.countryCode, soldNumberKind(market.countryCode, input.selection.kind));
+    if (price === undefined) throw unsupportedKind();
+    // The add-on bills a priced number's months, so one waits for it.
+    if (price !== null && !availability.subscribed) throw refused("extra_numbers_subscription_required");
+    return { availability, timezone, countryCode: market.countryCode };
+  });
+  if ("existing" in found && found.existing) return found.existing;
+  const { availability, timezone, countryCode } = found as { availability: ExtraNumberAvailability; timezone: string | null; countryCode: NonNullable<NumberSelection["countryCode"]> };
+  if (!provider.assignsOnOrder(countryCode)) throw Object.assign(new Error("Numbers in this country are picked from a list, not ordered by city."), { status: 400, code: "city_order_unsupported" });
+  const city = input.selection.city?.trim();
+  if (!city) throw Object.assign(new Error("Choose a city for the number."), { status: 400, code: "city_required" });
+  const kind = soldNumberKind(countryCode, input.selection.kind);
+  return await giveAssignedNumber(context, input, { countryCode, kind, city }, provider, async (number) => {
+    const { numbers: [offer] } = await offerExtraNumbers({ userId: input.userId, businessId: input.businessId, availability, timezone, selection: { countryCode, kind, city }, limit: 1, claimTokenSecret: input.claimTokenSecret }, listingOnly(number, countryCode));
+    if (!offer) throw Object.assign(new Error("The number that was ordered can't be used by this workspace."), { status: 409, code: "city_order_unusable" });
+    return await reserveExtraNumberClaim(context, { userId: input.userId, businessId: input.businessId, agentId: input.agentId, claimToken: offer.claimToken, claimTokenSecret: input.claimTokenSecret, idempotencyKey: input.idempotencyKey });
+  });
 }
 
 /**

@@ -2,10 +2,11 @@ import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 import { businesses, onboardingNumberClaimEvents, phoneNumbers } from "@lobbystack/db";
-import { extraNumberAvailabilityInTransaction, extraNumberPricesInTransaction, partnerNumberAvailabilityInTransaction, schedulePhoneNumberRelease, verifiedPhone } from "@lobbystack/domain";
+import { numberCountries, extraNumberAvailabilityInTransaction, extraNumberPricesInTransaction, partnerNumberAvailabilityInTransaction, schedulePhoneNumberRelease, verifiedPhone } from "@lobbystack/domain";
 import { extraNumbersProductId } from "@lobbystack/shared";
 import { jsonError } from "@/lib/api-helpers";
 import { operatorRoute } from "@/lib/operator-request";
+import { getTelephony, numbersConfigured } from "@/lib/telephony";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,8 @@ export const GET = operatorRoute(async ({ userId, businessId, transaction }) => 
   return {
     // An extra number's monthly price in US cents, or null for a number the plan includes or one that's free.
     phoneNumbers: rows.map((row) => ({ ...row, monthlyPriceCents: prices.get(row.id) ?? null })),
+    // The countries whose number is named when it is ordered, so the picker asks for a city there.
+    cityCountries: numbersConfigured() ? numberCountries().filter((country) => getTelephony().assignedNumbers.assignsOnOrder(country)) : [],
     activeClaim: activeClaims[0] ?? null,
     replacement: { reservedAt: workspace[0]?.replacementReservedAt ?? null, usedAt: workspace[0]?.replacementUsedAt ?? null, activeClaim: activeClaims.find(claim => claim.purpose === "replacement") ?? null },
     // A partner's business gets its numbers from its partner's tier, not a plan its billing page shows. Its partner's trial

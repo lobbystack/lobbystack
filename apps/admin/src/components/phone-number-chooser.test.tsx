@@ -91,6 +91,19 @@ describe("ordering a number by city", () => {
     expect(props.onClaimed).not.toHaveBeenCalled();
   });
 
+  it("asks to confirm before ordering a city, and orders nothing when the answer is no", async () => {
+    const order = cityOrder();
+    const confirmClaim = vi.fn().mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+    const props = setup({ getInitialNumberSuggestion: vi.fn().mockResolvedValue(serbia), cityOrder: order, confirmClaim });
+    await userEvent.click((await screen.findAllByRole("button", { name: "Order" }))[0]!);
+    await waitFor(() => expect(confirmClaim).toHaveBeenCalledOnce());
+    expect(confirmClaim).toHaveBeenCalledWith(expect.objectContaining({ locality: "Belgrade", countryCode: "RS" }));
+    expect(order.orderCity).not.toHaveBeenCalled();
+    await userEvent.click((await screen.findAllByRole("button", { name: "Order" }))[0]!);
+    await waitFor(() => expect(props.onClaimed).toHaveBeenCalled());
+    expect(order.orderCity).toHaveBeenCalledOnce();
+  });
+
   it("shows one order at a time and says so when it fails", async () => {
     let fail!: (reason: Error) => void;
     const order = cityOrder({ orderCity: vi.fn(() => new Promise<ClaimResult>((_resolve, reject) => { fail = reject; })) });

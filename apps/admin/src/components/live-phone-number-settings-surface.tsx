@@ -13,7 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ConfirmActionDialog } from "./confirm-action-dialog";
 import { useBusinessCan } from "./business-capabilities-provider";
 import { SmallButtonSkeleton } from "./loading-skeletons";
-import { PhoneNumberChooser, phoneNumberChooserApi, type AvailableNumberSummary, type ClaimResult } from "./phone-number-chooser";
+import { cityOrderApi, PhoneNumberChooser, phoneNumberChooserApi, type AvailableNumberSummary, type CityOrder, type ClaimResult } from "./phone-number-chooser";
 import { TrialPhoneVerification } from "./trial-phone-verification";
 import { useOpenUpgradePlanDialog } from "./upgrade-plan-dialog-context";
 import { useOpenNumberStep } from "@/lib/number-step";
@@ -37,6 +37,8 @@ type NumbersResponse = {
   /** Whether the business can buy another number for an agent, and whether it pays for one. */
   extraNumbers?: { available: boolean; priced: boolean; subscribed?: boolean; checkoutAvailable?: boolean; refusal: string | null };
   extraClaim?: { id: string; status: string } | null;
+  /** The countries whose number is named when it is ordered, where the picker asks for a city. */
+  cityCountries?: string[];
 };
 
 /** An extra number's monthly price, in the interface's language. */
@@ -120,6 +122,7 @@ export function LivePhoneNumberSettingsSurface({ agentId }: { agentId?: string }
   const confirmingExtraNumbersBilling = useExtraNumbersCheckoutReturn(businessId, () => setIsDialogOpen(true));
   const replacedNumberId = primaryPhoneNumber?.id;
   const numberApi = useMemo(() => phoneNumberChooserApi(isReplacement, { phoneNumberId: replacedNumberId, extraForAgentId: buysExtra ? agentId : undefined }), [agentId, buysExtra, isReplacement, replacedNumberId]);
+  const cityApi = useMemo(() => cityOrderApi(isReplacement, { phoneNumberId: replacedNumberId, extraForAgentId: buysExtra ? agentId : undefined }), [agentId, buysExtra, isReplacement, replacedNumberId]);
   const [confirming, setConfirming] = useState<AvailableNumberSummary | null>(null);
   const confirmAnswer = useRef<((buy: boolean) => void) | null>(null);
   function answerConfirm(buy: boolean): void {
@@ -136,6 +139,11 @@ export function LivePhoneNumberSettingsSurface({ agentId }: { agentId?: string }
   const priceOf = (country: string) => { const cents = extraNumberMonthlyCents(country, soldNumberKind(country)); return cents === undefined ? null : formatMonthlyPrice(cents, i18n.language); };
   // Stable across renders, so opening the price confirmation doesn't make the chooser load again.
   const chooserText = useMemo(() => phoneNumberChooserText(t), [t]);
+  const cityOrder = useMemo<CityOrder | undefined>(() => numbers.data?.cityCountries?.length ? {
+    countries: numbers.data.cityCountries,
+    ...cityApi,
+    labels: { header: t("phoneNumber.city.header"), select: buysExtra ? t("phoneNumber.extra.select") : chooserText.labels.select, empty: t("phoneNumber.city.empty"), failed: t("phoneNumber.city.failed") },
+  } : undefined, [buysExtra, chooserText, cityApi, numbers.data?.cityCountries, t]);
   const displayPhoneNumber = primaryPhoneNumber
     ? formatPhoneNumberDisplay(primaryPhoneNumber.e164, i18n.language)
     : null;
@@ -192,6 +200,13 @@ export function LivePhoneNumberSettingsSurface({ agentId }: { agentId?: string }
       </div>
     </div>
   );
+
+  // An order the carrier took and is still checking, which can take days. The page shows the claim while it waits.
+  function handlePending(): void {
+    toast.success(t("phoneNumber.toast.pending"));
+    setIsDialogOpen(false);
+    void queryClient.invalidateQueries({ queryKey: ["phone-numbers", businessId] });
+  }
 
   function handleClaimed(result: Extract<ClaimResult, { status: "claimed" }>): void {
     toast.success(t(hasPhoneNumber ? "phoneNumber.toast.changed" : "phoneNumber.toast.added"));
@@ -325,7 +340,9 @@ export function LivePhoneNumberSettingsSurface({ agentId }: { agentId?: string }
                           getErrorMessage={chooserText.getErrorMessage}
                           getInitialNumberSuggestion={numberApi.getInitialNumberSuggestion}
                           labels={buysExtra ? { ...chooserText.labels, select: t("phoneNumber.extra.select") } : chooserText.labels}
+                          cityOrder={cityOrder}
                           onClaimed={handleClaimed}
+                          onOrderPending={handlePending}
                           searchAvailableNumbers={numberApi.searchAvailableNumbers}
                           {...(extraPriced ? { countryNote: (country: string) => t("phoneNumber.extra.monthly", { price: priceOf(country) }), confirmClaim: confirmPurchase } : {})}
                         />

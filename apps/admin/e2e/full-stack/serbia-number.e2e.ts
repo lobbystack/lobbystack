@@ -1,13 +1,14 @@
 import { expect, test, type Page, type TestInfo } from "@playwright/test";
 import { randomUUID } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
-import { numberTrials, onboardingNumberClaimEvents, phoneNumbers } from "@lobbystack/db";
+import { defaultAgentIdOf, numberTrials, onboardingNumberClaimEvents, phoneNumbers } from "@lobbystack/db";
 import onboarding from "../../public/locales/en/onboarding.json" with { type: "json" };
+import settings from "../../public/locales/en/settings.json" with { type: "json" };
 
 import { isolateAuthRateLimit } from "../fixtures/email-verification";
 import { ZADARMA_DOCUMENTS_GROUP_ID, ZADARMA_SIP_HOST } from "../fixtures/full-stack-environment";
-import { migrator, removeFixtures, setPlan, signUp, type Migrator } from "../fixtures/full-stack";
+import { holdNumber, migrator, removeFixtures, setPlan, signUp, signUpOwner, twilioPhoneSid, type Migrator } from "../fixtures/full-stack";
 import { startThirdParties, type ThirdParties } from "../fixtures/third-parties";
 
 // A Serbian owner reaches the number step on Serbia, where Twilio has no numbers. Zadarma lists no landline numbers to
@@ -152,6 +153,63 @@ test("an owner on Free gets the plans for a Serbian number and orders nothing", 
     await expect(page.getByText(onboarding.number.refusals.paidPlan)).toBeVisible();
     expect(orders()).toEqual([]);
     expect(thirdParties.zadarma.calls.filter((call) => call.method === "POST")).toEqual([]);
+  } finally {
+    await removeFixtures(database, { emails, businessIds });
+  }
+});
+
+/** An owner on Starter with a US number, on their agent's phone page, who asks to change it and lands on Serbia's city list. */
+async function toReplacementDialog(page: Page, testInfo: TestInfo, emails: string[], businessIds: string[]) {
+  const owner = await signUpOwner(database, page, testInfo, `${prefix}-change`);
+  emails.push(owner.email);
+  businessIds.push(owner.businessId);
+  await setPlan(database, owner.businessId, "starter");
+  const current = await holdNumber(database, owner.businessId, { carrier: "twilio", providerPhoneId: twilioPhoneSid() });
+  const agentId = defaultAgentIdOf(owner.businessId);
+  await page.goto(`/agents/${agentId}/channels/phone`);
+  await page.getByRole("button", { name: settings.phoneNumber.actions.requestChange, exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.locator("#number-country")).toContainText("RS");
+  return { owner, current, dialog };
+}
+
+test("an owner changing their number to a Serbian one is given an idle number the account holds, and nothing is bought", async ({ page }, testInfo) => {
+  test.setTimeout(240_000);
+  const emails: string[] = [];
+  const businessIds: string[] = [];
+  try {
+    const idle = "381213860081";
+    thirdParties.zadarma.hold(idle, "off");
+    const { owner, current, dialog } = await toReplacementDialog(page, testInfo, emails, businessIds);
+    await dialog.getByRole("listitem").filter({ hasText: "Novi Sad" }).getByRole("button").click();
+    await expect(page.getByText(settings.phoneNumber.toast.changed, { exact: true })).toBeVisible({ timeout: 90_000 });
+
+    const numbers = await database.db.select({ id: phoneNumbers.id, e164: phoneNumbers.e164, carrier: phoneNumbers.carrier, status: phoneNumbers.status, reclaimReason: phoneNumbers.reclaimReason }).from(phoneNumbers).where(eq(phoneNumbers.businessId, owner.businessId));
+    expect(numbers.find((number) => number.e164 === `+${idle}`)).toMatchObject({ carrier: "zadarma", status: "active" });
+    // The old number stays for 30 days, then goes.
+    expect(numbers.find((number) => number.id === current.id)).toMatchObject({ status: "active", reclaimReason: "replacement" });
+    expect(orders()).toEqual([]);
+    expect(thirdParties.zadarma.numbers().find((item) => item.number === idle)).toMatchObject({ sip: `${idle}@${ZADARMA_SIP_HOST}`, autoprolongation: "on" });
+  } finally {
+    await removeFixtures(database, { emails, businessIds });
+  }
+});
+
+test("an owner changing their number to a Serbian one has a new number ordered when the account holds none idle", async ({ page }, testInfo) => {
+  test.setTimeout(240_000);
+  const emails: string[] = [];
+  const businessIds: string[] = [];
+  try {
+    const { owner, dialog } = await toReplacementDialog(page, testInfo, emails, businessIds);
+    await dialog.getByRole("listitem").filter({ hasText: "Belgrade" }).getByRole("button").click();
+    await expect(page.getByText(settings.phoneNumber.toast.changed, { exact: true })).toBeVisible({ timeout: 90_000 });
+
+    expect(orders()).toHaveLength(1);
+    expect(orders()[0]!.params).toMatchObject({ direction_id: "2393", documents_group_id: ZADARMA_DOCUMENTS_GROUP_ID });
+    const [bought] = thirdParties.zadarma.assigned;
+    const [number] = await database.db.select({ e164: phoneNumbers.e164, status: phoneNumbers.status }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, owner.businessId), eq(phoneNumbers.carrier, "zadarma")));
+    expect(number).toMatchObject({ e164: `+${bought}`, status: "active" });
+    expect(await database.db.select({ id: phoneNumbers.id }).from(phoneNumbers).where(eq(phoneNumbers.businessId, owner.businessId))).toHaveLength(2);
   } finally {
     await removeFixtures(database, { emails, businessIds });
   }

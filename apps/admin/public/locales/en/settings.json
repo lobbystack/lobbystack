@@ -479,7 +479,8 @@
     },
     "toast": {
       "changed": "Phone number changed. Your previous number will stay active for 30 days.",
-      "added": "Phone number added."
+      "added": "Phone number added.",
+      "pending": "We're setting up your number. It can take a few days."
     },
     "numbersUnavailable": "Phone numbers aren't set up on this dashboard yet. Ask whoever runs it to connect a phone provider.",
     "extra": {
@@ -492,6 +493,11 @@
       "cancel": "Cancel",
       "priceChanged": "The price changed. Search again to see it.",
       "unavailable": "This workspace can't buy more numbers."
+    },
+    "city": {
+      "header": "City",
+      "empty": "No cities are available right now.",
+      "failed": "We couldn't order that number. Try again."
     }
   },
   "appearance": {

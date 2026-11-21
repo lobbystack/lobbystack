@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("server-only", () => ({}));
+const telephony = vi.hoisted(() => ({ configured: vi.fn(() => false), assigns: vi.fn((_country: string) => false) }));
+vi.mock("@/lib/telephony", () => ({ numbersConfigured: telephony.configured, getTelephony: () => ({ assignedNumbers: { assignsOnOrder: telephony.assigns } }) }));
 const domain = vi.hoisted(() => ({ partnerNumberAvailabilityInTransaction: vi.fn(), verifiedPhone: vi.fn(), schedulePhoneNumberRelease: vi.fn(), extraNumberAvailabilityInTransaction: vi.fn(), extraNumberPricesInTransaction: vi.fn() }));
 vi.mock("@/lib/operator-request", () => import("@/lib/operator-request.fake"));
 vi.mock("@lobbystack/domain", async (original) => ({ ...await original<typeof import("@lobbystack/domain")>(), ...domain }));
@@ -38,6 +41,20 @@ describe("GET /api/phone-numbers", () => {
   it("names the agent each number reaches", async () => {
     const body = await (await GET(new Request("http://localhost:3000/api/phone-numbers"))).json() as { phoneNumbers: Array<{ id: string; agentId: string | null }> };
     expect(body.phoneNumbers).toEqual([expect.objectContaining({ id: number.id, agentId: AGENT })]);
+  });
+
+  it("lists the countries whose number is named when it is ordered, so the picker asks for a city there", async () => {
+    vi.stubEnv("ZADARMA_DOCUMENTS_GROUP_ID", "5");
+    telephony.configured.mockReturnValue(true);
+    telephony.assigns.mockImplementation((country: string) => country === "RS");
+    const body = await (await GET(new Request("http://localhost:3000/api/phone-numbers"))).json() as { cityCountries: string[] };
+    expect(body.cityCountries).toEqual(["RS"]);
+    vi.unstubAllEnvs();
+  });
+
+  it("lists none when no carrier is set up", async () => {
+    telephony.configured.mockReturnValue(false);
+    expect((await (await GET(new Request("http://localhost:3000/api/phone-numbers"))).json() as { cityCountries: string[] }).cityCountries).toEqual([]);
   });
 
   it("gives each extra number its monthly price and says whether the business can buy another", async () => {

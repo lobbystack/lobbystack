@@ -487,7 +487,8 @@
     },
     "toast": {
       "changed": "Numéro de téléphone modifié. Votre ancien numéro restera actif pendant 30 jours.",
-      "added": "Numéro de téléphone ajouté."
+      "added": "Numéro de téléphone ajouté.",
+      "pending": "Nous préparons votre numéro. Cela peut prendre quelques jours."
     },
     "numbersUnavailable": "Les numéros de téléphone ne sont pas encore configurés sur ce tableau de bord. Demandez à la personne qui le gère de connecter un fournisseur de téléphonie.",
     "extra": {
@@ -500,6 +501,11 @@
       "cancel": "Annuler",
       "priceChanged": "Le prix a changé. Relancez la recherche pour le voir.",
       "unavailable": "Cet espace de travail ne peut pas acheter d'autres numéros."
+    },
+    "city": {
+      "header": "Ville",
+      "empty": "Aucune ville n'est disponible pour le moment.",
+      "failed": "Nous n'avons pas pu commander ce numéro. Réessayez."
     }
   },
   "appearance": {
