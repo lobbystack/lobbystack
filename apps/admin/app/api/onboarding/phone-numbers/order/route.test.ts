@@ -1,7 +1,7 @@
 import { beforeEach, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
-const fixture = vi.hoisted(() => ({ limit: vi.fn(), order: vi.fn(), secret: vi.fn(() => "x".repeat(32)), telephonyOrder: vi.fn(), release: vi.fn() }));
+const fixture = vi.hoisted(() => ({ limit: vi.fn(), order: vi.fn(), secret: vi.fn(() => "x".repeat(32)), telephonyOrder: vi.fn(), release: vi.fn(), listReusable: vi.fn(async () => []), takeReusable: vi.fn(async () => undefined) }));
 vi.mock("@/lib/operator-request", () => import("@/lib/operator-request.fake"));
 vi.mock("@/lib/phone-number-search-limit", () => ({ assertPhoneNumberSearchAllowed: fixture.limit }));
 vi.mock("@lobbystack/domain", () => ({ orderOnboardingNumberClaim: fixture.order }));
@@ -9,7 +9,7 @@ vi.mock("@/lib/telephony", async (importOriginal) => ({
   ...await importOriginal<typeof import("@/lib/telephony")>(),
   getNumberClaimTokenSecret: fixture.secret,
   requireNumberSearch: () => undefined,
-  getTelephony: () => ({ assignedNumbers: { assignsOnOrder: () => true, order: fixture.telephonyOrder }, forNumber: () => ({ inventory: { releasePhoneNumber: fixture.release } }) }),
+  getTelephony: () => ({ assignedNumbers: { assignsOnOrder: () => true, order: fixture.telephonyOrder, listReusable: fixture.listReusable, takeReusable: fixture.takeReusable }, forNumber: () => ({ inventory: { releasePhoneNumber: fixture.release } }) }),
 }));
 
 import { resetFakeOperator } from "@/lib/operator-request.fake";
@@ -32,8 +32,10 @@ it("counts the order against the search limit, then reserves a claim for the cit
 });
 
 it("makes a key when the browser sends none, and hands the domain a provider that orders and releases through the carrier", async () => {
-  fixture.order.mockImplementation(async (_domain: unknown, _input: unknown, provider: { order: (input: unknown) => Promise<unknown>; release: (input: unknown) => Promise<void>; assignsOnOrder: (country: string) => boolean }) => {
+  fixture.order.mockImplementation(async (_domain: unknown, _input: unknown, provider: { order: (input: unknown) => Promise<unknown>; release: (input: unknown) => Promise<void>; assignsOnOrder: (country: string) => boolean; listReusable: (input: unknown) => Promise<unknown>; take: (input: unknown) => Promise<void> }) => {
     expect(provider.assignsOnOrder("RS")).toBe(true);
+    await provider.listReusable({ countryCode: "RS", kind: "local", city: "Nis" });
+    await provider.take({ carrier: "zadarma", providerPhoneId: "381213860081" });
     await provider.order({ countryCode: "RS", kind: "local", city: "Nis", label: "x" });
     await provider.release({ carrier: "zadarma", providerPhoneId: "381211234567" });
     return "claim-2";
@@ -42,6 +44,8 @@ it("makes a key when the browser sends none, and hands the domain a provider tha
   expect(fixture.order.mock.calls[0]![1].idempotencyKey).toMatch(/^[0-9a-f-]{36}$/);
   expect(fixture.telephonyOrder).toHaveBeenCalledWith({ countryCode: "RS", kind: "local", city: "Nis", label: "x" });
   expect(fixture.release).toHaveBeenCalledWith({ providerPhoneId: "381211234567" });
+  expect(fixture.listReusable).toHaveBeenCalledWith({ countryCode: "RS", kind: "local", city: "Nis" });
+  expect(fixture.takeReusable).toHaveBeenCalledWith({ carrier: "zadarma", providerPhoneId: "381213860081" });
 });
 
 it("orders nothing when the search limit refuses", async () => {

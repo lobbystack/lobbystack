@@ -16,6 +16,8 @@ export const POST = operatorRoute(async ({ request, userId, businessId, body: in
   const telephony = getTelephony();
   const provider: AssignedNumberProvider = {
     assignsOnOrder: (countryCode) => telephony.assignedNumbers.assignsOnOrder(countryCode),
+    listReusable: (search) => telephony.assignedNumbers.listReusable(search),
+    take: (number) => telephony.assignedNumbers.takeReusable(number),
     order: (order) => telephony.assignedNumbers.order(order),
     release: async ({ carrier, providerPhoneId }) => { await telephony.forNumber(carrier)?.inventory?.releasePhoneNumber({ providerPhoneId }); },
   };

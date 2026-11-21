@@ -26,6 +26,10 @@ export type NumberOrderRouter = {
   assignsOnOrder(countryCode: string): boolean;
   /** The cities that take an order in this country and kind. Empty when the country has none. */
   listCities(input: { countryCode: string; kind: NumberKind }): Promise<string[]>;
+  /** Live numbers the account holds in the city, from the carrier that assigns numbers at order. */
+  listReusable(input: { countryCode: string; kind: NumberKind; city?: string | undefined }): Promise<Array<{ carrier: CarrierId; providerPhoneId: string; e164: string }>>;
+  /** Readies a number from listReusable to give to a business. */
+  takeReusable(input: { carrier: CarrierId; providerPhoneId: string }): Promise<void>;
   /** Places and pays for the order, and returns the number the carrier assigned. */
   order(input: { countryCode: string; kind: NumberKind; city?: string | undefined; label: string }): Promise<{ carrier: CarrierId; providerPhoneId: string; e164: string }>;
 };
@@ -167,6 +171,12 @@ export function createTelephony(env: Env = process.env, factories: Partial<Telep
         const carrier = assigningCarrier(countryCode);
         return carrier ? await carriers[carrier]!.inventory!.listOrderCities?.({ countryCode, kind }) ?? [] : [];
       },
+      listReusable: async ({ countryCode, kind, city }) => {
+        const carrier = assigningCarrier(countryCode);
+        if (!carrier) return [];
+        return (await carriers[carrier]!.inventory!.listReusablePhoneNumbers?.({ countryCode, kind, city }) ?? []).map((number) => ({ carrier, ...number }));
+      },
+      takeReusable: async ({ carrier, providerPhoneId }) => { await carriers[carrier]?.inventory?.takeReusablePhoneNumber?.({ providerPhoneId }); },
       order: async (input) => {
         const carrier = assigningCarrier(input.countryCode);
         if (!carrier) throw phoneNumbersUnavailable();

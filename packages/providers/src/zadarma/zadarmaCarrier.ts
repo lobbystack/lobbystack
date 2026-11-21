@@ -145,6 +145,18 @@ export function createZadarmaCarrier(env: Env = process.env, options: ZadarmaCar
       await client.post("/v1/direct_numbers/order/", { number_id: wanted.id, direction_id: wanted.directionId, documents_group_id: zadarmaDocumentsGroupId(env), purpose });
       return await finishOrder(e164, true);
     },
+    /** Live numbers on the account in the city's area code. Zadarma's own list says which are on. */
+    listReusablePhoneNumbers: async ({ countryCode, kind, city }) => {
+      const prefixes = (await directions({ countryCode, kind, city })).map((direction) => `${digits(String(direction.countryCode ?? ""))}${digits(String(direction.areaCode ?? "")).replace(/^0+/, "")}`).filter((prefix) => prefix.length > 3);
+      if (!prefixes.length) return [];
+      const held = (await client.get<{ info?: ZadarmaOwnedNumber[] }>("/v1/direct_numbers/")).info ?? [];
+      return held.filter((number) => number.status === "on" && prefixes.some((prefix) => digits(number.number).startsWith(prefix))).map((number) => ({ providerPhoneId: digits(number.number), e164: `+${digits(number.number)}` }));
+    },
+    /** A release turns the number's renewal off, so a number given out again must renew or it ends with its paid period. */
+    takeReusablePhoneNumber: async ({ providerPhoneId }) => {
+      assertCertificationOperationAllowed();
+      await client.put("/v1/direct_numbers/autoprolongation/", { number: apiNumber(providerPhoneId), value: "on" });
+    },
     /** The destinations that sell this kind of number, by Zadarma's names for them. */
     listOrderCities: async ({ countryCode, kind }) => (await directions({ countryCode, kind })).map((direction) => direction.name?.trim() ?? "").filter(Boolean),
     /**

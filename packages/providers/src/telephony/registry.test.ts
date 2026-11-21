@@ -196,6 +196,17 @@ describe("ordering by city", () => {
     expect(zadarma.inventory!.orderAssignedPhoneNumber).toHaveBeenCalledWith({ countryCode: "RS", kind: "local", city: "Novi Sad", label: "x" });
   });
 
+  it("lists the numbers the carrier holds in a city, tagged with it, and readies one to give out", async () => {
+    const zadarma = assigning();
+    zadarma.inventory!.listReusablePhoneNumbers = vi.fn(async () => [{ providerPhoneId: "381213860081", e164: "+381213860081" }]);
+    zadarma.inventory!.takeReusablePhoneNumber = vi.fn(async () => undefined);
+    const { assignedNumbers } = createTelephony({ ZADARMA_DOCUMENTS_GROUP_ID: "5" }, { twilio: () => carrier("twilio"), zadarma: () => zadarma });
+    expect(await assignedNumbers.listReusable({ countryCode: "RS", kind: "local", city: "Novi Sad" })).toEqual([{ carrier: "zadarma", providerPhoneId: "381213860081", e164: "+381213860081" }]);
+    await assignedNumbers.takeReusable({ carrier: "zadarma", providerPhoneId: "381213860081" });
+    expect(zadarma.inventory!.takeReusablePhoneNumber).toHaveBeenCalledWith({ providerPhoneId: "381213860081" });
+    expect(await createTelephony({}, { twilio: () => carrier("twilio"), zadarma: () => zadarma }).assignedNumbers.listReusable({ countryCode: "RS", kind: "local" })).toEqual([]);
+  });
+
   it("offers no cities where numbers are picked from a list, or where the carrier's papers aren't in place", async () => {
     const withPapers = createTelephony({ ZADARMA_DOCUMENTS_GROUP_ID: "5" }, { twilio: () => carrier("twilio"), zadarma: () => assigning() }).assignedNumbers;
     expect(withPapers.assignsOnOrder("US")).toBe(false);

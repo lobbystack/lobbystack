@@ -206,6 +206,24 @@ describe("ordering a Zadarma number by city", () => {
     expect(await inventory.listOrderCities!({ countryCode: "RS", kind: "toll_free" })).toEqual(["Toll-free"]);
   });
 
+  it("lists live numbers the account holds in the city's area code, apart from ones in review or in other cities", async () => {
+    const held = { "GET /v1/direct_numbers/": () => ({ status: "success", info: [
+      { number: "381213860081", status: "on" },
+      { number: "381213860082", status: "checking" },
+      { number: "381111234567", status: "on" },
+    ] }) };
+    const inventory = createZadarmaCarrier(env, { client: fakeZadarma({ ...catalog, ...held }).client })!.inventory!;
+    expect(await inventory.listReusablePhoneNumbers!({ countryCode: "RS", kind: "local", city: "Novi Sad" })).toEqual([{ providerPhoneId: "381213860081", e164: "+381213860081" }]);
+    expect(await inventory.listReusablePhoneNumbers!({ countryCode: "RS", kind: "local", city: "Belgrade" })).toEqual([{ providerPhoneId: "381111234567", e164: "+381111234567" }]);
+    expect(await inventory.listReusablePhoneNumbers!({ countryCode: "RS", kind: "local", city: "Subotica" })).toEqual([]);
+  });
+
+  it("turns a reused number's renewal back on, since a release turned it off", async () => {
+    const { client, calls } = fakeZadarma({ "PUT /v1/direct_numbers/autoprolongation/": () => ({ status: "success" }) });
+    await createZadarmaCarrier(env, { client })!.inventory!.takeReusablePhoneNumber!({ providerPhoneId: "381213860081" });
+    expect(Object.fromEntries(calls[0]!.params)).toMatchObject({ number: "381213860081", value: "on" });
+  });
+
   it("reads a number Zadarma writes in national form", async () => {
     const { client } = fakeZadarma({ ...catalog, "POST /v1/direct_numbers/order/": () => ({ ...orderReply, number: "0211234567" }) });
     expect((await createZadarmaCarrier(env, { client })!.inventory!.orderAssignedPhoneNumber!({ countryCode: "RS", kind: "local", city: "Novi Sad", label: "x" })).e164).toBe("+381211234567");

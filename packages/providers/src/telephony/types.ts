@@ -78,6 +78,13 @@ export interface NumberInventory {
    */
   /** The cities a number can be ordered in, for a carrier that has orderAssignedPhoneNumber. */
   listOrderCities?(input: { countryCode: string; kind: NumberKind }): Promise<string[]>;
+  /**
+   * Live numbers the account already holds in this city, for a carrier that has orderAssignedPhoneNumber. The caller
+   * decides which of them no business uses, so a number that was let go can be given out again instead of buying one.
+   */
+  listReusablePhoneNumbers?(input: { countryCode: string; kind: NumberKind; city?: string | undefined }): Promise<Array<{ providerPhoneId: string; e164: string }>>;
+  /** Makes an owned number ready to give to a business again, such as turning its renewal back on after a release turned it off. */
+  takeReusablePhoneNumber?(input: { providerPhoneId: string }): Promise<void>;
   orderAssignedPhoneNumber?(input: { countryCode: string; kind: NumberKind; city?: string | undefined; label: string }): Promise<{ providerPhoneId: string; e164: string }>;
   /** Whether a purchase failed because the number is no longer for sale. */
   isNumberUnavailableError(error: unknown): boolean;

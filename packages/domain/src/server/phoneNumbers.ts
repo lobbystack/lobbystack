@@ -259,15 +259,33 @@ export async function searchBusinessNumberInventory(context: DomainContext, inpu
 /** What ordering a number by city needs from the carrier side. The dashboard builds it from the telephony registry. */
 export type AssignedNumberProvider = {
   assignsOnOrder(countryCode: string): boolean;
+  /** Live numbers the account already holds in the city, which may be ones no business uses. */
+  listReusable(input: { countryCode: string; kind: NumberSelection["kind"]; city?: string | undefined }): Promise<Array<{ carrier: CarrierId; providerPhoneId: string; e164: string }>>;
+  /** Readies a number from listReusable to give to a business. */
+  take(input: { carrier: CarrierId; providerPhoneId: string }): Promise<void>;
   order(input: { countryCode: string; kind: NumberSelection["kind"]; city?: string | undefined; label: string }): Promise<{ carrier: CarrierId; providerPhoneId: string; e164: string }>;
   release(input: { carrier: CarrierId; providerPhoneId: string }): Promise<void>;
 };
 
+/** The first of these numbers that no business holds. The unique index on phone numbers backs this up when two claims race. */
+async function firstUnusedNumber<T extends { e164: string }>(context: DomainContext, scope: { userId: string; businessId: string }, numbers: T[]): Promise<T | undefined> {
+  if (!numbers.length) return undefined;
+  return await withBusinessTransaction(context.db, { userId: scope.userId, businessId: scope.businessId, actorType: "operator" }, async (tx) => {
+    for (const number of numbers) {
+      const holder = (await tx.execute<{ business_id: string | null }>(sql`select app.resolve_business_by_phone(${number.e164}) as business_id`)).rows[0]?.business_id;
+      if (!holder) return number;
+    }
+    return undefined;
+  });
+}
+
 /**
- * Orders an onboarding number in a city, for a country whose carrier names the number only when it takes the order,
+ * Gives an onboarding number in a city, for a country whose carrier names the number only when it takes the order,
  * such as Zadarma's Serbian landlines. The business gets the same checks as a search, so a plan that isn't paid is
- * refused before anything is ordered. The order is placed and charged first, because the number isn't known before
- * it. The number is then signed into an offer and reserved like any other claim, and the worker takes it from there.
+ * refused before anything is ordered. A live number the account already holds in the city, which no business uses,
+ * is given out first, since buying another would cost money for nothing. When there is none, the number is ordered
+ * and charged first, because it isn't known before. The number is then signed into an offer and reserved like any
+ * other claim, and the worker takes it from there.
  * A reservation that is refused after the order releases the number, which ends its renewal, and the cost of that
  * order is lost. The same idempotency key returns the claim it made and orders nothing again.
  */
@@ -290,7 +308,10 @@ export async function orderOnboardingNumberClaim(context: DomainContext, input: 
   const city = input.selection.city?.trim();
   if (!city) throw numberClaimError(400, "city_required", "Choose a city for the number.");
   const kind = soldNumberKind(market.countryCode, input.selection.kind);
-  const ordered = await provider.order({ countryCode: market.countryCode, kind, city, label: `LobbyStack ${input.businessId}` });
+  // An error listing what the account holds stops here: ordering without knowing could buy a number it already has.
+  const idle = await firstUnusedNumber(context, input, await provider.listReusable({ countryCode: market.countryCode, kind, city }));
+  if (idle) await provider.take({ carrier: idle.carrier, providerPhoneId: idle.providerPhoneId });
+  const ordered = idle ?? await provider.order({ countryCode: market.countryCode, kind, city, label: `LobbyStack ${input.businessId}` });
   try {
     const [offer] = await offerBusinessNumbers({ userId: input.userId, businessId: input.businessId, purpose: "onboarding", eligibility: eligibility!, selection: { countryCode: market.countryCode, kind, city }, limit: 1, claimTokenSecret: input.claimTokenSecret }, {
       listAvailablePhoneNumbers: async () => [{ phoneE164: ordered.e164, countryCode: market.countryCode, capabilities: { sms: false, voice: true }, carrier: ordered.carrier }],
@@ -298,7 +319,7 @@ export async function orderOnboardingNumberClaim(context: DomainContext, input: 
     if (!offer) throw numberClaimError(409, "city_order_unusable", "The number that was ordered can't be used by this workspace.");
     return await reserveOnboardingNumberClaim(context, { userId: input.userId, businessId: input.businessId, claimToken: offer.claimToken, claimTokenSecret: input.claimTokenSecret, idempotencyKey: input.idempotencyKey, ipHash: input.ipHash ?? null });
   } catch (error) {
-    // The number is on the account and billed, with no claim to track it, so end its renewal. The charge for it is lost.
+    // The number is on the account and billed, with no claim to track it, so end its renewal. An order's charge is lost.
     await provider.release({ carrier: ordered.carrier, providerPhoneId: ordered.providerPhoneId }).catch((releaseError: unknown) => console.error("[numbers] couldn't release a number ordered for a refused claim", ordered.carrier, releaseError instanceof Error ? releaseError.message : releaseError));
     throw error;
   }
@@ -499,7 +520,8 @@ export async function numberProvisioningLeaseEndsAt(context: DomainContext, inpu
  */
 export async function completeNumberProvisioning(context: DomainContext, input: { businessId: string; claimId: string; carrier?: CarrierId; e164: string; providerPhoneId: string; carrierConnectionId?: string | undefined; voiceUrl: string; smsUrl?: string; monthlyCostCents?: number | undefined }): Promise<string> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const existing = (await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(eq(phoneNumbers.providerPhoneId, input.providerPhoneId)).limit(1))[0];
+    // A reclaimed row for the same number is history, so a number given out again gets a new row, not the old one.
+    const existing = (await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(and(eq(phoneNumbers.providerPhoneId, input.providerPhoneId), ne(phoneNumbers.status, "reclaimed"))).limit(1))[0];
     const offered = (await tx.select({ selection: onboardingNumberClaimEvents.selectionContext }).from(onboardingNumberClaimEvents).where(and(eq(onboardingNumberClaimEvents.id, input.claimId), eq(onboardingNumberClaimEvents.businessId, input.businessId))).limit(1))[0]?.selection;
     // Claims from before voice-only numbers didn't record texting; those numbers all text.
     const smsEnabled = offered?.sms !== false;

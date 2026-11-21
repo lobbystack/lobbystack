@@ -72,7 +72,7 @@ export type ThirdParties = {
    * landline numbers to pick from, and the number named in the reply to an order. `status` is what a number is when
    * ordered, "on" or "checking" while Zadarma reviews documents.
    */
-  zadarma: { calls: ZadarmaCall[]; assigned: string[]; status: string; numbers(): ZadarmaNumber[] };
+  zadarma: { calls: ZadarmaCall[]; assigned: string[]; status: string; numbers(): ZadarmaNumber[]; /** Puts a live number on the account before the test starts, as one an earlier business left behind. */ hold(number: string, autoprolongation?: "on" | "off"): void };
   calendly: {
     /** What the next account to connect pays for. Calendly's Free plan is `basic` at the `free` stage. */
     plan: "paid" | "free";
@@ -324,7 +324,7 @@ export async function startThirdParties(): Promise<ThirdParties> {
       messagesTo: (to) => calls.filter((call) => call.path.endsWith("/Messages.json") && call.method === "POST" && call.form.To === to),
       addNumber: ({ sid, e164, trunkSid }) => { numberResource(sid, e164).trunk_sid = trunkSid ?? null; },
     },
-    zadarma: { calls: zadarmaCalls, get assigned() { return [...zadarmaAssigned]; }, get status() { return zadarmaSettings.status; }, set status(value: string) { zadarmaSettings.status = value; }, numbers: () => [...zadarmaNumbers.values()] },
+    zadarma: { calls: zadarmaCalls, get assigned() { return [...zadarmaAssigned]; }, get status() { return zadarmaSettings.status; }, set status(value: string) { zadarmaSettings.status = value; }, numbers: () => [...zadarmaNumbers.values()], hold: (number, autoprolongation = "off") => { zadarmaNumbers.set(number, { number, status: "on", sip: null, autoprolongation }); } },
     calendly,
     firecrawl,
     polar,

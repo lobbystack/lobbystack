@@ -213,8 +213,8 @@ describe("orderOnboardingNumberClaim", () => {
   const input = { userId: "user-1", businessId: "business-1", claimTokenSecret: "number-claim-unit-secret", idempotencyKey: "key-1", selection: { countryCode: "RS" as const, kind: "local" as const, city: "Novi Sad" } };
   const assigned = { carrier: "zadarma" as const, providerPhoneId: "381211234567", e164: "+381211234567" };
 
-  function provider(overrides: Partial<AssignedNumberProvider> = {}): AssignedNumberProvider & { order: ReturnType<typeof vi.fn>; release: ReturnType<typeof vi.fn> } {
-    return { assignsOnOrder: () => true, order: vi.fn(async () => assigned), release: vi.fn(async () => undefined), ...overrides } as never;
+  function provider(overrides: Partial<AssignedNumberProvider> = {}): AssignedNumberProvider & { order: ReturnType<typeof vi.fn>; release: ReturnType<typeof vi.fn>; take: ReturnType<typeof vi.fn>; listReusable: ReturnType<typeof vi.fn> } {
+    return { assignsOnOrder: () => true, listReusable: vi.fn(async () => []), take: vi.fn(async () => undefined), order: vi.fn(async () => assigned), release: vi.fn(async () => undefined), ...overrides } as never;
   }
 
   // Selects in order: an earlier claim under the key, a claim in flight, a number the business holds, then the business. A hosted workspace on a paid plan has no trial, so Serbia's numbers are for sale to it.
@@ -242,6 +242,52 @@ describe("orderOnboardingNumberClaim", () => {
     paidWorkspace({ earlier: [{ id: "claim-0" }] });
     const carrier = provider();
     expect(await orderOnboardingNumberClaim(context, input, carrier)).toBe("claim-0");
+    expect(carrier.order).not.toHaveBeenCalled();
+  });
+
+  const idle = { carrier: "zadarma" as const, providerPhoneId: "381213860081", e164: "+381213860081" };
+
+  it("gives out a number the account already holds in the city, which no business uses, and buys nothing", async () => {
+    const tx = paidWorkspace();
+    const carrier = provider({ listReusable: vi.fn(async () => [idle]) } as never);
+    expect(await orderOnboardingNumberClaim(context, input, carrier)).toBe("claim-1");
+    expect(carrier.listReusable).toHaveBeenCalledWith({ countryCode: "RS", kind: "local", city: "Novi Sad" });
+    expect(carrier.take).toHaveBeenCalledWith({ carrier: "zadarma", providerPhoneId: "381213860081" });
+    expect(carrier.order).not.toHaveBeenCalled();
+    expect(carrier.release).not.toHaveBeenCalled();
+    // The claim is for the number that was already held.
+    expect(JSON.stringify((tx.execute.mock.calls as unknown[][]).at(-1)![0])).toContain("+381213860081");
+  });
+
+  it("skips a held number that a business still uses, and orders a new one", async () => {
+    let calls = 0;
+    // The first query asks who holds the number, and answers with a business. The next reserves the claim.
+    paidWorkspace({ execute: () => (calls++ === 0 ? { rows: [{ business_id: "business-2" }] } : { rows: [{ id: "claim-1" }] }) });
+    const carrier = provider({ listReusable: vi.fn(async () => [idle]) } as never);
+    expect(await orderOnboardingNumberClaim(context, input, carrier)).toBe("claim-1");
+    expect(carrier.take).not.toHaveBeenCalled();
+    expect(carrier.order).toHaveBeenCalledOnce();
+  });
+
+  it("takes the next idle number when the first is held, and ends the renewal of one whose claim is refused", async () => {
+    const second = { ...idle, providerPhoneId: "381213860099", e164: "+381213860099" };
+    let calls = 0;
+    paidWorkspace({ execute: () => {
+      if (calls++ === 0) return { rows: [{ business_id: "business-2" }] };
+      if (calls === 2) return { rows: [{ business_id: null }] };
+      throw new Error("claim refused");
+    } });
+    const carrier = provider({ listReusable: vi.fn(async () => [idle, second]) } as never);
+    await expect(orderOnboardingNumberClaim(context, input, carrier)).rejects.toThrow("claim refused");
+    expect(carrier.take).toHaveBeenCalledWith({ carrier: "zadarma", providerPhoneId: "381213860099" });
+    expect(carrier.release).toHaveBeenCalledWith({ carrier: "zadarma", providerPhoneId: "381213860099" });
+    expect(carrier.order).not.toHaveBeenCalled();
+  });
+
+  it("orders nothing when it can't tell what the account holds", async () => {
+    paidWorkspace();
+    const carrier = provider({ listReusable: vi.fn(async () => { throw new Error("Zadarma is down"); }) } as never);
+    await expect(orderOnboardingNumberClaim(context, input, carrier)).rejects.toThrow("Zadarma is down");
     expect(carrier.order).not.toHaveBeenCalled();
   });
 

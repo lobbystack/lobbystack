@@ -96,6 +96,29 @@ test("a paid Serbian owner orders a number in their city, routed to the SIP serv
   }
 });
 
+test("a paid owner is given a number the account already holds in their city, with renewal back on, and nothing is bought", async ({ page }, testInfo) => {
+  test.setTimeout(240_000);
+  const emails: string[] = [];
+  const businessIds: string[] = [];
+  try {
+    // A number an earlier business let go: live on the account, its renewal off, and no business holds it.
+    const idle = "381213860081";
+    thirdParties.zadarma.hold(idle, "off");
+    const businessId = await toNumberStep(page, testInfo, "starter", emails, businessIds);
+    await page.getByRole("listitem").filter({ hasText: "Novi Sad" }).getByRole("button", { name: onboarding.number.select }).click();
+    await expect(page).toHaveURL("/onboarding/attribution", { timeout: 120_000 });
+
+    const [number] = await database.db.select({ e164: phoneNumbers.e164, carrier: phoneNumbers.carrier, status: phoneNumbers.status, target: phoneNumbers.voiceWebhookTargetUrl }).from(phoneNumbers).where(eq(phoneNumbers.businessId, businessId));
+    expect(number).toMatchObject({ e164: `+${idle}`, carrier: "zadarma", status: "active", target: `sip:${idle}@${ZADARMA_SIP_HOST}` });
+    // Nothing was ordered, so nothing was charged, and the number renews again.
+    expect(orders()).toEqual([]);
+    expect(thirdParties.zadarma.assigned).toEqual([]);
+    expect(thirdParties.zadarma.numbers().find((item) => item.number === idle)).toMatchObject({ sip: `${idle}@${ZADARMA_SIP_HOST}`, autoprolongation: "on" });
+  } finally {
+    await removeFixtures(database, { emails, businessIds });
+  }
+});
+
 test("a paid owner whose order Zadarma is still checking moves on, and the claim waits for the number", async ({ page }, testInfo) => {
   test.setTimeout(240_000);
   const emails: string[] = [];
