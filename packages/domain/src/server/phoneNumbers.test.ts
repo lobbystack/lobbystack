@@ -12,7 +12,7 @@ vi.mock("@lobbystack/db", async (original) => ({
 vi.mock("../authz", () => ({ requireBusinessAdmin: mocks.requireBusinessAdmin }));
 vi.mock("./entitlement", () => ({ loadEntitlement: mocks.loadEntitlement }));
 
-import { reserveOnboardingNumberClaim, reserveReplacementNumberClaim, searchBusinessNumberInventory } from "./phoneNumbers";
+import { orderOnboardingNumberClaim, reserveOnboardingNumberClaim, reserveReplacementNumberClaim, searchBusinessNumberInventory, type AssignedNumberProvider } from "./phoneNumbers";
 
 const context = { db: {} as never };
 const scope = { userId: "user-1", businessId: "business-1", claimTokenSecret: "number-claim-unit-secret" };
@@ -204,5 +204,78 @@ describe("number claims", () => {
     const outage = new Error("connection terminated");
     setup(() => { throw outage; });
     await expect(reserveReplacementNumberClaim(context, { ...scope, claimToken: await offer("replacement"), idempotencyKey: "key" })).rejects.toBe(outage);
+  });
+});
+
+describe("orderOnboardingNumberClaim", () => {
+  afterEach(() => { vi.unstubAllEnvs(); });
+
+  const input = { userId: "user-1", businessId: "business-1", claimTokenSecret: "number-claim-unit-secret", idempotencyKey: "key-1", selection: { countryCode: "RS" as const, kind: "local" as const, city: "Novi Sad" } };
+  const assigned = { carrier: "zadarma" as const, providerPhoneId: "381211234567", e164: "+381211234567" };
+
+  function provider(overrides: Partial<AssignedNumberProvider> = {}): AssignedNumberProvider & { order: ReturnType<typeof vi.fn>; release: ReturnType<typeof vi.fn> } {
+    return { assignsOnOrder: () => true, order: vi.fn(async () => assigned), release: vi.fn(async () => undefined), ...overrides } as never;
+  }
+
+  // Selects in order: an earlier claim under the key, then the business. A hosted workspace on a paid plan has no trial, so Serbia's numbers are for sale to it.
+  function paidWorkspace(options: { earlier?: unknown[]; execute?: () => unknown; free?: boolean } = {}) {
+    vi.stubEnv("ZADARMA_DOCUMENTS_GROUP_ID", "5");
+    entitled(options.free ? planEntitlement("free_cloud") : planEntitlement("starter", { live: true, capMinor: null }));
+    const selects = [options.earlier ?? [], [{ stage: "phone_number", timezone: "Europe/Belgrade", deploymentMode: "cloud", replacementUsedAt: null }]];
+    const tx = { select: () => chain(selects.shift() ?? []), update: () => ({ set: () => ({ where: async () => [] }) }), execute: vi.fn(async () => await (options.execute ?? (() => ({ rows: [{ id: "claim-1" }] })))()) };
+    mocks.withBusinessTransaction.mockImplementation(async (_db: unknown, _scope: unknown, callback: (tx: unknown) => unknown) => await callback(tx));
+    return tx;
+  }
+
+  it("orders the number in the city, then reserves a claim for the number the carrier assigned", async () => {
+    const tx = paidWorkspace();
+    const carrier = provider();
+    expect(await orderOnboardingNumberClaim(context, input, carrier)).toBe("claim-1");
+    expect(carrier.order).toHaveBeenCalledWith({ countryCode: "RS", kind: "local", city: "Novi Sad", label: "LobbyStack business-1" });
+    expect(carrier.release).not.toHaveBeenCalled();
+    // The claim function got the assigned number, signed into an offer for this business and person.
+    expect(JSON.stringify((tx.execute.mock.calls as unknown[][]).at(-1)![0])).toContain("+381211234567");
+    expect(mocks.enqueueOutbox).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ topic: "phoneNumber.provision", aggregateId: "claim-1" }));
+  });
+
+  it("returns the claim it already made for the same key, and orders nothing again", async () => {
+    paidWorkspace({ earlier: [{ id: "claim-0" }] });
+    const carrier = provider();
+    expect(await orderOnboardingNumberClaim(context, input, carrier)).toBe("claim-0");
+    expect(carrier.order).not.toHaveBeenCalled();
+  });
+
+  it("orders nothing for a workspace that hasn't paid, since Serbia has no free trial", async () => {
+    paidWorkspace({ free: true });
+    const carrier = provider();
+    await expect(orderOnboardingNumberClaim(context, input, carrier)).rejects.toMatchObject({ status: 409 });
+    expect(carrier.order).not.toHaveBeenCalled();
+  });
+
+  it("orders nothing in a country whose numbers are picked from a list, or without a city", async () => {
+    paidWorkspace();
+    const listed = provider({ assignsOnOrder: () => false });
+    await expect(orderOnboardingNumberClaim(context, input, listed)).rejects.toMatchObject({ status: 400, code: "city_order_unsupported" });
+    paidWorkspace();
+    const carrier = provider();
+    await expect(orderOnboardingNumberClaim(context, { ...input, selection: { countryCode: "RS", kind: "local" } }, carrier)).rejects.toMatchObject({ status: 400, code: "city_required" });
+    expect(listed.order).not.toHaveBeenCalled();
+    expect(carrier.order).not.toHaveBeenCalled();
+  });
+
+  it("releases the number when the claim is refused after the order, so it stops renewing", async () => {
+    paidWorkspace({ execute: () => { throw new Error("claim refused"); } });
+    const carrier = provider();
+    await expect(orderOnboardingNumberClaim(context, input, carrier)).rejects.toThrow("claim refused");
+    expect(carrier.release).toHaveBeenCalledWith({ carrier: "zadarma", providerPhoneId: "381211234567" });
+  });
+
+  it("still reports the refusal when the release fails too", async () => {
+    paidWorkspace({ execute: () => { throw new Error("claim refused"); } });
+    const carrier = provider({ release: vi.fn(async () => { throw new Error("release failed"); }) });
+    const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    await expect(orderOnboardingNumberClaim(context, input, carrier)).rejects.toThrow("claim refused");
+    expect(logged).toHaveBeenCalled();
+    logged.mockRestore();
   });
 });

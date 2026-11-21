@@ -115,8 +115,10 @@ export function createZadarmaCarrier(env: Env = process.env, options: ZadarmaCar
       if (direction.currency?.toUpperCase() !== "USD") throw new Error(`Zadarma prices numbers in ${countryCode.toUpperCase()} in ${direction.currency}, not US dollars. Set the account's currency to USD.`);
       return { monthlyCents: Math.round(amount * 100) };
     },
-    findOwnedPhoneNumber: async ({ e164 }) => {
+    findOwnedPhoneNumber: async ({ e164, includePending }) => {
       const number = await owned(e164);
+      // A number still in Zadarma's review can't take calls yet, so it isn't one the account has for use.
+      if (number && !includePending && number.status !== "on") return null;
       return number ? { providerPhoneId: digits(e164), e164: `+${digits(number.number)}` } : null;
     },
     /**
@@ -143,6 +145,8 @@ export function createZadarmaCarrier(env: Env = process.env, options: ZadarmaCar
       await client.post("/v1/direct_numbers/order/", { number_id: wanted.id, direction_id: wanted.directionId, documents_group_id: zadarmaDocumentsGroupId(env), purpose });
       return await finishOrder(e164, true);
     },
+    /** The destinations that sell this kind of number, by Zadarma's names for them. */
+    listOrderCities: async ({ countryCode, kind }) => (await directions({ countryCode, kind })).map((direction) => direction.name?.trim() ?? "").filter(Boolean),
     /**
      * Orders a number in a city without choosing one. Zadarma lists no landline numbers to pick from in Serbia and
      * names the number in its reply to the order, which is placed and charged to the account's balance right away.

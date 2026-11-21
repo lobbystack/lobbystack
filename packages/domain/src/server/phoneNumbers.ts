@@ -256,6 +256,48 @@ export async function searchBusinessNumberInventory(context: DomainContext, inpu
   return { market: eligibility.market, numbers, trial: Boolean(eligibility.trial), countryFixed: eligibility.countryFixed };
 }
 
+/** What ordering a number by city needs from the carrier side. The dashboard builds it from the telephony registry. */
+export type AssignedNumberProvider = {
+  assignsOnOrder(countryCode: string): boolean;
+  order(input: { countryCode: string; kind: NumberSelection["kind"]; city?: string | undefined; label: string }): Promise<{ carrier: CarrierId; providerPhoneId: string; e164: string }>;
+  release(input: { carrier: CarrierId; providerPhoneId: string }): Promise<void>;
+};
+
+/**
+ * Orders an onboarding number in a city, for a country whose carrier names the number only when it takes the order,
+ * such as Zadarma's Serbian landlines. The business gets the same checks as a search, so a plan that isn't paid is
+ * refused before anything is ordered. The order is placed and charged first, because the number isn't known before
+ * it. The number is then signed into an offer and reserved like any other claim, and the worker takes it from there.
+ * A reservation that is refused after the order releases the number, which ends its renewal, and the cost of that
+ * order is lost. The same idempotency key returns the claim it made and orders nothing again.
+ */
+export async function orderOnboardingNumberClaim(context: DomainContext, input: { userId: string; businessId: string; selection: Partial<NumberSelection>; claimTokenSecret: string; idempotencyKey: string; ipHash?: string | null | undefined; ipCountry?: string | null | undefined }, provider: AssignedNumberProvider): Promise<string> {
+  const { eligibility, existing } = await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: "operator" }, async (tx) => {
+    await requireBusinessAdmin(tx, input);
+    const earlier = (await tx.select({ id: onboardingNumberClaimEvents.id }).from(onboardingNumberClaimEvents).where(and(eq(onboardingNumberClaimEvents.businessId, input.businessId), eq(onboardingNumberClaimEvents.idempotencyKey, input.idempotencyKey))).limit(1))[0];
+    if (earlier) return { eligibility: undefined, existing: earlier.id };
+    return { eligibility: await numberEligibilityInTransaction(tx, { userId: input.userId, businessId: input.businessId, purpose: "onboarding", selection: input.selection, via: "dashboard", ipHash: input.ipHash, ipCountry: input.ipCountry }), existing: undefined };
+  });
+  if (existing) return existing;
+  const { market } = eligibility!;
+  if (!isNumberCountry(market.countryCode) || !provider.assignsOnOrder(market.countryCode)) throw numberClaimError(400, "city_order_unsupported", "Numbers in this country are picked from a list, not ordered by city.");
+  const city = input.selection.city?.trim();
+  if (!city) throw numberClaimError(400, "city_required", "Choose a city for the number.");
+  const kind = soldNumberKind(market.countryCode, input.selection.kind);
+  const ordered = await provider.order({ countryCode: market.countryCode, kind, city, label: `LobbyStack ${input.businessId}` });
+  try {
+    const [offer] = await offerBusinessNumbers({ userId: input.userId, businessId: input.businessId, purpose: "onboarding", eligibility: eligibility!, selection: { countryCode: market.countryCode, kind, city }, limit: 1, claimTokenSecret: input.claimTokenSecret }, {
+      listAvailablePhoneNumbers: async () => [{ phoneE164: ordered.e164, countryCode: market.countryCode, capabilities: { sms: false, voice: true }, carrier: ordered.carrier }],
+    });
+    if (!offer) throw numberClaimError(409, "city_order_unusable", "The number that was ordered can't be used by this workspace.");
+    return await reserveOnboardingNumberClaim(context, { userId: input.userId, businessId: input.businessId, claimToken: offer.claimToken, claimTokenSecret: input.claimTokenSecret, idempotencyKey: input.idempotencyKey, ipHash: input.ipHash ?? null });
+  } catch (error) {
+    // The number is on the account and billed, with no claim to track it, so end its renewal. The charge for it is lost.
+    await provider.release({ carrier: ordered.carrier, providerPhoneId: ordered.providerPhoneId }).catch((releaseError: unknown) => console.error("[numbers] couldn't release a number ordered for a refused claim", ordered.carrier, releaseError instanceof Error ? releaseError.message : releaseError));
+    throw error;
+  }
+}
+
 /**
  * Reserves an onboarding offer. A trial offer carries either the verified
  * mobile it needs or the dashboard's SMS-free eligibility. Only an SMS-free

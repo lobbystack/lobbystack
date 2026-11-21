@@ -110,6 +110,12 @@ describe("Zadarma numbers", () => {
     expect(await inventory.findOwnedPhoneNumber({ e164: "+381211234567" })).toEqual({ providerPhoneId: "381211234567", e164: "+381211234567" });
     expect(await inventory.findOwnedPhoneNumber({ e164: "+381211234500" })).toBeNull();
   });
+
+  it("doesn't count a number still in Zadarma's review as one the account has for use, unless asked", async () => {
+    const inventory = createZadarmaCarrier(env, { client: fakeZadarma(owning("checking")).client })!.inventory!;
+    expect(await inventory.findOwnedPhoneNumber({ e164: "+381211234567" })).toBeNull();
+    expect(await inventory.findOwnedPhoneNumber({ e164: "+381211234567", includePending: true })).toEqual({ providerPhoneId: "381211234567", e164: "+381211234567" });
+  });
 });
 
 describe("ordering a Zadarma number", () => {
@@ -192,6 +198,12 @@ describe("ordering a Zadarma number by city", () => {
     const order = calls.find((call) => call.path === "/v1/direct_numbers/order/")!;
     expect(Object.fromEntries(order.params)).toEqual({ direction_id: "101", documents_group_id: "5", purpose: "Answering incoming business calls with an AI voice receptionist.", format: "json" });
     expect(calls.filter((call) => call.method === "POST")).toHaveLength(1);
+  });
+
+  it("lists the cities that take an order, by Zadarma's names, apart from toll-free", async () => {
+    const inventory = createZadarmaCarrier(env, { client: fakeZadarma(catalog).client })!.inventory!;
+    expect(await inventory.listOrderCities!({ countryCode: "RS", kind: "local" })).toEqual(["Belgrade", "Novi Sad"]);
+    expect(await inventory.listOrderCities!({ countryCode: "RS", kind: "toll_free" })).toEqual(["Toll-free"]);
   });
 
   it("reads a number Zadarma writes in national form", async () => {

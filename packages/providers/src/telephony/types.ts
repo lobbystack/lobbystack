@@ -58,7 +58,11 @@ export interface NumberInventory {
   listAvailablePhoneNumbers(input: NumberSearch): Promise<AvailablePhoneNumber[]>;
   /** What the carrier charges each month for a number of this kind in this country, in US cents. */
   getPhoneNumberMonthlyPrice(input: { countryCode: string; kind: NumberKind }): Promise<{ monthlyCents: number }>;
-  findOwnedPhoneNumber(input: { e164: string }): Promise<OwnedPhoneNumber | null>;
+  /**
+   * The number if the account has it and it is live. With `includePending`, one the carrier is still checking or
+   * waiting to be paid for counts too, which is how a number nobody can use but the account is billed for is found.
+   */
+  findOwnedPhoneNumber(input: { e164: string; includePending?: boolean }): Promise<OwnedPhoneNumber | null>;
   /** Buys the number with the carrier's messaging webhooks and, where the country needs them, its regulatory documents. */
   /**
    * Throws NumberOrderPendingError when the carrier is still working on the
@@ -72,6 +76,8 @@ export interface NumberInventory {
    * number in the city and returns the one the carrier gave. The order is placed and paid when this returns, even if
    * the carrier hasn't activated the number: purchasePhoneNumber on the returned number reports when it has.
    */
+  /** The cities a number can be ordered in, for a carrier that has orderAssignedPhoneNumber. */
+  listOrderCities?(input: { countryCode: string; kind: NumberKind }): Promise<string[]>;
   orderAssignedPhoneNumber?(input: { countryCode: string; kind: NumberKind; city?: string | undefined; label: string }): Promise<{ providerPhoneId: string; e164: string }>;
   /** Whether a purchase failed because the number is no longer for sale. */
   isNumberUnavailableError(error: unknown): boolean;

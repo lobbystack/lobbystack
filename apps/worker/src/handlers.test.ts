@@ -651,6 +651,8 @@ describe("worker handlers", () => {
     await expect(handleJob({ jobId: randomUUID(), type: "phoneNumber.provision", queue: "critical", businessId, payload: { claimId }, trace: {}, idempotencyKey: `claim:${claimId}`, scheduled: false }, { domain, telephony })).rejects.toThrow(/still pending/);
     expect(deferNumberProvisioning).not.toHaveBeenCalled();
     expect(inventory.releasePhoneNumber).toHaveBeenCalledWith({ providerPhoneId: "num-late" });
+    // A number the carrier never activated is on the account and billed, so the search for it counts a pending one.
+    expect(inventory.findOwnedPhoneNumber).toHaveBeenCalledWith({ e164: "+447700900123", includePending: true });
     expect(failNumberProvisioning).toHaveBeenCalledWith(domain, expect.objectContaining({ businessId, claimId, unavailable: false }));
   });
 

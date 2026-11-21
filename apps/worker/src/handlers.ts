@@ -1244,7 +1244,7 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
             return { status: "deferred", entityId: claimId, retryAt };
           }
           // Given up: a number the order already put on the account would be billed with no business, so release it.
-          const late = await inventory.findOwnedPhoneNumber({ e164: claim.e164 }).catch(() => null);
+          const late = await inventory.findOwnedPhoneNumber({ e164: claim.e164, includePending: true }).catch(() => null);
           if (late) await inventory.releasePhoneNumber({ providerPhoneId: late.providerPhoneId }).catch(() => undefined);
         }
         if (purchased && providerPhoneId && inventory) await inventory.releasePhoneNumber({ providerPhoneId }).catch(() => undefined);

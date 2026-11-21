@@ -2,7 +2,7 @@ import { createTelnyxCarrier, createTelnyxAlertSms } from "../telnyx/telnyxCarri
 import { createTwilioAlertSms, createTwilioCarrier } from "../twilio/twilioCarrier";
 import { createZadarmaCarrier } from "../zadarma/zadarmaCarrier";
 import { carrierSellsIn, countryRegistration, numbersCarriersFor, telephonyRoutes, type TelephonyRoutes } from "./config";
-import { CARRIER_IDS, isCarrierId, type AlertSmsSender, type AvailablePhoneNumber, type CarrierAdapters, type CarrierId, type LineTypeLookup, type NumberSearch, type PhoneVerifier } from "./types";
+import { CARRIER_IDS, isCarrierId, type AlertSmsSender, type AvailablePhoneNumber, type CarrierAdapters, type CarrierId, type LineTypeLookup, type NumberKind, type NumberSearch, type PhoneVerifier } from "./types";
 
 type Env = Record<string, string | undefined>;
 
@@ -15,6 +15,19 @@ export type NumberSearchRouter = {
   listAvailablePhoneNumbers(input: NumberSearch): Promise<AvailablePhoneNumber[]>;
   /** Whether a carrier that may sell numbers in this country has credentials. */
   canSearch(countryCode: string): boolean;
+};
+
+/**
+ * Numbers for a country where the carrier names the number when it takes the order, so the buyer picks a city, not a
+ * number. Zadarma sells Serbian landlines this way.
+ */
+export type NumberOrderRouter = {
+  /** Whether the carrier that sells in this country assigns the number at order, and has the papers to. */
+  assignsOnOrder(countryCode: string): boolean;
+  /** The cities that take an order in this country and kind. Empty when the country has none. */
+  listCities(input: { countryCode: string; kind: NumberKind }): Promise<string[]>;
+  /** Places and pays for the order, and returns the number the carrier assigned. */
+  order(input: { countryCode: string; kind: NumberKind; city?: string | undefined; label: string }): Promise<{ carrier: CarrierId; providerPhoneId: string; e164: string }>;
 };
 
 /**
@@ -49,6 +62,8 @@ export type Telephony = {
   /** The carriers that may sell numbers in this country, in the order a search tries them. */
   numbersCarriers(countryCode: string): CarrierId[];
   numbers: NumberSearchRouter;
+  /** Ordering by city, for the countries whose carrier assigns the number. */
+  assignedNumbers: NumberOrderRouter;
   verifier?: PhoneVerifier;
   lineTypes?: LineTypeLookup;
   /** The shared sender, through the carrier TELEPHONY_ALERT_SMS names. */
@@ -129,6 +144,11 @@ export function createTelephony(env: Env = process.env, factories: Partial<Telep
     return isCarrierId(id) ? carriers[id] : undefined;
   };
   const numbersCarriers = (countryCode: string) => numbersCarriersFor(routes, countryCode);
+  /** The first carrier in the country's order that sells there, has its papers, and assigns numbers on order. */
+  const assigningCarrier = (countryCode: string): CarrierId | undefined => numbersCarriers(countryCode).find((carrier) =>
+    carrierSellsIn(carrier, countryCode)
+    && (countryRegistration(carrier, countryCode, env)?.missing.length ?? 0) === 0
+    && Boolean(carriers[carrier]?.inventory?.orderAssignedPhoneNumber));
   const alertSms = alertFactories[routes.alertSms](env);
   const verifier = carriers[routes.verify]?.verifier;
   const lineTypes = carriers[routes.lookup]?.lineTypes;
@@ -140,6 +160,18 @@ export function createTelephony(env: Env = process.env, factories: Partial<Telep
     numbers: {
       canSearch: (countryCode) => numbersCarriers(countryCode).some((carrier) => carrierSellsIn(carrier, countryCode) && Boolean(carriers[carrier]?.inventory)),
       listAvailablePhoneNumbers: async (input) => await searchInOrder(numbersCarriers(input.countryCode), carriers, input, env),
+    },
+    assignedNumbers: {
+      assignsOnOrder: (countryCode) => assigningCarrier(countryCode) !== undefined,
+      listCities: async ({ countryCode, kind }) => {
+        const carrier = assigningCarrier(countryCode);
+        return carrier ? await carriers[carrier]!.inventory!.listOrderCities?.({ countryCode, kind }) ?? [] : [];
+      },
+      order: async (input) => {
+        const carrier = assigningCarrier(input.countryCode);
+        if (!carrier) throw phoneNumbersUnavailable();
+        return { carrier, ...(await carriers[carrier]!.inventory!.orderAssignedPhoneNumber!(input)) };
+      },
     },
     ...(verifier ? { verifier } : {}),
     ...(lineTypes ? { lineTypes } : {}),
