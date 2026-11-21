@@ -221,6 +221,11 @@
       "placeholder": "Choose a country",
       "back": "Back to the numbers",
       "other": "Other country"
+    },
+    "city": {
+      "header": "City",
+      "empty": "No cities are available right now.",
+      "failed": "We couldn't order that number. Try again."
     }
   },
   "attribution": {

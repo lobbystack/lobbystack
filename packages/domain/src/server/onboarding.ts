@@ -219,10 +219,19 @@ export async function advanceOnboardingStage(
     // purchase moves on (completeNumberProvisioning), or its failure goes back
     // to picking one (failNumberProvisioning): moving on first would let the
     // purchase fail and leave the business past the step with no number.
-    if (!current.partnerId && current.deploymentMode === "cloud" && to === "attribution" && (currentStage === "phone_number" || currentStage === "verify_phone" || currentStage === "phone_number_claiming")) throw numberRequired();
+    // The exception is an order the carrier accepted and is still checking, such as Zadarma's review of documents,
+    // which takes days. Waiting on that step would hold the owner back that long, and a failure afterwards tells
+    // them in a notification (failNumberProvisioning).
+    if (!current.partnerId && current.deploymentMode === "cloud" && to === "attribution" && (currentStage === "phone_number" || currentStage === "verify_phone" || currentStage === "phone_number_claiming") && !(currentStage === "phone_number_claiming" && await numberOrderAcceptedInTransaction(tx, input.businessId))) throw numberRequired();
     await advanceOnboardingStageInTransaction(tx, { ...input, to, from: currentStage, partnerId: current.partnerId, accessLevel: current.accessLevel });
     return to;
   });
+}
+
+/** Whether the carrier accepted the order for the business's first number and is still working on it. */
+async function numberOrderAcceptedInTransaction(tx: DatabaseTransaction, businessId: string): Promise<boolean> {
+  const [claim] = await tx.select({ id: onboardingNumberClaimEvents.id }).from(onboardingNumberClaimEvents).where(and(eq(onboardingNumberClaimEvents.businessId, businessId), eq(onboardingNumberClaimEvents.purpose, "onboarding"), eq(onboardingNumberClaimEvents.status, "provisioning"), isNotNull(onboardingNumberClaimEvents.providerOrderId))).limit(1);
+  return Boolean(claim);
 }
 
 /** Whether the business runs a number trial that nobody pays for yet, so the plans come before Home. */

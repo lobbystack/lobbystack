@@ -171,3 +171,41 @@ describe("onboarding number API adapter", () => {
     expect(await screen.findByText("number.refusals.paidPlan")).toBeTruthy();
   });
 });
+
+describe("ordering a number by city", () => {
+  /** A Serbian business on the number step, in a country whose carrier names the number when it takes the order. */
+  function setupCities(options: { awaitingCarrier?: boolean; claim?: Record<string, unknown> } = {}) {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } }); clients.push(client);
+    client.setQueryData(["businesses"], { businesses: [{ businessId: "business-1", active: true, onboardingStage: "phone_number" }] });
+    client.setQueryData(["onboarding-primary-number", "business-1"], { activeClaim: options.awaitingCarrier ? { id: "claim-1", status: "provisioning", awaitingCarrier: true } : null, phoneNumbers: [] });
+    client.setQueryData(["onboarding-number-countries", "business-1"], { countries: ["RS"], cityCountries: ["RS"], trialCountries: [], suggestedCountry: "RS", verifyPhone: false, trialRefusal: null, verifiedPhone: null, numberRequired: true });
+    const fetchMock = vi.fn(async (input: string, _init?: RequestInit) => {
+      if (input.includes("/api/phone-numbers?")) return Response.json({ activeClaim: options.awaitingCarrier ? { id: "claim-1", status: "provisioning", awaitingCarrier: true } : null, phoneNumbers: [] });
+      if (input.includes("/suggestion?")) return Response.json({ numbers: [], market: { countryCode: "RS" } });
+      if (input.includes("/cities?")) return Response.json({ cities: ["Belgrade", "Novi Sad"] });
+      if (input.includes("/order?")) return Response.json({ claimId: "claim-1" }, { status: 202 });
+      if (input.includes("/claim/claim-1?")) return Response.json({ claim: { status: "provisioning", requestedE164: "+381211234567", phoneNumberId: null, providerOrderId: "381211234567", ...options.claim } });
+      if (input.includes("/api/onboarding/stage?")) return Response.json({ ok: true, stage: "attribution" });
+      throw new Error(`Unexpected request: ${input}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<QueryClientProvider client={client}><OnboardingNumberSurface /></QueryClientProvider>);
+    return fetchMock;
+  }
+
+  it("offers Serbia's cities, and moves on to the next step once the carrier has the order but hasn't activated it", async () => {
+    const fetchMock = setupCities();
+    await userEvent.click((await screen.findAllByRole("button", { name: "number.select" }))[1]!);
+    await waitFor(() => expect(navigation.push).toHaveBeenCalledWith("/onboarding/attribution"), { timeout: 4000 });
+    const order = fetchMock.mock.calls.find(([url]) => String(url).includes("/order?"))!;
+    expect(JSON.parse(String((order[1] as RequestInit).body)).selection).toEqual({ countryCode: "RS", kind: "local", city: "Novi Sad" });
+    const stage = fetchMock.mock.calls.find(([url]) => String(url).includes("/api/onboarding/stage?"))!;
+    expect(JSON.parse(String((stage[1] as RequestInit).body))).toEqual({ to: "attribution" });
+  });
+
+  it("moves a returning owner on when an order is still with the carrier, instead of waiting on the picker", async () => {
+    const fetchMock = setupCities({ awaitingCarrier: true });
+    await waitFor(() => expect(navigation.push).toHaveBeenCalledWith("/onboarding/attribution"), { timeout: 4000 });
+    expect(fetchMock.mock.calls.filter(([url]) => String(url).includes("/api/onboarding/stage?"))).toHaveLength(1);
+  });
+});

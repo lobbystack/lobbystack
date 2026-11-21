@@ -3,6 +3,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { OnboardingAttributionSurface } from "./onboarding-attribution-surface";
+import { CityListSkeleton } from "./loading-skeletons";
 import { OnboardingBusinessSurface } from "./onboarding-business-surface";
 import { OnboardingLanguageSurface } from "./onboarding-language-surface";
 import { OnboardingReadingSurface } from "./onboarding-reading-surface";
@@ -71,6 +72,15 @@ describe("onboarding steps while they load", () => {
     for (const text of ["number.countryLabel", "number.areaCodeLabel", "number.tableHeaders.phoneNumber"]) expect(busy.textContent).toContain(text);
     expect(screen.getByText("number.search").closest("[data-slot='skeleton']")).toBeTruthy();
     expect(busy.querySelectorAll("[data-slot='skeleton']").length).toBeGreaterThan(4);
+    expect(document.querySelector(".animate-spin")).toBeNull();
+  });
+
+  it("shows the city list as rows of placeholders, with its real header and button text", () => {
+    render(<CityListSkeleton labels={{ header: "City", select: "Order" }} />);
+    const busy = document.querySelector("[aria-busy='true']")!;
+    expect(busy.textContent).toContain("City");
+    expect(screen.getAllByText("Order")[0]!.closest("[data-slot='skeleton']")).toBeTruthy();
+    expect(busy.querySelectorAll("[data-slot='skeleton']").length).toBeGreaterThanOrEqual(10);
     expect(document.querySelector(".animate-spin")).toBeNull();
   });
 

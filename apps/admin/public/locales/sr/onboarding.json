@@ -223,6 +223,11 @@
       "placeholder": "Izaberite zemlju",
       "back": "Nazad na brojeve",
       "other": "Druga zemlja"
+    },
+    "city": {
+      "header": "Grad",
+      "empty": "Trenutno nema dostupnih gradova.",
+      "failed": "Nismo uspeli da naručimo taj broj. Pokušajte ponovo."
     }
   },
   "attribution": {

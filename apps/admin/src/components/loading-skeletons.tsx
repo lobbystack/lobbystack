@@ -802,6 +802,25 @@ export function PhoneNumberChooserSkeleton({ labels, rows = 4 }: { labels: { cou
   );
 }
 
+/** The cities a number can be ordered in, as the chooser lists them: its header, then a row for each city with its button. */
+export function CityListSkeleton({ labels, rows = 5 }: { labels: { header: string; select: string }; rows?: number }) {
+  return (
+    <div aria-busy="true" className="flex min-h-0 flex-1 flex-col">
+      <div className="flex h-14 shrink-0 items-center border-b border-border px-4 type-title text-muted-foreground">
+        <span>{labels.header}</span>
+      </div>
+      <div className="flex flex-col">
+        {Array.from({ length: rows }).map((_, index) => (
+          <div className="grid grid-cols-[1fr_auto] items-center gap-3 border-b border-border px-4 py-3 last:border-b-0" key={index}>
+            <Skeleton aria-hidden="true" className="h-5 w-32" />
+            <HiddenTextSkeleton skeletonClassName="inline-flex h-8 items-center justify-center rounded-full px-3 type-button whitespace-nowrap">{labels.select}</HiddenTextSkeleton>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /**
  * The brand step's form while the server decides whether the step applies and
  * which fields it asks. Both fields hold a place, since either can appear, and

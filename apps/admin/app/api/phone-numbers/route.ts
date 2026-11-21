@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 import { businesses, onboardingNumberClaimEvents, phoneNumbers } from "@lobbystack/db";
@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 export const GET = operatorRoute(async ({ userId, businessId, transaction }) => NextResponse.json(await transaction(async (tx) => {
   const workspace = await tx.select({ replacementReservedAt: businesses.phoneNumberReplacementReservedAt, replacementUsedAt: businesses.phoneNumberReplacementUsedAt }).from(businesses).where(eq(businesses.id, businessId)).limit(1);
   const partnerNumbers = await partnerNumberAvailabilityInTransaction(tx, businessId);
-  const activeClaims = await tx.select({ id: onboardingNumberClaimEvents.id, status: onboardingNumberClaimEvents.status, purpose: onboardingNumberClaimEvents.purpose }).from(onboardingNumberClaimEvents).where(and(eq(onboardingNumberClaimEvents.businessId, businessId), eq(onboardingNumberClaimEvents.userId, userId), inArray(onboardingNumberClaimEvents.status, ["reserved", "provisioning"]))).orderBy(desc(onboardingNumberClaimEvents.reservedAt));
+  const activeClaims = await tx.select({ id: onboardingNumberClaimEvents.id, status: onboardingNumberClaimEvents.status, purpose: onboardingNumberClaimEvents.purpose, awaitingCarrier: sql<boolean>`${onboardingNumberClaimEvents.providerOrderId} is not null` }).from(onboardingNumberClaimEvents).where(and(eq(onboardingNumberClaimEvents.businessId, businessId), eq(onboardingNumberClaimEvents.userId, userId), inArray(onboardingNumberClaimEvents.status, ["reserved", "provisioning"]))).orderBy(desc(onboardingNumberClaimEvents.reservedAt));
   const prices = await extraNumberPricesInTransaction(tx, businessId);
   const rows = await tx.select().from(phoneNumbers).where(and(eq(phoneNumbers.businessId, businessId), eq(phoneNumbers.status, "active"))).orderBy(asc(phoneNumbers.createdAt));
   return {

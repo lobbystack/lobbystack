@@ -67,8 +67,12 @@ function randomTorontoNumber(): string {
 
 export type ThirdParties = {
   carrier: { calls: CarrierCall[]; offered: string[]; messagesTo(to: string): CarrierCall[]; addNumber(input: { sid: string; e164: string; trunkSid?: string }): void };
-  /** Zadarma's numbers API, which verifies each request's signature: what was asked, the numbers offered, and the numbers ordered. */
-  zadarma: { calls: ZadarmaCall[]; offered: string[]; numbers(): ZadarmaNumber[] };
+  /**
+   * Zadarma's numbers API, which verifies each request's signature, and answers as the real one does for Serbia: no
+   * landline numbers to pick from, and the number named in the reply to an order. `status` is what a number is when
+   * ordered, "on" or "checking" while Zadarma reviews documents.
+   */
+  zadarma: { calls: ZadarmaCall[]; assigned: string[]; status: string; numbers(): ZadarmaNumber[] };
   calendly: {
     /** What the next account to connect pays for. Calendly's Free plan is `basic` at the `free` stage. */
     plan: "paid" | "free";
@@ -98,7 +102,8 @@ export async function startThirdParties(): Promise<ThirdParties> {
   const calls: CarrierCall[] = [];
   const offered: string[] = [];
   const zadarmaCalls: ZadarmaCall[] = [];
-  const zadarmaOffered: Array<{ id: string; direction: string; number: string }> = [];
+  const zadarmaAssigned: string[] = [];
+  const zadarmaSettings = { status: "on" };
   const zadarmaNumbers = new Map<string, ZadarmaNumber>();
   const firecrawl: ThirdParties["firecrawl"] = { rateLimitedStarts: 0, starts: [] };
   const crawls = new Map<string, string>();
@@ -160,20 +165,18 @@ export async function startThirdParties(): Promise<ThirdParties> {
     if (!signed) return send(response, 401, { status: "error", message: "Wrong signature" });
     const route = `${method} ${url.pathname}`;
     if (route === "GET /v1/direct_numbers/country/") {
-      const direction = (id: string, areaCode: string, name: string, toll: boolean) => ({ id, countryCode: "381", areaCode, name, connect_fee: 7, monthly_fee: 12, currency: "USD", receive_sms: false, is_toll: toll });
-      return send(response, 200, { status: "success", info: [direction("100", "11", "Belgrade", false), direction("101", "21", "Novi Sad", false), direction("102", "800", "Toll-free", true)] });
+      // As the real account answers for Serbia: euros, and is_toll "true" for every destination, landline ones included.
+      const direction = (id: string, areaCode: string, name: string) => ({ id, countryCode: "381", areaCode, name, connect_fee: 7, monthly_fee: 10.5, currency: "EUR", receive_sms: false, is_toll: "true", connect_time: "20" });
+      return send(response, 200, { status: "success", info: [direction("2393", "11", "Belgrade"), direction("18387", "18", "Nis"), direction("18389", "21", "Novi Sad"), direction("2390", "800", "Toll-free")] });
     }
-    const listed = /^GET \/v1\/direct_numbers\/available\/(\d+)\/$/.exec(route)?.[1];
-    if (listed) {
-      const made = Array.from({ length: 3 }, () => ({ id: `zn-${randomBytes(6).toString("hex")}`, direction: listed, number: listed === "101" ? randomNoviSadNumber() : randomBelgradeNumber() }));
-      zadarmaOffered.push(...made);
-      return send(response, 200, { status: "success", numbers: made.map((item) => ({ id: item.id, direction_id: item.direction, number: item.number })) });
-    }
+    // Zadarma lists no landline numbers to pick from in Serbia: it names the number when it takes the order.
+    if (/^GET \/v1\/direct_numbers\/available\/\d+\/$/.test(route)) return send(response, 200, { status: "success", numbers: [] });
     if (route === "POST /v1/direct_numbers/order/") {
-      const wanted = zadarmaOffered.find((item) => item.id === params.number_id && item.direction === params.direction_id);
-      if (!wanted || !params.documents_group_id) return send(response, 400, { status: "error", message: "Check the order's parameters" });
-      zadarmaNumbers.set(wanted.number, { number: wanted.number, status: "on", sip: null, autoprolongation: "on" });
-      return send(response, 200, { status: "success", number: wanted.number, is_reserved: "false", is_activated: "true" });
+      if (!params.direction_id || !params.documents_group_id) return send(response, 400, { status: "error", message: "Check the order's parameters" });
+      const number = params.direction_id === "18389" ? randomNoviSadNumber() : randomBelgradeNumber();
+      zadarmaAssigned.push(number);
+      zadarmaNumbers.set(number, { number, status: zadarmaSettings.status, sip: null, autoprolongation: "on" });
+      return send(response, 200, { status: "success", number: `+${number}`, is_reserved: "false", is_activated: zadarmaSettings.status === "on" ? "true" : "false" });
     }
     if (route === "GET /v1/direct_numbers/") return send(response, 200, { status: "success", info: [...zadarmaNumbers.values()].map((number) => ({ number: number.number, status: number.status, sip: number.sip })) });
     if (route === "PUT /v1/direct_numbers/set_sip_id/") {
@@ -321,7 +324,7 @@ export async function startThirdParties(): Promise<ThirdParties> {
       messagesTo: (to) => calls.filter((call) => call.path.endsWith("/Messages.json") && call.method === "POST" && call.form.To === to),
       addNumber: ({ sid, e164, trunkSid }) => { numberResource(sid, e164).trunk_sid = trunkSid ?? null; },
     },
-    zadarma: { calls: zadarmaCalls, get offered() { return zadarmaOffered.map((item) => item.number); }, numbers: () => [...zadarmaNumbers.values()] },
+    zadarma: { calls: zadarmaCalls, get assigned() { return [...zadarmaAssigned]; }, get status() { return zadarmaSettings.status; }, set status(value: string) { zadarmaSettings.status = value; }, numbers: () => [...zadarmaNumbers.values()] },
     calendly,
     firecrawl,
     polar,

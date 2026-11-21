@@ -217,11 +217,11 @@ describe("orderOnboardingNumberClaim", () => {
     return { assignsOnOrder: () => true, order: vi.fn(async () => assigned), release: vi.fn(async () => undefined), ...overrides } as never;
   }
 
-  // Selects in order: an earlier claim under the key, then the business. A hosted workspace on a paid plan has no trial, so Serbia's numbers are for sale to it.
-  function paidWorkspace(options: { earlier?: unknown[]; execute?: () => unknown; free?: boolean } = {}) {
+  // Selects in order: an earlier claim under the key, a claim in flight, a number the business holds, then the business. A hosted workspace on a paid plan has no trial, so Serbia's numbers are for sale to it.
+  function paidWorkspace(options: { earlier?: unknown[]; inFlight?: unknown[]; held?: unknown[]; execute?: () => unknown; free?: boolean } = {}) {
     vi.stubEnv("ZADARMA_DOCUMENTS_GROUP_ID", "5");
     entitled(options.free ? planEntitlement("free_cloud") : planEntitlement("starter", { live: true, capMinor: null }));
-    const selects = [options.earlier ?? [], [{ stage: "phone_number", timezone: "Europe/Belgrade", deploymentMode: "cloud", replacementUsedAt: null }]];
+    const selects = [options.earlier ?? [], options.inFlight ?? [], options.held ?? [], [{ stage: "phone_number", timezone: "Europe/Belgrade", deploymentMode: "cloud", replacementUsedAt: null }]];
     const tx = { select: () => chain(selects.shift() ?? []), update: () => ({ set: () => ({ where: async () => [] }) }), execute: vi.fn(async () => await (options.execute ?? (() => ({ rows: [{ id: "claim-1" }] })))()) };
     mocks.withBusinessTransaction.mockImplementation(async (_db: unknown, _scope: unknown, callback: (tx: unknown) => unknown) => await callback(tx));
     return tx;
@@ -242,6 +242,15 @@ describe("orderOnboardingNumberClaim", () => {
     paidWorkspace({ earlier: [{ id: "claim-0" }] });
     const carrier = provider();
     expect(await orderOnboardingNumberClaim(context, input, carrier)).toBe("claim-0");
+    expect(carrier.order).not.toHaveBeenCalled();
+  });
+
+  it("orders nothing while a claim is in flight or the business already holds a number, since the claim would refuse it", async () => {
+    const carrier = provider();
+    paidWorkspace({ inFlight: [{ id: "claim-0" }] });
+    await expect(orderOnboardingNumberClaim(context, input, carrier)).rejects.toMatchObject({ code: "number_claim_in_progress" });
+    paidWorkspace({ held: [{ id: "number-1" }] });
+    await expect(orderOnboardingNumberClaim(context, input, carrier)).rejects.toMatchObject({ code: "business_number_exists" });
     expect(carrier.order).not.toHaveBeenCalled();
   });
 

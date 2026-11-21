@@ -276,6 +276,12 @@ export async function orderOnboardingNumberClaim(context: DomainContext, input: 
     await requireBusinessAdmin(tx, input);
     const earlier = (await tx.select({ id: onboardingNumberClaimEvents.id }).from(onboardingNumberClaimEvents).where(and(eq(onboardingNumberClaimEvents.businessId, input.businessId), eq(onboardingNumberClaimEvents.idempotencyKey, input.idempotencyKey))).limit(1))[0];
     if (earlier) return { eligibility: undefined, existing: earlier.id };
+    // The claim function refuses these two, and an order can't be undone for free, so refuse them before ordering.
+    // Its hourly and daily limits stay with the claim, which counts across a person's businesses.
+    const inFlight = await tx.select({ id: onboardingNumberClaimEvents.id }).from(onboardingNumberClaimEvents).where(and(eq(onboardingNumberClaimEvents.businessId, input.businessId), eq(onboardingNumberClaimEvents.purpose, "onboarding"), inArray(onboardingNumberClaimEvents.status, ["reserved", "provisioning"]))).limit(1);
+    if (inFlight.length) throw refused("number_claim_in_progress");
+    const held = await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), inArray(phoneNumbers.status, ["active", "provisioning"]))).limit(1);
+    if (held.length) throw refused("business_number_exists");
     return { eligibility: await numberEligibilityInTransaction(tx, { userId: input.userId, businessId: input.businessId, purpose: "onboarding", selection: input.selection, via: "dashboard", ipHash: input.ipHash, ipCountry: input.ipCountry }), existing: undefined };
   });
   if (existing) return existing;
@@ -436,7 +442,7 @@ export async function reservePartnerKeyNumberClaimInTransaction(tx: DatabaseTran
 }
 
 export async function getOnboardingNumberClaim(context: DomainContext, input: { userId: string; businessId: string; claimId: string }) {
-  return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => { await requireBusinessAdmin(tx, input); return (await tx.select({ id: onboardingNumberClaimEvents.id, purpose: onboardingNumberClaimEvents.purpose, status: onboardingNumberClaimEvents.status, requestedE164: onboardingNumberClaimEvents.requestedE164, phoneNumberId: onboardingNumberClaimEvents.phoneNumberId, lastError: onboardingNumberClaimEvents.lastError }).from(onboardingNumberClaimEvents).where(and(eq(onboardingNumberClaimEvents.id, input.claimId), eq(onboardingNumberClaimEvents.businessId, input.businessId), eq(onboardingNumberClaimEvents.userId, input.userId))).limit(1))[0] ?? null; });
+  return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => { await requireBusinessAdmin(tx, input); return (await tx.select({ id: onboardingNumberClaimEvents.id, purpose: onboardingNumberClaimEvents.purpose, status: onboardingNumberClaimEvents.status, requestedE164: onboardingNumberClaimEvents.requestedE164, phoneNumberId: onboardingNumberClaimEvents.phoneNumberId, lastError: onboardingNumberClaimEvents.lastError, providerOrderId: onboardingNumberClaimEvents.providerOrderId }).from(onboardingNumberClaimEvents).where(and(eq(onboardingNumberClaimEvents.id, input.claimId), eq(onboardingNumberClaimEvents.businessId, input.businessId), eq(onboardingNumberClaimEvents.userId, input.userId))).limit(1))[0] ?? null; });
 }
 
 const numberProvisioningLeaseMs = 10 * 60_000;

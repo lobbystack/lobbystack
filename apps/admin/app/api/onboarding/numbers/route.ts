@@ -5,7 +5,7 @@ import { businesses } from "@lobbystack/db";
 import { countryCodeForTimezone, joinNumberWaitlist, numberCountries, onboardingNumberTrialOutlook, trialCountries, verifiedPhone } from "@lobbystack/domain";
 import { jsonError } from "@/lib/api-helpers";
 import { operatorRoute } from "@/lib/operator-request";
-import { numbersConfigured, requestIpHash } from "@/lib/telephony";
+import { getTelephony, numbersConfigured, requestIpHash } from "@/lib/telephony";
 import { trustedClientCountry } from "@/lib/trusted-client-ip";
 
 export const dynamic = "force-dynamic";
@@ -27,7 +27,10 @@ export const GET = operatorRoute(async ({ request, userId, businessId, transacti
   const trial = await onboardingNumberTrialOutlook(domain, { userId, businessId, ipHash: numbersConfigured() ? requestIpHash(request) : null, ipCountry: trustedClientCountry(request) });
   // verifiedPhone lets an owner who comes back see the phone they already verified.
   // numberRequired: a direct cloud owner goes on without a number only where we sell none. Self-hosted keeps its skip.
-  return NextResponse.json({ countries: numberCountries(), trialCountries: trialCountries(), suggestedCountry, verifyPhone: trial.verificationNeeded, trialRefusal: trial.refusal, verifiedPhone: verified?.phone ?? null, numberRequired: business?.deploymentMode === "cloud" });
+  // cityCountries: the carrier names the number when it takes the order, so the picker asks for a city, not a number.
+  const countries = numberCountries();
+  const cityCountries = numbersConfigured() ? countries.filter((country) => getTelephony().assignedNumbers.assignsOnOrder(country)) : [];
+  return NextResponse.json({ countries, cityCountries, trialCountries: trialCountries(), suggestedCountry, verifyPhone: trial.verificationNeeded, trialRefusal: trial.refusal, verifiedPhone: verified?.phone ?? null, numberRequired: business?.deploymentMode === "cloud" });
 });
 
 // An owner in a country without numbers asks to hear when numbers arrive there.

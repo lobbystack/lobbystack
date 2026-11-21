@@ -223,6 +223,11 @@
       "placeholder": "Elija un país",
       "back": "Volver a los números",
       "other": "Otro país"
+    },
+    "city": {
+      "header": "Ciudad",
+      "empty": "No hay ciudades disponibles ahora.",
+      "failed": "No pudimos pedir ese número. Inténtalo de nuevo."
     }
   },
   "attribution": {

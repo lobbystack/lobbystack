@@ -5,7 +5,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { LoaderCircle } from "lucide-react";
 
 import { Flag } from "@/components/flag";
-import { PhoneNumberChooserSkeleton } from "@/components/loading-skeletons";
+import { CityListSkeleton, PhoneNumberChooserSkeleton } from "@/components/loading-skeletons";
 import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -69,6 +69,8 @@ export type SearchResult = {
 
 export type ClaimResult =
   | { status: "claimed"; phoneNumberId: string; e164: string }
+  /** The carrier took the order and is still checking it, which can take days. */
+  | { status: "pending" }
   | { status: "unavailable"; alternatives: Array<AvailableNumberSummary> }
   | { status: "failed" };
 
@@ -86,6 +88,14 @@ type PhoneNumberChooserLabels = {
   searchFailed: string;
   claimFailed: string;
   unavailable: string;
+};
+
+/** Countries where the carrier names the number when it takes the order, so the owner picks a city. */
+export type CityOrder = {
+  countries: readonly string[];
+  loadCities: (args: { businessId: string; country: SupportedOnboardingPhoneCountry }) => Promise<string[]>;
+  orderCity: (args: { businessId: string; country: SupportedOnboardingPhoneCountry; city: string }) => Promise<ClaimResult>;
+  labels: { header: string; select: string; empty: string; failed: string };
 };
 
 type PhoneNumberChooserProps = {
@@ -111,6 +121,10 @@ type PhoneNumberChooserProps = {
   onClaimed: (result: Extract<ClaimResult, { status: "claimed" }>, number: AvailableNumberSummary) => void;
   onClaimStarted?: (number: AvailableNumberSummary) => void;
   onClaimCompleted?: (number: AvailableNumberSummary) => void;
+  /** Offers cities instead of numbers in the countries it lists. */
+  cityOrder?: CityOrder | undefined;
+  /** Called when a city's order was accepted but isn't active yet, so the owner can move on. */
+  onOrderPending?: (() => void) | undefined;
   /** A last country option for owners in a country we sell no numbers in. Picking it calls onSelect and keeps the country. */
   otherCountry?: { label: string; onSelect: () => void } | undefined;
   /** A line under the search for the picked country, such as an extra number's price. */
@@ -170,6 +184,32 @@ export function phoneNumberChooserApi(replacement: boolean, target: { phoneNumbe
   };
 }
 
+/**
+ * The onboarding calls for a country whose number is named when it is ordered. The order is charged at once, so this
+ * waits only until the carrier has taken it: active gives the number, and an order still being checked, which can
+ * take days, returns pending so the owner can move on.
+ */
+export function onboardingCityOrderApi(): Pick<CityOrder, "loadCities" | "orderCity"> {
+  const prefix = "/api/onboarding/phone-numbers";
+  return {
+    async loadCities({ businessId, country }) {
+      return (await requestJson<{ cities: string[] }>(`${prefix}/cities?businessId=${encodeURIComponent(businessId)}&country=${encodeURIComponent(country)}`)).cities;
+    },
+    async orderCity({ businessId, country, city }) {
+      const { claimId } = await requestJson<{ claimId: string }>(`${prefix}/order?businessId=${encodeURIComponent(businessId)}`, { method: "POST", body: JSON.stringify({ selection: { countryCode: country, kind: "local", city }, idempotencyKey: crypto.randomUUID() }) });
+      const deadline = Date.now() + 60_000;
+      while (Date.now() < deadline) {
+        const { claim } = await requestJson<{ claim: { status: string; requestedE164: string; phoneNumberId: string | null; providerOrderId: string | null } | null }>(`${prefix}/claim/${encodeURIComponent(claimId)}?businessId=${encodeURIComponent(businessId)}`);
+        if (claim?.status === "claimed" && claim.phoneNumberId) return { status: "claimed", phoneNumberId: claim.phoneNumberId, e164: claim.requestedE164 };
+        if (!claim || claim.status === "failed" || claim.status === "unavailable") return { status: "failed" };
+        if (claim.providerOrderId) return { status: "pending" };
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+      return { status: "failed" };
+    },
+  };
+}
+
 const COUNTRY_OPTIONS: Array<{
   code: SupportedOnboardingPhoneCountry;
   label: string;
@@ -219,6 +259,8 @@ export function PhoneNumberChooser({
   otherCountry,
   countryNote,
   confirmClaim,
+  cityOrder,
+  onOrderPending,
 }: PhoneNumberChooserProps) {
   const [country, setCountry] = useState<SupportedOnboardingPhoneCountry>("US");
   const [countryFixed, setCountryFixed] = useState(false);
@@ -232,6 +274,45 @@ export function PhoneNumberChooser({
   const [hasMore, setHasMore] = useState(false);
   const isSearching = searchSource !== null;
   const supportsAreaCodeSearch = supportsOnboardingAreaCodeSearch(country);
+  const ordersByCity = Boolean(cityOrder?.countries.includes(country));
+  const [cities, setCities] = useState<string[] | null>(null);
+  const [orderingCity, setOrderingCity] = useState<string | null>(null);
+
+  // The cities load when the picked country takes orders by city.
+  useEffect(() => {
+    if (!cityOrder || !cityOrder.countries.includes(country)) { setCities(null); return; }
+    let cancelled = false;
+    setCities(null);
+    cityOrder.loadCities({ businessId, country }).then((loaded) => { if (!cancelled) setCities(loaded); }).catch((loadError: unknown) => {
+      if (cancelled) return;
+      setCities([]);
+      setError(getErrorMessage(loadError, labels.loadFailed));
+    });
+    return () => { cancelled = true; };
+  }, [businessId, cityOrder, country, getErrorMessage, labels.loadFailed]);
+
+  async function handleOrderCity(city: string): Promise<void> {
+    if (!cityOrder || isClaiming) return;
+    setOrderingCity(city);
+    setIsClaiming(true);
+    setError(null);
+    try {
+      const result = await cityOrder.orderCity({ businessId, country, city });
+      if (result.status === "pending") { onOrderPending?.(); return; }
+      if (result.status === "claimed") {
+        const number: AvailableNumberSummary = { e164: result.e164, display: formatPhoneNumberDisplay(result.e164), locality: city, countryCode: country, kind: "local", capabilities: { sms: false, voice: true }, selectionContext: { mode: "city", countryCode: country, city } };
+        onClaimCompleted?.(number);
+        onClaimed(result, number);
+        return;
+      }
+      setError(cityOrder.labels.failed);
+    } catch (orderError) {
+      setError(getErrorMessage(orderError, cityOrder.labels.failed));
+    } finally {
+      setOrderingCity(null);
+      setIsClaiming(false);
+    }
+  }
 
   function handleCountryChange(value: string | null): void {
     if (value === OTHER_COUNTRY) {
@@ -365,9 +446,11 @@ export function PhoneNumberChooser({
     <div className="flex flex-col gap-6">
       <div
         className={
-          supportsAreaCodeSearch
-            ? "grid grid-cols-1 gap-3 sm:grid-cols-[140px_1fr_160px_auto] sm:items-end"
-            : "grid grid-cols-1 gap-3 sm:grid-cols-[140px_auto] sm:items-end"
+          ordersByCity
+            ? "grid grid-cols-1 gap-3 sm:grid-cols-[140px] sm:items-end"
+            : supportsAreaCodeSearch
+              ? "grid grid-cols-1 gap-3 sm:grid-cols-[140px_1fr_160px_auto] sm:items-end"
+              : "grid grid-cols-1 gap-3 sm:grid-cols-[140px_auto] sm:items-end"
         }
       >
         <div className="flex flex-col gap-2">
@@ -412,7 +495,7 @@ export function PhoneNumberChooser({
             </div>
           </>
         ) : null}
-        <Button
+        {ordersByCity ? null : <Button
           className="w-full sm:w-auto"
           disabled={isSearching}
           loading={isSearching && searchSource === "search"}
@@ -421,12 +504,40 @@ export function PhoneNumberChooser({
           type="button"
         >
           {labels.search}
-        </Button>
+        </Button>}
       </div>
 
       {countryNote ? <p className="type-body-muted" data-testid="number-country-note">{countryNote(country)}</p> : null}
 
-      <Surface className="flex h-96 flex-col">
+      {ordersByCity && cityOrder ? (
+        <Surface className="flex h-96 flex-col">
+          {cities === null ? <CityListSkeleton labels={{ header: cityOrder.labels.header, select: cityOrder.labels.select }} /> : (
+            <>
+              <div className="flex h-14 shrink-0 items-center border-b border-border px-4 type-title text-muted-foreground">
+                <span>{cityOrder.labels.header}</span>
+              </div>
+              <div className="min-h-0 flex-1 overflow-y-auto">
+                {cities.length === 0 ? (
+                  <div className="px-4 py-8 text-center type-body-muted">{cityOrder.labels.empty}</div>
+                ) : (
+                  <ul className="flex flex-col">
+                    {cities.map((city) => (
+                      <li className="grid grid-cols-[1fr_auto] items-center gap-3 border-b border-border px-4 py-3 last:border-b-0" key={city}>
+                        <span className="type-title text-foreground">{city}</span>
+                        <Button className="rounded-full" disabled={isClaiming && orderingCity !== city} loading={orderingCity === city} onClick={() => void handleOrderCity(city)} size="sm" type="button">
+                          {cityOrder.labels.select}
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </>
+          )}
+        </Surface>
+      ) : null}
+
+      {ordersByCity ? null : <Surface className="flex h-96 flex-col">
         <div className="flex h-14 shrink-0 items-center border-b border-border px-4 type-title text-muted-foreground">
           <span>{labels.phoneNumberHeader}</span>
         </div>
@@ -489,7 +600,7 @@ export function PhoneNumberChooser({
             </button>
           </div>
         ) : null}
-      </Surface>
+      </Surface>}
 
       {error ? <FieldError>{error}</FieldError> : null}
     </div>
