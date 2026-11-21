@@ -425,10 +425,13 @@ Run `pnpm voice:call` against a staging Telnyx number before you send production
 
 LobbyStack buys numbers from Zadarma in Serbia only. Twilio has none there, so a search for Serbia skips Twilio, and it asks Telnyx before Zadarma when `TELNYX_RS_REQUIREMENT_GROUP_ID` is set. Serbia is in the number picker once Telnyx or Zadarma can sell there, and it has the free trial. Zadarma can't send a call to OpenAI, so each Zadarma number points at the SIP server in `docker/asterisk`, which passes the call on. [Answer calls on a number from another carrier](./external-numbers.md) explains that server. To set it up:
 
-1. In the Zadarma account, create a documents group with the company's registration papers and address, which the country's regulator asks for. The group's id is in the list from `GET /v1/documents/groups/list/`. Set it as `ZADARMA_DOCUMENTS_GROUP_ID` on the admin and the worker.
-2. Create API keys at **my.zadarma.com/api**. Set them as `ZADARMA_API_KEY` and `ZADARMA_API_SECRET` on the admin and the worker.
-3. Run the SIP server. Set its address as `ZADARMA_SIP_HOST` on the worker, and put Zadarma's addresses in the server's `CARRIER_IPS`.
-4. Keep the account's balance above what a number costs, because an order charges it.
+1. Create API keys at **my.zadarma.com/api**. Set them as `ZADARMA_API_KEY` and `ZADARMA_API_SECRET` on the admin and the worker.
+2. In the Zadarma account, create a documents group with the company's registration papers and address, which the country's regulator asks for.
+3. Run `scripts/operations/zadarma-check.ts` (`pnpm exec tsx --tsconfig scripts/tsconfig.json scripts/operations/zadarma-check.ts`). It orders and changes nothing. It signs real requests, lists your documents groups with their ids, says whether each group is verified for the country's landline destinations, and prints what's left to set. Set the id of the group to use as `ZADARMA_DOCUMENTS_GROUP_ID` on the admin and the worker.
+4. Run the SIP server. Set its address as `ZADARMA_SIP_HOST` on the worker, and put Zadarma's addresses in the server's `CARRIER_IPS`.
+5. Keep the account's balance above what a number costs, because an order charges it, and turn on automatic top-up in the account so a customer's order doesn't fail for an empty balance.
+
+From then on nothing is set by hand for a number. A customer in Serbia picks one in the number step, the worker orders it under the documents group, and when Zadarma activates it the worker routes it to the SIP server and gives it to the business. A trial that doesn't convert releases it the same way.
 
 A Zadarma number differs from the other carriers' numbers in these ways:
 

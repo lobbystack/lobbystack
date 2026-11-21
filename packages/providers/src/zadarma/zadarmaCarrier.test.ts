@@ -25,10 +25,11 @@ function fakeZadarma(routes: Record<string, (call: Call) => unknown>) {
 
 const env = { ZADARMA_API_KEY: "KEY", ZADARMA_API_SECRET: "SECRET", ZADARMA_DOCUMENTS_GROUP_ID: "5", ZADARMA_SIP_HOST: "sip.example.com:5060" };
 
+// As Zadarma answers for Serbia: ids are numbers, and is_toll is "true" for every destination, landline ones included.
 const directions = { status: "success", info: [
-  { id: "100", areaCode: "11", name: "Belgrade", monthly_fee: 8, currency: "USD", receive_sms: false, is_toll: false },
-  { id: "101", areaCode: "21", name: "Novi Sad", monthly_fee: 8, currency: "USD", receive_sms: "false", is_toll: "false" },
-  { id: "102", areaCode: "800", name: "Toll-free", monthly_fee: 26, currency: "USD", receive_sms: true, is_toll: true },
+  { id: 100, countryCode: "381", areaCode: "11", name: "Belgrade", monthly_fee: 8, currency: "USD", receive_sms: "false", is_toll: "true" },
+  { id: 101, countryCode: "381", areaCode: "21", name: "Novi Sad", monthly_fee: 8, currency: "USD", receive_sms: "false", is_toll: "true" },
+  { id: 102, countryCode: "381", areaCode: "800", name: "Toll-free", monthly_fee: 26, currency: "USD", receive_sms: "true", is_toll: "true" },
 ] };
 const belgrade = { numbers: [{ id: "n1", direction_id: "100", number: "381111234567" }, { id: "n2", direction_id: "100", number: "381111234568" }] };
 const noviSad = { numbers: [{ id: "n3", direction_id: "101", number: "381211234567" }] };
@@ -36,7 +37,7 @@ const catalog = {
   "GET /v1/direct_numbers/country/": () => directions,
   "GET /v1/direct_numbers/available/100/": () => belgrade,
   "GET /v1/direct_numbers/available/101/": () => noviSad,
-  "GET /v1/direct_numbers/available/102/": () => ({ numbers: [{ id: "n4", direction_id: "102", number: "381800123456" }] }),
+  "GET /v1/direct_numbers/available/102/": () => ({ numbers: [{ id: "n4", direction_id: "102", number: "0800123456" }] }),
 };
 const owning = (status: string, extra: Record<string, unknown> = {}) => ({ "GET /v1/direct_numbers/": () => ({ status: "success", info: [{ number: "381211234567", status, ...extra }] }) });
 
@@ -62,6 +63,14 @@ describe("Zadarma numbers", () => {
     expect(calls[0]!.params.get("country")).toBe("RS");
     // It stopped at the limit, and never asked about the toll-free destination.
     expect(calls.map((call) => call.path)).not.toContain("/v1/direct_numbers/available/102/");
+  });
+
+  it("tells toll-free destinations from landline ones by name, though Zadarma marks both as toll", async () => {
+    const { client } = fakeZadarma(catalog);
+    const inventory = createZadarmaCarrier(env, { client })!.inventory!;
+    expect((await inventory.listAvailablePhoneNumbers({ countryCode: "RS", kind: "local", limit: 10 })).map((number) => number.locality)).toEqual(["Belgrade", "Belgrade", "Novi Sad"]);
+    // A toll-free number is listed in national form, 0800123456, and comes out as +381800123456.
+    expect((await inventory.listAvailablePhoneNumbers({ countryCode: "RS", kind: "toll_free", limit: 10 })).map((number) => number.phoneE164)).toEqual(["+381800123456"]);
   });
 
   it("narrows a search by kind, city and area code, and by texting", async () => {

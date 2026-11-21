@@ -2,13 +2,11 @@ import { assertCertificationOperationAllowed } from "@lobbystack/shared";
 
 import { NumberOrderPendingError, type AvailablePhoneNumber, type CarrierAdapters, type NumberInventory, type NumberKind, type NumberRouting } from "../telephony/types";
 import { zadarmaConfigured, zadarmaDocumentsGroupId, zadarmaRegistration } from "./registration";
+import { isTollFreeDirection, zadarmaE164, zadarmaFlag, type ZadarmaDirection } from "./zadarmaDirections";
 import { ZadarmaApiError, ZadarmaClient } from "./zadarmaClient";
 
 type Env = Record<string, string | undefined>;
 
-/** Zadarma writes booleans as true, "true", 1 or "1", depending on the field. */
-type Flag = boolean | string | number | null | undefined;
-type ZadarmaDirection = { id: string | number; areaCode?: string | number; name?: string; monthly_fee?: string | number; currency?: string; receive_sms?: Flag; is_toll?: Flag };
 type ZadarmaAvailableNumber = { id: string; direction_id?: string | number; number: string };
 type ZadarmaOwnedNumber = { number: string; status?: string; type?: string };
 
@@ -34,7 +32,7 @@ export const ZADARMA_ORDER_MAX_WAIT_MS = 30 * 86_400_000;
 const maxDirectionsPerSearch = 8;
 const E164 = /^\+[1-9]\d{7,14}$/;
 const digits = (phone: string) => phone.replace(/\D/g, "");
-const flag = (value: Flag) => value === true || value === "true" || value === 1 || value === "1";
+const flag = zadarmaFlag;
 const DEFAULT_PURPOSE = "Answering incoming business calls with an AI voice receptionist.";
 
 /** Zadarma's number parameter, as its owned-number list writes it: the digits, with the country code and no plus. */
@@ -66,7 +64,7 @@ export function createZadarmaCarrier(env: Env = process.env, options: ZadarmaCar
     const listed = (await client.get<{ info?: ZadarmaDirection[] }>("/v1/direct_numbers/country/", { country: input.countryCode.toUpperCase() })).info ?? [];
     const city = input.city?.trim().toLowerCase();
     return listed.filter((direction) =>
-      flag(direction.is_toll) === (input.kind === "toll_free")
+      isTollFreeDirection(direction) === (input.kind === "toll_free")
       && (!input.sms || flag(direction.receive_sms))
       && (!city || direction.name?.toLowerCase().includes(city))
       && matchesAreaCode(direction, input.areaCode));
@@ -101,7 +99,7 @@ export function createZadarmaCarrier(env: Env = process.env, options: ZadarmaCar
       const found: AvailablePhoneNumber[] = [];
       for (const direction of (await directions(input)).slice(0, maxDirectionsPerSearch)) {
         for (const number of await availableIn(direction)) {
-          const e164 = `+${digits(number.number)}`;
+          const e164 = zadarmaE164(number.number, direction);
           if (!E164.test(e164)) continue;
           found.push({ phoneE164: e164, ...(direction.name ? { locality: direction.name } : {}), countryCode: input.countryCode.toUpperCase(), capabilities: { sms: flag(direction.receive_sms), voice: true } });
           if (found.length >= input.limit) return found;
