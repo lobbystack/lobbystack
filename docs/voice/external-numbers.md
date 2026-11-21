@@ -21,6 +21,8 @@ LobbyStack holds no account with the carrier. The number is a `phone_numbers` ro
 
 The server runs on a host with a public IP address, such as a small VPS. It needs Docker.
 
+To run it on Azure, use the Terraform configuration in [`terraform/`](../../terraform/README.md). It creates the VM, a static IP address and the firewall rules, and starts the server. The steps below are the same by hand.
+
 1. Copy `docker/asterisk/asterisk.env.example` to `docker/asterisk/asterisk.env` and set at least these:
 
    | Variable | What it holds |
@@ -64,6 +66,8 @@ Start with UDP on port 5060, and move to TLS on port 5061 once calls work and th
 ### Zadarma
 
 Zadarma confirmed in November 2026 that it keeps the user part of the address in the INVITE's Request-URI and in `To`, that `From` holds the caller's number, and that it sends over UDP, TCP or TLS on the port you set. It sends G.711 A-law and µ-law, which the server passes through.
+
+To set a number's destination from the command line, run `pnpm exec tsx --tsconfig scripts/tsconfig.json scripts/operations/zadarma-route.ts --number +381213860081`. It prints where it would send the number, and `--apply` changes it. It needs `ZADARMA_API_KEY`, `ZADARMA_API_SECRET` and `ZADARMA_SIP_HOST` in the environment.
 
 Zadarma's landline numbers come with 2 incoming channels, so a number takes 2 calls at once. A third caller gets nothing, and the call never reaches the server or LobbyStack. A number can have up to 15 more channels, each priced per month. Zadarma's numbers API (`PUT /v1/direct_numbers/set_sip_id/`) sets a number's destination in a script.
 

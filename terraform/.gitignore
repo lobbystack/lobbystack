@@ -1,0 +1,7 @@
+# State and variables hold secrets: the OpenAI project id lets anyone who has it dial in.
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+terraform.tfvars
+*.auto.tfvars

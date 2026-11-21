@@ -28,7 +28,8 @@ export async function POST(request: Request) {
   let event;
   try {
     event = await client.webhooks.unwrap(await request.text(), request.headers);
-  } catch {
+  } catch (error) {
+    console.warn("[live] webhook signature check failed", error instanceof Error ? error.message : error);
     return new NextResponse("Invalid signature.", { status: 400 });
   }
   if (event.type !== "live.transport.incoming") return new NextResponse(null, { status: 200 });
