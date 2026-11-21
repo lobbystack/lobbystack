@@ -423,7 +423,7 @@ Run `pnpm voice:call` against a staging Telnyx number before you send production
 
 ## Use Zadarma
 
-LobbyStack buys numbers from Zadarma in Serbia only. Twilio has none there, so a search for Serbia skips Twilio, and it asks Telnyx before Zadarma when `TELNYX_RS_REQUIREMENT_GROUP_ID` is set. Serbia is in the number picker once Telnyx or Zadarma can sell there, and it has the free trial. Zadarma can't send a call to OpenAI, so each Zadarma number points at the SIP server in `docker/asterisk`, which passes the call on. [Answer calls on a number from another carrier](./external-numbers.md) explains that server. To set it up:
+LobbyStack buys numbers from Zadarma in Serbia only. Twilio has none there, so a search for Serbia skips Twilio, and it asks Telnyx before Zadarma when `TELNYX_RS_REQUIREMENT_GROUP_ID` is set. Serbia is in the number picker once Telnyx or Zadarma can sell there, and it is paid only, with no free trial. Zadarma can't send a call to OpenAI, so each Zadarma number points at the SIP server in `docker/asterisk`, which passes the call on. [Answer calls on a number from another carrier](./external-numbers.md) explains that server. To set it up:
 
 1. Create API keys at **my.zadarma.com/api**. Set them as `ZADARMA_API_KEY` and `ZADARMA_API_SECRET` on the admin and the worker.
 2. In the Zadarma account, create a documents group with the company's registration papers and address, which the country's regulator asks for.
@@ -431,13 +431,13 @@ LobbyStack buys numbers from Zadarma in Serbia only. Twilio has none there, so a
 4. Run the SIP server. Set its address as `ZADARMA_SIP_HOST` on the worker, and put Zadarma's addresses in the server's `CARRIER_IPS`.
 5. Keep the account's balance above what a number costs, because an order charges it, and turn on automatic top-up in the account so a customer's order doesn't fail for an empty balance.
 
-From then on nothing is set by hand for a number. A customer in Serbia picks one in the number step, the worker orders it under the documents group, and when Zadarma activates it the worker routes it to the SIP server and gives it to the business. A trial that doesn't convert releases it the same way.
+From then on nothing is set by hand for a number. A customer in Serbia picks one in the number step, the worker orders it under the documents group, and when Zadarma activates it the worker routes it to the SIP server and gives it to the business.
 
 A Zadarma number differs from the other carriers' numbers in these ways:
 
 - **Orders take days.** Zadarma activates a number only after it checks the documents, and its order page says that takes 1 to 20 business days. The worker checks the order every 10 minutes and waits up to 30 days, where other carriers get 5.
 - **Voice only.** None of its numbers text, and Zadarma has no Verify, Lookup or shared sender.
-- **A free trial costs real money.** A trial number is ordered like any other, and Zadarma charges the connection fee and the first month up front, about €17.50 on its order page in Serbia. A trial that doesn't convert releases the number, which ends when its paid period does, so budget that much for each trial.
+- **An order costs real money up front.** Zadarma charges the connection fee and the first month when the number is ordered, about €17.50 on its order page in Serbia, and doesn't refund it. So Serbian numbers have no free trial: a business needs a paid plan before it can order one.
 - **No cancel.** Releasing a number turns off its auto-renewal, so it keeps billing until the period it paid for ends.
 - **No refused-call forwarding.** Zadarma can't forward a call the agent refuses and has no webhook to ask. The admin refuses such a call, and the SIP server answers Zadarma with busy or congestion. Nothing reaches the owner.
 - **No staff answers first, and no call cost lookup.**

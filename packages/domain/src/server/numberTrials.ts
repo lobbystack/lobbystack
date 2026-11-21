@@ -35,9 +35,15 @@ export function numberCountries(env: NodeJS.ProcessEnv = process.env): NumberCou
   return NUMBER_COUNTRIES.filter((country) => numberCountryReady(country, env));
 }
 
-/** Countries with a free trial number. An Australian number costs $8.25 a month, so Australia is paid only. */
+/**
+ * Countries where a number is paid only. An Australian number costs $8.25 a month. Serbia's numbers come from Zadarma,
+ * which charges our balance when we order and doesn't refund a number a trial customer walks away from.
+ */
+const PAID_ONLY_COUNTRIES: readonly NumberCountry[] = ["AU", "RS"];
+
+/** Countries with a free trial number. */
 export function trialCountries(env: NodeJS.ProcessEnv = process.env): NumberCountry[] {
-  return numberCountries(env).filter((country) => country !== "AU");
+  return numberCountries(env).filter((country) => !PAID_ONLY_COUNTRIES.includes(country));
 }
 
 export function isNumberCountry(value: string | null | undefined, env: NodeJS.ProcessEnv = process.env): value is NumberCountry {

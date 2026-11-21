@@ -39,8 +39,9 @@ describe("number countries", () => {
     expect(numberCountries({ TELNYX_RS_REQUIREMENT_GROUP_ID: "rg_1" })).toEqual(["US", "CA", "PR", "RS"]);
   });
 
-  it("gives Serbia a free trial", () => {
-    expect(trialCountries({ ZADARMA_DOCUMENTS_GROUP_ID: "5" })).toEqual(["US", "CA", "PR", "RS"]);
+  it("sells Serbia's numbers but gives no free trial, because Zadarma charges for the order up front", () => {
+    expect(numberCountries({ ZADARMA_DOCUMENTS_GROUP_ID: "5" })).toContain("RS");
+    expect(trialCountries({ ZADARMA_DOCUMENTS_GROUP_ID: "5" })).toEqual(["US", "CA", "PR"]);
     expect(trialCountries({})).toEqual(["US", "CA", "PR"]);
   });
 
