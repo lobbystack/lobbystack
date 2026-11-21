@@ -2,7 +2,7 @@ import { expect, test, type Page, type TestInfo } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 
-import { defaultAgentIdOf, numberTrials, onboardingNumberClaimEvents, phoneNumbers } from "@lobbystack/db";
+import { numberTrials, onboardingNumberClaimEvents, phoneNumbers } from "@lobbystack/db";
 import onboarding from "../../public/locales/en/onboarding.json" with { type: "json" };
 import settings from "../../public/locales/en/settings.json" with { type: "json" };
 
@@ -165,7 +165,9 @@ async function toReplacementDialog(page: Page, testInfo: TestInfo, emails: strin
   businessIds.push(owner.businessId);
   await setPlan(database, owner.businessId, "starter");
   const current = await holdNumber(database, owner.businessId, { carrier: "twilio", providerPhoneId: twilioPhoneSid() });
-  const agentId = defaultAgentIdOf(owner.businessId);
+  // holdNumber puts the number on the business's default agent, so that agent's page is the one to open.
+  const [held] = await database.db.select({ agentId: phoneNumbers.agentId }).from(phoneNumbers).where(eq(phoneNumbers.id, current.id));
+  const agentId = held!.agentId!;
   await page.goto(`/agents/${agentId}/channels/phone`);
   await page.getByRole("button", { name: settings.phoneNumber.actions.requestChange, exact: true }).click();
   const dialog = page.getByRole("dialog");
