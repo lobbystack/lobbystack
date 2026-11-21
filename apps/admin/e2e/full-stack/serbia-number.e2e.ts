@@ -21,9 +21,11 @@ let database: Migrator;
 let thirdParties: ThirdParties;
 
 test.use({ timezoneId: "Europe/Belgrade" });
-test.beforeAll(async () => { thirdParties = await startThirdParties(); database = migrator(); });
-test.afterAll(async () => { await thirdParties.close(); await database.pool.end(); });
-test.afterEach(() => { thirdParties.zadarma.status = "on"; });
+test.beforeAll(() => { database = migrator(); });
+test.afterAll(async () => { await database.pool.end(); });
+// Each test gets its own fake, so the calls, numbers and status of one never reach the next.
+test.beforeEach(async () => { thirdParties = await startThirdParties(); });
+test.afterEach(async () => { await thirdParties.close(); });
 
 /** Signs up, creates a business, and goes on to the number step, on the plan given. */
 async function toNumberStep(page: Page, testInfo: TestInfo, plan: "free_cloud" | "starter", emails: string[], businessIds: string[]): Promise<string> {
@@ -48,7 +50,7 @@ async function toNumberStep(page: Page, testInfo: TestInfo, plan: "free_cloud" |
 
 const orders = () => thirdParties.zadarma.calls.filter((call) => call.route === "/v1/direct_numbers/order/");
 
-test("a paid Serbian owner orders a number in their city, routed to the SIP server, and releasing it ends its auto-renewal", async ({ page }, testInfo) => {
+test("a paid Serbian owner orders a number in their city, routed to the SIP server, and releasing it ends its auto-renewal", async ({ page, baseURL }, testInfo) => {
   test.setTimeout(240_000);
   const emails: string[] = [];
   const businessIds: string[] = [];
@@ -85,7 +87,7 @@ test("a paid Serbian owner orders a number in their city, routed to the SIP serv
     expect(await database.db.select({ id: numberTrials.id }).from(numberTrials).where(eq(numberTrials.businessId, businessId))).toEqual([]);
 
     // Removing the number releases it. Zadarma has no cancel, so that ends its auto-renewal.
-    const removed = await page.request.delete(`/api/phone-numbers?businessId=${businessId}`, { data: { phoneNumberId: number!.id } });
+    const removed = await page.request.delete(`/api/phone-numbers?businessId=${businessId}`, { headers: { origin: new URL(baseURL!).origin }, data: { phoneNumberId: number!.id } });
     expect(removed.ok()).toBe(true);
     await expect.poll(() => thirdParties.zadarma.numbers().find((item) => item.number === digits)?.autoprolongation, { timeout: 90_000 }).toBe("off");
     await expect.poll(async () => (await database.db.select({ status: phoneNumbers.status }).from(phoneNumbers).where(eq(phoneNumbers.id, number!.id)))[0]?.status, { timeout: 60_000 }).toBe("reclaimed");
