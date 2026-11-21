@@ -65,11 +65,10 @@ Les conditions publiques changent. Ce tableau reflète le marché observé le 7 
 | Rosie | 20 % récurrent, 50 % de rabais le premier mois pour les clients recommandés | Service de réponse IA avec un taux de base similaire |
 | AI Phone 360 | 20 % récurrent, cookie de 30 jours, paiements mensuels après un seuil | Comparaison directe dans la catégorie, avec une économie proche |
 | Upfirst | 25 % à vie plus un bonus de 50 $ après activité client | Offre plus agressive dans les réceptionnistes IA |
-| My AI Front Desk | La page publique actuelle indique 30 % récurrent avec attribution à vie | Offre plus agressive pour créateurs |
 | Retell AI | 15 % pour les références payantes | Infrastructure d'agent vocal avec un taux public plus bas |
 | Smith.ai | Modèle de référence avec codes promo et rabais mensuels récurrents | Programme partenaire mature, avec moins de détail public sur la commission en argent |
 
-Upfirst et My AI Front Desk affichent un potentiel public plus élevé. Rosie et AI Phone 360 sont les plus proches de LobbyStack sur le taux. Retell AI paie moins sur sa page publique.
+Upfirst affiche le potentiel public le plus élevé. Rosie et AI Phone 360 sont les plus proches de LobbyStack sur le taux. Retell AI paie moins sur sa page publique.
 
 LobbyStack donne aux affiliés un chemin de vente plus large. Vous pouvez recommander le produit hébergé à un opérateur local qui veut répondre aux appels cette semaine. Vous pouvez aussi orienter un acheteur technique vers le code, l'auto-hébergement et le modèle de fournisseurs. Votre recommandation repose sur plus qu'une démo produit.
 
@@ -189,7 +188,6 @@ Pour comprendre le produit avant de le recommander, consultez la [vue d'ensemble
 - [Programme d'affiliation Rosie](https://heyrosie.com/ai-answering-service-affiliate-program)
 - [Affiliés AI Phone 360](https://www.aiphone360.com/affiliates)
 - [Programme partenaire affilié Upfirst](https://upfirst.ai/affiliate-program)
-- [Programme d'affiliation My AI Front Desk](https://www.myaifrontdesk.com/affiliate)
 - [Programme d'affiliation Retell AI](https://affiliate.retellai.com/)
 - [Programme de référence Smith.ai](https://smith.ai/partners/referral-affiliate-program)
 - [Dépôt GitHub LobbyStack](https://github.com/lobbystack/lobbystack)
