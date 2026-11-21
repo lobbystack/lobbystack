@@ -51,6 +51,17 @@ To run it on Azure, use the Terraform configuration in [`terraform/`](../../terr
 
 The server needs no database and keeps nothing between calls. Its logs go to the container's output.
 
+### Run it locally
+
+A laptop behind a router can't receive a carrier's calls, but it can try the OpenAI leg with a softphone such as Linphone. macOS ignores host networking, so use `docker-compose.local.yml`, which publishes UDP 5060 and 10000–10200.
+
+1. Copy `asterisk.env.example` to `asterisk.env`. Set `OPENAI_PROJECT_ID`, and set `CARRIER_IPS` to the address Asterisk sees the softphone call come from. The container log shows it when the first call is refused.
+2. Run `docker compose -f docker-compose.local.yml up --build`.
+3. From the softphone, call `sip:<number without +>@<your laptop's address>:5060`.
+4. Keep the admin and the OpenAI webhook running as in "Test a call".
+
+Audio behind NAT may not reach OpenAI, because the server then advertises the container's address. A call that rings but has no sound points to that, and the VM is the way around it.
+
 ## Connect the carrier
 
 Set each number's destination at the carrier to an external SIP address:
