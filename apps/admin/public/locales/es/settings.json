@@ -506,7 +506,8 @@
       "header": "Ciudad",
       "empty": "No hay ciudades disponibles ahora.",
       "failed": "No pudimos pedir ese número. Inténtalo de nuevo."
-    }
+    },
+    "carrierUnavailable": "No podemos preparar un número ahora. Inténtelo de nuevo más tarde."
   },
   "appearance": {
     "title": "Preferencias",

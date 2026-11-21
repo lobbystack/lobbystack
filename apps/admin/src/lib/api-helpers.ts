@@ -76,6 +76,12 @@ export function asApiResponse(error: unknown): NextResponse {
   const code = typeof error === "object" && error !== null && "code" in error && typeof error.code === "string" ? error.code : undefined;
   // A deployment without a carrier for the country is a setup gap the number picker explains, not a server error.
   if (code === "phone_numbers_unavailable") return jsonError(error instanceof Error ? error.message : "Phone numbers aren't set up on this dashboard.", 503, code);
+  // A carrier that can't take a number request has a fixed message that names no carrier. The cause is reported, so the deployment's operator hears of it.
+  if (code === "number_carrier_unavailable" && error instanceof Error) {
+    const errorId = crypto.randomUUID();
+    runAfterResponse(() => reportServerError(error, { operation: "api_response", errorId }));
+    return NextResponse.json({ error: error.message, code, errorId }, { status: 503, headers: { "x-error-id": errorId } });
+  }
   const message = status >= 500 ? "Request failed." : error instanceof Error ? error.message : "Request failed.";
   if (status >= 500) {
     const errorId = crypto.randomUUID();

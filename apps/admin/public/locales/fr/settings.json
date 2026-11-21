@@ -506,7 +506,8 @@
       "header": "Ville",
       "empty": "Aucune ville n'est disponible pour le moment.",
       "failed": "Nous n'avons pas pu commander ce numéro. Réessayez."
-    }
+    },
+    "carrierUnavailable": "Nous ne pouvons pas préparer de numéro pour le moment. Réessayez plus tard."
   },
   "appearance": {
     "title": "Préférences",

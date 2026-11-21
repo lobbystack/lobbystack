@@ -1,6 +1,6 @@
 import { assertCertificationOperationAllowed } from "@lobbystack/shared";
 
-import { NumberOrderPendingError, type AvailablePhoneNumber, type CarrierAdapters, type NumberInventory, type NumberKind, type NumberRouting } from "../telephony/types";
+import { NumberCarrierUnavailableError, NumberOrderPendingError, type AvailablePhoneNumber, type CarrierAdapters, type NumberInventory, type NumberKind, type NumberRouting } from "../telephony/types";
 import { zadarmaConfigured, zadarmaDocumentsGroupId, zadarmaRegistration } from "./registration";
 import { isTollFreeDirection, zadarmaE164, zadarmaFlag, type ZadarmaDirection } from "./zadarmaDirections";
 import { ZadarmaApiError, ZadarmaClient } from "./zadarmaClient";
@@ -210,6 +210,24 @@ export function createZadarmaCarrier(env: Env = process.env, options: ZadarmaCar
       return { target: `sip:${target}` };
     },
   };
+
+  // What an owner's request can fail with must not carry Zadarma's words to the browser. A refusal from its API, such as
+  // an account without the funds for an order, becomes an error that names no carrier. The reason goes to the log,
+  // where whoever runs the deployment can act on it. The worker's own calls keep the real error.
+  const dashboardCalls = ["listAvailablePhoneNumbers", "listOrderCities", "listReusablePhoneNumbers", "takeReusablePhoneNumber", "orderAssignedPhoneNumber"] as const;
+  for (const operation of dashboardCalls) {
+    const call = inventory[operation] as ((input: unknown) => Promise<unknown>) | undefined;
+    if (!call) continue;
+    (inventory as unknown as Record<string, unknown>)[operation] = async (input: unknown) => {
+      try {
+        return await call(input);
+      } catch (error) {
+        if (!(error instanceof ZadarmaApiError)) throw error;
+        console.error(JSON.stringify({ event: "ops.numbers.carrier_refused", carrier: "zadarma", operation, status: error.status, message: error.message }));
+        throw new NumberCarrierUnavailableError({ cause: error });
+      }
+    };
+  }
 
   return { carrier: "zadarma", inventory, routing };
 }

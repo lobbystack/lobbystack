@@ -90,6 +90,20 @@ export interface NumberInventory {
   isNumberUnavailableError(error: unknown): boolean;
 }
 
+/**
+ * A carrier that couldn't take a request the dashboard made, such as an account that can't pay or a service that is
+ * down. Its message names no carrier and says nothing about why, so it is safe to show an owner. The carrier's own
+ * words stay in `cause` and in the server log, for whoever runs the deployment.
+ */
+export class NumberCarrierUnavailableError extends Error {
+  readonly status = 503;
+  readonly code = "number_carrier_unavailable";
+  constructor(options: { cause?: unknown } = {}) {
+    super("We can't set up a number right now. Please try again later.", options);
+    this.name = "NumberCarrierUnavailableError";
+  }
+}
+
 /** A number order the carrier accepted but hadn't finished when the purchase stopped waiting. */
 export class NumberOrderPendingError extends Error {
   readonly orderId: string;

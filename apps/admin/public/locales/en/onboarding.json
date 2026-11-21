@@ -226,7 +226,8 @@
       "header": "City",
       "empty": "No cities are available right now.",
       "failed": "We couldn't order that number. Try again."
-    }
+    },
+    "carrierUnavailable": "We can't set up a number right now. Please try again later."
   },
   "attribution": {
     "title": "How did you hear about {{appName}}?",

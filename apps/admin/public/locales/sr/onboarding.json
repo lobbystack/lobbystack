@@ -228,7 +228,8 @@
       "header": "Grad",
       "empty": "Trenutno nema dostupnih gradova.",
       "failed": "Nismo uspeli da naručimo taj broj. Pokušajte ponovo."
-    }
+    },
+    "carrierUnavailable": "Trenutno ne možemo da pripremimo broj. Pokušajte ponovo kasnije."
   },
   "attribution": {
     "title": "Kako ste čuli za {{appName}}?",

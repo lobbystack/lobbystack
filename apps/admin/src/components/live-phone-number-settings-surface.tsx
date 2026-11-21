@@ -80,6 +80,7 @@ export function phoneNumberChooserText(t: TFunction<"settings">) {
       if (code === "partner_number_limit_reached") return t("phoneNumber.partnerTierRequired.description");
       if (code === "partner_numbers_unavailable") return t("phoneNumber.partnerNumbersUnavailable.description");
       if (code === "phone_numbers_unavailable") return t("phoneNumber.numbersUnavailable");
+      if (code === "number_carrier_unavailable") return t("phoneNumber.carrierUnavailable");
       if (code === "extra_number_price_changed") return t("phoneNumber.extra.priceChanged");
       return getSettingsPhoneNumberErrorMessage(error, fallback);
     },

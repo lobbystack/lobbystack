@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { createTelephony } from "../telephony/registry";
-import { NumberOrderPendingError } from "../telephony/types";
+import { NumberCarrierUnavailableError, NumberOrderPendingError } from "../telephony/types";
 import { zadarmaRegistration } from "./registration";
 import { createZadarmaCarrier, ZADARMA_ORDER_MAX_WAIT_MS, ZadarmaNumberOrderError } from "./zadarmaCarrier";
-import { ZadarmaClient } from "./zadarmaClient";
+import { ZadarmaApiError, ZadarmaClient } from "./zadarmaClient";
 
 type Call = { method: string; path: string; params: URLSearchParams };
 
@@ -253,6 +253,49 @@ describe("ordering a Zadarma number by city", () => {
     const { client, calls } = fakeZadarma({ ...catalog, ...owning("checking") });
     await expect(createZadarmaCarrier(env, { client })!.inventory!.purchasePhoneNumber({ e164: "+381211234567", countryCode: "RS", kind: "local", label: "x" })).rejects.toBeInstanceOf(NumberOrderPendingError);
     expect(calls.some((call) => call.method === "POST")).toBe(false);
+  });
+});
+
+describe("what a failed request shows an owner", () => {
+  const rejectedWith = async (work: Promise<unknown>) => await work.then(() => { throw new Error("expected a rejection"); }, (error: unknown) => error);
+
+  it("turns Zadarma's refusal of an order into an error that names no carrier and says nothing about why", async () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    // The fake answers 200 with an error body, so make the order itself fail as Zadarma does, with a 400.
+    const fetch = vi.fn(async (input: URL | RequestInfo) => {
+      const url = new URL(String(input));
+      if (url.pathname === "/v1/direct_numbers/country/") return new Response(JSON.stringify(directions), { status: 200 });
+      return new Response(JSON.stringify({ status: "error", message: "You do not have sufficient funds on your account." }), { status: 400 });
+    });
+    const inventory = createZadarmaCarrier(env, { client: new ZadarmaClient({ key: "KEY", secret: "SECRET", fetch: fetch as typeof globalThis.fetch }) })!.inventory!;
+    const error = await rejectedWith(inventory.orderAssignedPhoneNumber!({ countryCode: "RS", kind: "local", city: "Novi Sad", label: "x" })) as Error & { status: number; code: string };
+    expect(error).toBeInstanceOf(NumberCarrierUnavailableError);
+    expect(error).toMatchObject({ status: 503, code: "number_carrier_unavailable", message: "We can't set up a number right now. Please try again later." });
+    expect(error.message).not.toMatch(/zadarma|funds|direct_numbers|400/i);
+    // The reason is kept for whoever runs the deployment.
+    expect(error.cause).toBeInstanceOf(ZadarmaApiError);
+    expect(logged).toHaveBeenCalledWith(expect.stringContaining("sufficient funds"));
+    expect(JSON.parse(String(logged.mock.calls[0]![0]))).toMatchObject({ event: "ops.numbers.carrier_refused", carrier: "zadarma", operation: "orderAssignedPhoneNumber", status: 400 });
+    logged.mockRestore();
+  });
+
+  it("does the same for the calls that list cities, numbers to reuse and what a search finds", async () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const failing = new ZadarmaClient({ key: "KEY", secret: "SECRET", fetch: (async () => new Response(JSON.stringify({ status: "error", message: "Wrong signature" }), { status: 401 })) as typeof globalThis.fetch });
+    const inventory = createZadarmaCarrier(env, { client: failing })!.inventory!;
+    for (const call of [
+      () => inventory.listOrderCities!({ countryCode: "RS", kind: "local" }),
+      () => inventory.listReusablePhoneNumbers!({ countryCode: "RS", kind: "local", city: "Novi Sad" }),
+      () => inventory.takeReusablePhoneNumber!({ providerPhoneId: "381213860081" }),
+      () => inventory.listAvailablePhoneNumbers({ countryCode: "RS", kind: "local", limit: 3 }),
+    ]) expect(await rejectedWith(call())).toBeInstanceOf(NumberCarrierUnavailableError);
+    logged.mockRestore();
+  });
+
+  it("keeps the real error for the worker's own calls, which no owner sees", async () => {
+    const failing = new ZadarmaClient({ key: "KEY", secret: "SECRET", fetch: (async () => new Response(JSON.stringify({ status: "error", message: "boom" }), { status: 400 })) as typeof globalThis.fetch });
+    const inventory = createZadarmaCarrier(env, { client: failing })!.inventory!;
+    expect(await rejectedWith(inventory.releasePhoneNumber({ providerPhoneId: "381213860081" }))).toBeInstanceOf(ZadarmaApiError);
   });
 });
 

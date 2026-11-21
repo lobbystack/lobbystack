@@ -228,7 +228,8 @@
       "header": "Ville",
       "empty": "Aucune ville n'est disponible pour le moment.",
       "failed": "Nous n'avons pas pu commander ce numéro. Réessayez."
-    }
+    },
+    "carrierUnavailable": "Nous ne pouvons pas préparer de numéro pour le moment. Réessayez plus tard."
   },
   "attribution": {
     "title": "Comment avez-vous connu {{appName}} ?",
