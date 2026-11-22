@@ -1,3 +1,4 @@
+import { demoSnapshot } from "@lobbystack/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
@@ -16,7 +17,8 @@ const mocks = vi.hoisted(() => ({
   openaiHangup: vi.fn(async () => undefined),
 }));
 
-vi.mock("@lobbystack/domain", () => ({
+vi.mock("@lobbystack/domain", async (original) => ({
+  ...(await original<typeof import("@lobbystack/domain")>()),
   businessHasPhoneNumber: (snapshot: { contactChannels: { phoneNumber?: string } }) => Boolean(snapshot.contactChannels.phoneNumber),
   finishLiveCall: mocks.finishLiveCall,
   getBusinessSnapshotForAgent: mocks.snapshot,
@@ -35,11 +37,9 @@ vi.mock("@/lib/live-prototype", () => ({
   endLiveBrowserSession: mocks.hangup,
   getLiveClient: () => ({ live: { create: mocks.create, sessions: { hangup: mocks.openaiHangup } } }),
 }));
-vi.mock("@lobbystack/agent-core/live/session", () => ({ buildBrowserSessionConfig: () => ({ model: "gpt-live-1" }) }));
-
 import { POST } from "./route";
 
-const snapshot = { businessId: "biz_1", displayName: "Maple Clinic", defaultLocale: "en", greeting: "Hi", contactChannels: { phoneNumber: "+15815020392" } };
+const snapshot = { ...demoSnapshot, businessId: "biz_1", greeting: "Hi", contactChannels: { phoneNumber: "+15815020392" } };
 
 function start(widgetId: string, extra: Record<string, string> = {}) {
   return POST(new Request("https://admin.lobbystack.test/api/voice/live/session", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ sdp: "v=0\r\n", widgetId, ...extra }) }));
@@ -177,10 +177,13 @@ describe("POST /api/voice/live/session", () => {
     expect(mocks.create).not.toHaveBeenCalled();
   });
 
-  it("passes the WebRTC offer to OpenAI unchanged", async () => {
+  it("passes the WebRTC offer to OpenAI unchanged and requests GPT-Live 1.1", async () => {
     mocks.access.mockResolvedValue({ businessId: "biz_1", origin: "https://admin.lobbystack.test", widgetId: "lobbystack-dashboard-test-call", dashboardTestCall: true, billable: true });
     await start("lobbystack-dashboard-test-call");
-    expect(mocks.create).toHaveBeenCalledWith(expect.objectContaining({ transport: { type: "webrtc", sdp: "v=0\r\n" } }));
+    expect(mocks.create).toHaveBeenCalledWith(expect.objectContaining({
+      session: expect.objectContaining({ model: "gpt-live-1.1" }),
+      transport: { type: "webrtc", sdp: "v=0\r\n" },
+    }));
   });
 
   it("returns the end token only the starting browser gets", async () => {

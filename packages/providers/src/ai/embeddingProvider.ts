@@ -5,7 +5,14 @@ import { createHash } from "node:crypto";
 import { trimTrailingSlashes, type AiUsage } from "@lobbystack/shared";
 
 export const DEFAULT_EMBEDDING_AI_BASE_URL = "https://api.openai.com/v1";
-export const DEFAULT_EMBEDDING_AI_MODEL = "text-embedding-3-small";
+const OPENAI_LARGE_EMBEDDING_MODEL = "text-embedding-3-large";
+const OPENAI_LARGE_EMBEDDING_PRICING = {
+  inputCostPerMillionTokens: 0.13,
+  pricingVersion: "text-embedding-3-large-2026-11",
+  pricingSource: "https://developers.openai.com/api/docs/models/text-embedding-3-large",
+  pricingEffectiveDate: "2026-11-22",
+};
+export const DEFAULT_EMBEDDING_AI_MODEL = OPENAI_LARGE_EMBEDDING_MODEL;
 export const EMBEDDING_DIMENSIONS = 1536;
 export const DEFAULT_EMBEDDING_TIMEOUT_MS = 30_000;
 export const DEFAULT_EMBEDDING_MAX_PARALLEL_CALLS = 4;
@@ -32,6 +39,7 @@ export type EmbeddingOptions = {
 };
 
 export class OpenAiCompatibleEmbeddingProvider {
+  readonly embeddingFingerprint: string;
   private readonly model: string;
   private readonly api: EmbeddingModel;
   private readonly providerName: string;
@@ -39,7 +47,6 @@ export class OpenAiCompatibleEmbeddingProvider {
   private readonly pricingVersion: string | undefined;
   private readonly pricingSource: string | undefined;
   private readonly pricingEffectiveDate: string | undefined;
-  private readonly embeddingFingerprint: string;
   private readonly maxParallelCalls: number;
 
   constructor(config: EmbeddingAiConfig) {
@@ -86,6 +93,7 @@ export class OpenAiCompatibleEmbeddingProvider {
     const result = await embedMany({
       model: this.api,
       values,
+      ...(this.model === OPENAI_LARGE_EMBEDDING_MODEL ? { dimensions: EMBEDDING_DIMENSIONS } : {}),
       ...(options?.abortSignal ? { abortSignal: options.abortSignal } : {}),
       maxParallelCalls: this.maxParallelCalls,
       telemetry: {
@@ -95,20 +103,24 @@ export class OpenAiCompatibleEmbeddingProvider {
         functionId: "lobbystack.embeddingAi.embed",
       },
     });
-    const latencyMs = performance.now() - startedAt;
-    const totalCostUsd = this.inputCostPerMillionTokens !== undefined ? (result.usage.tokens * this.inputCostPerMillionTokens) / 1_000_000 : undefined;
-    await onUsage?.({
-      provider: this.providerName,
-      model: this.model,
-      latencyMs,
-      inputTokens: result.usage.tokens,
-      totalTokens: result.usage.tokens,
-      ...(totalCostUsd !== undefined ? { totalCostUsd } : {}),
-      ...(this.pricingVersion ? { pricingVersion: this.pricingVersion } : {}),
-      ...(this.pricingSource ? { pricingSource: this.pricingSource } : {}),
-      ...(this.pricingEffectiveDate ? { pricingEffectiveDate: this.pricingEffectiveDate } : {}),
-      ...(this.inputCostPerMillionTokens !== undefined ? { ratesUsdPerMillionTokens: { input: this.inputCostPerMillionTokens } } : {}),
-    });
+    const { tokens } = result.usage;
+    if (onUsage && Number.isFinite(tokens)) {
+      const inputRate = this.inputCostPerMillionTokens;
+      await onUsage({
+        provider: this.providerName,
+        model: this.model,
+        latencyMs: performance.now() - startedAt,
+        inputTokens: tokens,
+        totalTokens: tokens,
+        ...(inputRate !== undefined ? {
+          totalCostUsd: (tokens * inputRate) / 1_000_000,
+          ratesUsdPerMillionTokens: { input: inputRate },
+        } : {}),
+        ...(this.pricingVersion ? { pricingVersion: this.pricingVersion } : {}),
+        ...(this.pricingSource ? { pricingSource: this.pricingSource } : {}),
+        ...(this.pricingEffectiveDate ? { pricingEffectiveDate: this.pricingEffectiveDate } : {}),
+      });
+    }
     return result.embeddings.map((embedding) => normalizeEmbedding(embedding));
   }
 }
@@ -131,6 +143,8 @@ export function normalizeEmbedding(values: number[]): number[] {
 
 export function createEmbeddingFingerprint(input: { baseURL: string; model: string; providerName: string; revision?: string }): string {
   return createHash("sha256").update(JSON.stringify({
+    // The previous re-embedding pipeline could pair vectors with the wrong text.
+    pipelineVersion: 2,
     baseURL: input.baseURL.replace(/\/$/, ""),
     model: input.model,
     providerName: input.providerName,
@@ -143,21 +157,32 @@ export type EmbeddingAiEnvironment = Record<string, string | undefined>;
 
 export function createEmbeddingProvider(environment: EmbeddingAiEnvironment = process.env): OpenAiCompatibleEmbeddingProvider | undefined {
   const baseURL = environment.AI_EMBEDDING_BASE_URL?.trim() || DEFAULT_EMBEDDING_AI_BASE_URL;
+  const model = environment.AI_EMBEDDING_MODEL?.trim() || DEFAULT_EMBEDDING_AI_MODEL;
+  const name = environment.AI_EMBEDDING_PROVIDER_NAME?.trim() || "openai";
   const apiKey = environment.AI_EMBEDDING_API_KEY?.trim() || environment.OPENAI_API_KEY?.trim();
-  if (!apiKey && trimTrailingSlashes(baseURL) === DEFAULT_EMBEDDING_AI_BASE_URL) return undefined;
-  const inputCostPerMillionTokens = parseOptionalNumber(environment.AI_EMBEDDING_INPUT_COST_PER_MILLION_TOKENS);
+  const isOpenAiEndpoint = trimTrailingSlashes(baseURL) === DEFAULT_EMBEDDING_AI_BASE_URL;
+  if (!apiKey && isOpenAiEndpoint) return undefined;
+  const inputRate = environment.AI_EMBEDDING_INPUT_COST_PER_MILLION_TOKENS?.trim();
+  const inputCostPerMillionTokens = parseOptionalNumber(inputRate);
+  const pricingVersion = environment.AI_EMBEDDING_PRICING_VERSION?.trim();
+  const pricingSource = environment.AI_EMBEDDING_PRICING_SOURCE?.trim();
+  const pricingEffectiveDate = environment.AI_EMBEDDING_PRICING_EFFECTIVE_DATE?.trim();
+  const useDefaultPricing = isOpenAiEndpoint && model === OPENAI_LARGE_EMBEDDING_MODEL && name === "openai"
+    && !inputRate && !pricingVersion && !pricingSource && !pricingEffectiveDate;
   const timeoutMs = parsePositiveNumber(environment.AI_EMBEDDING_TIMEOUT_MS);
   const maxParallelCalls = parsePositiveNumber(environment.AI_EMBEDDING_MAX_PARALLEL_CALLS);
   return new OpenAiCompatibleEmbeddingProvider({
     ...(apiKey ? { apiKey } : {}),
-    ...(environment.AI_EMBEDDING_MODEL ? { model: environment.AI_EMBEDDING_MODEL } : {}),
-    ...(environment.AI_EMBEDDING_BASE_URL?.trim() ? { baseURL: environment.AI_EMBEDDING_BASE_URL.trim() } : {}),
-    ...(environment.AI_EMBEDDING_PROVIDER_NAME ? { name: environment.AI_EMBEDDING_PROVIDER_NAME } : {}),
+    model,
+    baseURL,
+    name,
     ...(environment.AI_EMBEDDING_REVISION ? { revision: environment.AI_EMBEDDING_REVISION } : {}),
-    ...(environment.AI_EMBEDDING_PRICING_VERSION?.trim() ? { pricingVersion: environment.AI_EMBEDDING_PRICING_VERSION.trim() } : {}),
-    ...(environment.AI_EMBEDDING_PRICING_SOURCE?.trim() ? { pricingSource: environment.AI_EMBEDDING_PRICING_SOURCE.trim() } : {}),
-    ...(environment.AI_EMBEDDING_PRICING_EFFECTIVE_DATE?.trim() ? { pricingEffectiveDate: environment.AI_EMBEDDING_PRICING_EFFECTIVE_DATE.trim() } : {}),
-    ...(inputCostPerMillionTokens !== undefined ? { inputCostPerMillionTokens } : {}),
+    ...(useDefaultPricing ? OPENAI_LARGE_EMBEDDING_PRICING : {
+      ...(pricingVersion ? { pricingVersion } : {}),
+      ...(pricingSource ? { pricingSource } : {}),
+      ...(pricingEffectiveDate ? { pricingEffectiveDate } : {}),
+      ...(inputCostPerMillionTokens !== undefined ? { inputCostPerMillionTokens } : {}),
+    }),
     ...(timeoutMs !== undefined ? { timeoutMs } : {}),
     ...(maxParallelCalls !== undefined ? { maxParallelCalls } : {}),
   });

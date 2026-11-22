@@ -221,6 +221,7 @@ export const SCHEMA_MIGRATIONS = [
   "0216_extra_numbers.sql",
   "0217_marketing_email_opt_out.sql",
   "0218_extra_numbers_monthly.sql",
+  "0219_calls_live_model.sql",
 ] as const;
 
 const CONCURRENT_INDEX_DIRECTIVE = /^-- lobbystack:concurrent-index ([a-z][a-z0-9_]*)$/m;
