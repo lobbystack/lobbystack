@@ -9,7 +9,7 @@ const embeddingDuration = getMeter("lobbystack-rag").createHistogram("rag.embedd
 const LOOKUP_BATCH_SIZE = 1_000;
 
 export type KnowledgeEmbeddingProvider = Pick<OpenAiCompatibleEmbeddingProvider, "embed"> & {
-  fingerprint?: string;
+  readonly embeddingFingerprint?: string;
 };
 
 function isValidVector(vector: number[] | null | undefined): vector is number[] {
@@ -30,49 +30,51 @@ export async function embedKnowledgeChunks(
   if (chunks.length === 0) return [];
 
   const uniqueTexts = [...new Set(chunks)];
-  const vectors = new Map<string, number[]>();
-  const { fingerprint } = provider;
-  if (fingerprint) {
+  const vectorsByText = new Map<string, number[]>();
+  const { embeddingFingerprint } = provider;
+  if (embeddingFingerprint) await withBusinessTransaction(domain.db, { businessId, actorType: "worker" }, async (tx) => {
     const hashesByText = new Map(uniqueTexts.map((text) => [text, hashContent(text)]));
     const hashes = [...new Set(hashesByText.values())];
-    await withBusinessTransaction(domain.db, { businessId, actorType: "worker" }, async (tx) => {
-      for (let start = 0; start < hashes.length; start += LOOKUP_BATCH_SIZE) {
-        const rows = await tx.select({ content: knowledgeChunks.content, contentHash: knowledgeChunks.contentHash, embedding: knowledgeChunks.embedding })
-          .from(knowledgeChunks)
-          .where(and(
-            eq(knowledgeChunks.businessId, businessId),
-            eq(knowledgeChunks.embeddingFingerprint, fingerprint),
-            eq(knowledgeChunks.embeddingStatus, "completed"),
-            isNotNull(knowledgeChunks.embedding),
-            inArray(knowledgeChunks.contentHash, hashes.slice(start, start + LOOKUP_BATCH_SIZE)),
-          ));
-        for (const { content, contentHash, embedding } of rows) {
-          if (hashesByText.get(content) !== contentHash || vectors.has(content)) continue;
-          if (isValidVector(embedding)) vectors.set(content, embedding);
-        }
+    for (let start = 0; start < hashes.length; start += LOOKUP_BATCH_SIZE) {
+      const rows = await tx.select({
+        content: knowledgeChunks.content,
+        contentHash: knowledgeChunks.contentHash,
+        embedding: knowledgeChunks.embedding,
+      }).from(knowledgeChunks).where(and(
+        eq(knowledgeChunks.businessId, businessId),
+        eq(knowledgeChunks.embeddingFingerprint, embeddingFingerprint),
+        eq(knowledgeChunks.embeddingStatus, "completed"),
+        isNotNull(knowledgeChunks.embedding),
+        inArray(knowledgeChunks.contentHash, hashes.slice(start, start + LOOKUP_BATCH_SIZE)),
+      ));
+      for (const { content, contentHash, embedding } of rows) {
+        if (hashesByText.get(content) !== contentHash || vectorsByText.has(content)) continue;
+        if (isValidVector(embedding)) vectorsByText.set(content, embedding);
       }
-    });
-  }
+    }
+  });
 
-  const misses = uniqueTexts.filter((text) => !vectors.has(text));
-  if (misses.length > 0) {
-    const startedAt = performance.now();
-    let usage: DurableAiUsage | undefined;
-    try {
-      const embeddings = await provider.embed(misses, (reported) => { usage = reported; });
-      embeddingDuration.record(performance.now() - startedAt, { provider: usage?.provider ?? "unknown" });
-      if (embeddings.length !== misses.length) throw new Error("Knowledge embedding provider returned an incomplete result.");
-      for (const [index, text] of misses.entries()) {
-        const vector = embeddings[index];
-        if (!isValidVector(vector)) throw new Error("Knowledge embedding provider returned an incompatible vector.");
-        vectors.set(text, vector);
-      }
-    } finally {
-      if (usage) {
-        await recordAiGenerationEvent(domain, { ...usage, businessId, operation: "knowledge.embed" }).catch(() => undefined);
-      }
+  const textsToEmbed = uniqueTexts.filter((text) => !vectorsByText.has(text));
+  if (textsToEmbed.length === 0) return chunks.map((text) => vectorsByText.get(text)!);
+
+  const startedAt = performance.now();
+  let usage: DurableAiUsage | undefined;
+  let embeddings: number[][];
+  try {
+    embeddings = await provider.embed(textsToEmbed, (reported) => { usage = reported; });
+    embeddingDuration.record(performance.now() - startedAt, { provider: usage?.provider ?? "unknown" });
+  } finally {
+    if (usage) {
+      await recordAiGenerationEvent(domain, { ...usage, businessId, operation: "knowledge.embed" }).catch(() => undefined);
     }
   }
 
-  return chunks.map((text) => vectors.get(text)!);
+  if (embeddings.length !== textsToEmbed.length) throw new Error("Knowledge embedding provider returned an incomplete result.");
+  for (const [index, text] of textsToEmbed.entries()) {
+    const vector = embeddings[index];
+    if (!isValidVector(vector)) throw new Error("Knowledge embedding provider returned an incompatible vector.");
+    vectorsByText.set(text, vector);
+  }
+
+  return chunks.map((text) => vectorsByText.get(text)!);
 }

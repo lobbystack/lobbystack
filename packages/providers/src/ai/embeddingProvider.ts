@@ -33,6 +33,7 @@ export type EmbeddingOptions = {
 };
 
 export class OpenAiCompatibleEmbeddingProvider {
+  readonly embeddingFingerprint: string;
   private readonly model: string;
   private readonly api: EmbeddingModel;
   private readonly providerName: string;
@@ -40,7 +41,6 @@ export class OpenAiCompatibleEmbeddingProvider {
   private readonly pricingVersion: string | undefined;
   private readonly pricingSource: string | undefined;
   private readonly pricingEffectiveDate: string | undefined;
-  private readonly embeddingFingerprint: string;
   private readonly maxParallelCalls: number;
 
   constructor(config: EmbeddingAiConfig) {

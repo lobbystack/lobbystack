@@ -539,15 +539,15 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
     case "knowledge.reembedBusiness": {
       const businessId = businessIdOrThrow(job);
       const embeddingProvider = dependencies.embeddings;
-      const fingerprint = embeddingProvider?.fingerprint;
-      if (!embeddingProvider || !fingerprint) return { status: "skipped", entityId: businessId };
+      const embeddingFingerprint = embeddingProvider?.embeddingFingerprint;
+      if (!embeddingProvider || !embeddingFingerprint) return { status: "skipped", entityId: businessId };
       const batchSize = 64;
       let reembedded = 0;
       while (true) {
         const rows = await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) =>
           await tx.select({ id: knowledgeChunks.id, documentId: knowledgeChunks.documentId, sequence: knowledgeChunks.sequence, content: knowledgeChunks.content })
             .from(knowledgeChunks)
-            .where(and(eq(knowledgeChunks.businessId, businessId), or(isNull(knowledgeChunks.embeddingFingerprint), ne(knowledgeChunks.embeddingFingerprint, fingerprint), isNull(knowledgeChunks.embedding), eq(knowledgeChunks.embeddingStatus, "pending"), eq(knowledgeChunks.embeddingStatus, "failed"))))
+            .where(and(eq(knowledgeChunks.businessId, businessId), or(isNull(knowledgeChunks.embeddingFingerprint), ne(knowledgeChunks.embeddingFingerprint, embeddingFingerprint), isNull(knowledgeChunks.embedding), eq(knowledgeChunks.embeddingStatus, "pending"), eq(knowledgeChunks.embeddingStatus, "failed"))))
             .limit(batchSize),
         );
         if (rows.length === 0) break;
@@ -586,7 +586,7 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
             await tx.update(knowledgeChunks).set({
               ...(rest.length > 0 ? { content: first, contentHash: hashContent(first) } : {}),
               embedding,
-              embeddingFingerprint: fingerprint,
+              embeddingFingerprint,
               embeddingStatus: "completed",
               embeddingError: null,
               updatedAt: new Date(),
@@ -595,7 +595,7 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
             for (const content of rest) {
               const partEmbedding = embeddings[embeddingIndex++];
               if (!partEmbedding) throw new Error("Embedding provider returned an incompatible re-embedding vector.");
-              await tx.insert(knowledgeChunks).values({ businessId, documentId: row.documentId, sequence, content, contentHash: hashContent(content), embedding: partEmbedding, embeddingFingerprint: fingerprint, embeddingStatus: "completed", embeddingError: null });
+              await tx.insert(knowledgeChunks).values({ businessId, documentId: row.documentId, sequence, content, contentHash: hashContent(content), embedding: partEmbedding, embeddingFingerprint, embeddingStatus: "completed", embeddingError: null });
               sequence += 1;
             }
           }
@@ -1677,8 +1677,8 @@ async function indexKnowledgeText(
   }
 
   const indexStartedAt = performance.now();
-  const { fingerprint } = embeddingProvider;
-  const prepared = { businessId: input.businessId, documentId: input.documentId, text: input.text, embeddings, ...(fingerprint ? { embeddingFingerprint: fingerprint } : {}) };
+  const { embeddingFingerprint } = embeddingProvider;
+  const prepared = { businessId: input.businessId, documentId: input.documentId, text: input.text, embeddings, ...(embeddingFingerprint ? { embeddingFingerprint } : {}) };
   const indexed = input.websitePage ? await indexCrawledWebsitePage(dependencies.domain, { ...prepared, ...input.websitePage }) : await indexDocumentText(dependencies.domain, prepared);
   indexDuration.record(performance.now() - indexStartedAt, { operation: "knowledge.index" });
   return indexed;

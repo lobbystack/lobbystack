@@ -65,13 +65,13 @@ function job(businessId: string, documentId: string): JobEnvelope {
   return { jobId: randomUUID(), type: "knowledge.extractDocument", queue: "bulk", businessId, payload: { documentId }, trace: {}, idempotencyKey: `knowledge:${documentId}`, scheduled: false };
 }
 
-function testEmbeddings(fingerprint?: string) {
+function testEmbeddings(embeddingFingerprint?: string) {
   const embed = vi.fn<KnowledgeEmbeddingProvider["embed"]>(async (values, onUsage) => {
     expect(mocks.transactionActive).toBe(false);
     await onUsage?.({ provider: "openai", model: "text-embedding-3-large", inputTokens: values.length, latencyMs: 5 });
     return values.map((_, index) => new Array<number>(1536).fill(index + 1));
   });
-  return { ...(fingerprint ? { fingerprint } : {}), embed };
+  return { ...(embeddingFingerprint ? { embeddingFingerprint } : {}), embed };
 }
 
 const domain = { db: {} as never };
@@ -94,7 +94,7 @@ describe("knowledge.extractDocument", () => {
   it("fails a document over the plan's text limit before paying to embed it", async () => {
     const businessId = randomUUID();
     const documentId = randomUUID();
-    const embeddings = { embed: vi.fn(), fingerprint: "fingerprint" };
+    const embeddings = { embed: vi.fn(), embeddingFingerprint: "revision-1" };
     const dependencies = { domain: { db: {} as never }, storage: { getObject: vi.fn(async () => new Uint8Array([1])) } as never, embeddings };
     mocks.extract.mockResolvedValue("Staff list");
     vi.mocked(checkKnowledgeStorageLimit).mockResolvedValue("Knowledge storage limit reached. 5 MB of text is included on this plan.");
@@ -104,24 +104,24 @@ describe("knowledge.extractDocument", () => {
     expect(markKnowledgeDocumentFailed).toHaveBeenCalledWith(dependencies.domain, { businessId, documentId, error: "Knowledge storage limit reached. 5 MB of text is included on this plan." });
   });
 
-  it("embeds only distinct misses for the business and fingerprint, then restores chunk order", async () => {
+  it("reuses embeddings for the same business and embedding fingerprint, then restores chunk order", async () => {
     const businessId = randomUUID();
     const otherBusinessId = randomUUID();
     const documentId = randomUUID();
     const texts = ["# Hours", "# Services", "# Hours", "# Contact", "# Services"];
     const originalText = texts.join("\n");
-    let indexedRows: Array<{ content: string; contentHash: string; embedding: number[]; businessId: string; fingerprint: string | undefined }> = [];
+    let indexedRows: Array<{ content: string; contentHash: string; embedding: number[]; businessId: string; embeddingFingerprint: string | undefined }> = [];
     mocks.lookup.mockImplementation(async (_scope, params) => indexedRows.filter((row) => {
-      const [tenant, fingerprint, status, ...hashes] = params as unknown[];
-      return row.businessId === tenant && row.fingerprint === fingerprint && status === "completed" && hashes.includes(row.contentHash);
+      const [lookupBusinessId, embeddingFingerprint, status, ...hashes] = params as unknown[];
+      return row.businessId === lookupBusinessId && row.embeddingFingerprint === embeddingFingerprint && status === "completed" && hashes.includes(row.contentHash);
     }));
     vi.mocked(indexDocumentText).mockImplementation(async (_domain, input) => {
       const chunks = chunkText(input.text);
-      indexedRows = chunks.map((content, index) => ({ content, contentHash: hashContent(content), embedding: input.embeddings[index]!, businessId: input.businessId, fingerprint: input.embeddingFingerprint }));
+      indexedRows = chunks.map((content, index) => ({ content, contentHash: hashContent(content), embedding: input.embeddings[index]!, businessId: input.businessId, embeddingFingerprint: input.embeddingFingerprint }));
       return { chunkCount: chunks.length };
     });
-    const importText = async (text: string, tenant: string, fingerprint: string) => {
-      const embeddings = testEmbeddings(fingerprint);
+    const importText = async (text: string, tenant: string, embeddingFingerprint: string) => {
+      const embeddings = testEmbeddings(embeddingFingerprint);
       mocks.extract.mockResolvedValue(text);
       await handleJob(job(tenant, documentId), { domain, storage, embeddings });
       return embeddings.embed.mock.calls.map(([values]) => values);
@@ -142,7 +142,7 @@ describe("knowledge.extractDocument", () => {
     expect(await importText(originalText, otherBusinessId, "revision-2")).toEqual([["# Hours", "# Services", "# Contact"]]);
   });
 
-  it("deduplicates without a fingerprint and records provider usage even when chunk writeback fails", async () => {
+  it("deduplicates without an embedding fingerprint and records provider usage even when chunk writeback fails", async () => {
     const businessId = randomUUID();
     const embeddings = testEmbeddings();
     mocks.extract.mockResolvedValue("# Hours\n# Hours\n# Services");
