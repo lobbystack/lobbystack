@@ -1,7 +1,7 @@
 import { and, asc, eq, gt, isNotNull, isNull, lt, sql } from "drizzle-orm";
 
 import { billingUsageEvents, calls, contacts, enqueueOutbox, transcripts, withBusinessTransaction, type NewOutboxMessage } from "@lobbystack/db";
-import { isTransferPhone, MAX_PHONE_CALL_MS } from "@lobbystack/shared";
+import { isTransferPhone, LIVE_MODEL, MAX_PHONE_CALL_MS } from "@lobbystack/shared";
 
 import { reserveOutboundCallAttempt } from "./billing";
 import type { DomainContext } from "./context";
@@ -17,9 +17,8 @@ import { boundedReconciledVoiceSeconds } from "./voiceRecovery";
 
 export const LIVE_CALL_PROVIDER = "openai_live";
 
-// gpt-live-1 voice sessions: $0.05 per minute, billed per second.
-// https://developers.openai.com/api/docs/models/gpt-live-1
-const LIVE_PRICING = { usdPerMinute: 0.05, version: "gpt-live-1-2026-07", source: "https://developers.openai.com/api/docs/models/gpt-live-1", effectiveDate: "2026-07-08" };
+// LobbyStack's rate for the configured voice model, billed per second.
+const LIVE_PRICING = { usdPerMinute: 0.05, version: `${LIVE_MODEL}-2026-11`, source: `https://developers.openai.com/api/docs/models/${LIVE_MODEL}`, effectiveDate: "2026-11-22" };
 
 /** Why a live call ended, mapped to the dispositions billing already knows. */
 export type LiveCallEnd =
@@ -240,7 +239,7 @@ export async function finishLiveCall(context: DomainContext, input: { businessId
         quantity: seconds,
         quantityUnit: "second",
         provider: "openai",
-        model: "gpt-live-1",
+        model: LIVE_MODEL,
         operation: "live_session",
         pricingVersion: LIVE_PRICING.version,
         pricingSource: LIVE_PRICING.source,

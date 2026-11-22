@@ -35,7 +35,10 @@ vi.mock("@/lib/live-prototype", () => ({
   endLiveBrowserSession: mocks.hangup,
   getLiveClient: () => ({ live: { create: mocks.create, sessions: { hangup: mocks.openaiHangup } } }),
 }));
-vi.mock("@lobbystack/agent-core/live/session", () => ({ buildBrowserSessionConfig: () => ({ model: "gpt-live-1" }) }));
+vi.mock("@lobbystack/agent-core/live/session", async () => {
+  const { LIVE_MODEL } = await import("@lobbystack/shared");
+  return { buildBrowserSessionConfig: () => ({ model: LIVE_MODEL }) };
+});
 
 import { POST } from "./route";
 
@@ -64,6 +67,7 @@ describe("POST /api/voice/live/session", () => {
     mocks.access.mockResolvedValue({ businessId: "biz_1", origin: "https://admin.lobbystack.test", widgetId: "lobbystack-prospect-demo", prospectDemoId: "demo_1", dashboardTestCall: false, billable: false });
     const response = await start("lobbystack-prospect-demo", { businessSlug: "acme", prospectDemoToken: "secret" });
     expect(response.status).toBe(201);
+    expect(mocks.create).toHaveBeenCalledWith(expect.objectContaining({ session: { model: "gpt-live-1.1" } }));
     expect(mocks.allowance).not.toHaveBeenCalled();
     expect(mocks.startLiveWebCall).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ sessionId: "live_1", billable: false, sessionPurpose: "prospect_demo", prospectDemoId: "demo_1" }));
     expect(mocks.recordProspectDemoCallStarted).toHaveBeenCalledWith(expect.anything(), { businessId: "biz_1", prospectDemoId: "demo_1", callId: "call_1", channel: "web_voice", provider: "openai_live" });

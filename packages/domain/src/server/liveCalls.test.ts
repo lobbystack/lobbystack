@@ -51,7 +51,7 @@ describe("finishLiveCall", () => {
   it("completes the call with the billed seconds and records the GPT-Live cost in the same write", async () => {
     await finishLiveCall(context, { ...call, seconds: 90, end: "caller_hung_up" });
     expect(mocks.completeCall).toHaveBeenCalledWith(context, expect.objectContaining({ callId: "call_1", status: "completed", disposition: "caller_hung_up", providerDurationSeconds: 90, mediaDurationSeconds: 90, providerCostUsd: expect.closeTo(0.075, 6) }));
-    expect(finalizing().costEvent).toMatchObject({ eventKey: "voice_ai:live_session:call_1", channel: "voice", model: "gpt-live-1", operation: "live_session", quantity: 90, costUsd: expect.closeTo(0.075, 6) });
+    expect(finalizing().costEvent).toMatchObject({ eventKey: "voice_ai:live_session:call_1", channel: "voice", model: "gpt-live-1.1", operation: "live_session", quantity: 90, costUsd: expect.closeTo(0.075, 6), pricingVersion: "gpt-live-1.1-2026-11" });
     // Texts held while the call ran go out once it's over.
     expect(mocks.releaseCallTexts).toHaveBeenCalledWith(context, { businessId: call.businessId, callId: "call_1" });
   });
