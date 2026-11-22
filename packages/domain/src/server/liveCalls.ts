@@ -18,7 +18,12 @@ import { boundedReconciledVoiceSeconds } from "./voiceRecovery";
 export const LIVE_CALL_PROVIDER = "openai_live";
 
 // LobbyStack's rate for the configured voice model, billed per second.
-const LIVE_PRICING = { usdPerMinute: 0.05, version: `${LIVE_MODEL}-2026-11`, source: `https://developers.openai.com/api/docs/models/${LIVE_MODEL}`, effectiveDate: "2026-11-22" };
+const LIVE_PRICING = {
+  usdPerMinute: 0.05,
+  version: `${LIVE_MODEL}-2026-11`,
+  source: `https://developers.openai.com/api/docs/models/${LIVE_MODEL}`,
+  effectiveDate: "2026-11-22",
+};
 
 /** Why a live call ended, mapped to the dispositions billing already knows. */
 export type LiveCallEnd =

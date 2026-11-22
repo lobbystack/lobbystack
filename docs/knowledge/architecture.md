@@ -10,10 +10,12 @@ LobbyStack separates authoritative business facts from retrieved long-form knowl
 
 1. An operator submits a URL, text entry, or uploaded document through `apps/admin`.
 2. The API stores durable metadata and enqueues an outbox job in the same PostgreSQL transaction.
-3. `apps/worker` fetches or extracts content and splits it into chunks. It reuses completed vectors from the same business when the text and embedding fingerprint match, then embeds only distinct texts that still need a vector. Only those misses incur provider usage. Concurrent cold misses may both incur usage before either job saves its vectors.
+3. `apps/worker` fetches or extracts content and splits it into chunks. It reuses completed vectors when the business, exact text, and embedding fingerprint match. The provider receives each distinct text that still needs a vector once per batch. Concurrent jobs may pay to embed the same text if both check before either writes it.
 4. The worker refreshes the business context snapshot after indexing succeeds.
 
-The default model is `text-embedding-3-large` at 1,536 dimensions. The fingerprint covers the endpoint, model, provider name, dimensions, and revision. Set matching `AI_EMBEDDING_MODEL` and `AI_EMBEDDING_REVISION` values on admin and worker. Remove a `text-embedding-3-small` override from both to adopt the new default. A fingerprint change makes `knowledge.reembedBusiness` rebuild older vectors, with keyword retrieval filling gaps until matching vectors are ready. If existing text and vector pairings are uncertain, drain the workers and set a fresh revision on both services before rebuilding.
+The default model is `text-embedding-3-large` at 1,536 dimensions. The fingerprint covers the endpoint, model, provider name, dimensions, and revision. A fingerprint change makes `knowledge.reembedBusiness` rebuild older vectors. Keyword retrieval fills gaps until matching vectors are ready.
+
+Set matching `AI_EMBEDDING_MODEL` and `AI_EMBEDDING_REVISION` values on admin and worker. Remove a `text-embedding-3-small` override from both to adopt the new default. If existing text and vector pairings are uncertain, drain the workers and set a fresh revision on both services before rebuilding.
 
 ## Spot a website read that stalled
 

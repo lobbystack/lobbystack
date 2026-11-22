@@ -5,7 +5,8 @@ import { createHash } from "node:crypto";
 import { trimTrailingSlashes, type AiUsage } from "@lobbystack/shared";
 
 export const DEFAULT_EMBEDDING_AI_BASE_URL = "https://api.openai.com/v1";
-export const DEFAULT_EMBEDDING_AI_MODEL = "text-embedding-3-large";
+const OPENAI_LARGE_EMBEDDING_MODEL = "text-embedding-3-large";
+export const DEFAULT_EMBEDDING_AI_MODEL = OPENAI_LARGE_EMBEDDING_MODEL;
 export const EMBEDDING_DIMENSIONS = 1536;
 export const DEFAULT_EMBEDDING_TIMEOUT_MS = 30_000;
 export const DEFAULT_EMBEDDING_MAX_PARALLEL_CALLS = 4;
@@ -86,7 +87,7 @@ export class OpenAiCompatibleEmbeddingProvider {
     const result = await embedMany({
       model: this.api,
       values,
-      ...(this.model === "text-embedding-3-large" ? { dimensions: EMBEDDING_DIMENSIONS } : {}),
+      ...(this.model === OPENAI_LARGE_EMBEDDING_MODEL ? { dimensions: EMBEDDING_DIMENSIONS } : {}),
       ...(options?.abortSignal ? { abortSignal: options.abortSignal } : {}),
       maxParallelCalls: this.maxParallelCalls,
       telemetry: {
@@ -96,20 +97,24 @@ export class OpenAiCompatibleEmbeddingProvider {
         functionId: "lobbystack.embeddingAi.embed",
       },
     });
-    const latencyMs = performance.now() - startedAt;
-    const totalCostUsd = this.inputCostPerMillionTokens !== undefined ? (result.usage.tokens * this.inputCostPerMillionTokens) / 1_000_000 : undefined;
-    if (Number.isFinite(result.usage.tokens)) await onUsage?.({
-      provider: this.providerName,
-      model: this.model,
-      latencyMs,
-      inputTokens: result.usage.tokens,
-      totalTokens: result.usage.tokens,
-      ...(totalCostUsd !== undefined ? { totalCostUsd } : {}),
-      ...(this.pricingVersion ? { pricingVersion: this.pricingVersion } : {}),
-      ...(this.pricingSource ? { pricingSource: this.pricingSource } : {}),
-      ...(this.pricingEffectiveDate ? { pricingEffectiveDate: this.pricingEffectiveDate } : {}),
-      ...(this.inputCostPerMillionTokens !== undefined ? { ratesUsdPerMillionTokens: { input: this.inputCostPerMillionTokens } } : {}),
-    });
+    const { tokens } = result.usage;
+    if (onUsage && Number.isFinite(tokens)) {
+      const inputRate = this.inputCostPerMillionTokens;
+      await onUsage({
+        provider: this.providerName,
+        model: this.model,
+        latencyMs: performance.now() - startedAt,
+        inputTokens: tokens,
+        totalTokens: tokens,
+        ...(inputRate !== undefined ? {
+          totalCostUsd: (tokens * inputRate) / 1_000_000,
+          ratesUsdPerMillionTokens: { input: inputRate },
+        } : {}),
+        ...(this.pricingVersion ? { pricingVersion: this.pricingVersion } : {}),
+        ...(this.pricingSource ? { pricingSource: this.pricingSource } : {}),
+        ...(this.pricingEffectiveDate ? { pricingEffectiveDate: this.pricingEffectiveDate } : {}),
+      });
+    }
     return result.embeddings.map((embedding) => normalizeEmbedding(embedding));
   }
 }
@@ -152,7 +157,7 @@ export function createEmbeddingProvider(environment: EmbeddingAiEnvironment = pr
   return new OpenAiCompatibleEmbeddingProvider({
     ...(apiKey ? { apiKey } : {}),
     model: environment.AI_EMBEDDING_MODEL?.trim() || DEFAULT_EMBEDDING_AI_MODEL,
-    ...(environment.AI_EMBEDDING_BASE_URL?.trim() ? { baseURL: environment.AI_EMBEDDING_BASE_URL.trim() } : {}),
+    baseURL,
     ...(environment.AI_EMBEDDING_PROVIDER_NAME ? { name: environment.AI_EMBEDDING_PROVIDER_NAME } : {}),
     ...(environment.AI_EMBEDDING_REVISION ? { revision: environment.AI_EMBEDDING_REVISION } : {}),
     ...(environment.AI_EMBEDDING_PRICING_VERSION?.trim() ? { pricingVersion: environment.AI_EMBEDDING_PRICING_VERSION.trim() } : {}),

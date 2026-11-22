@@ -538,8 +538,9 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
     }
     case "knowledge.reembedBusiness": {
       const businessId = businessIdOrThrow(job);
-      const fingerprint = dependencies.embeddings?.fingerprint;
-      if (!dependencies.embeddings || !fingerprint) return { status: "skipped", entityId: businessId };
+      const embeddingProvider = dependencies.embeddings;
+      const fingerprint = embeddingProvider?.fingerprint;
+      if (!embeddingProvider || !fingerprint) return { status: "skipped", entityId: businessId };
       const batchSize = 64;
       let reembedded = 0;
       while (true) {
@@ -555,14 +556,14 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         rows.sort((a, b) => b.sequence - a.sequence);
         // A chunk stored by an older pipeline can exceed the provider's input
         // limit. Embed each split part, then store the parts as their own rows.
-        const batches = rows.map((row) => ({ row, contents: embeddingInputsForChunk(row.content) }));
-        const inputs = batches.flatMap((batch) => batch.contents);
+        const splitChunks = rows.map((row) => ({ row, contents: embeddingInputsForChunk(row.content) }));
+        const inputs = splitChunks.flatMap(({ contents }) => contents);
         let embeddings: number[][];
         try {
           await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) => {
             await tx.update(knowledgeChunks).set({ embeddingStatus: "pending", embeddingError: null, updatedAt: new Date() }).where(and(eq(knowledgeChunks.businessId, businessId), inArray(knowledgeChunks.id, rowIds)));
           });
-          embeddings = await embedKnowledgeChunks(dependencies.domain, dependencies.embeddings, businessId, inputs);
+          embeddings = await embedKnowledgeChunks(dependencies.domain, embeddingProvider, businessId, inputs);
         } catch (error) {
           await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) => {
             await tx.update(knowledgeChunks).set({ embeddingStatus: "failed", embeddingError: error instanceof Error ? error.message.slice(0, 1000) : "Embedding failed.", updatedAt: new Date() }).where(and(eq(knowledgeChunks.businessId, businessId), inArray(knowledgeChunks.id, rowIds)));
@@ -570,10 +571,10 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
           throw error;
         }
         await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) => {
-          let index = 0;
-          for (const { row, contents } of batches) {
+          let embeddingIndex = 0;
+          for (const { row, contents } of splitChunks) {
             const [first, ...rest] = contents;
-            const embedding = embeddings[index++];
+            const embedding = embeddings[embeddingIndex++];
             if (first === undefined || !embedding) throw new Error("Embedding provider returned an incompatible re-embedding vector.");
             if (rest.length > 0) {
               // Make room beside the original chunk, not after the document.
@@ -592,9 +593,9 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
             }).where(and(eq(knowledgeChunks.id, row.id), eq(knowledgeChunks.businessId, businessId)));
             let sequence = row.sequence + 1;
             for (const content of rest) {
-              const piece = embeddings[index++];
-              if (!piece) throw new Error("Embedding provider returned an incompatible re-embedding vector.");
-              await tx.insert(knowledgeChunks).values({ businessId, documentId: row.documentId, sequence, content, contentHash: hashContent(content), embedding: piece, embeddingFingerprint: fingerprint, embeddingStatus: "completed", embeddingError: null });
+              const partEmbedding = embeddings[embeddingIndex++];
+              if (!partEmbedding) throw new Error("Embedding provider returned an incompatible re-embedding vector.");
+              await tx.insert(knowledgeChunks).values({ businessId, documentId: row.documentId, sequence, content, contentHash: hashContent(content), embedding: partEmbedding, embeddingFingerprint: fingerprint, embeddingStatus: "completed", embeddingError: null });
               sequence += 1;
             }
           }
@@ -1644,7 +1645,8 @@ async function indexKnowledgeText(
 ): Promise<{ chunkCount: number }> {
   const chunks = chunkText(input.text);
   chunkCount.record(chunks.length, { operation: "knowledge.index" });
-  if (!dependencies.embeddings) {
+  const embeddingProvider = dependencies.embeddings;
+  if (!embeddingProvider) {
     if (!input.deferFailure) await markKnowledgeDocumentFailed(dependencies.domain, {
       businessId: input.businessId,
       documentId: input.documentId,
@@ -1662,7 +1664,7 @@ async function indexKnowledgeText(
 
   let embeddings: number[][];
   try {
-    embeddings = await embedKnowledgeChunks(dependencies.domain, dependencies.embeddings, input.businessId, chunks);
+    embeddings = await embedKnowledgeChunks(dependencies.domain, embeddingProvider, input.businessId, chunks);
   } catch (error) {
     embeddingFailures.add(1, { operation: "knowledge.index" });
     if (!input.deferFailure) await markKnowledgeDocumentFailed(dependencies.domain, {
@@ -1675,7 +1677,8 @@ async function indexKnowledgeText(
   }
 
   const indexStartedAt = performance.now();
-  const prepared = { businessId: input.businessId, documentId: input.documentId, text: input.text, embeddings, ...(dependencies.embeddings?.fingerprint ? { embeddingFingerprint: dependencies.embeddings.fingerprint } : {}) };
+  const { fingerprint } = embeddingProvider;
+  const prepared = { businessId: input.businessId, documentId: input.documentId, text: input.text, embeddings, ...(fingerprint ? { embeddingFingerprint: fingerprint } : {}) };
   const indexed = input.websitePage ? await indexCrawledWebsitePage(dependencies.domain, { ...prepared, ...input.websitePage }) : await indexDocumentText(dependencies.domain, prepared);
   indexDuration.record(performance.now() - indexStartedAt, { operation: "knowledge.index" });
   return indexed;
