@@ -30,6 +30,46 @@ describe("embedding requests", () => {
     expect(JSON.parse(String(fetchEmbeddings.mock.calls[0]![1].body))).toEqual({ model: "text-embedding-3-small", input: ["hours"], encoding_format: "float" });
   });
 
+  it("records versioned usage for the default OpenAI embedding rate", async () => {
+    const usage = vi.fn();
+    await createEmbeddingProvider({ OPENAI_API_KEY: "test" })!.embed(["hours"], usage);
+    expect(usage).toHaveBeenCalledWith(expect.objectContaining({
+      totalCostUsd: 0.13 / 1_000_000,
+      ratesUsdPerMillionTokens: { input: 0.13 },
+      pricingVersion: "text-embedding-3-large-2026-11",
+      pricingSource: "https://developers.openai.com/api/docs/models/text-embedding-3-large",
+      pricingEffectiveDate: "2026-11-22",
+    }));
+  });
+
+  it.each([
+    { AI_EMBEDDING_MODEL: "text-embedding-3-small" },
+    { AI_EMBEDDING_BASE_URL: "https://gateway.example.test/v1" },
+    { AI_EMBEDDING_INPUT_COST_PER_MILLION_TOKENS: "0.20" },
+  ])("leaves unversioned pricing unknown for %j", async (environment) => {
+    const usage = vi.fn();
+    await createEmbeddingProvider({ OPENAI_API_KEY: "test", ...environment })!.embed(["hours"], usage);
+    expect(usage.mock.calls[0]?.[0].totalCostUsd).toBeUndefined();
+  });
+
+  it("records an explicitly configured rate with its own pricing metadata", async () => {
+    const usage = vi.fn();
+    await createEmbeddingProvider({
+      OPENAI_API_KEY: "test",
+      AI_EMBEDDING_BASE_URL: "https://gateway.example.test/v1",
+      AI_EMBEDDING_INPUT_COST_PER_MILLION_TOKENS: "0.20",
+      AI_EMBEDDING_PRICING_VERSION: "gateway-1",
+      AI_EMBEDDING_PRICING_SOURCE: "https://gateway.example.test/prices",
+      AI_EMBEDDING_PRICING_EFFECTIVE_DATE: "2026-10-01",
+    })!.embed(["hours"], usage);
+    expect(usage).toHaveBeenCalledWith(expect.objectContaining({
+      totalCostUsd: 0.20 / 1_000_000,
+      pricingVersion: "gateway-1",
+      pricingSource: "https://gateway.example.test/prices",
+      pricingEffectiveDate: "2026-10-01",
+    }));
+  });
+
   it("splits a large document into requests the provider accepts, each with its own timeout", async () => {
     const usage = vi.fn();
 
