@@ -8,7 +8,7 @@ import { realtimeEventSchema, type JobEnvelope } from "@lobbystack/contracts";
 import { HOST_EMAIL_BRAND, billingMeterEventNames, detectSiteLanguage, emailSender, getPolarMeteredUsagePayload, intlLocale, isUuid, normalizeRuntimeLocale, parseEmailBrandReference, extraNumbersProductId, partnerFeatures, partnerTierProductId, type BillingUsageKind, type EmailBrandReference, type ProductUpdateEntry } from "@lobbystack/shared";
 import { appointments, calls, contacts, enqueueOutbox, knowledgeChunks, knowledgeDocuments, messages, notifications, phoneNumbers, storageObjects, websiteIngestionJobs, withBusinessTransaction, type Database } from "@lobbystack/db";
 import { enqueueKnowledgeDerivedRefresh, finishBusinessSummaryRegenerate, forgetStaleRetiredCalendarTokens, loadBusinessHoursInput, loadBusinessSummaryInput, markBusinessHoursChecked, resetGeneratedBusinessSummary, saveGeneratedBusinessHours, saveGeneratedBusinessSummary, type SummaryRegenerateOutcome } from "@lobbystack/domain";
-import { billingCheckoutLeaseEndsAt, checkKnowledgeStorageLimit, claimBillingCheckoutRequest, countPublishableOutboxMessages, deferBillingCheckoutRequest, deleteCallRecordingForRetention, deleteExpiredObjectsForBusiness, deleteStoredObjects, deleteSentProductEventsBefore, expireProspectDemos, finalizeConversationSession, loadCallSummaryInput, generateAffiliatePayoutRun, indexCrawledWebsitePage, indexDocumentText, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markKnowledgeDocumentFailed, markProductEventsSent, reconcileBillingProviderEvent, recordAiGenerationEvent, recordCallProviderPricing, loadLiveCallForPricing, recordProductEvent, recordSmsProviderPricing, refreshBusinessSnapshot, runPrivacyRetentionSweep, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, chunkText, embeddingInputsForChunk, hashContent, upsertWebsiteDocument, planReminderOf, queuePlanReminderEmail, queueWelcomeEmail, type DurableAiUsage, type GeneratedCallSummary } from "@lobbystack/domain";
+import { billingCheckoutLeaseEndsAt, checkKnowledgeStorageLimit, claimBillingCheckoutRequest, countPublishableOutboxMessages, deferBillingCheckoutRequest, deleteCallRecordingForRetention, deleteExpiredObjectsForBusiness, deleteStoredObjects, deleteSentProductEventsBefore, expireProspectDemos, finalizeConversationSession, loadCallSummaryInput, generateAffiliatePayoutRun, indexCrawledWebsitePage, indexDocumentText, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markKnowledgeDocumentFailed, markProductEventsSent, reconcileBillingProviderEvent, recordAiGenerationEvent, recordCallProviderPricing, loadLiveCallForPricing, recordProductEvent, recordSmsProviderPricing, refreshBusinessSnapshot, runPrivacyRetentionSweep, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, chunkText, embeddingInputsForChunk, hashContent, upsertWebsiteDocument, planReminderOf, queuePlanReminderEmail, queueWelcomeEmail, type GeneratedCallSummary } from "@lobbystack/domain";
 import { PRODUCT_UPDATE_ENTRIES, postNumberReleasedInTransaction, postProductUpdates } from "@lobbystack/domain";
 import { deliverOutbound, markFeedbackEmailFailed, markFeedbackEmailSent, queueDailyOperatorSummaries, refreshUnitEconomicsMonth } from "@lobbystack/domain";
 import { NUMBER_ORDER_MAX_WAIT_MS, claimNumberProvisioning, completeNumberProvisioning, deferNumberProvisioning, desiredNumberRouting, refreshStaleRefusedCallForwards, enqueueNumberRouting, resolveRefusedCallForward, failNumberProvisioning, isSharedSmsSender, loadNumberReleaseEmail, loadNumberTrialEmail, numberProvisioningLeaseEndsAt, sharedSmsSender, sweepNumberReleases, sweepNumberTrial } from "@lobbystack/domain";
@@ -32,6 +32,7 @@ import { isLivePrototypeEnabled, type LiveRecoveryOutcome } from "./liveCalls";
 import { deleteReleasedCalendarEvent, reconcileBusinessCalendar, retireCalendarWebhook, syncAppointmentCalendar, type CalendarProviders } from "./calendarJobs";
 import { refreshInstagramToken, replyToInstagramMessage, sendInstagramMessage, type InstagramOperations } from "./instagramJobs";
 import { replyToTextMessage } from "./textReplyJobs";
+import { embedKnowledgeChunks, type KnowledgeEmbeddingProvider } from "./knowledgeEmbeddings";
 import { emitInfoLog, getMeter } from "@lobbystack/telemetry/node";
 import { bucketOutboxBacklog, getPostHogDistinctIdForBusinessSystem, redactTelemetryProperties, type TelemetryProperties } from "@lobbystack/telemetry";
 
@@ -40,7 +41,6 @@ const extractionDuration = ragMeter.createHistogram("rag.extraction.duration_ms"
 const ocrDuration = ragMeter.createHistogram("rag.ocr.duration_ms", { unit: "ms" });
 const recordOcr: OcrRecorder = (durationMs, attributes) => ocrDuration.record(durationMs, attributes);
 const chunkCount = ragMeter.createHistogram("rag.chunk.count", { unit: "{chunk}" });
-const embeddingDuration = ragMeter.createHistogram("rag.embedding.duration_ms", { unit: "ms" });
 const embeddingFailures = ragMeter.createCounter("rag.embedding.failures", { unit: "{failure}" });
 const indexDuration = ragMeter.createHistogram("rag.index.duration_ms", { unit: "ms" });
 const sentProductEventRetentionMs = 7 * 24 * 60 * 60_000;
@@ -72,7 +72,7 @@ export type WorkerDependencies = {
   polar?: { recordUsage(input: { eventName: string; externalCustomerId: string; quantity: number; timestamp: string; idempotencyKey: string; businessId: string; usageKind: string }): Promise<void>; createCheckout?(input: { productId: string; customerEmail: string; externalCustomerId: string; successUrl: string; returnUrl: string; idempotencyKey?: string }): Promise<{ checkoutUrl: string; checkoutId: string }>; setCancelAtPeriodEnd?(input: { subscriptionId: string; cancelAtPeriodEnd: boolean }): Promise<void> };
   /** Sets partners' own domains up: Cloudflare for SaaS or Caddy, as partnerFeatures decides, and DNS for partners' TXT records. Without it, their jobs are skipped. */
   customDomains?: CustomDomainProviders;
-  embeddings?: { fingerprint?: string; embed(values: string[], onUsage?: (usage: DurableAiUsage) => Promise<void> | void): Promise<number[][]> };
+  embeddings?: KnowledgeEmbeddingProvider;
   crawler?: { crawl(input: { url: string; limit?: number }): Promise<Array<{ url: string; title?: string; markdown?: string; language?: string }>> };
   /** Calendar providers by name. Without one, its connections are left unsynced. */
   calendars?: CalendarProviders;
@@ -551,6 +551,8 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         );
         if (rows.length === 0) break;
         const rowIds = rows.map((row) => row.id);
+        // Process higher sequences first so inserting split parts can't shift any remaining row.
+        rows.sort((a, b) => b.sequence - a.sequence);
         // A chunk stored by an older pipeline can exceed the provider's input
         // limit. Embed each split part, then store the parts as their own rows.
         const batches = rows.map((row) => ({ row, contents: embeddingInputsForChunk(row.content) }));
@@ -560,11 +562,7 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
           await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) => {
             await tx.update(knowledgeChunks).set({ embeddingStatus: "pending", embeddingError: null, updatedAt: new Date() }).where(and(eq(knowledgeChunks.businessId, businessId), inArray(knowledgeChunks.id, rowIds)));
           });
-          embeddings = await dependencies.embeddings.embed(inputs);
-          if (embeddings.length !== inputs.length) throw new Error("Embedding provider returned an incomplete re-embedding batch.");
-          if (embeddings.some((embedding) => embedding.length !== 1536 || embedding.some((value) => !Number.isFinite(value)) || embedding.every((value) => value === 0))) {
-            throw new Error("Embedding provider returned an incompatible re-embedding vector.");
-          }
+          embeddings = await embedKnowledgeChunks(dependencies.domain, dependencies.embeddings, businessId, inputs);
         } catch (error) {
           await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) => {
             await tx.update(knowledgeChunks).set({ embeddingStatus: "failed", embeddingError: error instanceof Error ? error.message.slice(0, 1000) : "Embedding failed.", updatedAt: new Date() }).where(and(eq(knowledgeChunks.businessId, businessId), inArray(knowledgeChunks.id, rowIds)));
@@ -573,10 +571,7 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         }
         await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) => {
           let index = 0;
-          // Highest sequence first, so a split's new pieces never shift the
-          // sequence of a chunk still waiting to be processed.
-          const ordered = [...batches].sort((a, b) => b.row.sequence - a.row.sequence);
-          for (const { row, contents } of ordered) {
+          for (const { row, contents } of batches) {
             const [first, ...rest] = contents;
             const embedding = embeddings[index++];
             if (first === undefined || !embedding) throw new Error("Embedding provider returned an incompatible re-embedding vector.");
@@ -1666,13 +1661,8 @@ async function indexKnowledgeText(
   }
 
   let embeddings: number[][];
-  let usage: DurableAiUsage | undefined;
   try {
-    const embeddingStartedAt = performance.now();
-    embeddings = await dependencies.embeddings.embed(chunks, (value) => {
-      usage = value;
-    });
-    embeddingDuration.record(performance.now() - embeddingStartedAt, { provider: usage?.provider ?? "unknown" });
+    embeddings = await embedKnowledgeChunks(dependencies.domain, dependencies.embeddings, input.businessId, chunks);
   } catch (error) {
     embeddingFailures.add(1, { operation: "knowledge.index" });
     if (!input.deferFailure) await markKnowledgeDocumentFailed(dependencies.domain, {
@@ -1684,27 +1674,10 @@ async function indexKnowledgeText(
     throw error;
   }
 
-  if (embeddings.length !== chunks.length) {
-    if (!input.deferFailure) await markKnowledgeDocumentFailed(dependencies.domain, {
-      businessId: input.businessId,
-      documentId: input.documentId,
-      ...(input.websitePage ? { expectedRevision: input.websitePage.sourceRevision } : {}),
-      error: "Knowledge embedding provider returned an incomplete result.",
-    });
-    throw new Error("Knowledge embedding provider returned an incomplete result.");
-  }
-
   const indexStartedAt = performance.now();
   const prepared = { businessId: input.businessId, documentId: input.documentId, text: input.text, embeddings, ...(dependencies.embeddings?.fingerprint ? { embeddingFingerprint: dependencies.embeddings.fingerprint } : {}) };
   const indexed = input.websitePage ? await indexCrawledWebsitePage(dependencies.domain, { ...prepared, ...input.websitePage }) : await indexDocumentText(dependencies.domain, prepared);
   indexDuration.record(performance.now() - indexStartedAt, { operation: "knowledge.index" });
-  if (usage) {
-    await recordAiGenerationEvent(dependencies.domain, {
-      ...usage,
-      businessId: input.businessId,
-      operation: "knowledge.embed",
-    }).catch(() => undefined);
-  }
   return indexed;
 }
 

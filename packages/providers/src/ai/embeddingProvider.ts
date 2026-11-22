@@ -5,7 +5,7 @@ import { createHash } from "node:crypto";
 import { trimTrailingSlashes, type AiUsage } from "@lobbystack/shared";
 
 export const DEFAULT_EMBEDDING_AI_BASE_URL = "https://api.openai.com/v1";
-export const DEFAULT_EMBEDDING_AI_MODEL = "text-embedding-3-small";
+export const DEFAULT_EMBEDDING_AI_MODEL = "text-embedding-3-large";
 export const EMBEDDING_DIMENSIONS = 1536;
 export const DEFAULT_EMBEDDING_TIMEOUT_MS = 30_000;
 export const DEFAULT_EMBEDDING_MAX_PARALLEL_CALLS = 4;
@@ -86,6 +86,7 @@ export class OpenAiCompatibleEmbeddingProvider {
     const result = await embedMany({
       model: this.api,
       values,
+      ...(this.model === "text-embedding-3-large" ? { dimensions: EMBEDDING_DIMENSIONS } : {}),
       ...(options?.abortSignal ? { abortSignal: options.abortSignal } : {}),
       maxParallelCalls: this.maxParallelCalls,
       telemetry: {
@@ -97,7 +98,7 @@ export class OpenAiCompatibleEmbeddingProvider {
     });
     const latencyMs = performance.now() - startedAt;
     const totalCostUsd = this.inputCostPerMillionTokens !== undefined ? (result.usage.tokens * this.inputCostPerMillionTokens) / 1_000_000 : undefined;
-    await onUsage?.({
+    if (Number.isFinite(result.usage.tokens)) await onUsage?.({
       provider: this.providerName,
       model: this.model,
       latencyMs,
@@ -150,7 +151,7 @@ export function createEmbeddingProvider(environment: EmbeddingAiEnvironment = pr
   const maxParallelCalls = parsePositiveNumber(environment.AI_EMBEDDING_MAX_PARALLEL_CALLS);
   return new OpenAiCompatibleEmbeddingProvider({
     ...(apiKey ? { apiKey } : {}),
-    ...(environment.AI_EMBEDDING_MODEL ? { model: environment.AI_EMBEDDING_MODEL } : {}),
+    model: environment.AI_EMBEDDING_MODEL?.trim() || DEFAULT_EMBEDDING_AI_MODEL,
     ...(environment.AI_EMBEDDING_BASE_URL?.trim() ? { baseURL: environment.AI_EMBEDDING_BASE_URL.trim() } : {}),
     ...(environment.AI_EMBEDDING_PROVIDER_NAME ? { name: environment.AI_EMBEDDING_PROVIDER_NAME } : {}),
     ...(environment.AI_EMBEDDING_REVISION ? { revision: environment.AI_EMBEDDING_REVISION } : {}),

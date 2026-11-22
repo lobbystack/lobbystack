@@ -10,10 +10,10 @@ LobbyStack separates authoritative business facts from retrieved long-form knowl
 
 1. An operator submits a URL, text entry, or uploaded document through `apps/admin`.
 2. The API stores durable metadata and enqueues an outbox job in the same PostgreSQL transaction.
-3. `apps/worker` fetches or extracts content, chunks it, creates embeddings through the configured OpenAI-compatible endpoint, and writes tenant-scoped vectors.
+3. `apps/worker` fetches or extracts content and splits it into chunks. It reuses completed vectors from the same business when the text and embedding fingerprint match, then embeds only distinct texts that still need a vector. Only those misses incur provider usage. Concurrent cold misses may both incur usage before either job saves its vectors.
 4. The worker refreshes the business context snapshot after indexing succeeds.
 
-Embedding vectors are stored at the fixed `vector(1536)` dimension together with a fingerprint of the configured endpoint, model, provider name, dimensions, and revision. Semantic retrieval only compares matching fingerprints; keyword retrieval fills gaps while `knowledge.reembedBusiness` regenerates existing chunk text after a provider change.
+The default model is `text-embedding-3-large` at 1,536 dimensions. The fingerprint covers the endpoint, model, provider name, dimensions, and revision. Set matching `AI_EMBEDDING_MODEL` and `AI_EMBEDDING_REVISION` values on admin and worker. Remove a `text-embedding-3-small` override from both to adopt the new default. A fingerprint change makes `knowledge.reembedBusiness` rebuild older vectors, with keyword retrieval filling gaps until matching vectors are ready. If existing text and vector pairings are uncertain, drain the workers and set a fresh revision on both services before rebuilding.
 
 ## Spot a website read that stalled
 
