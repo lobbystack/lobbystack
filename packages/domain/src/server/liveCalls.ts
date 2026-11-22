@@ -83,6 +83,20 @@ export async function startLivePhoneCall(context: DomainContext, input: { busine
   return { callId: call.callId, conversationId: call.conversationId, agentId: call.agentId, blocked: call.blocked, duplicate: call.duplicate, maxDurationMs };
 }
 
+/** Saves the model when OpenAI first accepts a previously reserved SIP call. */
+export async function recordAcceptedLivePhoneModel(context: DomainContext, input: { businessId: string; callId: string; model: string }) {
+  await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    await tx.update(calls).set({ liveModel: input.model }).where(and(
+      eq(calls.id, input.callId),
+      eq(calls.businessId, input.businessId),
+      eq(calls.provider, LIVE_CALL_PROVIDER),
+      eq(calls.transport, "voice"),
+      isNull(calls.endedAt),
+      sql`${calls.liveModel} is distinct from ${input.model}`,
+    ));
+  });
+}
+
 /**
  * Grows a phone call's minute reservation by up to one slice while it runs.
  * Returns the seconds granted, 0 when the plan has nothing left, the call
