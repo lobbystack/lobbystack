@@ -137,6 +137,8 @@ export function normalizeEmbedding(values: number[]): number[] {
 
 export function createEmbeddingFingerprint(input: { baseURL: string; model: string; providerName: string; revision?: string }): string {
   return createHash("sha256").update(JSON.stringify({
+    // The previous re-embedding pipeline could pair vectors with the wrong text.
+    pipelineVersion: 2,
     baseURL: input.baseURL.replace(/\/$/, ""),
     model: input.model,
     providerName: input.providerName,
