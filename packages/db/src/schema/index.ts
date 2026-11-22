@@ -1029,6 +1029,7 @@ export const calls = pgTable(
     // The carrier that carried a phone call; null for browser calls (migration 0170).
     carrier: varchar("carrier", { length: 32 }),
     gatewaySessionId: varchar("gateway_session_id", { length: 255 }),
+    liveModel: varchar("live_model", { length: 128 }),
     transport: varchar("transport", { length: 32 }).notNull(),
     originUrl: text("origin_url"),
     userAgent: text("user_agent"),
