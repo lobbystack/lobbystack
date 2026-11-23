@@ -129,6 +129,10 @@ terraform apply -var-file=environments/dev.tfvars
 
 The VM takes a few minutes to install Docker and build the server after Terraform finishes. To watch it, run the `ssh_command` output, then `cloud-init status --wait` and `docker compose -f /opt/lobbystack-sip/docker-compose.yml logs asterisk`.
 
+The VM accepts only the key whose public half is `ssh_public_key`. If SSH answers `Permission denied (publickey)`, your client isn't offering that key: connect with `ssh -i <private key file> azureuser@<public_ip>`, or add the key to a `Host` entry in `~/.ssh/config`.
+
+Replacing the VM gives it new host keys while the static address stays, so SSH then stops with `REMOTE HOST IDENTIFICATION HAS CHANGED`. After a replacement you made, run `ssh-keygen -R <public_ip>` and connect again. Treat the same warning as real when you didn't replace anything.
+
 ## Connect it
 
 1. Put the `zadarma_sip_host` output in `.env` as `ZADARMA_SIP_HOST` on the worker.

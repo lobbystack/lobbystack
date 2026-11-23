@@ -61,6 +61,7 @@ priv_key_file=${KEY}
 ca_list_file=/etc/ssl/certs/ca-certificates.crt
 method=tlsv1_2
 verify_server=${TLS_VERIFY_SERVER:-yes}
+allow_wildcard_certs=${TLS_ALLOW_WILDCARD_CERTS:-yes}
 verify_client=no
 ${NAT_LINES}
 TLS

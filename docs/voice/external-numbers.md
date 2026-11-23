@@ -113,6 +113,14 @@ That never touches a number a carrier holds. Cancel the number with the carrier 
    - No line at all means the carrier didn't reach the server. Check `CARRIER_IPS`, the firewall and the address you set at the carrier.
 4. In the admin's logs, `live.incoming` shows `routedBy: x-lobbystack-called` and the call opens in the dashboard with the caller as a contact.
 
+If the caller hears ringing and nothing answers, the log shows `PJSIP/openai-… is ringing` and the call ends at the ring timeout. OpenAI answered the SIP request, but the admin never accepted the call, because OpenAI's `live.transport.incoming` webhook didn't reach it. Check these in order:
+
+   - The webhook URL in the OpenAI project is `https://your_app_domain/api/webhooks/openai/live`, and its secret is `OPENAI_WEBHOOK_SECRET` on the admin.
+   - The admin and the worker are running, and the address in `NEXT_PUBLIC_APP_URL` answers from the internet. OpenAI can't reach a laptop, so a test from one needs a tunnel, such as `cloudflared tunnel --url http://localhost:23000`. A quick tunnel gets a new address each time it starts, so update the OpenAI webhook URL and `NEXT_PUBLIC_APP_URL` when you restart it.
+   - The number is attached to a business, as in "Attach the number to a business".
+
+If the log shows `The server identity does not match to any identities specified in the certificate` and `CONGESTION`, Asterisk refused OpenAI's certificate. It is a wildcard (`*.api.openai.com`), and Asterisk rejects wildcards unless `allow_wildcard_certs` is on. The entrypoint turns it on, so this only appears on a server that was built before that change. Rebuild it, or run `docker compose up -d --build` after you update `entrypoint.sh`. Don't set `TLS_VERIFY_SERVER=no` to get past it, because that lets anyone between the server and OpenAI listen to the calls.
+
 Call it from a phone a few times before you give it to a customer, and run `pnpm voice:call` against it. [testing.md](./testing.md) describes the script.
 
 ## What an external number can't do
