@@ -2,11 +2,13 @@ import { createHash, randomUUID } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it, vi } from "vitest";
 
+import type { JobEnvelope } from "@lobbystack/contracts";
 import { businesses, createDatabaseClient, knowledgeChunks, knowledgeDocuments, type Database } from "@lobbystack/db";
-import { hashContent } from "@lobbystack/domain";
+import { embeddingInputsForChunk, hashContent } from "@lobbystack/domain";
 import { createEmbeddingProvider, EMBEDDING_DIMENSIONS } from "@lobbystack/providers/ai/embeddingProvider";
 
-import { embedKnowledgeChunks, enqueueStaleKnowledgeEmbeddings } from "./knowledgeEmbeddings";
+import { handleJob } from "./handlers";
+import { embedKnowledgeChunks, enqueueStaleKnowledgeEmbeddings, type KnowledgeEmbeddingProvider } from "./knowledgeEmbeddings";
 
 const testUrl = process.env.LOBBYSTACK_RELIABILITY_TEST_DATABASE_URL;
 if (testUrl) {
@@ -24,7 +26,7 @@ describe.skipIf(!client)("knowledge embedding reuse against PostgreSQL", () => {
   it("queues another repair for a business that writes stale vectors after a sweep", async () => {
     const businessId = randomUUID();
     const fingerprint = "current";
-    const add = vi.fn(async (_name: string, job: { businessId: string }, _options: { jobId: string; deduplication: { id: string } }) => job);
+    const add = vi.fn(async (_name: string, _job: { businessId: string }, options: { jobId: string; deduplication: { id: string } }) => ({ id: options.jobId }));
     const queue = { name: "bulk", add } as unknown as Parameters<typeof enqueueStaleKnowledgeEmbeddings>[1];
     const repairs = () => add.mock.calls.filter(([, job]) => job.businessId === businessId);
     const rollback = new Error("rollback test fixture");
@@ -93,4 +95,75 @@ describe.skipIf(!client)("knowledge embedding reuse against PostgreSQL", () => {
       throw rollback;
     })).rejects.toBe(rollback);
   });
+
+  it("splits an oversized chunk once when two fingerprints embed the same source row", async () => {
+    const businessId = randomUUID();
+    const worker = createDatabaseClient("lobbystack_worker", {
+      DATABASE_URL: testUrl!,
+      LOBBYSTACK_WORKER_PASSWORD: process.env.LOBBYSTACK_WORKER_PASSWORD ?? "worker",
+    });
+    const legacyText = "hour ".repeat(9000).trim();
+    const parts = embeddingInputsForChunk(legacyText);
+    expect(parts).toHaveLength(2);
+    const tail = "Services";
+    let markCurrentRead!: () => void;
+    let releaseCurrent!: () => void;
+    const currentRead = new Promise<void>((resolve) => { markCurrentRead = resolve; });
+    const currentWrite = new Promise<void>((resolve) => { releaseCurrent = resolve; });
+    const embedPrevious = vi.fn<KnowledgeEmbeddingProvider["embed"]>(async (texts) => {
+      await currentRead;
+      return texts.map(() => vector(0.25));
+    });
+    const embedCurrent = vi.fn<KnowledgeEmbeddingProvider["embed"]>(async (texts) => {
+      markCurrentRead();
+      await currentWrite;
+      return texts.map(() => vector(0.5));
+    });
+    const repair = (embeddingFingerprint: string, embed: KnowledgeEmbeddingProvider["embed"]) => {
+      const jobId = randomUUID();
+      const job: JobEnvelope = {
+        jobId, type: "knowledge.reembedBusiness", queue: "bulk", businessId,
+        payload: { fingerprint: embeddingFingerprint }, trace: {}, idempotencyKey: jobId, scheduled: false,
+      };
+      return handleJob(job, { domain: { db: worker.db }, embeddings: { embeddingFingerprint, embed } });
+    };
+    const repairs: Array<ReturnType<typeof repair>> = [];
+    try {
+      await client!.db.transaction(async (tx) => {
+        await tx.insert(businesses).values({ id: businessId, slug: businessId, name: "Concurrent repair", timezone: "UTC", businessType: "test", telemetryEnabled: false });
+        const [document] = await tx.insert(knowledgeDocuments).values({ businessId, sourceType: "text", title: "Legacy chunks", status: "indexed" }).returning({ id: knowledgeDocuments.id });
+        await tx.insert(knowledgeChunks).values([legacyText, tail].map((content, sequence) => ({
+          businessId, documentId: document!.id, content, sequence, contentHash: hashContent(content),
+          embedding: vector(0.125), embeddingFingerprint: "legacy", embeddingStatus: "completed",
+        })));
+      });
+      const previous = repair("previous", embedPrevious);
+      const current = repair("current", embedCurrent);
+      repairs.push(previous, current);
+      // Both jobs are past the initial scan before the first writeback. The
+      // current repair writes second, when its oversized source is stale.
+      await Promise.race(repairs);
+      expect(embedPrevious.mock.calls[0]?.[0]).toEqual([tail, ...parts]);
+      expect(embedCurrent.mock.calls[0]?.[0]).toEqual([tail, ...parts]);
+      releaseCurrent();
+      await current;
+
+      const chunks = await client!.db.select({
+        content: knowledgeChunks.content,
+        sequence: knowledgeChunks.sequence,
+        embedding: knowledgeChunks.embedding,
+        embeddingFingerprint: knowledgeChunks.embeddingFingerprint,
+        embeddingStatus: knowledgeChunks.embeddingStatus,
+      }).from(knowledgeChunks).where(eq(knowledgeChunks.businessId, businessId)).orderBy(knowledgeChunks.sequence);
+      expect(chunks).toEqual([...parts, tail].map((content, sequence) => ({
+        content, sequence, embedding: vector(0.5), embeddingFingerprint: "current", embeddingStatus: "completed",
+      })));
+    } finally {
+      markCurrentRead();
+      releaseCurrent();
+      await Promise.allSettled(repairs);
+      await worker.pool.end();
+      await client!.db.delete(businesses).where(eq(businesses.id, businessId));
+    }
+  }, 15_000);
 });

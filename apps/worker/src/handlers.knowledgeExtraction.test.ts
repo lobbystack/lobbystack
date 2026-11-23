@@ -28,13 +28,19 @@ function transaction(scope: { businessId: string; actorType: string }) {
         from: () => query,
         innerJoin: () => query,
         where: () => query,
+        orderBy: () => query,
+        for: async () => [],
         limit: () => "objectKey" in fields
           ? Promise.resolve([{ objectKey: "business/knowledge/scan.pdf", contentType: "application/pdf" }])
           : mocks.scan(),
       };
       return query;
     },
-    update: () => ({ set: (values: unknown) => ({ where: (filter: SQL) => mocks.update(values, dialect.sqlToQuery(filter).params) }) }),
+    update: () => ({ set: (values: unknown) => ({ where: (filter: SQL) => {
+      const params = dialect.sqlToQuery(filter).params;
+      const result = mocks.update(values, params);
+      return Object.assign(result, { returning: async () => { await result; return [{ id: params[0] }]; } });
+    } }) }),
     insert: () => ({ values: mocks.insert }),
   };
 }
@@ -195,8 +201,8 @@ describe("knowledge.reembedBusiness", () => {
     expect(embeddings.embed.mock.calls.map(([values]) => values)).toEqual([[first, second]]);
     const writes = mocks.update.mock.calls.filter(([values]) => "embedding" in (values as object));
     expect(writes).toEqual([
-      [expect.objectContaining({ embedding: new Array<number>(1536).fill(7), embeddingFingerprint: "revision-2" }), ["last", businessId]],
-      [expect.objectContaining({ content: first, embedding: new Array<number>(1536).fill(1), embeddingFingerprint: "revision-2" }), ["first", businessId]],
+      [expect.objectContaining({ embedding: new Array<number>(1536).fill(7), embeddingFingerprint: "revision-2" }), ["last", businessId, 1, "Services"]],
+      [expect.objectContaining({ content: first, embedding: new Array<number>(1536).fill(1), embeddingFingerprint: "revision-2" }), ["first", businessId, 0, legacyText]],
     ]);
     expect(mocks.insert).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ content: second, documentId, sequence: 1, embedding: new Array<number>(1536).fill(2) }));
     expect(recordAiGenerationEvent).toHaveBeenCalledExactlyOnceWith(domain, expect.objectContaining({ operation: "knowledge.embed", inputTokens: 2, businessId }));

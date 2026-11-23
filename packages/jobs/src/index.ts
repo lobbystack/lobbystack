@@ -84,8 +84,8 @@ export async function enqueueJob(
     ...(input.deduplicationId !== undefined ? { deduplication: { id: input.deduplicationId } } : {}),
     ...(input.type === "billing.syncUsage" || input.type === "notification.dispatch" || input.type === "webhook.deliver" ? { attempts: 12, backoff: { type: "exponential", delay: 5_000 } } : {}),
   };
-  await queue.add(input.type, envelope, options);
-  return jobId;
+  const job = await queue.add(input.type, envelope, options);
+  return job.id ?? jobId;
 }
 
 export function createWorkerOptions(

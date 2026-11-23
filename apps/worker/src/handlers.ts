@@ -6,7 +6,7 @@ import { UnrecoverableError } from "bullmq";
 import { hasSummarizableTranscript, type BusinessHoursExtractor, type BusinessSummarizer, type CallSummarizer } from "@lobbystack/agent-core";
 import { realtimeEventSchema, type JobEnvelope } from "@lobbystack/contracts";
 import { HOST_EMAIL_BRAND, billingMeterEventNames, detectSiteLanguage, emailSender, getPolarMeteredUsagePayload, intlLocale, isUuid, normalizeRuntimeLocale, parseEmailBrandReference, extraNumbersProductId, partnerFeatures, partnerTierProductId, type BillingUsageKind, type EmailBrandReference, type ProductUpdateEntry } from "@lobbystack/shared";
-import { appointments, calls, contacts, enqueueOutbox, knowledgeChunks, knowledgeDocuments, messages, notifications, phoneNumbers, storageObjects, websiteIngestionJobs, withBusinessTransaction, type Database } from "@lobbystack/db";
+import { appointments, calls, contacts, enqueueOutbox, knowledgeChunks, knowledgeDocuments, messages, notifications, phoneNumbers, storageObjects, websiteIngestionJobs, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import { enqueueKnowledgeDerivedRefresh, finishBusinessSummaryRegenerate, forgetStaleRetiredCalendarTokens, loadBusinessHoursInput, loadBusinessSummaryInput, markBusinessHoursChecked, resetGeneratedBusinessSummary, saveGeneratedBusinessHours, saveGeneratedBusinessSummary, type SummaryRegenerateOutcome } from "@lobbystack/domain";
 import { billingCheckoutLeaseEndsAt, checkKnowledgeStorageLimit, claimBillingCheckoutRequest, countPublishableOutboxMessages, deferBillingCheckoutRequest, deleteCallRecordingForRetention, deleteExpiredObjectsForBusiness, deleteStoredObjects, deleteSentProductEventsBefore, expireProspectDemos, finalizeConversationSession, loadCallSummaryInput, generateAffiliatePayoutRun, indexCrawledWebsitePage, indexDocumentText, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markKnowledgeDocumentFailed, markProductEventsSent, reconcileBillingProviderEvent, recordAiGenerationEvent, recordCallProviderPricing, loadLiveCallForPricing, recordProductEvent, recordSmsProviderPricing, refreshBusinessSnapshot, runPrivacyRetentionSweep, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, chunkText, embeddingInputsForChunk, hashContent, upsertWebsiteDocument, planReminderOf, queuePlanReminderEmail, queueWelcomeEmail, type GeneratedCallSummary } from "@lobbystack/domain";
 import { PRODUCT_UPDATE_ENTRIES, postNumberReleasedInTransaction, postProductUpdates } from "@lobbystack/domain";
@@ -553,6 +553,15 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         );
         if (rows.length === 0) break;
         const rowIds = rows.map((row) => row.id);
+        const documentIds = [...new Set(rows.map((row) => row.documentId))];
+        const writeBatch = <T>(write: (tx: DatabaseTransaction) => Promise<T>) =>
+          withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) => {
+            // Serialize sequence shifts and document replacement before locking any chunks.
+            await tx.select({ id: knowledgeDocuments.id }).from(knowledgeDocuments)
+              .where(and(eq(knowledgeDocuments.businessId, businessId), inArray(knowledgeDocuments.id, documentIds)))
+              .orderBy(knowledgeDocuments.id).for("no key update");
+            return await write(tx);
+          });
         // Process higher sequences first so inserting split parts can't shift any remaining row.
         rows.sort((a, b) => b.sequence - a.sequence);
         // A chunk stored by an older pipeline can exceed the provider's input
@@ -561,47 +570,53 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         const inputs = splitChunks.flatMap(({ contents }) => contents);
         let embeddings: number[][];
         try {
-          await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) => {
+          await writeBatch(async (tx) => {
             await tx.update(knowledgeChunks).set({ embeddingStatus: "pending", embeddingError: null, updatedAt: new Date() }).where(and(eq(knowledgeChunks.businessId, businessId), inArray(knowledgeChunks.id, rowIds)));
           });
           embeddings = await embedKnowledgeChunks(dependencies.domain, embeddingProvider, businessId, inputs);
         } catch (error) {
-          await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) => {
+          await writeBatch(async (tx) => {
             await tx.update(knowledgeChunks).set({ embeddingStatus: "failed", embeddingError: error instanceof Error ? error.message.slice(0, 1000) : "Embedding failed.", updatedAt: new Date() }).where(and(eq(knowledgeChunks.businessId, businessId), inArray(knowledgeChunks.id, rowIds)));
           });
           throw error;
         }
-        await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) => {
+        reembedded += await writeBatch(async (tx) => {
+          let written = 0;
           let embeddingIndex = 0;
           for (const { row, contents } of splitChunks) {
             const [first, ...rest] = contents;
-            const embedding = embeddings[embeddingIndex++];
+            const [embedding, ...partEmbeddings] = embeddings.slice(embeddingIndex, embeddingIndex + contents.length);
+            embeddingIndex += contents.length;
             if (first === undefined || !embedding) throw new Error("Embedding provider returned an incompatible re-embedding vector.");
-            if (rest.length > 0) {
-              // Make room beside the original chunk, not after the document.
-              // The temporary offset keeps the unique (document, sequence)
-              // index satisfied while later chunks move up.
-              await tx.update(knowledgeChunks).set({ sequence: sql`${knowledgeChunks.sequence} + 1000000` }).where(and(eq(knowledgeChunks.businessId, businessId), eq(knowledgeChunks.documentId, row.documentId), gt(knowledgeChunks.sequence, row.sequence)));
-              await tx.update(knowledgeChunks).set({ sequence: sql`${knowledgeChunks.sequence} - 1000000 + ${rest.length}` }).where(and(eq(knowledgeChunks.businessId, businessId), eq(knowledgeChunks.documentId, row.documentId), gte(knowledgeChunks.sequence, row.sequence + 1000000)));
-            }
-            await tx.update(knowledgeChunks).set({
+            // The conditional update locks and rechecks the source before any sequence changes.
+            const [updated] = await tx.update(knowledgeChunks).set({
               ...(rest.length > 0 ? { content: first, contentHash: hashContent(first) } : {}),
               embedding,
               embeddingFingerprint,
               embeddingStatus: "completed",
               embeddingError: null,
               updatedAt: new Date(),
-            }).where(and(eq(knowledgeChunks.id, row.id), eq(knowledgeChunks.businessId, businessId)));
+            }).where(and(
+              eq(knowledgeChunks.id, row.id), eq(knowledgeChunks.businessId, businessId),
+              eq(knowledgeChunks.sequence, row.sequence), eq(knowledgeChunks.content, row.content),
+            )).returning({ id: knowledgeChunks.id });
+            if (!updated) continue;
+            if (rest.length > 0) {
+              // The temporary offset keeps the unique (document, sequence) index satisfied.
+              await tx.update(knowledgeChunks).set({ sequence: sql`${knowledgeChunks.sequence} + 1000000` }).where(and(eq(knowledgeChunks.businessId, businessId), eq(knowledgeChunks.documentId, row.documentId), gt(knowledgeChunks.sequence, row.sequence)));
+              await tx.update(knowledgeChunks).set({ sequence: sql`${knowledgeChunks.sequence} - 1000000 + ${rest.length}` }).where(and(eq(knowledgeChunks.businessId, businessId), eq(knowledgeChunks.documentId, row.documentId), gte(knowledgeChunks.sequence, row.sequence + 1000000)));
+            }
             let sequence = row.sequence + 1;
-            for (const content of rest) {
-              const partEmbedding = embeddings[embeddingIndex++];
+            for (const [index, content] of rest.entries()) {
+              const partEmbedding = partEmbeddings[index];
               if (!partEmbedding) throw new Error("Embedding provider returned an incompatible re-embedding vector.");
               await tx.insert(knowledgeChunks).values({ businessId, documentId: row.documentId, sequence, content, contentHash: hashContent(content), embedding: partEmbedding, embeddingFingerprint, embeddingStatus: "completed", embeddingError: null });
               sequence += 1;
             }
+            written += 1;
           }
+          return written;
         });
-        reembedded += rows.length;
       }
       return { status: reembedded > 0 ? "completed" : "skipped", entityId: `${businessId}:${reembedded}` };
     }

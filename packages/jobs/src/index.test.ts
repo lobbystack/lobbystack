@@ -7,7 +7,7 @@ import { enqueueJob, createRedisConnection, createWorkerOptions, isKnownJobType,
 const UUID_V5_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
 function createQueueStub(name = "default") {
-  const add = vi.fn(async () => ({ id: "job" }));
+  const add = vi.fn(async (_name: string, _data: unknown, options: { jobId: string }) => ({ id: options.jobId }));
   return { queue: { name, add } as never, add };
 }
 
@@ -90,6 +90,17 @@ describe("enqueueJob job ids", () => {
     });
     expect(options.jobId).toBe(jobId);
     expect(options).toEqual({ jobId, delay: 60_000 });
+  });
+
+  it("returns the retained job's ID when BullMQ deduplicates the enqueue", async () => {
+    const { queue, add } = createQueueStub("bulk");
+    const input = { type: "knowledge.reembedBusiness", payload: {}, deduplicationId: "repair" } as const;
+    const retainedId = await enqueueJob(queue, { ...input, idempotencyKey: "first" });
+    add.mockResolvedValueOnce({ id: retainedId });
+
+    expect(await enqueueJob(queue, { ...input, idempotencyKey: "second" })).toBe(retainedId);
+    expect(add.mock.calls[1]?.[2]).toMatchObject({ deduplication: { id: "repair" } });
+    expect(add.mock.calls[1]?.[2].jobId).not.toBe(retainedId);
   });
 
   it("defaults the business scope to null and omits delay for immediate jobs", async () => {
