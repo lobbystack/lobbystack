@@ -8,4 +8,4 @@ packages:
 write_files: ${write_files}
 runcmd:
   - systemctl enable --now docker
-  - cd /opt/lobbystack-sip && docker compose up -d --build
+  - cd /opt/lobbystack && docker compose up -d --build
