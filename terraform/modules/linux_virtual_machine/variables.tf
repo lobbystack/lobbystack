@@ -45,28 +45,6 @@ variable "custom_data" {
   sensitive   = true
 }
 
-variable "os_disk_storage_account_type" {
-  description = "The OS disk's storage type."
-  type        = string
-  default     = "StandardSSD_LRS"
-}
-
-variable "image" {
-  description = "The marketplace image the VM starts from."
-  type = object({
-    publisher = string
-    offer     = string
-    sku       = string
-    version   = string
-  })
-  default = {
-    publisher = "Canonical"
-    offer     = "ubuntu-24_04-lts"
-    sku       = "server"
-    version   = "latest"
-  }
-}
-
 variable "tags" {
   description = "Tags for the VM."
   type        = map(string)

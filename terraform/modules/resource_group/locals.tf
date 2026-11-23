@@ -1,1 +1,7 @@
-# This module has nothing to compute: its resource takes the variables as they are.
+locals {
+  name = join("-", compact([
+    var.app_name,
+    "resource-group",
+    var.environment,
+  ]))
+}

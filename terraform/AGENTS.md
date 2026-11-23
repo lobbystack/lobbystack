@@ -17,7 +17,7 @@ templates/         *.tftpl files read by templatefile().
 scripts/python/    deploy.py, start.py and stop.py. Run Terraform through these.
 ```
 
-Every file stays in its slot. A new value shared by modules goes in `locals.tf`, not in `main.tf`.
+Every file stays in its slot. A new value shared by modules goes in the root `locals.tf`, not in `main.tf`.
 
 ## Modules
 
@@ -25,6 +25,7 @@ Every file stays in its slot. A new value shared by modules goes in `locals.tf`,
 - A module creates only that resource type. Nothing else goes in it, not a helper resource and not a data source for another type.
 - The resource is always named `this`, so its address is `module.<name>.azurerm_<type>.this`.
 - Every module has all four files, even when `locals.tf` holds only a comment.
+- `locals.tf` holds what the module decides itself: the resource's name and the settings that never differ, such as an address range, a SKU or an image. `variables.tf` holds only what the caller supplies: the common values (`app_name`, `environment`, `location`, `resource_group_name`, `tags`) and ids or names from other modules. Don't add a variable for a value nobody overrides.
 - Variables carry a `description` and a `type`. Give a default only when one value is right almost everywhere. Add `validation` blocks for rules Azure would reject late, such as a priority range.
 - Outputs expose what other modules need, usually `id` and `name`, and add a `description`.
 - Wire modules in `main.tf` through outputs (`module.resource_group.name`), never by retyping a name.
@@ -32,10 +33,10 @@ Every file stays in its slot. A new value shared by modules goes in `locals.tf`,
 
 ## Naming
 
-Every resource name is built inside its module from `app_name`, the resource type and the environment:
+Every resource name is built in its module's `locals.tf` from `app_name`, the resource type and the environment, and `main.tf` reads `local.name`:
 
 ```hcl
-name = join("", compact([
+name = join("-", compact([
   var.app_name,
   "{resource_type}",
   var.environment,
@@ -45,14 +46,14 @@ name = join("", compact([
 `{resource_type}` is the module's name with hyphens, for example:
 
 ```hcl
-name = join("", compact([
+name = join("-", compact([
   var.app_name,
   "virtual-network",
   var.environment,
 ]))
 ```
 
-The module declares `app_name` and `environment` as variables and `main.tf` passes them in. Don't pass a finished `name` into a module that follows this pattern.
+The module declares `app_name` and `environment` as variables and the root `main.tf` passes them in. Don't pass a finished `name` into a module that follows this pattern.
 
 Exception: `network_security_rule` names each rule by its key in the `rules` map.
 

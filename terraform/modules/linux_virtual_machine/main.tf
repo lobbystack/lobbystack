@@ -1,9 +1,5 @@
 resource "azurerm_linux_virtual_machine" "this" {
-  name = join("-", compact([
-    var.app_name,
-    "linux-virtual-machine",
-    var.environment,
-  ]))
+  name                            = local.name
   location                        = var.location
   resource_group_name             = var.resource_group_name
   size                            = var.size

@@ -33,7 +33,6 @@ module "virtual_network" {
   environment         = var.environment
   location            = module.resource_group.location
   resource_group_name = module.resource_group.name
-  address_space       = ["10.20.0.0/16"]
   tags                = local.tags
 }
 
@@ -45,7 +44,6 @@ module "subnet" {
   environment          = var.environment
   resource_group_name  = module.resource_group.name
   virtual_network_name = module.virtual_network.name
-  address_prefixes     = ["10.20.1.0/24"]
 }
 
 # Static, because the carrier routes each number to this address, and a dynamic one changes when the VM restarts.
@@ -57,8 +55,6 @@ module "public_ip" {
   environment         = var.environment
   location            = module.resource_group.location
   resource_group_name = module.resource_group.name
-  allocation_method   = "Static"
-  sku                 = "Standard"
   domain_name_label   = var.dns_label
   tags                = local.tags
 }

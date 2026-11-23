@@ -17,8 +17,3 @@ variable "virtual_network_name" {
   description = "The virtual network the subnet belongs to."
   type        = string
 }
-
-variable "address_prefixes" {
-  description = "The subnet's address ranges, inside the network's, such as [\"10.20.1.0/24\"]."
-  type        = list(string)
-}

@@ -29,17 +29,6 @@ variable "public_ip_address_id" {
   default     = null
 }
 
-variable "private_ip_address_allocation" {
-  description = "Dynamic or Static."
-  type        = string
-  default     = "Dynamic"
-
-  validation {
-    condition     = contains(["Dynamic", "Static"], var.private_ip_address_allocation)
-    error_message = "private_ip_address_allocation is Dynamic or Static."
-  }
-}
-
 variable "tags" {
   description = "Tags for the interface."
   type        = map(string)

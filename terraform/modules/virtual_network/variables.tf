@@ -18,11 +18,6 @@ variable "resource_group_name" {
   type        = string
 }
 
-variable "address_space" {
-  description = "The address ranges of the network, such as [\"10.20.0.0/16\"]."
-  type        = list(string)
-}
-
 variable "tags" {
   description = "Tags for the virtual network."
   type        = map(string)

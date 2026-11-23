@@ -1,1 +1,9 @@
-# This module has nothing to compute: its resource takes the variables as they are.
+locals {
+  name = join("-", compact([
+    var.app_name,
+    "subnet",
+    var.environment,
+  ]))
+
+  address_prefixes = ["10.20.1.0/24"]
+}
