@@ -17,9 +17,9 @@ variable "name_prefix" {
 }
 
 variable "vm_size" {
-  description = "The VM size. The server only passes G.711 audio through, so two vCPUs and 4 GB carry a few calls and build the Docker image. A size needs two things: the region offers it, and your subscription has vCPU quota for its family there. A new subscription often has none for the cheap burstable B-series, so the default is a general purpose size. README.md shows how to check."
+  description = "The VM size. The server only passes G.711 audio through, so two vCPUs and 4 GB carry a few calls and build the Docker image. The default is the cheapest burstable size that fits. A size needs two things: the region offers it, and your subscription has vCPU quota for its family there. A new subscription often has none for the B-series, and Standard_D2als_v6 is a general purpose size that works without a request. README.md shows how to check."
   type        = string
-  default     = "Standard_D2als_v6"
+  default     = "Standard_B2ls_v2"
 }
 
 variable "dns_label" {
