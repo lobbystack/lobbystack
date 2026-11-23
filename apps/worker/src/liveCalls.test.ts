@@ -656,10 +656,10 @@ describe("recovering a call whose worker died", () => {
 
     // OpenAI's usage covers the whole session; our own measurement runs from the call's original start.
     mocks.finishLiveCall.mockClear();
-    (controller.options.onClose as (summary: unknown) => void)({ sessionId: "live_orphan", durationMs: 30_000, delegations: [], usageConfirmed: true, billedSeconds: 150, closeReason: "remote_hangup", end: "caller_hung_up" });
+    (controller.options.onClose as (summary: unknown) => void)({ sessionId: "live_orphan", sessionModel: "gpt-live-1.1", durationMs: 30_000, delegations: [], usageConfirmed: true, billedSeconds: 150, closeReason: "remote_hangup", end: "caller_hung_up" });
     await vi.waitFor(() => expect(mocks.finishLiveCall).toHaveBeenCalledOnce());
     const finished = mocks.finishLiveCall.mock.calls[0]![1] as { seconds: number; measuredSeconds: number; end: string; recording: unknown };
-    expect(finished).toMatchObject({ callId: "call_live_orphan", seconds: 150, end: "caller_hung_up", recording: { sessionId: "live_orphan" } });
+    expect(finished).toMatchObject({ callId: "call_live_orphan", seconds: 150, confirmedModel: "gpt-live-1.1", end: "caller_hung_up", recording: { sessionId: "live_orphan" } });
     expect(finished.measuredSeconds).toBeGreaterThanOrEqual(120);
     info.mockRestore();
   });

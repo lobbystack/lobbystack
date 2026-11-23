@@ -229,7 +229,7 @@ export async function liveCallHasRecording(context: DomainContext, input: { busi
  * `recording`, the copy of OpenAI's stored recording, so a repeated finish
  * writes none of them twice and a retry after a failure loses none of them.
  */
-export async function finishLiveCall(context: DomainContext, input: { businessId: string; callId: string; seconds: number; measuredSeconds?: number; end: LiveCallEnd; endedAt?: Date; channel?: "voice" | "web_voice"; recording?: { sessionId: string } }) {
+export async function finishLiveCall(context: DomainContext, input: { businessId: string; callId: string; seconds: number; measuredSeconds?: number; end: LiveCallEnd; endedAt?: Date; channel?: "voice" | "web_voice"; recording?: { sessionId: string }; confirmedModel?: string }) {
   const seconds = Math.max(0, input.seconds);
   const channel = input.channel ?? "voice";
   const status = input.end === "transferred" ? "transferred" : input.end === "blocked_contact" ? "blocked" : "completed";
@@ -247,6 +247,7 @@ export async function finishLiveCall(context: DomainContext, input: { businessId
     providerDurationSeconds: Math.ceil(seconds),
     mediaDurationSeconds: Math.max(0, input.measuredSeconds ?? seconds),
     outbox,
+    ...(channel === "voice" && input.confirmedModel && input.confirmedModel.length <= 128 ? { fallbackLiveModel: input.confirmedModel } : {}),
     ...(seconds > 0 ? {
       buildCostEvent: (liveModel: string | null) => {
         const model = liveModel ?? LEGACY_LIVE_MODEL;

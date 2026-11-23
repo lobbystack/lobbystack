@@ -162,11 +162,13 @@ export function createEmbeddingProvider(environment: EmbeddingAiEnvironment = pr
   const apiKey = environment.AI_EMBEDDING_API_KEY?.trim() || environment.OPENAI_API_KEY?.trim();
   const isOpenAiEndpoint = trimTrailingSlashes(baseURL) === DEFAULT_EMBEDDING_AI_BASE_URL;
   if (!apiKey && isOpenAiEndpoint) return undefined;
-  const inputRate = environment.AI_EMBEDDING_INPUT_COST_PER_MILLION_TOKENS?.trim();
+  // An unbound rate cannot follow a model change.
+  const matchesPricingModel = environment.AI_EMBEDDING_PRICING_MODEL?.trim() === model;
+  const inputRate = matchesPricingModel ? environment.AI_EMBEDDING_INPUT_COST_PER_MILLION_TOKENS?.trim() : undefined;
   const inputCostPerMillionTokens = parseOptionalNumber(inputRate);
-  const pricingVersion = environment.AI_EMBEDDING_PRICING_VERSION?.trim();
-  const pricingSource = environment.AI_EMBEDDING_PRICING_SOURCE?.trim();
-  const pricingEffectiveDate = environment.AI_EMBEDDING_PRICING_EFFECTIVE_DATE?.trim();
+  const pricingVersion = matchesPricingModel ? environment.AI_EMBEDDING_PRICING_VERSION?.trim() : undefined;
+  const pricingSource = matchesPricingModel ? environment.AI_EMBEDDING_PRICING_SOURCE?.trim() : undefined;
+  const pricingEffectiveDate = matchesPricingModel ? environment.AI_EMBEDDING_PRICING_EFFECTIVE_DATE?.trim() : undefined;
   const useDefaultPricing = isOpenAiEndpoint && model === OPENAI_LARGE_EMBEDDING_MODEL && name === "openai"
     && !inputRate && !pricingVersion && !pricingSource && !pricingEffectiveDate;
   const timeoutMs = parsePositiveNumber(environment.AI_EMBEDDING_TIMEOUT_MS);

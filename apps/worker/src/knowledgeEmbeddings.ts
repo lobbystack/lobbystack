@@ -1,7 +1,9 @@
-import { and, eq, inArray, isNotNull } from "drizzle-orm";
+import { randomUUID } from "node:crypto";
+import { and, eq, inArray, sql } from "drizzle-orm";
 
-import { knowledgeChunks, withBusinessTransaction } from "@lobbystack/db";
+import { knowledgeChunks, listReembedBusinesses, withBusinessTransaction, type Database } from "@lobbystack/db";
 import { hashContent, recordAiGenerationEvent, type DomainContext, type DurableAiUsage } from "@lobbystack/domain";
+import { enqueueJob } from "@lobbystack/jobs";
 import { EMBEDDING_DIMENSIONS, type OpenAiCompatibleEmbeddingProvider } from "@lobbystack/providers/ai/embeddingProvider";
 import { getMeter } from "@lobbystack/telemetry/node";
 
@@ -11,6 +13,20 @@ const LOOKUP_BATCH_SIZE = 1_000;
 export type KnowledgeEmbeddingProvider = Pick<OpenAiCompatibleEmbeddingProvider, "embed"> & {
   readonly embeddingFingerprint?: string;
 };
+
+export async function enqueueStaleKnowledgeEmbeddings(db: Database, queue: Parameters<typeof enqueueJob>[0], fingerprint: string) {
+  for (const businessId of await listReembedBusinesses(db, fingerprint)) {
+    const deduplicationId = `knowledge-reembed:${businessId}:${fingerprint}`;
+    await enqueueJob(queue, {
+      type: "knowledge.reembedBusiness",
+      businessId,
+      payload: { fingerprint },
+      // Deduplicate unfinished jobs across replicas. A completed job must not block a later repair.
+      idempotencyKey: `${deduplicationId}:${randomUUID()}`,
+      deduplicationId,
+    });
+  }
+}
 
 function isValidVector(vector: number[] | null | undefined): vector is number[] {
   if (vector?.length !== EMBEDDING_DIMENSIONS) return false;
@@ -33,22 +49,23 @@ export async function embedKnowledgeChunks(
   const vectorsByText = new Map<string, number[]>();
   const { embeddingFingerprint } = provider;
   if (embeddingFingerprint) await withBusinessTransaction(domain.db, { businessId, actorType: "worker" }, async (tx) => {
-    const hashesByText = new Map(uniqueTexts.map((text) => [text, hashContent(text)]));
-    const hashes = [...new Set(hashesByText.values())];
-    for (let start = 0; start < hashes.length; start += LOOKUP_BATCH_SIZE) {
-      const rows = await tx.select({
+    for (let start = 0; start < uniqueTexts.length; start += LOOKUP_BATCH_SIZE) {
+      const texts = uniqueTexts.slice(start, start + LOOKUP_BATCH_SIZE);
+      const hashes = texts.map(hashContent);
+      const rows = await tx.selectDistinctOn([knowledgeChunks.contentHash, knowledgeChunks.content], {
         content: knowledgeChunks.content,
-        contentHash: knowledgeChunks.contentHash,
         embedding: knowledgeChunks.embedding,
       }).from(knowledgeChunks).where(and(
         eq(knowledgeChunks.businessId, businessId),
         eq(knowledgeChunks.embeddingFingerprint, embeddingFingerprint),
         eq(knowledgeChunks.embeddingStatus, "completed"),
-        isNotNull(knowledgeChunks.embedding),
-        inArray(knowledgeChunks.contentHash, hashes.slice(start, start + LOOKUP_BATCH_SIZE)),
+        inArray(knowledgeChunks.contentHash, hashes),
+        sql`(${knowledgeChunks.contentHash}, ${knowledgeChunks.content}) in (
+          select * from unnest(${sql.param(hashes)}::text[], ${sql.param(texts)}::text[])
+        )`,
+        sql`vector_dims(${knowledgeChunks.embedding}) = ${EMBEDDING_DIMENSIONS} and vector_norm(${knowledgeChunks.embedding}) > 0`,
       ));
-      for (const { content, contentHash, embedding } of rows) {
-        if (hashesByText.get(content) !== contentHash || vectorsByText.has(content)) continue;
+      for (const { content, embedding } of rows) {
         if (isValidVector(embedding)) vectorsByText.set(content, embedding);
       }
     }

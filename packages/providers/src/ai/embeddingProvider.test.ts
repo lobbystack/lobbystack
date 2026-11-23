@@ -45,11 +45,34 @@ describe("embedding requests", () => {
   it.each([
     { AI_EMBEDDING_MODEL: "text-embedding-3-small" },
     { AI_EMBEDDING_BASE_URL: "https://gateway.example.test/v1" },
-    { AI_EMBEDDING_INPUT_COST_PER_MILLION_TOKENS: "0.20" },
+    { AI_EMBEDDING_PRICING_MODEL: "text-embedding-3-large", AI_EMBEDDING_INPUT_COST_PER_MILLION_TOKENS: "0.20" },
   ])("leaves unversioned pricing unknown for %j", async (environment) => {
     const usage = vi.fn();
     await createEmbeddingProvider({ OPENAI_API_KEY: "test", ...environment })!.embed(["hours"], usage);
     expect(usage.mock.calls[0]?.[0].totalCostUsd).toBeUndefined();
+  });
+
+  it.each([
+    [undefined, undefined, "text-embedding-3-large", 0.13, "text-embedding-3-large-2026-11"],
+    ["text-embedding-3-large", "text-embedding-3-small", "text-embedding-3-large", 0.13, "text-embedding-3-large-2026-11"],
+    ["text-embedding-3-small", "text-embedding-3-small", "text-embedding-3-small", 0.02, "text-embedding-3-small-2026-10"],
+  ])("uses the rate for the effective model %s with pricing model %s", async (configuredModel, pricingModel, model, rate, pricingVersion) => {
+    const usage = vi.fn();
+    await createEmbeddingProvider({
+      OPENAI_API_KEY: "test",
+      AI_EMBEDDING_MODEL: configuredModel,
+      AI_EMBEDDING_PRICING_MODEL: pricingModel,
+      AI_EMBEDDING_INPUT_COST_PER_MILLION_TOKENS: "0.02",
+      AI_EMBEDDING_PRICING_VERSION: "text-embedding-3-small-2026-10",
+      AI_EMBEDDING_PRICING_SOURCE: "https://developers.openai.com/api/docs/models/text-embedding-3-small",
+      AI_EMBEDDING_PRICING_EFFECTIVE_DATE: "2026-10-01",
+    })!.embed(["hours"], usage);
+    expect(usage).toHaveBeenCalledWith(expect.objectContaining({
+      model,
+      totalCostUsd: rate / 1_000_000,
+      ratesUsdPerMillionTokens: { input: rate },
+      pricingVersion,
+    }));
   });
 
   it("records an explicitly configured rate with its own pricing metadata", async () => {
@@ -57,6 +80,8 @@ describe("embedding requests", () => {
     await createEmbeddingProvider({
       OPENAI_API_KEY: "test",
       AI_EMBEDDING_BASE_URL: "https://gateway.example.test/v1",
+      AI_EMBEDDING_MODEL: "custom-model",
+      AI_EMBEDDING_PRICING_MODEL: "custom-model",
       AI_EMBEDDING_INPUT_COST_PER_MILLION_TOKENS: "0.20",
       AI_EMBEDDING_PRICING_VERSION: "gateway-1",
       AI_EMBEDDING_PRICING_SOURCE: "https://gateway.example.test/prices",

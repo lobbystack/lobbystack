@@ -149,24 +149,28 @@ describe.skipIf(!admin)("a call forwarded from the owner's line", () => {
 
 describe.skipIf(!admin)("redelivery for a SIP call reserved before the upgrade", () => {
   it.each([
-    { alreadyAccepted: false, model: "gpt-live-1.1", pricingVersion: "gpt-live-1.1-2026-11" },
-    { alreadyAccepted: true, model: "gpt-live-1", pricingVersion: "gpt-live-1-2026-07" },
-  ])("records $model when OpenAI already accepted the call: $alreadyAccepted", async ({ alreadyAccepted, model, pricingVersion }) => {
+    { acceptError: undefined, initialModel: null, confirmedModel: undefined, model: "gpt-live-1.1", pricingVersion: "gpt-live-1.1-2026-11" },
+    { acceptError: "Session already accepted", initialModel: null, confirmedModel: undefined, model: "gpt-live-1", pricingVersion: "gpt-live-1-2026-07" },
+    { acceptError: "Accept response timed out", initialModel: null, confirmedModel: "gpt-live-1.1", model: "gpt-live-1.1", pricingVersion: "gpt-live-1.1-2026-11" },
+    { acceptError: "Session already accepted", initialModel: "gpt-live-1", confirmedModel: "gpt-live-1.1", model: "gpt-live-1", pricingVersion: "gpt-live-1-2026-07" },
+  ])("records $model after retry (accept error: $acceptError, stored: $initialModel)", async ({ acceptError, initialModel, confirmedModel, model, pricingVersion }) => {
     await admin!.db.update(partnerLifecycles).set({ state: "active", since: new Date() }).where(eq(partnerLifecycles.partnerId, partnerId));
     const domain = { db: getWorkerDatabase().db };
     const sessionId = `rtc_${randomUUID()}`;
     const { callId } = await startLivePhoneCall(domain, { businessId, sessionId, from: "+14165550134", to: line });
-    await admin!.db.update(calls).set({ liveModel: null }).where(eq(calls.id, callId));
-    if (alreadyAccepted) setup.accept.mockRejectedValueOnce(new Error("Session already accepted"));
+    await admin!.db.update(calls).set({ liveModel: initialModel }).where(eq(calls.id, callId));
+    if (acceptError) setup.accept.mockRejectedValueOnce(new Error(acceptError));
 
     await ring([], sessionId);
 
     expect(setup.accept).toHaveBeenCalledWith(sessionId, { session: { model: "gpt-live-1.1", type: "live" } });
     expect(setup.attach).toHaveBeenCalledWith(expect.objectContaining({ callId, sessionId, resume: true }));
     const [call] = await admin!.db.select({ model: calls.liveModel }).from(calls).where(eq(calls.id, callId));
-    expect(call?.model).toBe(alreadyAccepted ? null : model);
+    expect(call?.model).toBe(acceptError ? initialModel : model);
 
-    await finishLiveCall(domain, { businessId, callId, seconds: 90, end: "caller_finished" });
+    await finishLiveCall(domain, { businessId, callId, seconds: 90, end: "caller_finished", ...(confirmedModel ? { confirmedModel } : {}) });
+    const [finishedCall] = await admin!.db.select({ model: calls.liveModel }).from(calls).where(eq(calls.id, callId));
+    expect(finishedCall?.model).toBe(acceptError && !confirmedModel ? initialModel : model);
     const [event] = await admin!.db.select({ model: unitEconomicsEvents.model, pricingVersion: unitEconomicsEvents.pricingVersion, costUsd: unitEconomicsEvents.costUsd })
       .from(unitEconomicsEvents).where(eq(unitEconomicsEvents.eventKey, `voice_ai:live_session:${callId}`));
     expect(event).toEqual({ model, pricingVersion, costUsd: 0.075 });

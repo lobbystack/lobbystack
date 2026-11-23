@@ -20,11 +20,14 @@ const mocks = vi.hoisted(() => ({
 function transaction(scope: { businessId: string; actorType: string }) {
   const dialect = new PgDialect();
   return {
+    selectDistinctOn: (_keys: unknown, _fields: unknown) => ({
+      from: () => ({ where: (filter: SQL) => mocks.lookup(scope, dialect.sqlToQuery(filter).params) }),
+    }),
     select(fields: Record<string, unknown>) {
       const query = {
         from: () => query,
         innerJoin: () => query,
-        where: (filter: SQL) => "contentHash" in fields ? mocks.lookup(scope, dialect.sqlToQuery(filter).params) : query,
+        where: () => query,
         limit: () => "objectKey" in fields
           ? Promise.resolve([{ objectKey: "business/knowledge/scan.pdf", contentType: "application/pdf" }])
           : mocks.scan(),
@@ -112,8 +115,9 @@ describe("knowledge.extractDocument", () => {
     const originalText = texts.join("\n");
     let indexedRows: Array<{ content: string; contentHash: string; embedding: number[]; businessId: string; embeddingFingerprint: string | undefined }> = [];
     mocks.lookup.mockImplementation(async (_scope, params) => indexedRows.filter((row) => {
-      const [lookupBusinessId, embeddingFingerprint, status, ...hashes] = params as unknown[];
-      return row.businessId === lookupBusinessId && row.embeddingFingerprint === embeddingFingerprint && status === "completed" && hashes.includes(row.contentHash);
+      const [lookupBusinessId, embeddingFingerprint, status] = params as unknown[];
+      const [, texts] = (params as unknown[]).slice(-3) as [string[], string[], number];
+      return row.businessId === lookupBusinessId && row.embeddingFingerprint === embeddingFingerprint && status === "completed" && texts.includes(row.content);
     }));
     vi.mocked(indexDocumentText).mockImplementation(async (_domain, input) => {
       const chunks = chunkText(input.text);
@@ -130,7 +134,8 @@ describe("knowledge.extractDocument", () => {
     expect(await importText(originalText, businessId, "revision-1")).toEqual([["# Hours", "# Services", "# Contact"]]);
     expect(mocks.lookup).toHaveBeenCalledExactlyOnceWith(
       { businessId, actorType: "worker" },
-      [businessId, "revision-1", "completed", ...["# Hours", "# Services", "# Contact"].map(hashContent)],
+      [businessId, "revision-1", "completed", ...["# Hours", "# Services", "# Contact"].map(hashContent),
+        ["# Hours", "# Services", "# Contact"].map(hashContent), ["# Hours", "# Services", "# Contact"], 1536],
     );
     expect(indexedRows.map((row) => row.embedding[0])).toEqual([1, 2, 1, 3, 2]);
     expect(recordAiGenerationEvent).toHaveBeenCalledExactlyOnceWith(domain, expect.objectContaining({ operation: "knowledge.embed", inputTokens: 3, businessId }));

@@ -266,7 +266,9 @@ export async function completeCall(
     businessId: string; callId: string; status: string; endedAt: string; disposition?: string; providerDurationSeconds?: number; mediaDurationSeconds?: number; providerCostUsd?: number; expectedProviderCallId?: string;
     /** Follow-up jobs written with the completion, so only the write that finalizes the call queues them. */
     outbox?: NewOutboxMessage[];
-    /** Builds the cost row from the model stored when the call began. */
+    /** Provider-confirmed model for a Live call whose reservation has no model. */
+    fallbackLiveModel?: string;
+    /** Builds the cost row from the model stored on the call. */
     buildCostEvent?: (liveModel: string | null) => UnitEconomicsEventInput;
   },
 ): Promise<boolean> {
@@ -276,6 +278,7 @@ export async function completeCall(
       endedAt: new Date(input.endedAt),
       disposition: input.disposition,
       providerDurationSeconds: input.providerDurationSeconds,
+      ...(input.fallbackLiveModel ? { liveModel: sql`coalesce(${calls.liveModel}, ${input.fallbackLiveModel})` } : {}),
       revision: sql`${calls.revision} + 1`,
       updatedAt: new Date(),
     }).where(and(

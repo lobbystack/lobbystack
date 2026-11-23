@@ -541,6 +541,7 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       const embeddingProvider = dependencies.embeddings;
       const embeddingFingerprint = embeddingProvider?.embeddingFingerprint;
       if (!embeddingProvider || !embeddingFingerprint) return { status: "skipped", entityId: businessId };
+      if (typeof job.payload.fingerprint === "string" && job.payload.fingerprint !== embeddingFingerprint) return { status: "skipped", entityId: businessId };
       const batchSize = 64;
       let reembedded = 0;
       while (true) {
