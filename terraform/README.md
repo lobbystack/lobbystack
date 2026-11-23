@@ -9,6 +9,86 @@ This Terraform configuration creates a VM on Azure that runs the SIP server in `
 - A network security group. It allows SIP and audio from the carrier's addresses only, audio from OpenAI's addresses, and SSH from the addresses you list. Everything else inbound is denied.
 - An Ubuntu 24.04 VM with SSH key login only. On its first boot it installs Docker, writes the server's files from `docker/asterisk`, and starts it.
 
+## Layout
+
+```
+main.tf            wires the modules together
+locals.tf          the values they share: tags, the firewall rules, the first-boot files
+templates/         the files Terraform fills in (*.tftpl), such as the VM's cloud-init
+data.tf            data sources (none yet)
+variables.tf       every setting, with its description
+providers.tf       the azurerm provider
+outputs.tf         the address, the SSH command and the Zadarma values
+environments/      dev.tfvars, sandbox.tfvars, prod.tfvars: the settings that differ per environment
+scripts/python/    deploy.py (a menu that runs Terraform), start.py and stop.py (the VM), and resources/components/ with their code
+modules/<name>/    one module per Azure resource type, each with main.tf, locals.tf, variables.tf and outputs.tf
+```
+
+A module creates only the resource type it is named for, without the `azurerm_` part: `resource_group`, `virtual_network`, `subnet`, `public_ip`, `network_security_group`, `network_security_rule`, `network_interface`, `network_interface_security_group_association` and `linux_virtual_machine`. To add another resource type, add a module for it and call it from `main.tf`.
+
+## Environments
+
+`environments/<environment>.tfvars` holds what isn't secret: the environment, the Azure subscription, the application's name, the region, the VM size and the carrier's addresses. `terraform.tfvars` (gitignored) holds what is: your SSH key, the addresses that may reach SSH and the OpenAI project id. Terraform reads `terraform.tfvars` by itself, and you add the environment's file:
+
+```sh
+terraform plan -var-file=environments/dev.tfvars
+```
+
+Each environment keeps its own state in its own workspace, so applying one never plans to remove another's resources:
+
+```sh
+terraform workspace new sandbox      # the first time
+terraform workspace select sandbox
+terraform apply -var-file=environments/sandbox.tfvars
+```
+
+`dev` was created before workspaces, so its state stays in the `default` workspace, and Terraform accepts that for `dev` only. Selecting the wrong workspace shows a warning, so read the plan before you apply. Each environment also gets its own resource group, named `{app_name}-resource-group-{environment}`: `lobbystack-sip-resource-group-dev`, `lobbystack-sip-resource-group-sandbox` and `lobbystack-sip-resource-group-prod`. Destroying one environment can't touch another's resources. The resources inside are named from `app_name` alone, such as `lobbystack-sip-vm`, because a name only has to be unique inside its group.
+
+An existing environment can't be renamed in place, because Azure can't rename a resource group. Moving an environment from an older name to this one replaces every resource in it, including the public IP, so the address changes and the numbers routed to it need pointing at the new one.
+
+## Deploy with the menu
+
+`scripts/python/deploy.py` runs the same Terraform commands from a menu, so you pick an environment instead of typing the workspace and variable file each time. It needs Python 3.10 or newer and the Azure CLI signed in.
+
+```sh
+python3 scripts/python/deploy.py
+```
+
+| Option | What it does |
+| --- | --- |
+| Plan | Previews the changes. |
+| Apply | Saves a plan, shows it, and applies that exact plan only after you confirm. It prints the outputs afterwards. |
+| Drift | Compares the state with what Azure has now, and lists the resources someone changed by hand. |
+| Destroy | Removes the environment. You type its name to confirm. |
+| Import | Adopts existing resources listed in `scripts/python/resources/import/<environment>.json`. Copy `scripts/python/resources/import/environment.template.json` for the format. |
+| Init | Runs `terraform init` and selects the environment's workspace. |
+
+It shows the Azure subscription the environment uses and asks nothing about it. Saved plans hold the same secrets as the state, so `*.tfplan` is gitignored and the tool deletes its plan files when it finishes.
+
+## Start and stop the VM
+
+`stop.py` deallocates the VM, which ends its compute bill and keeps the disk and the static IP, so the address is the same when `start.py` brings it back. Calls to the number fail while it is stopped. Both take an environment, which is `dev` when you leave it out:
+
+```sh
+python3 scripts/python/stop.py            # dev
+python3 scripts/python/start.py sandbox
+python3 scripts/python/stop.py prod       # asks first; --yes skips the question
+```
+
+They use the environment's subscription and resource group from its tfvars file. `$RESOURCE_GROUP` names a group directly instead.
+
+## Subscriptions
+
+`dev` and `sandbox` use the NPD subscription, and `prod` uses the PRD one. Each environment file sets `subscription_id`, and Terraform builds everything there, whichever subscription `az` has selected. `deploy.py` shows that subscription, and `start.py` and `stop.py` read it from the same file.
+
+`prod.tfvars` holds a placeholder until you put the PRD subscription's id in it. While it is there, every Terraform command for prod stops on the `subscription_id` check, so prod can't be created in the NPD subscription by mistake. List the ids you can use with:
+
+```sh
+az account list --query "[].[name,id]" -o tsv
+```
+
+The account you sign in with needs access to the subscription. If PRD is in another tenant, sign in with `az login --tenant <tenant id>` first.
+
 ## Before you start
 
 You need an Azure subscription, the Azure CLI signed in with `az login`, Terraform 1.6 or newer, an SSH key, and your OpenAI project id (`proj_...`).
@@ -17,7 +97,7 @@ You need an Azure subscription, the Azure CLI signed in with `az login`, Terrafo
 
 Azure refuses some regions for some subscriptions. It answers `RequestDisallowedByAzure: The selected region is currently not accepting new customers`, and `westeurope` and `germanywestcentral` did that for the first subscription this was tried on. The default is `polandcentral`, which is close to Serbia.
 
-A size also needs vCPU quota for its family in the region. A new subscription often has none for some families, and Azure answers `OperationNotAllowed ... exceeding approved ... Cores quota, Current Limit: 0`. That happened with the burstable `Standard_B2ls_v2`. The default is `Standard_D2als_v6` (2 vCPUs, 4 GB), which had quota on that subscription.
+A size also needs vCPU quota for its family in the region. A new subscription often has none for some families, and Azure answers `OperationNotAllowed ... exceeding approved ... Cores quota, Current Limit: 0`. That happened with the burstable `Standard_B2ls_v2` until Microsoft approved quota for its family. The default is now `Standard_B2ls_v2` (2 vCPUs, 4 GB). `Standard_D2als_v6` has the same size and worked without a request, so use it if your subscription has no Bsv2 quota.
 
 To check before you apply:
 
@@ -30,7 +110,7 @@ az vm list-skus --location polandcentral --resource-type virtualMachines \
   --query "[?starts_with(name,'Standard_D2')].{name:name, family:family, restricted:length(restrictions)}" -o table
 ```
 
-Pick a size whose family has quota in the first list and `restricted` at 0 in the second, and set `location` and `vm_size` in `terraform.tfvars`. To keep a cheaper size, ask Azure for more quota in the portal under **Quotas**, which can take time. Changing the region replaces the resource group, which is safe while it holds nothing.
+Pick a size whose family has quota in the first list and `restricted` at 0 in the second, and set `location` and `vm_size` in `environments/<environment>.tfvars`. To keep a cheaper size, ask Azure for more quota in the portal under **Quotas**, which can take time. Changing the region replaces the resource group, which is safe while it holds nothing.
 
 ## Create the server
 
@@ -39,12 +119,12 @@ cd terraform
 cp terraform.tfvars.example terraform.tfvars
 ```
 
-Edit `terraform.tfvars`: your SSH public key, the address you SSH from, and the OpenAI project id. Leave `carrier_ips` empty for now if you don't have Zadarma's addresses. The server then starts closed to every carrier. Then run:
+Edit `terraform.tfvars`: your SSH public key, the address you SSH from, and the OpenAI project id. In `environments/dev.tfvars`, set `carrier_ips` to `[]` if you don't have Zadarma's addresses. The server then starts closed to every carrier. Then run:
 
 ```sh
 terraform init
-terraform plan
-terraform apply
+terraform plan -var-file=environments/dev.tfvars
+terraform apply -var-file=environments/dev.tfvars
 ```
 
 The VM takes a few minutes to install Docker and build the server after Terraform finishes. To watch it, run the `ssh_command` output, then `cloud-init status --wait` and `docker compose -f /opt/lobbystack-sip/docker-compose.yml logs asterisk`.
@@ -53,15 +133,15 @@ The VM takes a few minutes to install Docker and build the server after Terrafor
 
 1. Put the `zadarma_sip_host` output in `.env` as `ZADARMA_SIP_HOST` on the worker.
 2. In Zadarma, set a number's destination to the `zadarma_destination_example` output, with that number's digits in place of the example's.
-3. Set `carrier_ips` in `terraform.tfvars` to the addresses Zadarma's calls come from, and apply again. That opens the firewall for them and tells the server to accept them.
+3. Set `carrier_ips` in `environments/<environment>.tfvars` to the addresses Zadarma's calls come from, and apply again. That opens the firewall for them and tells the server to accept them.
 
 ## Change settings
 
-The network rules update in place. The server's own settings, such as `carrier_ips`, `openai_project_id` and the files from `docker/asterisk`, are written once, on first boot, so changing them replaces the VM. The static IP address stays, and calls stop for the few minutes it takes to start again. For a quick change without a replacement, edit `/opt/lobbystack-sip/asterisk.env` on the VM and run `docker compose up -d` there, then put the same value in `terraform.tfvars`, so the next replacement keeps it.
+The network rules update in place. The server's own settings, such as `carrier_ips`, `openai_project_id` and the files from `docker/asterisk`, are written once, on first boot, so changing them replaces the VM. The static IP address stays, and calls stop for the few minutes it takes to start again. For a quick change without a replacement, edit `/opt/lobbystack-sip/asterisk.env` on the VM and run `docker compose up -d` there, then put the same value in `environments/<environment>.tfvars` or `terraform.tfvars`, so the next replacement keeps it.
 
 ## Keep the state private
 
-The state holds the OpenAI project id, which lets anyone who has it dial in. Don't commit it. For anything beyond a trial, keep it in an encrypted remote backend, such as a private Azure storage account:
+The state holds the OpenAI project id, which lets anyone who has it dial in. Don't commit it. For anything beyond a trial, and always for `prod`, keep it in an encrypted remote backend, such as a private Azure storage account. A backend keeps one state per workspace, so the environments stay apart:
 
 ```hcl
 terraform {
@@ -74,7 +154,7 @@ terraform {
 }
 ```
 
-`terraform.tfvars` and the state files are in `.gitignore`. `.terraform.lock.hcl` isn't, so commit it.
+`terraform.tfvars`, the state files and the workspaces' state folder (`terraform.tfstate.d/`) are in `.gitignore`. The environment files are not, so keep secrets out of them. `.terraform.lock.hcl` isn't, so commit it.
 
 ## Not included
 
@@ -84,4 +164,4 @@ terraform {
 
 ## Remove it
 
-`terraform destroy` removes everything, including the static address. Numbers routed to that address stop working until you route them somewhere else.
+Select the environment's workspace first. `terraform destroy -var-file=environments/<environment>.tfvars` removes that environment's resources, including the static address. `python3 scripts/python/stop.py [environment]` stops the VM's compute bill instead and keeps the address, and `python3 scripts/python/start.py [environment]` brings it back. Numbers routed to that address stop working until you route them somewhere else.

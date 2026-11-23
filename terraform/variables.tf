@@ -1,7 +1,22 @@
 variable "subscription_id" {
-  description = "The Azure subscription to create everything in. Null uses ARM_SUBSCRIPTION_ID, or the one `az login` selected."
+  description = "The Azure subscription to create everything in. Each environment sets its own in environments/<environment>.tfvars: dev and sandbox use the NPD subscription and prod uses the PRD one. Null uses ARM_SUBSCRIPTION_ID, or the one `az login` selected, which is why the environment files always set it."
   type        = string
   default     = null
+
+  validation {
+    condition     = var.subscription_id == null || can(regex("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$", var.subscription_id))
+    error_message = "subscription_id is a subscription's id, such as 00000000-0000-0000-0000-000000000000. For prod, put the PRD subscription's id in environments/prod.tfvars."
+  }
+}
+
+variable "environment" {
+  description = "Which environment this is: dev, sandbox or prod. It goes into every resource's tags and picks the workspace that holds its state. Set it in environments/<environment>.tfvars."
+  type        = string
+
+  validation {
+    condition     = contains(["dev", "sandbox", "prod"], var.environment)
+    error_message = "The environment is dev, sandbox or prod."
+  }
 }
 
 variable "location" {
@@ -10,10 +25,14 @@ variable "location" {
   default     = "polandcentral"
 }
 
-variable "name_prefix" {
-  description = "A prefix for every resource's name."
+variable "app_name" {
+  description = "The application's name, which names everything: the resource group is {app_name}-resource-group-{environment}, such as lobbystack-sip-resource-group-dev, and the resources inside start with {app_name}. Set it in environments/<environment>.tfvars."
   type        = string
-  default     = "lobbystack-sip"
+
+  validation {
+    condition     = can(regex("^[a-z0-9][a-z0-9-]{1,40}[a-z0-9]$", var.app_name))
+    error_message = "app_name is lowercase letters, digits and hyphens, from 3 to 42 characters, and starts and ends with a letter or digit."
+  }
 }
 
 variable "vm_size" {

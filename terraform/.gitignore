@@ -2,6 +2,10 @@
 .terraform/
 *.tfstate
 *.tfstate.*
+terraform.tfstate.d/
 crash.log
 terraform.tfvars
 *.auto.tfvars
+
+# Saved plans hold the same secrets as the state.
+*.tfplan

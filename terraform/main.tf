@@ -1,177 +1,170 @@
 # A VM that runs the SIP server in docker/asterisk. It takes a carrier's calls, such as Zadarma's, and passes them to
 # OpenAI. See docs/voice/external-numbers.md.
+#
+# Each Azure resource type has its own module in modules/, and a module creates only that type. This file wires
+# them together, and locals.tf holds the values they share.
 
-locals {
-  rtp_range = "${var.rtp_start}-${var.rtp_end}"
-
-  # An address no carrier uses, so the server starts and accepts nothing until carrier_ips is set.
-  carrier_ips_for_server = length(var.carrier_ips) > 0 ? var.carrier_ips : ["192.0.2.1"]
-
-  # The server's files, read from the repository, so the VM runs the same server the repository holds. The
-  # settings come from the variables, so asterisk.env.example and .gitignore stay out.
-  server_files = merge(
-    { for name in ["Dockerfile", "entrypoint.sh", "docker-compose.yml"] : name => base64encode(file("${path.module}/../docker/asterisk/${name}")) },
-    { for name in fileset("${path.module}/../docker/asterisk", "etc/*") : name => base64encode(file("${path.module}/../docker/asterisk/${name}")) },
-  )
-
-  tags = merge({ project = "lobbystack", purpose = "sip-server" }, var.tags)
+# The state of every environment would otherwise be one file, and applying one environment would plan to remove the
+# other's resources. Each environment has its own workspace. dev's state was created before workspaces, in the default
+# one, so that stays valid for dev. See README.md.
+check "workspace_matches_environment" {
+  assert {
+    condition     = terraform.workspace == var.environment || (terraform.workspace == "default" && var.environment == "dev")
+    error_message = "This is the ${terraform.workspace} workspace but the environment is ${var.environment}. Run `terraform workspace select ${var.environment}`, or create it with `terraform workspace new ${var.environment}`."
+  }
 }
 
-resource "azurerm_resource_group" "sip" {
-  name     = "${var.name_prefix}-rg"
+# Each environment gets its own resource group, named {app_name}-resource-group-{environment}, so destroying one
+# environment can never touch another's resources. The resources inside are named from app_name alone, because a name
+# only has to be unique inside its group.
+module "resource_group" {
+  source = "./modules/resource_group"
+
+  name     = "${var.app_name}-resource-group-${var.environment}"
   location = var.location
   tags     = local.tags
 }
 
-resource "azurerm_virtual_network" "sip" {
-  name                = "${var.name_prefix}-vnet"
-  location            = azurerm_resource_group.sip.location
-  resource_group_name = azurerm_resource_group.sip.name
+module "virtual_network" {
+  source = "./modules/virtual_network"
+
+  name                = "${var.app_name}-vnet"
+  location            = module.resource_group.location
+  resource_group_name = module.resource_group.name
   address_space       = ["10.20.0.0/16"]
   tags                = local.tags
 }
 
-resource "azurerm_subnet" "sip" {
-  name                 = "${var.name_prefix}-subnet"
-  resource_group_name  = azurerm_resource_group.sip.name
-  virtual_network_name = azurerm_virtual_network.sip.name
+module "subnet" {
+  source = "./modules/subnet"
+
+  name                 = "${var.app_name}-subnet"
+  resource_group_name  = module.resource_group.name
+  virtual_network_name = module.virtual_network.name
   address_prefixes     = ["10.20.1.0/24"]
 }
 
 # Static, because the carrier routes each number to this address, and a dynamic one changes when the VM restarts.
-resource "azurerm_public_ip" "sip" {
-  name                = "${var.name_prefix}-ip"
-  location            = azurerm_resource_group.sip.location
-  resource_group_name = azurerm_resource_group.sip.name
+module "public_ip" {
+  source = "./modules/public_ip"
+
+  name                = "${var.app_name}-ip"
+  location            = module.resource_group.location
+  resource_group_name = module.resource_group.name
   allocation_method   = "Static"
   sku                 = "Standard"
   domain_name_label   = var.dns_label
   tags                = local.tags
 }
 
-# Azure denies everything inbound that no rule allows. Only these rules open anything.
-resource "azurerm_network_security_group" "sip" {
-  name                = "${var.name_prefix}-nsg"
-  location            = azurerm_resource_group.sip.location
-  resource_group_name = azurerm_resource_group.sip.name
+# Azure denies everything inbound that no rule allows. Only the rules below open anything.
+module "network_security_group" {
+  source = "./modules/network_security_group"
+
+  name                = "${var.app_name}-nsg"
+  location            = module.resource_group.location
+  resource_group_name = module.resource_group.name
   tags                = local.tags
 }
 
-resource "azurerm_network_security_rule" "sip_from_carrier" {
-  count                       = length(var.carrier_ips) > 0 ? 1 : 0
-  name                        = "sip-from-carrier"
-  priority                    = 100
-  direction                   = "Inbound"
-  access                      = "Allow"
-  protocol                    = "Udp"
-  source_port_range           = "*"
-  destination_port_range      = "5060"
-  source_address_prefixes     = var.carrier_ips
-  destination_address_prefix  = "*"
-  resource_group_name         = azurerm_resource_group.sip.name
-  network_security_group_name = azurerm_network_security_group.sip.name
+module "network_security_rule" {
+  source = "./modules/network_security_rule"
+
+  resource_group_name         = module.resource_group.name
+  network_security_group_name = module.network_security_group.name
+  rules                       = local.network_security_rules
 }
 
-resource "azurerm_network_security_rule" "audio_from_carrier" {
-  count                       = length(var.carrier_ips) > 0 ? 1 : 0
-  name                        = "audio-from-carrier"
-  priority                    = 110
-  direction                   = "Inbound"
-  access                      = "Allow"
-  protocol                    = "Udp"
-  source_port_range           = "*"
-  destination_port_range      = local.rtp_range
-  source_address_prefixes     = var.carrier_ips
-  destination_address_prefix  = "*"
-  resource_group_name         = azurerm_resource_group.sip.name
-  network_security_group_name = azurerm_network_security_group.sip.name
+module "network_interface" {
+  source = "./modules/network_interface"
+
+  name                 = "${var.app_name}-nic"
+  location             = module.resource_group.location
+  resource_group_name  = module.resource_group.name
+  subnet_id            = module.subnet.id
+  public_ip_address_id = module.public_ip.id
+  tags                 = local.tags
 }
 
-resource "azurerm_network_security_rule" "audio_from_openai" {
-  name                        = "audio-from-openai"
-  priority                    = 120
-  direction                   = "Inbound"
-  access                      = "Allow"
-  protocol                    = "Udp"
-  source_port_range           = "*"
-  destination_port_range      = local.rtp_range
-  source_address_prefixes     = var.openai_media_cidrs
-  destination_address_prefix  = "*"
-  resource_group_name         = azurerm_resource_group.sip.name
-  network_security_group_name = azurerm_network_security_group.sip.name
+module "network_interface_security_group_association" {
+  source = "./modules/network_interface_security_group_association"
+
+  network_interface_id      = module.network_interface.id
+  network_security_group_id = module.network_security_group.id
 }
 
-resource "azurerm_network_security_rule" "ssh" {
-  count                       = length(var.ssh_allowed_cidrs) > 0 ? 1 : 0
-  name                        = "ssh"
-  priority                    = 200
-  direction                   = "Inbound"
-  access                      = "Allow"
-  protocol                    = "Tcp"
-  source_port_range           = "*"
-  destination_port_range      = "22"
-  source_address_prefixes     = var.ssh_allowed_cidrs
-  destination_address_prefix  = "*"
-  resource_group_name         = azurerm_resource_group.sip.name
-  network_security_group_name = azurerm_network_security_group.sip.name
+module "linux_virtual_machine" {
+  source = "./modules/linux_virtual_machine"
+
+  name                  = "${var.app_name}-vm"
+  location              = module.resource_group.location
+  resource_group_name   = module.resource_group.name
+  size                  = var.vm_size
+  admin_username        = var.admin_username
+  admin_ssh_public_key  = var.ssh_public_key
+  network_interface_ids = [module.network_interface.id]
+  custom_data           = base64encode(local.cloud_init)
+  tags                  = local.tags
 }
 
-resource "azurerm_network_interface" "sip" {
-  name                = "${var.name_prefix}-nic"
-  location            = azurerm_resource_group.sip.location
-  resource_group_name = azurerm_resource_group.sip.name
-  tags                = local.tags
-
-  ip_configuration {
-    name                          = "primary"
-    subnet_id                     = azurerm_subnet.sip.id
-    private_ip_address_allocation = "Dynamic"
-    public_ip_address_id          = azurerm_public_ip.sip.id
-  }
+# The resources moved from the root into modules. These blocks make Terraform adopt what already exists under the old
+# addresses instead of destroying it. Once every state that held the old addresses has applied, they can be deleted.
+moved {
+  from = azurerm_resource_group.sip
+  to   = module.resource_group.azurerm_resource_group.this
 }
 
-resource "azurerm_network_interface_security_group_association" "sip" {
-  network_interface_id      = azurerm_network_interface.sip.id
-  network_security_group_id = azurerm_network_security_group.sip.id
+moved {
+  from = azurerm_virtual_network.sip
+  to   = module.virtual_network.azurerm_virtual_network.this
 }
 
-resource "azurerm_linux_virtual_machine" "sip" {
-  name                            = "${var.name_prefix}-vm"
-  location                        = azurerm_resource_group.sip.location
-  resource_group_name             = azurerm_resource_group.sip.name
-  size                            = var.vm_size
-  admin_username                  = var.admin_username
-  disable_password_authentication = true
-  network_interface_ids           = [azurerm_network_interface.sip.id]
-  tags                            = local.tags
+moved {
+  from = azurerm_subnet.sip
+  to   = module.subnet.azurerm_subnet.this
+}
 
-  admin_ssh_key {
-    username   = var.admin_username
-    public_key = var.ssh_public_key
-  }
+moved {
+  from = azurerm_public_ip.sip
+  to   = module.public_ip.azurerm_public_ip.this
+}
 
-  os_disk {
-    caching              = "ReadWrite"
-    storage_account_type = "StandardSSD_LRS"
-  }
+moved {
+  from = azurerm_network_security_group.sip
+  to   = module.network_security_group.azurerm_network_security_group.this
+}
 
-  source_image_reference {
-    publisher = "Canonical"
-    offer     = "ubuntu-24_04-lts"
-    sku       = "server"
-    version   = "latest"
-  }
+moved {
+  from = azurerm_network_security_rule.sip_from_carrier[0]
+  to   = module.network_security_rule.azurerm_network_security_rule.this["sip-from-carrier"]
+}
 
-  # The server's settings and files are written on first boot. Changing them replaces the VM, and the static
-  # address stays. See README.md.
-  custom_data = base64encode(templatefile("${path.module}/cloud-init.yaml.tftpl", {
-    files                = local.server_files
-    openai_project_id    = var.openai_project_id
-    carrier_ips          = join(",", local.carrier_ips_for_server)
-    public_ip            = azurerm_public_ip.sip.ip_address
-    default_country_code = var.default_country_code
-    caller_header        = var.caller_header
-    rtp_start            = var.rtp_start
-    rtp_end              = var.rtp_end
-  }))
+moved {
+  from = azurerm_network_security_rule.audio_from_carrier[0]
+  to   = module.network_security_rule.azurerm_network_security_rule.this["audio-from-carrier"]
+}
+
+moved {
+  from = azurerm_network_security_rule.audio_from_openai
+  to   = module.network_security_rule.azurerm_network_security_rule.this["audio-from-openai"]
+}
+
+moved {
+  from = azurerm_network_security_rule.ssh[0]
+  to   = module.network_security_rule.azurerm_network_security_rule.this["ssh"]
+}
+
+moved {
+  from = azurerm_network_interface.sip
+  to   = module.network_interface.azurerm_network_interface.this
+}
+
+moved {
+  from = azurerm_network_interface_security_group_association.sip
+  to   = module.network_interface_security_group_association.azurerm_network_interface_security_group_association.this
+}
+
+moved {
+  from = azurerm_linux_virtual_machine.sip
+  to   = module.linux_virtual_machine.azurerm_linux_virtual_machine.this
 }

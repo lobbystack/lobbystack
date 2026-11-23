@@ -1,0 +1,11 @@
+#cloud-config
+# Installs Docker, writes the SIP server's files from docker/asterisk, and starts it. Runs once, on the VM's first boot.
+# locals.tf builds write_files as JSON, which is valid YAML, so this file is valid YAML too.
+package_update: true
+packages:
+  - docker.io
+  - docker-compose-v2
+write_files: ${write_files}
+runcmd:
+  - systemctl enable --now docker
+  - cd /opt/lobbystack-sip && docker compose up -d --build
