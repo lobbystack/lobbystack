@@ -1,5 +1,9 @@
 resource "azurerm_network_interface" "this" {
-  name                = var.name
+  name = join("-", compact([
+    var.app_name,
+    "network-interface",
+    var.environment,
+  ]))
   location            = var.location
   resource_group_name = var.resource_group_name
   tags                = var.tags

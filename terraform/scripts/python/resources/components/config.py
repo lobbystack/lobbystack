@@ -45,9 +45,9 @@ def workspace_for(environment: str) -> str:
 
 
 def resource_group_name(environment: str) -> str:
-    """The environment's resource group, {app_name}-resource-group-{environment}, as main.tf names it."""
+    """The environment's resource group, {app_name}resource-group{environment}, as modules/resource_group names it."""
     app_name = read_tfvar(environment, "app_name")
-    return f"{app_name}-resource-group-{environment}" if app_name else ""
+    return f"{app_name}resource-group{environment}" if app_name else ""
 
 
 def read_tfvar(environment: str, key: str) -> str:

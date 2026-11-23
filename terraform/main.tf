@@ -14,21 +14,23 @@ check "workspace_matches_environment" {
   }
 }
 
-# Each environment gets its own resource group, named {app_name}-resource-group-{environment}, so destroying one
-# environment can never touch another's resources. The resources inside are named from app_name alone, because a name
-# only has to be unique inside its group.
+# Each environment gets its own resource group, so destroying one environment can never touch another's resources.
+# Every resource is named from app_name, its type and the environment. See AGENTS.md.
 module "resource_group" {
   source = "./modules/resource_group"
 
-  name     = "${var.app_name}-resource-group-${var.environment}"
-  location = var.location
-  tags     = local.tags
+  app_name    = var.app_name
+  environment = var.environment
+  location    = var.location
+  tags        = local.tags
 }
 
 module "virtual_network" {
   source = "./modules/virtual_network"
 
-  name                = "${var.app_name}-vnet"
+  app_name = var.app_name
+
+  environment         = var.environment
   location            = module.resource_group.location
   resource_group_name = module.resource_group.name
   address_space       = ["10.20.0.0/16"]
@@ -38,7 +40,9 @@ module "virtual_network" {
 module "subnet" {
   source = "./modules/subnet"
 
-  name                 = "${var.app_name}-subnet"
+  app_name = var.app_name
+
+  environment          = var.environment
   resource_group_name  = module.resource_group.name
   virtual_network_name = module.virtual_network.name
   address_prefixes     = ["10.20.1.0/24"]
@@ -48,7 +52,9 @@ module "subnet" {
 module "public_ip" {
   source = "./modules/public_ip"
 
-  name                = "${var.app_name}-ip"
+  app_name = var.app_name
+
+  environment         = var.environment
   location            = module.resource_group.location
   resource_group_name = module.resource_group.name
   allocation_method   = "Static"
@@ -61,7 +67,9 @@ module "public_ip" {
 module "network_security_group" {
   source = "./modules/network_security_group"
 
-  name                = "${var.app_name}-nsg"
+  app_name = var.app_name
+
+  environment         = var.environment
   location            = module.resource_group.location
   resource_group_name = module.resource_group.name
   tags                = local.tags
@@ -78,7 +86,9 @@ module "network_security_rule" {
 module "network_interface" {
   source = "./modules/network_interface"
 
-  name                 = "${var.app_name}-nic"
+  app_name = var.app_name
+
+  environment          = var.environment
   location             = module.resource_group.location
   resource_group_name  = module.resource_group.name
   subnet_id            = module.subnet.id
@@ -96,7 +106,9 @@ module "network_interface_security_group_association" {
 module "linux_virtual_machine" {
   source = "./modules/linux_virtual_machine"
 
-  name                  = "${var.app_name}-vm"
+  app_name = var.app_name
+
+  environment           = var.environment
   location              = module.resource_group.location
   resource_group_name   = module.resource_group.name
   size                  = var.vm_size

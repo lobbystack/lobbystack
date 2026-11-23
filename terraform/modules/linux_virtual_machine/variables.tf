@@ -1,5 +1,10 @@
-variable "name" {
-  description = "The VM's name."
+variable "app_name" {
+  description = "The application name, the first part of the resource's name."
+  type        = string
+}
+
+variable "environment" {
+  description = "The environment, the last part of the resource's name."
   type        = string
 }
 

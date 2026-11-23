@@ -42,7 +42,7 @@ terraform workspace select sandbox
 terraform apply -var-file=environments/sandbox.tfvars
 ```
 
-`dev` was created before workspaces, so its state stays in the `default` workspace, and Terraform accepts that for `dev` only. Selecting the wrong workspace shows a warning, so read the plan before you apply. Each environment also gets its own resource group, named `{app_name}-resource-group-{environment}`: `lobbystack-sip-resource-group-dev`, `lobbystack-sip-resource-group-sandbox` and `lobbystack-sip-resource-group-prod`. Destroying one environment can't touch another's resources. The resources inside are named from `app_name` alone, such as `lobbystack-sip-vm`, because a name only has to be unique inside its group.
+`dev` was created before workspaces, so its state stays in the `default` workspace, and Terraform accepts that for `dev` only. Selecting the wrong workspace shows a warning, so read the plan before you apply. Each environment also gets its own resource group, named from `app_name`, `resource-group` and the environment, such as `lobbystack-sipresource-groupdev`. Destroying one environment can't touch another's resources. The resources inside are named from `app_name`, their resource type and the environment, such as `lobbystack-sip` + `linux-virtual-machine` + `dev`. See AGENTS.md.
 
 An existing environment can't be renamed in place, because Azure can't rename a resource group. Moving an environment from an older name to this one replaces every resource in it, including the public IP, so the address changes and the numbers routed to it need pointing at the new one.
 
