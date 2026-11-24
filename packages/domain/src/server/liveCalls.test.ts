@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { completeCall } from "./voice";
 
 const mocks = vi.hoisted(() => ({
   completeCall: vi.fn(),
@@ -30,7 +31,7 @@ describe("startLivePhoneCall", () => {
   it("records the call against the OpenAI session so retries stay idempotent", async () => {
     mocks.startCall.mockResolvedValue({ callId: "call_1", conversationId: "conv_1", contactId: "contact_1", duplicate: false, blocked: false });
     await expect(startLivePhoneCall(context, { businessId: "biz_1", sessionId: "live_1", from: "+14165550100", to: "+15815020392" })).resolves.toMatchObject({ callId: "call_1", blocked: false });
-    expect(mocks.startCall).toHaveBeenCalledWith(context, expect.objectContaining({ provider: LIVE_CALL_PROVIDER, providerCallId: "live_1", transport: "voice" }));
+    expect(mocks.startCall).toHaveBeenCalledWith(context, expect.objectContaining({ provider: LIVE_CALL_PROVIDER, providerCallId: "live_1", transport: "voice", liveModel: "gpt-live-1.1" }));
   });
 
   it("limits the call to its reservation, and not at all on an unlimited plan", async () => {
@@ -46,12 +47,22 @@ describe("startLivePhoneCall", () => {
 
 describe("finishLiveCall", () => {
   // What the write that finalizes the call is asked to write with it.
-  const finalizing = () => mocks.completeCall.mock.lastCall![1] as { outbox: Array<{ topic: string; dedupeKey: string; payload: unknown; availableAt?: Date }>; costEvent?: Record<string, unknown> };
+  const finalizing = () => mocks.completeCall.mock.lastCall![1] as Parameters<typeof completeCall>[1];
 
   it("completes the call with the billed seconds and records the GPT-Live cost in the same write", async () => {
     await finishLiveCall(context, { ...call, seconds: 90, end: "caller_hung_up" });
-    expect(mocks.completeCall).toHaveBeenCalledWith(context, expect.objectContaining({ callId: "call_1", status: "completed", disposition: "caller_hung_up", providerDurationSeconds: 90, mediaDurationSeconds: 90, providerCostUsd: expect.closeTo(0.075, 6) }));
-    expect(finalizing().costEvent).toMatchObject({ eventKey: "voice_ai:live_session:call_1", channel: "voice", model: "gpt-live-1", operation: "live_session", quantity: 90, costUsd: expect.closeTo(0.075, 6) });
+    expect(mocks.completeCall).toHaveBeenCalledWith(context, expect.objectContaining({ callId: "call_1", status: "completed", disposition: "caller_hung_up", providerDurationSeconds: 90, mediaDurationSeconds: 90 }));
+    expect(finalizing().buildCostEvent?.("gpt-live-1.1")).toMatchObject({
+      eventKey: "voice_ai:live_session:call_1",
+      channel: "voice",
+      model: "gpt-live-1.1",
+      operation: "live_session",
+      quantity: 90,
+      costUsd: expect.closeTo(0.075, 6),
+      pricingVersion: "gpt-live-1.1-2026-11",
+      pricingSource: "https://developers.openai.com/api/docs/models/gpt-live-1.1",
+      pricingRates: { usdPerMinute: 0.05 },
+    });
     // Texts held while the call ran go out once it's over.
     expect(mocks.releaseCallTexts).toHaveBeenCalledWith(context, { businessId: call.businessId, callId: "call_1" });
   });
@@ -69,17 +80,17 @@ describe("finishLiveCall", () => {
   it("doesn't queue Twilio pricing for a browser call", async () => {
     await finishLiveCall(context, { ...call, seconds: 60, end: "caller_finished", channel: "web_voice" });
     expect(finalizing().outbox).toEqual([]);
-    expect(finalizing().costEvent).toMatchObject({ channel: "web_voice" });
+    expect(finalizing().buildCostEvent?.("gpt-live-1.1")).toMatchObject({ channel: "web_voice" });
   });
 
   it("writes the cost and the price job once when the finish fails after the call was finalized and is retried", async () => {
     // Like Postgres: only the write that finalizes the call commits what it carries.
     const committed: unknown[] = [];
     let finalized = false;
-    mocks.completeCall.mockImplementation(async (_context: unknown, input: { outbox?: unknown[]; costEvent?: unknown }) => {
+    mocks.completeCall.mockImplementation(async (_context: unknown, input: Parameters<typeof completeCall>[1]) => {
       if (finalized) return false;
       finalized = true;
-      committed.push(...(input.outbox ?? []), ...(input.costEvent ? [input.costEvent] : []));
+      committed.push(...(input.outbox ?? []), ...(input.buildCostEvent ? [input.buildCostEvent("gpt-live-1.1")] : []));
       return true;
     });
     mocks.releaseCallTexts.mockRejectedValueOnce(new Error("timeout exceeded when trying to connect"));
@@ -108,13 +119,13 @@ describe("finishLiveCall", () => {
     await finishLiveCall(context, { ...call, seconds: 90, end: "caller_hung_up", channel: "web_voice", recording: { sessionId: "live_1" } });
     const { outbox } = finalizing();
     expect(outbox).toEqual([expect.objectContaining({ topic: "call.saveRecording", dedupeKey: "call:call_1:recording:1", payload: { callId: "call_1", sessionId: "live_1", attempt: 1 } })]);
-    expect(outbox[0]!.availableAt!.getTime() - Date.now()).toBeGreaterThan(4_000);
+    expect(outbox?.[0]?.availableAt?.getTime()).toBeGreaterThan(Date.now() + 4_000);
   });
 
   it("records no cost and queues no price for a call that never connected", async () => {
     await finishLiveCall(context, { ...call, seconds: 0, end: "setup_failed" });
     expect(finalizing().outbox).toEqual([]);
-    expect(finalizing()).not.toHaveProperty("costEvent");
+    expect(finalizing()).not.toHaveProperty("buildCostEvent");
   });
 });
 

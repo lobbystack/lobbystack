@@ -4,6 +4,11 @@ import { describe, expect, it } from "vitest";
 import { buildBrowserSessionConfig, buildPhoneSessionConfig } from "./session";
 
 describe("GPT-Live session config", () => {
+  it("requests GPT-Live 1.1 for SIP and WebRTC calls", () => {
+    expect(buildPhoneSessionConfig(demoSnapshot).model).toBe("gpt-live-1.1");
+    expect(buildBrowserSessionConfig(demoSnapshot).model).toBe("gpt-live-1.1");
+  });
+
   // The worker sends the greeting when the session starts. A second copy in
   // the starting history could make GPT-Live greet twice.
   it("starts phone and browser sessions without the greeting in their history", () => {

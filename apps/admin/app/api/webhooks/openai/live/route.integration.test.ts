@@ -3,12 +3,7 @@ import { createHmac, randomUUID } from "node:crypto";
 import { and, eq, inArray } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
-// A call to a business whose partner's tier ended over 30 days ago, through
-// the live webhook and Twilio's fallback against PostgreSQL. Only OpenAI's
-// client is a fake. The business gets no minutes, so the webhook rejects the
-// session with 503, which makes the SIP trunk fail the call over to
-// /api/webhooks/twilio/voice, and that forwards it to the business's
-// transfer number.
+// SIP webhook delivery, retries and Twilio's fallback against PostgreSQL.
 
 const setup = vi.hoisted(() => {
   const testUrl = process.env.LOBBYSTACK_RELIABILITY_TEST_DATABASE_URL;
@@ -36,7 +31,7 @@ const setup = vi.hoisted(() => {
 });
 
 vi.mock("server-only", () => ({}));
-vi.mock("@lobbystack/agent-core/live/session", () => ({ buildPhoneSessionConfig: vi.fn() }));
+vi.mock("@lobbystack/agent-core/live/session", () => ({ buildPhoneSessionConfig: () => ({ model: "gpt-live-1.1", type: "live" }) }));
 vi.mock("@/lib/live-prototype", () => ({
   attachWorkerToLiveSession: setup.attach,
   getLiveClient: () => ({ webhooks: { unwrap: setup.unwrap }, live: { sessions: { reject: setup.reject, accept: setup.accept } } }),
@@ -47,7 +42,9 @@ vi.mock("@/lib/domain-context", async () => {
   return { createWorkerDomainContext: () => ({ db: getWorkerDatabase().db }) };
 });
 
-import { agents, businessContextSnapshots, businesses, businessNotifications, calls, createDatabaseClient, partnerLifecycles, partners, phoneNumbers, productEvents, defaultAgentIdOf } from "@lobbystack/db";
+import { agents, businessContextSnapshots, businesses, businessNotifications, calls, createDatabaseClient, partnerLifecycles, partners, phoneNumbers, productEvents, unitEconomicsEvents, defaultAgentIdOf } from "@lobbystack/db";
+import { finishLiveCall, startLivePhoneCall } from "@lobbystack/domain";
+import { getWorkerDatabase } from "@/lib/api-helpers";
 
 import { POST as forwardCall } from "../../twilio/voice/route";
 import { POST as incomingCall } from "./route";
@@ -64,8 +61,7 @@ const DAY = 24 * 60 * 60_000;
  * A call the owner forwarded from their own line names it in a Diversion
  * before the trunk's, or in History-Info.
  */
-async function ring(forwarded: Array<{ name: string; value: string }> = []): Promise<string> {
-  const sessionId = `rtc_${randomUUID()}`;
+async function ring(forwarded: Array<{ name: string; value: string }> = [], sessionId = `rtc_${randomUUID()}`): Promise<string> {
   setup.unwrap.mockResolvedValueOnce({ type: "live.transport.incoming", created_at: Math.floor(Date.now() / 1000), data: { session_id: sessionId, sip_headers: [...forwarded, { name: "Diversion", value: `<sip:${line}@twilio.example>` }, { name: "From", value: "<sip:+14165550134@example.com>" }] } });
   const response = await incomingCall(new Request("https://desk.example.test/api/webhooks/openai/live", { method: "POST", body: "{}" }));
   expect(response.status).toBe(200);
@@ -148,5 +144,35 @@ describe.skipIf(!admin)("a call forwarded from the owner's line", () => {
     // The bell gets one update that forwarding works, naming the owner's line.
     const bell = await admin!.db.select({ kind: businessNotifications.kind, category: businessNotifications.category, params: businessNotifications.params }).from(businessNotifications).where(and(eq(businessNotifications.businessId, businessId), eq(businessNotifications.kind, "forwarding_detected")));
     expect(bell).toEqual([{ kind: "forwarding_detected", category: "update", params: expect.objectContaining({ from: "+14165550177" }) }]);
+  });
+});
+
+describe.skipIf(!admin)("redelivery for a SIP call reserved before the upgrade", () => {
+  it.each([
+    { acceptError: undefined, initialModel: null, confirmedModel: undefined, model: "gpt-live-1.1", pricingVersion: "gpt-live-1.1-2026-11" },
+    { acceptError: "Session already accepted", initialModel: null, confirmedModel: undefined, model: "gpt-live-1", pricingVersion: "gpt-live-1-2026-07" },
+    { acceptError: "Accept response timed out", initialModel: null, confirmedModel: "gpt-live-1.1", model: "gpt-live-1.1", pricingVersion: "gpt-live-1.1-2026-11" },
+    { acceptError: "Session already accepted", initialModel: "gpt-live-1", confirmedModel: "gpt-live-1.1", model: "gpt-live-1", pricingVersion: "gpt-live-1-2026-07" },
+  ])("records $model after retry (accept error: $acceptError, stored: $initialModel)", async ({ acceptError, initialModel, confirmedModel, model, pricingVersion }) => {
+    await admin!.db.update(partnerLifecycles).set({ state: "active", since: new Date() }).where(eq(partnerLifecycles.partnerId, partnerId));
+    const domain = { db: getWorkerDatabase().db };
+    const sessionId = `rtc_${randomUUID()}`;
+    const { callId } = await startLivePhoneCall(domain, { businessId, sessionId, from: "+14165550134", to: line });
+    await admin!.db.update(calls).set({ liveModel: initialModel }).where(eq(calls.id, callId));
+    if (acceptError) setup.accept.mockRejectedValueOnce(new Error(acceptError));
+
+    await ring([], sessionId);
+
+    expect(setup.accept).toHaveBeenCalledWith(sessionId, { session: { model: "gpt-live-1.1", type: "live" } });
+    expect(setup.attach).toHaveBeenCalledWith(expect.objectContaining({ callId, sessionId, resume: true }));
+    const [call] = await admin!.db.select({ model: calls.liveModel }).from(calls).where(eq(calls.id, callId));
+    expect(call?.model).toBe(acceptError ? initialModel : model);
+
+    await finishLiveCall(domain, { businessId, callId, seconds: 90, end: "caller_finished", ...(confirmedModel ? { confirmedModel } : {}) });
+    const [finishedCall] = await admin!.db.select({ model: calls.liveModel }).from(calls).where(eq(calls.id, callId));
+    expect(finishedCall?.model).toBe(acceptError && !confirmedModel ? initialModel : model);
+    const [event] = await admin!.db.select({ model: unitEconomicsEvents.model, pricingVersion: unitEconomicsEvents.pricingVersion, costUsd: unitEconomicsEvents.costUsd })
+      .from(unitEconomicsEvents).where(eq(unitEconomicsEvents.eventKey, `voice_ai:live_session:${callId}`));
+    expect(event).toEqual({ model, pricingVersion, costUsd: 0.075 });
   });
 });

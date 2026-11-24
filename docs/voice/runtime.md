@@ -1,6 +1,6 @@
 # Understand the voice runtime
 
-LobbyStack answers calls with OpenAI's GPT-Live model (`gpt-live-1`). OpenAI hosts the audio: phone calls reach it over SIP and browser calls over WebRTC. The admin app starts each call and the worker runs it. This page explains how a call flows, what each runtime does, and how to configure the phone path.
+LobbyStack uses OpenAI's `gpt-live-1.1` for SIP phone calls and WebRTC browser calls. OpenAI hosts the audio. The admin app starts each call and the worker runs it.
 
 ## How a GPT-Live call works
 

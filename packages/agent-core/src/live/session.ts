@@ -1,10 +1,10 @@
-import { normalizeAgentVoice, type BusinessContextSnapshot, type AgentVoice } from "@lobbystack/shared";
+import { LIVE_MODEL, normalizeAgentVoice, type BusinessContextSnapshot, type AgentVoice } from "@lobbystack/shared";
 import type { BuiltInVoice, MediaSessionConfig } from "openai/resources/live/live";
 import type { SessionAcceptParams } from "openai/resources/live/sessions";
 
 import { buildLiveInstructions } from "../instructions";
 
-export const LIVE_MODEL = "gpt-live-1";
+export { LIVE_MODEL };
 
 // Fails to compile when the shared list offers a voice GPT-Live doesn't have.
 true satisfies (AgentVoice extends BuiltInVoice ? true : never);
