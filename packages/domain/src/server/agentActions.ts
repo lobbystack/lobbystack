@@ -235,13 +235,13 @@ export async function recordTextConsentForCaller(
 
 export async function rescheduleForCaller(
   context: DomainContext,
-  input: { businessId: string; agentId?: string; callerPhone: string; appointmentId: string; startsAt: string; verificationId?: string; finalConfirmation: boolean },
+  input: { businessId: string; agentId?: string; callerPhone: string; appointmentId: string; startsAt: string; verificationId?: string; finalConfirmation: boolean; callId?: string },
 ) {
   if (!input.finalConfirmation) return { ok: false as const, reason: "Final confirmation is required." };
   if (!input.verificationId) return { ok: false as const, reason: "The appointment change verification is required." };
   let result: Awaited<ReturnType<typeof rescheduleAppointmentForCaller>>;
   try {
-    result = await rescheduleAppointmentForCaller(context, { businessId: input.businessId, ...(input.agentId ? { agentId: input.agentId } : {}), appointmentId: input.appointmentId, callerPhone: input.callerPhone, startsAt: input.startsAt, verificationId: input.verificationId });
+    result = await rescheduleAppointmentForCaller(context, { businessId: input.businessId, ...(input.agentId ? { agentId: input.agentId } : {}), appointmentId: input.appointmentId, callerPhone: input.callerPhone, startsAt: input.startsAt, verificationId: input.verificationId, ...(input.callId ? { callId: input.callId } : {}) });
   } catch (error) {
     // The new time isn't bookable: say why, and keep the verification for another try.
     if (!(error instanceof BookingUnavailableError)) throw error;

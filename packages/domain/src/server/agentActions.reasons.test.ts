@@ -22,4 +22,10 @@ describe("refused reschedules", () => {
     mocks.rescheduleAppointmentForCaller.mockRejectedValue(new Error("database is down"));
     await expect(rescheduleForCaller(context, input)).rejects.toThrow("database is down");
   });
+
+  it("passes callId to rescheduleAppointmentForCaller so confirmation texts are held", async () => {
+    mocks.rescheduleAppointmentForCaller.mockResolvedValueOnce({ appointmentId: "apt_1", serviceId: "svc_1", startsAt: new Date(), endsAt: new Date() });
+    await rescheduleForCaller(context, { ...input, callId: "call_1" });
+    expect(mocks.rescheduleAppointmentForCaller).toHaveBeenCalledWith(context, expect.objectContaining({ callId: "call_1" }));
+  });
 });
