@@ -22,13 +22,13 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@ai-sdk/openai-compatible": "^3.0.82",
+    "@ai-sdk/openai-compatible": "^3.0.94",
     "@aws-sdk/client-s3": "^3.1146.0",
     "@aws-sdk/s3-request-presigner": "^3.1146.0",
     "@lobbystack/shared": "workspace:*",
     "@lobbystack/telemetry": "workspace:*",
-    "ai": "^7.0.159",
-    "libphonenumber-js": "^1.13.15",
+    "ai": "^7.0.179",
+    "libphonenumber-js": "^1.13.17",
     "luxon": "^3.7.2",
     "nodemailer": "^10.3.1",
     "standardwebhooks": "^1.1.1",
