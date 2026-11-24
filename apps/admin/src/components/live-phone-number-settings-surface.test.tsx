@@ -54,6 +54,21 @@ describe("one agent's number", () => {
   });
 });
 
+describe("a number the carrier is still activating", () => {
+  it("says it's on order and that we'll email, until it arrives, and keeps the chooser closed", async () => {
+    renderWith({ partnerNumbers: { available: true }, activeClaim: { id: "claim-1", status: "provisioning", awaitingCarrier: true, e164: "+381213860081" } });
+    expect(await screen.findByText("phoneNumber.onOrder")).toBeTruthy();
+    expect(screen.queryByText("phoneNumber.current.empty")).toBeNull();
+    expect(screen.getByRole("button", { name: "phoneNumber.actions.getNumber" }).hasAttribute("disabled")).toBe(true);
+  });
+
+  it("says nothing about an order for a claim the carrier answered at once", async () => {
+    renderWith({ partnerNumbers: { available: true }, activeClaim: { id: "claim-1", status: "provisioning", awaitingCarrier: false } });
+    expect(await screen.findByText("phoneNumber.current.empty")).toBeTruthy();
+    expect(screen.queryByText("phoneNumber.onOrder")).toBeNull();
+  });
+});
+
 describe("a partner's business on the phone number settings", () => {
   it("gets a number when its partner's tier allows one, without the billing it doesn't have", async () => {
     const paths = renderWith({ partnerNumbers: { available: true } });

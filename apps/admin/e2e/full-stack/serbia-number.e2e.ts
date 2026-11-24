@@ -120,7 +120,7 @@ test("a paid owner is given a number the account already holds in their city, wi
   }
 });
 
-test("a paid owner whose order Zadarma is still checking moves on, and the claim waits for the number", async ({ page }, testInfo) => {
+test("a paid owner whose order Zadarma is still checking is told to wait for an email, moves on, and the claim waits for the number", async ({ page }, testInfo) => {
   test.setTimeout(240_000);
   const emails: string[] = [];
   const businessIds: string[] = [];
@@ -128,8 +128,9 @@ test("a paid owner whose order Zadarma is still checking moves on, and the claim
     thirdParties.zadarma.status = "checking";
     const businessId = await toNumberStep(page, testInfo, "starter", emails, businessIds);
     await page.getByRole("listitem").filter({ hasText: "Belgrade" }).getByRole("button", { name: onboarding.number.select }).click();
-    // Zadarma checks documents for days, so the owner goes on while the order waits.
+    // Zadarma checks documents for days, so the owner goes on while the order waits, told we'll email when it's ready.
     await expect(page).toHaveURL("/onboarding/attribution", { timeout: 120_000 });
+    await expect(page.getByText(onboarding.number.onOrder)).toBeVisible();
     expect(orders()).toHaveLength(1);
     expect(orders()[0]!.params).toMatchObject({ direction_id: "2393" });
 

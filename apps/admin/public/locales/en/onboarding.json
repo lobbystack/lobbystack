@@ -227,7 +227,8 @@
       "empty": "No cities are available right now.",
       "failed": "We couldn't order that number. Try again."
     },
-    "carrierUnavailable": "We can't set up a number right now. Please try again later."
+    "carrierUnavailable": "We can't set up a number right now. Please try again later.",
+    "onOrder": "We ordered your number. It can take a few business days, and we'll email you when it's ready."
   },
   "attribution": {
     "title": "How did you hear about {{appName}}?",

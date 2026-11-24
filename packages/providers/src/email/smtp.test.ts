@@ -431,6 +431,20 @@ describe("SMTP delivery", () => {
     }
   });
 
+  it("tells the owner a number the carrier activated is ready, in their language, with a link to it", async () => {
+    const { provider, sent } = capture();
+    const variables = { firstName: "Milica", businessName: "Delux", number: "+381213860081", url: "https://app.example.test/agents/primary/channels/phone" };
+    for (const locale of ["en", "fr", "es", "sr"]) await send(provider, { template: "number_ready", to: "owner@example.test", variables: { ...variables, locale } });
+    expect([0, 1, 2, 3].map((index) => sent(index).subject)).toEqual(["+381 21 3860081 is ready", "Le +381 21 3860081 est prêt", "El +381 21 3860081 está listo", "Broj +381 21 3860081 je spreman"]);
+    for (const index of [0, 1, 2, 3]) {
+      expect(sent(index).text).toContain("Delux");
+      expect(sent(index).text).toContain("https://app.example.test/agents/primary/channels/phone");
+      expect(sent(index).html).toContain('href="https://app.example.test/agents/primary/channels/phone"');
+    }
+    expect(sent(0).text).toContain("Calls to it now reach your agent.");
+    expect(isMarketingEmailTemplate("number_ready")).toBe(false);
+  });
+
   describe("call summary", () => {
     const call = { template: "call_summary" as const, to: "owner@example.test", variables: { locale: "en", businessName: "Metroprint", callerName: "Sarah Chen", callerPhone: "+14165550133", startedAt: "2026-11-09T20:32:00.000Z", timezone: "America/Toronto", durationSeconds: "134", summary: "Sarah asked for a quote on 500 <business> cards.", url: "https://app.example.test/calls/call-1" } };
 

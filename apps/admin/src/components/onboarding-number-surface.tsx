@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { resolveOnboardingRoute } from "@lobbystack/shared";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { onboardingCityOrderApi, PhoneNumberChooser, phoneNumberChooserApi, type CityOrder } from "./phone-number-chooser";
 import { OnboardingPlanSurface } from "./onboarding-plan-surface";
@@ -123,11 +124,17 @@ export function OnboardingNumberSurface() {
   });
   const awaitingCarrier = Boolean(phones.data?.activeClaim?.awaitingCarrier);
   const movedOn = useRef(false);
-  useEffect(() => {
-    if (!awaitingCarrier || claiming || !business || movedOn.current) return;
+  // The owner goes on with setup while the carrier activates the number, and the worker emails them when it's live.
+  const leaveWhileOnOrder = useCallback(() => {
+    if (movedOn.current) return;
     movedOn.current = true;
+    toast.success(t("number.onOrder"));
     moveOn.mutate();
-  }, [awaitingCarrier, business, claiming, moveOn]);
+  }, [moveOn, t]);
+  useEffect(() => {
+    if (!awaitingCarrier || claiming || !business) return;
+    leaveWhileOnOrder();
+  }, [awaitingCarrier, business, claiming, leaveWhileOnOrder]);
   const cityOrder = useMemo<CityOrder | undefined>(() => outlook.data?.cityCountries?.length ? {
     countries: outlook.data.cityCountries,
     loadCities: onboardingCityOrder.loadCities,
@@ -164,7 +171,7 @@ export function OnboardingNumberSurface() {
     );
   }
   return <div className="mx-auto flex w-full max-w-lg flex-col gap-6">
-    {business ? <PhoneNumberChooser businessId={business.businessId} getInitialNumberSuggestion={chooser.getInitialNumberSuggestion} searchAvailableNumbers={chooser.searchAvailableNumbers} claimNumber={claimNumber} getErrorMessage={getErrorMessage} onClaimStarted={(number) => { telemetry.track("web.onboarding.number_claim_started", { businessId: business.businessId, countryCode: number.selectionContext.countryCode, selectionMode: number.selectionContext.mode, numberKind: number.kind }); }} onClaimCompleted={(number) => { telemetry.track("web.onboarding.number_claim_completed", { businessId: business.businessId, countryCode: number.selectionContext.countryCode, selectionMode: number.selectionContext.mode, numberKind: number.kind }); }} onClaimed={() => { setClaiming(false); void phones.refetch(); }} otherCountry={{ label: t("number.country.other"), onSelect: () => setCountryFallback({ country: null }) }} cityOrder={cityOrder} onOrderPending={() => { movedOn.current = true; moveOn.mutate(); }} labels={{ countryLabel: t("number.countryLabel"), areaCodeLabel: t("number.areaCodeLabel"), areaCodePlaceholder: t("number.areaCodePlaceholder"), search: t("number.search"), searching: t("number.searching"), phoneNumberHeader: t("number.tableHeaders.phoneNumber"), select: t("number.select"), loadMore: t("number.loadMore"), empty: t("number.empty"), loadFailed: "number.loadFailed", searchFailed: "number.searchFailed", claimFailed: "number.claimFailed", unavailable: t("number.unavailable") }} /> : null}
+    {business ? <PhoneNumberChooser businessId={business.businessId} getInitialNumberSuggestion={chooser.getInitialNumberSuggestion} searchAvailableNumbers={chooser.searchAvailableNumbers} claimNumber={claimNumber} getErrorMessage={getErrorMessage} onClaimStarted={(number) => { telemetry.track("web.onboarding.number_claim_started", { businessId: business.businessId, countryCode: number.selectionContext.countryCode, selectionMode: number.selectionContext.mode, numberKind: number.kind }); }} onClaimCompleted={(number) => { telemetry.track("web.onboarding.number_claim_completed", { businessId: business.businessId, countryCode: number.selectionContext.countryCode, selectionMode: number.selectionContext.mode, numberKind: number.kind }); }} onClaimed={() => { setClaiming(false); void phones.refetch(); }} otherCountry={{ label: t("number.country.other"), onSelect: () => setCountryFallback({ country: null }) }} cityOrder={cityOrder} onOrderPending={leaveWhileOnOrder} labels={{ countryLabel: t("number.countryLabel"), areaCodeLabel: t("number.areaCodeLabel"), areaCodePlaceholder: t("number.areaCodePlaceholder"), search: t("number.search"), searching: t("number.searching"), phoneNumberHeader: t("number.tableHeaders.phoneNumber"), select: t("number.select"), loadMore: t("number.loadMore"), empty: t("number.empty"), loadFailed: "number.loadFailed", searchFailed: "number.searchFailed", claimFailed: "number.claimFailed", unavailable: t("number.unavailable") }} /> : null}
     {business && (skipAllowed || returnTo) ? <button className="mx-auto type-title text-muted-foreground underline underline-offset-4 hover:text-foreground disabled:opacity-50" disabled={skip.isPending || claiming} onClick={() => skip.mutate()} type="button">{skip.isPending ? t("number.skipping") : t("number.skipLater")}</button> : null}
     {skip.isError ? <FieldError>{t("number.skipFailed")}</FieldError> : null}
   </div>;

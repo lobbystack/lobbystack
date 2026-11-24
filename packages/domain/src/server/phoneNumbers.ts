@@ -9,13 +9,15 @@ import { requireBusinessAdmin } from "../authz";
 import type { DomainContext } from "./context";
 import { loadEntitlement } from "./entitlement";
 import { activateNumberTrialInTransaction, enqueueNumberRouting, failNumberTrialInTransaction, isNumberCountry, keepBusinessNumbersInTransaction, trialCountries, trialEmailInTransaction, directTrialNetworkRefusalInTransaction, trialNumberPaidForInTransaction, verifiedPhone, type NumberCountry } from "./numberTrials";
-import { isPastNumberStage, LEGACY_PHONE_STAGES, soldNumberKind } from "@lobbystack/shared";
+import { isPastNumberStage, LEGACY_PHONE_STAGES, normalizeInterfaceLocale, soldNumberKind } from "@lobbystack/shared";
 import { normalizeOnboardingStage, NUMBER_CLAIM_STAGES, numberRequired } from "./onboarding";
 import { loadPartnerNumberStanding, newPartnerNumberRefusal, numberCountsForPartnerInTransaction, partnerKeyNumberRefusal, partnerReplacementRefusal, partnerTrialOffered, recordPartnerNumberCostInTransaction, unclaimedPartnerDemoInTransaction } from "./partnerNumbers";
 import { resolveBusinessNumberMarket, type BusinessNumberMarket } from "./phoneNumberMarket";
 import { isDisposableTrialEmail } from "./trialEligibility";
 import { postBusinessNotificationInTransaction, resolveBusinessNotificationsInTransaction } from "./businessNotifications";
 import { recordProductEventInTransaction } from "./productEvents";
+import { appBaseUrl } from "./appBaseUrl";
+import { greetingName } from "./emailGreeting";
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 
 export type NumberSelection = {
@@ -570,7 +572,7 @@ export async function completeNumberProvisioning(context: DomainContext, input: 
     const [number] = existing ? [existing] : await tx.insert(phoneNumbers).values({ businessId: input.businessId, agentId: defaultAgentIdOf(input.businessId), e164: input.e164, providerPhoneId: input.providerPhoneId, ...(input.carrier ? { carrier: input.carrier } : {}), ...(input.carrierConnectionId ? { carrierConnectionId: input.carrierConnectionId } : {}), status: "active", voiceEnabled: true, smsEnabled, voiceWebhookStatus: "synced", voiceWebhookTargetUrl: input.voiceUrl, voiceWebhookLastSyncedAt: new Date(), ...(input.smsUrl ? { smsWebhookStatus: "synced", smsWebhookTargetUrl: input.smsUrl, smsWebhookLastSyncedAt: new Date() } : {}) }).returning({ id: phoneNumbers.id });
     if (!number) throw new Error("Provisioned number could not be persisted.");
     if (input.monthlyCostCents !== undefined) await recordPartnerNumberCostInTransaction(tx, { businessId: input.businessId, phoneNumberId: number.id, monthlyCostCents: input.monthlyCostCents });
-    const claim = (await tx.update(onboardingNumberClaimEvents).set({ status: "claimed", phoneNumberId: number.id, providerPhoneId: input.providerPhoneId, purchasedAt: new Date(), completedAt: new Date(), updatedAt: new Date() }).where(and(eq(onboardingNumberClaimEvents.id, input.claimId), eq(onboardingNumberClaimEvents.businessId, input.businessId), eq(onboardingNumberClaimEvents.status, "provisioning"))).returning({ purpose: onboardingNumberClaimEvents.purpose, replacingPhoneNumberId: onboardingNumberClaimEvents.replacingPhoneNumberId, selection: onboardingNumberClaimEvents.selectionContext, monthlyPriceCents: onboardingNumberClaimEvents.monthlyPriceCents }))[0];
+    const claim = (await tx.update(onboardingNumberClaimEvents).set({ status: "claimed", phoneNumberId: number.id, providerPhoneId: input.providerPhoneId, purchasedAt: new Date(), completedAt: new Date(), updatedAt: new Date() }).where(and(eq(onboardingNumberClaimEvents.id, input.claimId), eq(onboardingNumberClaimEvents.businessId, input.businessId), eq(onboardingNumberClaimEvents.status, "provisioning"))).returning({ purpose: onboardingNumberClaimEvents.purpose, providerOrderId: onboardingNumberClaimEvents.providerOrderId, replacingPhoneNumberId: onboardingNumberClaimEvents.replacingPhoneNumberId, selection: onboardingNumberClaimEvents.selectionContext, monthlyPriceCents: onboardingNumberClaimEvents.monthlyPriceCents }))[0];
     if (!claim) throw new Error("Number claim is no longer awaiting provisioning.");
     // Migration 0216's trigger moved an extra number to its agent and started its months, and gave a replacement its old number's agent.
     if (claim.purpose === "replacement") {
@@ -596,8 +598,37 @@ export async function completeNumberProvisioning(context: DomainContext, input: 
     if (profile && profile.staffFirstMode !== "never") await enqueueNumberRouting(tx, { businessId: input.businessId, phoneNumberId: number.id, mode: "receptionist" });
     // The business has a number again.
     await resolveBusinessNotificationsInTransaction(tx, { businessId: input.businessId, kinds: ["number_purchase_failed", "number_released"] });
+    // The owner left while the carrier finished the order, and was told they'd hear when the number answers.
+    if (claim.providerOrderId) await announceNumberReadyInTransaction(tx, { businessId: input.businessId, claimId: input.claimId, phoneNumberId: number.id, e164: input.e164 });
     return number.id;
   });
+}
+
+/**
+ * Tells a business its number is live after the carrier took days to activate it, such as a Zadarma order the
+ * regulator checks: a bell item, and an email to each owner and admin. A number bought at once needs neither, because
+ * the person who picked it watched it arrive. Each is keyed to the claim, so a retried job sends it once.
+ */
+export async function announceNumberReadyInTransaction(tx: DatabaseTransaction, input: { businessId: string; claimId: string; phoneNumberId: string; e164: string }): Promise<void> {
+  await postBusinessNotificationInTransaction(tx, { businessId: input.businessId, kind: "number_ready", key: `number_ready:${input.claimId}`, params: { number: input.e164 } });
+  // The worker's own function lists the owners and admins, which row security hides from it otherwise.
+  const team = (await tx.execute<{ user_id: string; email: string; name: string | null; preferred_locale: string | null; business_name: string | null }>(sql`select user_id, email, name, preferred_locale, business_name from app.business_allowance_alert_recipients(${input.businessId}::uuid)`)).rows;
+  for (const person of team) {
+    await enqueueOutbox(tx, {
+      topic: "email.send",
+      businessId: input.businessId,
+      aggregateType: "phone_number",
+      aggregateId: input.phoneNumberId,
+      dedupeKey: `number-ready:${input.claimId}:${person.user_id}`,
+      payload: {
+        template: "number_ready",
+        to: person.email,
+        variables: { locale: normalizeInterfaceLocale(person.preferred_locale) ?? "en", firstName: greetingName(person.name, person.email), businessName: person.business_name ?? "", number: input.e164, url: `${appBaseUrl()}/agents/primary/channels/phone` },
+        brand: { kind: "business", businessId: input.businessId },
+        replyTo: null,
+      },
+    });
+  }
 }
 
 export async function failNumberProvisioning(context: DomainContext, input: { businessId: string; claimId: string; unavailable: boolean }): Promise<void> {

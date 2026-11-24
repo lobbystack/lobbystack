@@ -488,7 +488,7 @@
     "toast": {
       "changed": "Broj telefona je promenjen. Prethodni broj ostaje aktivan još 30 dana.",
       "added": "Broj telefona je dodat.",
-      "pending": "Pripremamo vaš broj. To može da potraje nekoliko dana."
+      "pending": "Naručili smo Vaš broj. To može da potraje nekoliko radnih dana, a javićemo Vam mejlom kada bude spreman."
     },
     "numbersUnavailable": "Brojevi telefona još nisu podešeni na ovoj kontrolnoj tabli. Zamolite osobu koja njome upravlja da poveže telefonskog provajdera.",
     "extra": {
@@ -507,7 +507,8 @@
       "empty": "Trenutno nema dostupnih gradova.",
       "failed": "Nismo uspeli da naručimo taj broj. Pokušajte ponovo."
     },
-    "carrierUnavailable": "Trenutno ne možemo da pripremimo broj. Pokušajte ponovo kasnije."
+    "carrierUnavailable": "Trenutno ne možemo da pripremimo broj. Pokušajte ponovo kasnije.",
+    "onOrder": "Broj {{number}} je naručen. To može da potraje nekoliko radnih dana, a javićemo Vam mejlom kada bude spreman."
   },
   "appearance": {
     "title": "Postavke",

@@ -488,7 +488,7 @@
     "toast": {
       "changed": "Número de teléfono cambiado. Su número anterior seguirá activo durante 30 días.",
       "added": "Número de teléfono agregado.",
-      "pending": "Estamos preparando su número. Puede tardar unos días."
+      "pending": "Pedimos su número. Puede tardar unos días hábiles, y le escribiremos cuando esté listo."
     },
     "numbersUnavailable": "Los números de teléfono aún no están configurados en este panel. Pida a quien lo administra que conecte un proveedor de telefonía.",
     "extra": {
@@ -507,7 +507,8 @@
       "empty": "No hay ciudades disponibles ahora.",
       "failed": "No pudimos pedir ese número. Inténtalo de nuevo."
     },
-    "carrierUnavailable": "No podemos preparar un número ahora. Inténtelo de nuevo más tarde."
+    "carrierUnavailable": "No podemos preparar un número ahora. Inténtelo de nuevo más tarde.",
+    "onOrder": "Pedimos el {{number}}. Puede tardar unos días hábiles, y le escribiremos cuando esté listo."
   },
   "appearance": {
     "title": "Preferencias",

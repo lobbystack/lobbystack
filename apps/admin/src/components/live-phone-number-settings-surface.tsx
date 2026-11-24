@@ -24,10 +24,13 @@ import { formatDateTime, intlLocale } from "@/lib/locale";
 import { extraNumberMonthlyCents, soldNumberKind } from "@lobbystack/shared";
 import { useExtraNumbersCheckoutReturn, useStartExtraNumbersCheckout } from "./extra-numbers-checkout";
 
+/** A number being set up. awaitingCarrier: the carrier took the order and is still activating it, which can take days. */
+type NumberClaim = { id: string; status: string; awaitingCarrier?: boolean; e164?: string };
+
 type NumbersResponse = {
   phoneNumbers: PhoneNumberViewModel[];
-  activeClaim?: { id: string; status: string } | null;
-  replacement: { usedAt: string | null; activeClaim?: { id: string; status: string } | null };
+  activeClaim?: NumberClaim | null;
+  replacement: { usedAt: string | null; activeClaim?: NumberClaim | null };
   /**
    * For a partner's business, whether its partner's tier lets it get a new number now, whether that number is its partner's
    * 14-day trial, and why it can't get one; null for a direct business. With the trial, whether this person verified a mobile
@@ -36,7 +39,7 @@ type NumbersResponse = {
   partnerNumbers?: { available: boolean; trial?: boolean; refusal?: string | null; phoneVerified?: boolean } | null;
   /** Whether the business can buy another number for an agent, and whether it pays for one. */
   extraNumbers?: { available: boolean; priced: boolean; subscribed?: boolean; checkoutAvailable?: boolean; refusal: string | null };
-  extraClaim?: { id: string; status: string } | null;
+  extraClaim?: NumberClaim | null;
   /** The countries whose number is named when it is ordered, where the picker asks for a city. */
   cityCountries?: string[];
 };
@@ -114,6 +117,8 @@ export function LivePhoneNumberSettingsSurface({ agentId }: { agentId?: string }
   // An agent without a number, in a workspace that has one, gets another number of its own: an extra number.
   const businessHasNumber = Boolean(numbers.data?.phoneNumbers.some(number => number.status === "active" && !number.reclaimScheduledAt));
   const buysExtra = Boolean(agentId) && !isReplacement && businessHasNumber;
+  // The claim a carrier is still activating, for this agent's page: a first number, a replacement, or an extra one.
+  const onOrder = [buysExtra ? numbers.data?.extraClaim : numbers.data?.replacement.activeClaim ?? numbers.data?.activeClaim].find(claim => claim?.awaitingCarrier) ?? null;
   const extraNumbers = numbers.data?.extraNumbers;
   const extraPriced = Boolean(buysExtra && extraNumbers?.priced);
   // A priced extra number bills through its own monthly subscription, which a Polar checkout starts before the first one.
@@ -257,8 +262,11 @@ export function LivePhoneNumberSettingsSurface({ agentId }: { agentId?: string }
               ) : displayPhoneNumber ? (
                 <>
                   <p className="type-body text-foreground">{displayPhoneNumber}</p>
+                  {onOrder ? <p className="type-body-muted">{t("phoneNumber.onOrder", { number: formatPhoneNumberDisplay(onOrder.e164 ?? "") })}</p> : null}
                   {primaryPhoneNumber?.monthlyPriceCents != null ? <p className="type-caption text-muted-foreground">{t("phoneNumber.extra.monthly", { price: formatMonthlyPrice(primaryPhoneNumber.monthlyPriceCents, i18n.language) })}</p> : null}
                 </>
+              ) : onOrder ? (
+                <p className="type-body-muted">{t("phoneNumber.onOrder", { number: formatPhoneNumberDisplay(onOrder.e164 ?? "") })}</p>
               ) : buysExtra && (extraNumbers?.refusal === "extra_numbers_unavailable" || (needsExtraNumbersBilling && !extraNumbers?.checkoutAvailable)) ? (
                 <p className="type-body-muted">{t("phoneNumber.extra.unavailable")}</p>
               ) : (

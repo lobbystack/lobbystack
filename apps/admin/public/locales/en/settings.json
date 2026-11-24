@@ -480,7 +480,7 @@
     "toast": {
       "changed": "Phone number changed. Your previous number will stay active for 30 days.",
       "added": "Phone number added.",
-      "pending": "We're setting up your number. It can take a few days."
+      "pending": "We ordered your number. It can take a few business days, and we'll email you when it's ready."
     },
     "numbersUnavailable": "Phone numbers aren't set up on this dashboard yet. Ask whoever runs it to connect a phone provider.",
     "extra": {
@@ -499,7 +499,8 @@
       "empty": "No cities are available right now.",
       "failed": "We couldn't order that number. Try again."
     },
-    "carrierUnavailable": "We can't set up a number right now. Please try again later."
+    "carrierUnavailable": "We can't set up a number right now. Please try again later.",
+    "onOrder": "{{number}} is on order. It can take a few business days, and we'll email you when it's ready."
   },
   "appearance": {
     "title": "Preferences",

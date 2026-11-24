@@ -273,6 +273,10 @@
         "title": "Nous n'avons pas pu importer {{site}}",
         "line": "Vérifiez l'adresse et importez-le de nouveau."
       },
+      "number_ready": {
+        "title": "Le {{number}} est prêt",
+        "line": "Les appels vers ce numéro arrivent maintenant à votre agent."
+      },
       "website_import_finished": {
         "title": "Importation du site terminée",
         "line_one": "{{count}} page de {{site}} lue.",

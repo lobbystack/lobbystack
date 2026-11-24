@@ -431,7 +431,9 @@ LobbyStack buys numbers from Zadarma in Serbia only. Twilio has none there, so a
 4. Run the SIP server. Set its address as `ZADARMA_SIP_HOST` on the worker, and put Zadarma's addresses in the server's `CARRIER_IPS`.
 5. Keep the account's balance above what a number costs, because an order charges it, and turn on automatic top-up in the account so a customer's order doesn't fail for an empty balance.
 
-From then on nothing is set by hand for a number. A customer in Serbia picks one in the number step, the worker orders it under the documents group, and when Zadarma activates it the worker routes it to the SIP server and gives it to the business.
+From then on nothing is set by hand for a number. A customer in Serbia picks one in the number step, the worker orders it under the documents group, and when Zadarma activates it the worker routes it to the SIP server and gives it to the business. A number the account already holds in that city, with no business on it, goes out first and nothing is ordered. The SIP server needs nothing per number, since it answers any number Zadarma sends it.
+
+While Zadarma checks an order, the owner goes on with setup and is told the number is on order and that we'll email them. The agent's phone page says the same until it arrives. When the worker gives the number to the business, `announceNumberReadyInTransaction` in `packages/domain` posts a `number_ready` bell item and emails each owner and admin the `number_ready` template. A number given out at once, such as a held one, sends neither.
 
 A Zadarma number differs from the other carriers' numbers in these ways:
 
