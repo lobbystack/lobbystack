@@ -46,6 +46,7 @@ jobs:
           done
           echo "Marketing snapshot server failed to start"
           exit 1
+      # www.hhs.gov answers 403 to every automated client, so its links can't be checked here.
       # airagent.fr/tarifs/ has returned 404 since October 2026, though AirAgent's own homepage
       # still links to it. Remove its exclusion once the page is back or the blog post links elsewhere.
       - uses: lycheeverse/lychee-action@v2
@@ -71,7 +72,7 @@ jobs:
             --exclude '^https://www\.telus\.com/'
             --exclude '^https://www\.myphoneflow\.com/'
             --exclude '^https://business\.comcast\.com/'
-            --exclude '^https://www\.hhs\.gov/hipaa/for-professionals/special-topics/health-information-technology/cloud-computing/$'
+            --exclude '^https://www\.hhs\.gov/'
             --exclude '^https://openai\.com/api/pricing/$'
             --exclude '^https://help\.openai\.com/'
             --exclude '^https://www\.openai\.fm/'
