@@ -170,7 +170,7 @@ LobbyStack books into Google Calendar, Cal.com or Calendly and reaches other sof
 
 Dentina names 11 practice systems it books into and charges no setup fee; Premium costs $399 per location a month billed annually. Viva's 4,000 Gold credits cover about 400 AI call minutes if you spend them only on calls. Peerlogic's $699 Premium plan bundles the AI receptionist with a dental phone system.
 
-LobbyStack makes no HIPAA claim and books only into Google Calendar, Cal.com or Calendly. A practice that needs booking straight into Dentrix should start with Dentina or Peerlogic. Our page on the [AI receptionist for dental offices](/solutions/ai-receptionist-for-dental-offices/) covers where LobbyStack fits.
+LobbyStack makes no HIPAA claim and books only into Google Calendar, Cal.com or Calendly. A practice that needs booking straight into Dentrix should start with Dentina or Peerlogic. Our page on the [AI receptionist for dental offices](/solutions/ai-receptionist-for-dental-offices/) covers where LobbyStack fits, and our comparison of [dental answering services](/blog/dental-answering-service/) prices live and AI options side by side.
 
 ## Does an AI receptionist charge setup or hidden fees?
 

@@ -170,7 +170,7 @@ LobbyStack réserve dans Google Calendar, Cal.com ou Calendly et ne se connecte 
 
 Dentina nomme 11 logiciels de cabinet dans lesquels il réserve et ne facture pas de frais de mise en service ; Premium coûte 399 $ par établissement et par mois, facturé à l'année. Les 4 000 crédits Gold de Viva couvrent environ 400 minutes d'appel IA si vous ne les dépensez qu'en appels. Le forfait Premium de Peerlogic à 699 $ réunit le réceptionniste IA et un système téléphonique dentaire.
 
-LobbyStack ne revendique pas la conformité HIPAA et ne réserve que dans Google Calendar, Cal.com ou Calendly. Un cabinet qui veut réserver directement dans Dentrix devrait commencer par Dentina ou Peerlogic. Notre page sur le [réceptionniste IA pour cabinet dentaire](/fr/solutions/ai-receptionist-for-dental-offices/) montre où LobbyStack trouve sa place.
+LobbyStack ne revendique pas la conformité HIPAA et ne réserve que dans Google Calendar, Cal.com ou Calendly. Un cabinet qui veut réserver directement dans Dentrix devrait commencer par Dentina ou Peerlogic. Notre page sur le [réceptionniste IA pour cabinet dentaire](/fr/solutions/ai-receptionist-for-dental-offices/) montre où LobbyStack trouve sa place, et notre comparatif du [secrétariat dentaire téléphonique](/fr/blog/dental-answering-service/) chiffre les options humaines et IA.
 
 ## Un réceptionniste IA facture-t-il des frais de mise en service ou cachés ?
 
