@@ -4,6 +4,7 @@ import { businesses, businessMemberships, createDatabaseClient, knowledgeChunks,
 import { createKnowledgeDocument, createUpload, finalizeUpload, cancelKnowledgeDocument, deleteKnowledgeDocument, getKnowledgeDocumentContent, indexCrawledWebsitePage, markKnowledgeDocumentFailed, retryKnowledgeDocument, searchKnowledge, setKnowledgeDocumentActive } from "@lobbystack/domain";
 import { handleJob } from "../apps/worker/src/handlers";
 import type { JobEnvelope } from "@lobbystack/contracts";
+import { EMBEDDING_DIMENSIONS } from "@lobbystack/providers/ai/embeddingProvider";
 function assert(value: unknown, message: string): asserts value { if (!value) throw new Error(message); }
 const auth = createDatabaseClient("lobbystack_auth"), worker = createDatabaseClient("lobbystack_worker"), app = createDatabaseClient("lobbystack_app");
 const userId = randomUUID(), viewerId = randomUUID(), businessId = randomUUID(), foreignBusinessId = randomUUID();
@@ -102,7 +103,7 @@ try {
     const importing = await workerImport();
     assert(importing.status === "indexing" && importing.importedCount === 2 && importing.indexedCount === embeddedPages, "Indexing progress did not persist between pages.");
     embeddedPages += 1;
-    return values.map(() => Array<number>(1536).fill(0));
+    return values.map(() => Array<number>(EMBEDDING_DIMENSIONS).fill(0.5));
   } } });
   assert(completed.status === "completed" && (await workerImport()).status === "completed" && (await workerImport()).indexedCount === 2, "Worker did not complete the linked job.");
   let staleCrawlCalled = false;

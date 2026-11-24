@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
-import { billingAccounts, billingUsageEvents, billingUsageMonths, businesses, calls, contacts, createDatabaseClient, enqueueOutbox, outboxMessages, transcripts, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { billingAccounts, billingUsageEvents, billingUsageMonths, businesses, calls, contacts, createDatabaseClient, enqueueOutbox, outboxMessages, transcripts, unitEconomicsEvents, type Database, type DatabaseTransaction } from "@lobbystack/db";
 
 import { blockLiveCaller, extendLiveCallReservation, finishLiveCall, lastLiveCallSequence, listBusinessesWithOpenLiveCalls, listOpenLiveCalls, liveCallHasRecording, markLiveCallMediaStarted, retryLiveCallRecording, saveLiveCallTurn, startLivePhoneCall, startLiveWebCall } from "./liveCalls";
 import { heldForCall } from "./notifications";
@@ -228,6 +228,34 @@ describe.skipIf(!testUrl)("GPT-Live phone calls against PostgreSQL", () => {
       const started = await asWorker(tx, async (context) => [await startLivePhoneCall(context, input), await startLivePhoneCall(context, input)]);
       expect(started.map((row) => [row.duplicate, row.maxDurationMs])).toEqual([[false, undefined], [true, undefined]]);
       expect(await tx.select({ id: billingUsageEvents.id }).from(billingUsageEvents).where(eq(billingUsageEvents.businessId, businessId))).toHaveLength(0);
+    });
+  });
+
+  it("attributes recovered calls to the model that started them, including calls from before the upgrade", async () => {
+    await rollbackTest(async (tx) => {
+      const businessId = await business(tx, { plan: "pro" });
+      const legacyInput = call(businessId);
+      const [legacy, current] = await asWorker(tx, async (context) => [
+        await startLivePhoneCall(context, legacyInput),
+        await startLiveWebCall(context, { businessId, sessionId: `live_${randomUUID()}`, widgetId: "dashboard", billable: false }),
+      ]);
+      const startedAt = new Date(Date.now() - 5 * 60_000);
+      await tx.update(calls).set({ startedAt, liveModel: null }).where(eq(calls.id, legacy!.callId));
+      await tx.update(calls).set({ startedAt }).where(eq(calls.id, current!.callId));
+      await asWorker(tx, async (context) => {
+        // A retry of the original delivery must leave its model attribution intact.
+        await expect(startLivePhoneCall(context, legacyInput)).resolves.toMatchObject({ duplicate: true });
+        const open = await listOpenLiveCalls(context, { businessId, startedBefore: new Date(Date.now() - 60_000) });
+        expect(open).toHaveLength(2);
+        for (const { callId, channel } of open) {
+          await expect(finishLiveCall(context, { businessId, callId, channel, seconds: 90, end: "connection_lost" })).resolves.toBe(true);
+          await expect(finishLiveCall(context, { businessId, callId, channel, seconds: 90, end: "connection_lost" })).resolves.toBe(false);
+        }
+      });
+      const costs = await tx.select().from(unitEconomicsEvents).where(and(eq(unitEconomicsEvents.businessId, businessId), eq(unitEconomicsEvents.eventKind, "voice_ai")));
+      expect(costs).toHaveLength(2);
+      expect(costs.find((event) => event.callId === legacy!.callId)).toMatchObject({ model: "gpt-live-1", pricingVersion: "gpt-live-1-2026-07", costUsd: 0.075 });
+      expect(costs.find((event) => event.callId === current!.callId)).toMatchObject({ model: "gpt-live-1.1", pricingVersion: "gpt-live-1.1-2026-11", costUsd: 0.075 });
     });
   });
 

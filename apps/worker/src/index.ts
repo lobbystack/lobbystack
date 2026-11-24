@@ -1,4 +1,4 @@
-import { assertDatabaseRole, businesses, createDatabaseClient, databaseHealthCheck, enqueueOutbox, listReembedBusinesses, listSchedulerBusinesses, listSummaryBackfillBusinesses, withBusinessTransaction, withDispatcherTransaction } from "@lobbystack/db";
+import { assertDatabaseRole, businesses, createDatabaseClient, databaseHealthCheck, enqueueOutbox, listSchedulerBusinesses, listSummaryBackfillBusinesses, withBusinessTransaction, withDispatcherTransaction } from "@lobbystack/db";
 import { createBusinessHoursExtractor, createBusinessSummarizer, createCallSummarizer } from "@lobbystack/agent-core";
 import { DEFAULT_EMAIL_FROM, assertProductionSecrets, isMaintenanceMode, partnerFeatureWarnings, partnerFeatures } from "@lobbystack/shared";
 import { brandChangesChannel, encodeBrandChange, listenForBrandChanges, recordPartnerTierBilling, type BrandChangePublisher } from "@lobbystack/domain";
@@ -17,6 +17,7 @@ import { createStorageProvider } from "@lobbystack/providers/storage/provider";
 import { createTelephony } from "@lobbystack/providers/telephony/registry";
 import { getMeter, initializeTelemetry, redactOtelExceptionText, shutdownTelemetry, withExtractedTraceContext, withSpan } from "@lobbystack/telemetry/node";
 import { redactJobError } from "./redactJobError";
+import { enqueueStaleKnowledgeEmbeddings } from "./knowledgeEmbeddings";
 import type { CalendarProviders } from "./calendarJobs";
 import { DelayedError, Worker } from "bullmq";
 import { and, eq, isNull } from "drizzle-orm";
@@ -290,20 +291,18 @@ async function main(): Promise<void> {
         });
       }
     }
-    if (embeddings) {
-      const embeddingQueue = queues.get("bulk");
-      if (embeddingQueue) {
-        for (const businessId of await listReembedBusinesses(dispatcherDatabase.db, embeddings.fingerprint)) {
-          await enqueueJob(embeddingQueue, {
-            type: "knowledge.reembedBusiness",
-            businessId,
-            payload: { fingerprint: embeddings.fingerprint },
-            idempotencyKey: `knowledge-reembed:${businessId}:${embeddings.fingerprint}`,
-          });
-        }
-      }
-    }
   })().catch((error) => console.error("startup scheduling failed", redactOtelExceptionText(error instanceof Error ? error.message : String(error))));
+  const embeddingQueue = queues.get("bulk");
+  let embeddingReconciliation: Promise<void> | undefined;
+  const reconcileEmbeddings = () => {
+    if (!embeddings || !embeddingQueue || embeddingReconciliation) return;
+    embeddingReconciliation = enqueueStaleKnowledgeEmbeddings(dispatcherDatabase.db, embeddingQueue, embeddings.embeddingFingerprint)
+      .catch((error) => console.error("embedding reconciliation failed", redactOtelExceptionText(error instanceof Error ? error.message : String(error))))
+      .finally(() => { embeddingReconciliation = undefined; });
+  };
+  reconcileEmbeddings();
+  const embeddingRefresh = setInterval(reconcileEmbeddings, 5 * 60_000);
+  embeddingRefresh.unref();
   const schedulerRefresh = setInterval(() => void refreshSchedulers().catch((error) => console.error("scheduler refresh failed", redactOtelExceptionText(error instanceof Error ? error.message : String(error)))), 5 * 60_000);
   schedulerRefresh.unref();
   const checkHealth = async () => {
@@ -326,6 +325,7 @@ async function main(): Promise<void> {
     // Readiness fails and new attaches get 503 at once, so new work goes to the next deployment.
     state.draining = true;
     clearInterval(schedulerRefresh);
+    clearInterval(embeddingRefresh);
     clearInterval(healthRefresh);
     abort.abort();
     // Stop taking jobs, and let calls in progress end on their own until the

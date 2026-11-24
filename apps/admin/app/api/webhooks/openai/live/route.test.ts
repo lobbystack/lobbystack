@@ -2,10 +2,10 @@ import type { SQL } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ unwrap: vi.fn(), reject: vi.fn(), accept: vi.fn(), execute: vi.fn(), snapshot: vi.fn(), forAgent: vi.fn(), buildSession: vi.fn(), startLivePhoneCall: vi.fn(), finishLiveCall: vi.fn(), attach: vi.fn(), isNumberTrialEnded: vi.fn(), markNumberTrialMinutesExhausted: vi.fn() }));
+const mocks = vi.hoisted(() => ({ unwrap: vi.fn(), reject: vi.fn(), accept: vi.fn(), execute: vi.fn(), snapshot: vi.fn(), forAgent: vi.fn(), buildSession: vi.fn(), startLivePhoneCall: vi.fn(), finishLiveCall: vi.fn(), attach: vi.fn(), isNumberTrialEnded: vi.fn(), markNumberTrialMinutesExhausted: vi.fn(), recordAcceptedLivePhoneModel: vi.fn() }));
 
 vi.mock("@lobbystack/agent-core/live/session", () => ({ buildPhoneSessionConfig: mocks.buildSession }));
-vi.mock("@lobbystack/domain", () => ({ finishLiveCall: mocks.finishLiveCall, getBusinessSnapshotForAgent: mocks.forAgent, getCachedBusinessSnapshot: mocks.snapshot, startLivePhoneCall: mocks.startLivePhoneCall, isNumberTrialEnded: mocks.isNumberTrialEnded, markNumberTrialMinutesExhausted: mocks.markNumberTrialMinutesExhausted }));
+vi.mock("@lobbystack/domain", () => ({ finishLiveCall: mocks.finishLiveCall, getBusinessSnapshotForAgent: mocks.forAgent, getCachedBusinessSnapshot: mocks.snapshot, startLivePhoneCall: mocks.startLivePhoneCall, isNumberTrialEnded: mocks.isNumberTrialEnded, markNumberTrialMinutesExhausted: mocks.markNumberTrialMinutesExhausted, recordAcceptedLivePhoneModel: mocks.recordAcceptedLivePhoneModel }));
 vi.mock("@/lib/api-helpers", () => ({ getAppDatabase: () => ({ db: { execute: mocks.execute } }) }));
 vi.mock("@/lib/domain-context", () => ({ createWorkerDomainContext: () => ({}) }));
 vi.mock("@/lib/live-prototype", () => ({
@@ -22,6 +22,8 @@ beforeEach(() => {
   mocks.execute.mockResolvedValue({ rows: [{ business_id: null, position: 1 }] });
   mocks.isNumberTrialEnded.mockResolvedValue(false);
   mocks.markNumberTrialMinutesExhausted.mockResolvedValue(true);
+  mocks.buildSession.mockReturnValue({ model: "gpt-live-1.1", type: "live" });
+  mocks.recordAcceptedLivePhoneModel.mockResolvedValue(undefined);
   mocks.forAgent.mockImplementation(async (_domain: unknown, input: { loaded: unknown }) => input.loaded);
 });
 afterEach(() => { vi.unstubAllEnvs(); vi.restoreAllMocks(); });
@@ -106,6 +108,8 @@ describe("POST /api/webhooks/openai/live", () => {
     it("resumes a retried delivery as the agent its call recorded", async () => {
       mocks.startLivePhoneCall.mockResolvedValue({ callId: "call_1", conversationId: "conv_1", agentId: "agent_b", duplicate: true, blocked: false, maxDurationMs: 500_000 });
       await ring("+15815550100");
+      expect(mocks.recordAcceptedLivePhoneModel).toHaveBeenCalledWith(expect.anything(), { businessId: "biz_1", callId: "call_1", model: "gpt-live-1.1" });
+      expect(mocks.recordAcceptedLivePhoneModel).toHaveBeenCalledBefore(mocks.attach);
       expect(mocks.attach).toHaveBeenCalledWith(expect.objectContaining({ agentId: "agent_b", resume: true }));
     });
 

@@ -537,7 +537,7 @@ export function createAgentTools(context: AgentToolContext): ToolSet {
         execute: async (input) => {
           const start = startTime(input.startsAt);
           if (!start.ok) return start;
-          const result = await rescheduleForCaller(domain, { businessId, ...agent, callerPhone, ...input, startsAt: start.startsAt });
+          const result = await rescheduleForCaller(domain, { businessId, ...agent, callerPhone, ...input, startsAt: start.startsAt, ...(context.callId ? { callId: context.callId } : {}) });
           return !result.ok && "unavailableReason" in result && isReason(result.unavailableReason) ? { ok: false, reason: UNAVAILABLE_TOOL_MESSAGES[result.unavailableReason] } : result;
         },
       });

@@ -42,7 +42,7 @@ afterEach(() => { vi.clearAllMocks(); mocks.updates.length = 0; });
 function crawl(): { job: JobEnvelope; documentId: string; dependencies: Parameters<typeof handleJob>[1] & { crawler: { crawl: ReturnType<typeof vi.fn> } } } {
   const documentId = randomUUID();
   const crawler = { crawl: vi.fn(async () => [{ url: "https://example.com/", markdown: "Home" }, { url: "https://example.com/hours", markdown: "Open 9 to 5." }]) };
-  const embeddings = { embed: vi.fn(async (values: string[]) => values.map(() => [0.1])) };
+  const embeddings = { embed: vi.fn(async (values: string[]) => values.map(() => new Array<number>(1536).fill(0.1))) };
   return {
     documentId,
     job: { jobId: randomUUID(), type: "knowledge.crawlWebsite", queue: "bulk", businessId: randomUUID(), payload: { url: "https://example.com/", documentId, revision: 0, websiteIngestionJobId: randomUUID() }, trace: {}, idempotencyKey: `knowledge:${documentId}:crawl`, scheduled: false },

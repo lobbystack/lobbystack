@@ -18,8 +18,14 @@ import { createAgentTools, UNAVAILABLE_TOOL_MESSAGES } from "./tools";
 
 type Execute = (input: object, options: object) => Promise<Record<string, unknown>>;
 
-function tools(snapshot: Partial<BusinessContextSnapshot> = {}) {
-  const set = createAgentTools({ domain: { db: {} as never }, channel: "voice", callerPhone: "+14165550100", snapshot: { ...demoSnapshot, timezone: "America/Toronto", appointmentChangePolicy: { enabled: true, allowCancel: true, allowReschedule: true, verificationMode: "phone_match_and_facts" }, ...snapshot } });
+function tools(snapshot: Partial<BusinessContextSnapshot> = {}, options: { callId?: string } = {}) {
+  const set = createAgentTools({
+    domain: { db: {} as never },
+    channel: "voice",
+    callerPhone: "+14165550100",
+    ...(options.callId ? { callId: options.callId } : {}),
+    snapshot: { ...demoSnapshot, timezone: "America/Toronto", appointmentChangePolicy: { enabled: true, allowCancel: true, allowReschedule: true, verificationMode: "phone_match_and_facts" }, ...snapshot },
+  });
   const run = (name: string, input: object) => (set[name]!.execute! as Execute)(input, { toolCallId: "1", messages: [] });
   return { set, run };
 }
@@ -159,6 +165,12 @@ describe("rescheduleAppointment", () => {
     vi.mocked(rescheduleForCaller).mockResolvedValueOnce({ ok: true } as never);
     await tools().run("rescheduleAppointment", { appointmentId: "apt_1", verificationId: "ver_1", startsAt: "2026-10-06T10:00", finalConfirmation: true });
     expect(vi.mocked(rescheduleForCaller).mock.lastCall?.[1]).toMatchObject({ startsAt: "2026-10-06T10:00:00.000-04:00" });
+  });
+
+  it("passes the call id so the reschedule confirmation text waits for the call to end", async () => {
+    vi.mocked(rescheduleForCaller).mockResolvedValueOnce({ ok: true } as never);
+    await tools({}, { callId: "call_1" }).run("rescheduleAppointment", { appointmentId: "apt_1", verificationId: "ver_1", startsAt: "2026-10-06T10:00", finalConfirmation: true });
+    expect(vi.mocked(rescheduleForCaller).mock.lastCall?.[1]).toMatchObject({ callId: "call_1" });
   });
 
   it("refuses a time that has already passed, keeping the verification", async () => {

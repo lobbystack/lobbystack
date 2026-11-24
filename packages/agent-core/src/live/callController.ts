@@ -43,6 +43,7 @@ export type DelegationTiming = {
 
 export type LiveCallSummary = {
   sessionId: string;
+  sessionModel?: string;
   durationMs: number;
   /**
    * Session length OpenAI bills for: the final usage from session.closed, or
@@ -453,6 +454,7 @@ export class LiveCallController {
   private lateAttach = false;
   private firstEventMs: number | undefined;
   private latestUsageSeconds: number | undefined;
+  private sessionModel: string | undefined;
   private finished = false;
   private resolveFinished!: () => void;
   private readonly whenFinished = new Promise<void>((resolve) => { this.resolveFinished = resolve; });
@@ -543,7 +545,10 @@ export class LiveCallController {
     untyped.on<{ error?: { code?: string; message?: string } }>("transport.failed", (event) => this.transferFailed(event.error?.message || event.error?.code || "transport.failed"));
     socket.on("session.delegation.created", (event) => void this.handleDelegation(event));
     socket.on("session.usage.updated", (event) => { this.latestUsageSeconds = event.usage.seconds; });
-    socket.on("session.closed", (event) => this.finish(event.reason ?? undefined, event.usage?.seconds, true));
+    socket.on("session.closed", (event) => {
+      this.sessionModel = event.session?.model ?? this.sessionModel;
+      this.finish(event.reason ?? undefined, event.usage?.seconds, true);
+    });
     socket.on("session.instructions.appended", (event) => this.acknowledge(event.client_event_id));
     socket.on("session.commentary.appended", (event) => this.acknowledge(event.client_event_id));
     socket.on("session.thinking.appended", (event) => this.acknowledge(event.client_event_id));
@@ -556,7 +561,8 @@ export class LiveCallController {
     // 8, and left the first seconds silent. The sideband replays the last 3
     // seconds of events, so an attach within 3 seconds still sees
     // session.started; a later phone attach greets on its own timer.
-    socket.on("session.started", () => {
+    socket.on("session.started", (event) => {
+      this.sessionModel = event.session?.model ?? this.sessionModel;
       if (this.started) return;
       this.started = true;
       clearTimeout(this.greetingTimer);
@@ -1391,6 +1397,7 @@ export class LiveCallController {
     const seconds = sessionClosed ? billedSeconds : this.latestUsageSeconds;
     this.options.onClose?.({
       sessionId: this.options.sessionId,
+      ...(this.sessionModel ? { sessionModel: this.sessionModel } : {}),
       durationMs: Date.now() - this.startedAt,
       usageConfirmed: sessionClosed && billedSeconds !== undefined,
       delegations: this.delegations,

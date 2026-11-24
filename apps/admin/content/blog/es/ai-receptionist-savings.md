@@ -170,7 +170,7 @@ LobbyStack reserva en Google Calendar, Cal.com o Calendly y solo llega a otro so
 
 Dentina nombra 11 sistemas clínicos en los que reserva y no cobra tarifa de configuración; su plan Premium cuesta $399 por sede al mes con facturación anual. Los 4,000 créditos Gold de Viva cubren unos 400 minutos de llamada con IA si los gasta solo en llamadas. El plan Premium de $699 de Peerlogic combina la recepcionista con IA con un sistema telefónico para clínicas dentales.
 
-LobbyStack no afirma cumplir con HIPAA y solo reserva en Google Calendar, Cal.com o Calendly. Si su consultorio necesita reservar directo en Dentrix, empiece por Dentina o Peerlogic. Nuestra página sobre la [recepcionista con IA para consultorios dentales](/es/solutions/ai-receptionist-for-dental-offices/) explica dónde encaja LobbyStack.
+LobbyStack no afirma cumplir con HIPAA y solo reserva en Google Calendar, Cal.com o Calendly. Si su consultorio necesita reservar directo en Dentrix, empiece por Dentina o Peerlogic. Nuestra página sobre la [recepcionista con IA para consultorios dentales](/es/solutions/ai-receptionist-for-dental-offices/) explica dónde encaja LobbyStack, y nuestra comparativa de [recepcionista dental](/es/blog/dental-answering-service/) pone precio a las opciones con personas y con IA.
 
 ## ¿Una recepcionista con IA cobra tarifa de configuración o cargos ocultos?
 

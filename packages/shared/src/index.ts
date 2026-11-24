@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export { isMaintenanceMode } from "./maintenance";
+export const LIVE_MODEL = "gpt-live-1.1";
 /** The sync error of a connection whose provider rejected its grant. Any other sync error clears without a reconnect. */
 export const CALENDAR_RECONNECT_ERROR = "Calendar authorization requires reconnection.";
 /** The last sync error of a Calendly connection on a plan that can't book through the API. */

@@ -752,14 +752,14 @@ export async function rescheduleAppointmentInTransaction(
 
 export async function rescheduleAppointmentForCaller(
   context: DomainContext,
-  input: { businessId: string; agentId?: string; appointmentId: string; callerPhone: string; startsAt: string; verificationId: string },
+  input: { businessId: string; agentId?: string; appointmentId: string; callerPhone: string; startsAt: string; verificationId: string; callId?: string },
 ): Promise<{ appointmentId: string; serviceId: string; startsAt: Date; endsAt: Date } | null> {
   const result = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => await rescheduleAppointmentInTransaction(tx, {
     businessId: input.businessId,
     appointmentId: input.appointmentId,
     startsAt: input.startsAt,
     callerPhone: input.callerPhone,
-    change: { source: "caller" },
+    change: { source: "caller", ...(input.callId ? { callId: input.callId } : {}) },
     beforeUpdate: async () => await consumeAppointmentChangeVerificationInTransaction(tx, { businessId: input.businessId, agentId: input.agentId, verificationId: input.verificationId, appointmentId: input.appointmentId, callerPhone: input.callerPhone, action: "reschedule" }),
   }));
   if (result) {

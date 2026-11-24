@@ -10,6 +10,8 @@ Accepted. Every phone number now sits on the Twilio SIP trunk, and we removed `a
 
 Answer phone and browser calls with OpenAI's `gpt-live-1`, with client delegation. Phone calls reach OpenAI through a Twilio Elastic SIP trunk and browser calls through WebRTC. The admin app accepts or creates each session, and the worker holds its sideband connection and answers delegated requests.
 
+See the [voice runtime](../voice/runtime.md) for the model in use.
+
 Answer every delegated request, and every website chat message, with one agent core: an AI SDK `ToolLoopAgent` in `packages/agent-core`. It uses the `AI_CHAT_*` text model, `gpt-6-luna` with high reasoning by default.
 
 ## Rationale

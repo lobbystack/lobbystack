@@ -1,7 +1,7 @@
 import { and, asc, eq, gt, isNotNull, isNull, lt, sql } from "drizzle-orm";
 
 import { billingUsageEvents, calls, contacts, enqueueOutbox, transcripts, withBusinessTransaction, type NewOutboxMessage } from "@lobbystack/db";
-import { isTransferPhone, MAX_PHONE_CALL_MS } from "@lobbystack/shared";
+import { isTransferPhone, LIVE_MODEL, MAX_PHONE_CALL_MS } from "@lobbystack/shared";
 
 import { reserveOutboundCallAttempt } from "./billing";
 import type { DomainContext } from "./context";
@@ -17,9 +17,12 @@ import { boundedReconciledVoiceSeconds } from "./voiceRecovery";
 
 export const LIVE_CALL_PROVIDER = "openai_live";
 
-// gpt-live-1 voice sessions: $0.05 per minute, billed per second.
-// https://developers.openai.com/api/docs/models/gpt-live-1
-const LIVE_PRICING = { usdPerMinute: 0.05, version: "gpt-live-1-2026-07", source: "https://developers.openai.com/api/docs/models/gpt-live-1", effectiveDate: "2026-07-08" };
+const LEGACY_LIVE_MODEL = "gpt-live-1";
+// Keep the rate in effect for each session's model, billed per second.
+const LIVE_PRICING = new Map([
+  [LEGACY_LIVE_MODEL, { usdPerMinute: 0.05, version: "gpt-live-1-2026-07", effectiveDate: "2026-07-08" }],
+  ["gpt-live-1.1", { usdPerMinute: 0.05, version: "gpt-live-1.1-2026-11", effectiveDate: "2026-11-22" }],
+]);
 
 /** Why a live call ended, mapped to the dispositions billing already knows. */
 export type LiveCallEnd =
@@ -74,9 +77,24 @@ export async function startLivePhoneCall(context: DomainContext, input: { busine
     to: input.to,
     transport: "voice",
     gatewaySessionId: input.sessionId,
+    liveModel: LIVE_MODEL,
   });
   const maxDurationMs = call.reservedSeconds === undefined ? undefined : Math.min(MAX_PHONE_CALL_MS, Math.floor(call.reservedSeconds * 1_000));
   return { callId: call.callId, conversationId: call.conversationId, agentId: call.agentId, blocked: call.blocked, duplicate: call.duplicate, maxDurationMs };
+}
+
+/** Saves the model when OpenAI first accepts a previously reserved SIP call. */
+export async function recordAcceptedLivePhoneModel(context: DomainContext, input: { businessId: string; callId: string; model: string }) {
+  await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    await tx.update(calls).set({ liveModel: input.model }).where(and(
+      eq(calls.id, input.callId),
+      eq(calls.businessId, input.businessId),
+      eq(calls.provider, LIVE_CALL_PROVIDER),
+      eq(calls.transport, "voice"),
+      isNull(calls.endedAt),
+      sql`${calls.liveModel} is distinct from ${input.model}`,
+    ));
+  });
 }
 
 /**
@@ -106,6 +124,7 @@ export async function startLiveWebCall(
     to: "web",
     transport: "web_voice",
     gatewaySessionId: input.sessionId,
+    liveModel: LIVE_MODEL,
     widgetId: input.widgetId,
     billable: input.billable,
     ...(input.maxDurationMs !== undefined ? { maxDurationMs: input.maxDurationMs } : {}),
@@ -210,11 +229,10 @@ export async function liveCallHasRecording(context: DomainContext, input: { busi
  * `recording`, the copy of OpenAI's stored recording, so a repeated finish
  * writes none of them twice and a retry after a failure loses none of them.
  */
-export async function finishLiveCall(context: DomainContext, input: { businessId: string; callId: string; seconds: number; measuredSeconds?: number; end: LiveCallEnd; endedAt?: Date; channel?: "voice" | "web_voice"; recording?: { sessionId: string } }) {
+export async function finishLiveCall(context: DomainContext, input: { businessId: string; callId: string; seconds: number; measuredSeconds?: number; end: LiveCallEnd; endedAt?: Date; channel?: "voice" | "web_voice"; recording?: { sessionId: string }; confirmedModel?: string }) {
   const seconds = Math.max(0, input.seconds);
   const channel = input.channel ?? "voice";
   const status = input.end === "transferred" ? "transferred" : input.end === "blocked_contact" ? "blocked" : "completed";
-  const costUsd = (seconds / 60) * LIVE_PRICING.usdPerMinute;
   const outbox: NewOutboxMessage[] = [];
   if (input.recording) outbox.push(liveCallRecordingJob({ businessId: input.businessId, callId: input.callId, sessionId: input.recording.sessionId, attempt: 1 }));
   // Twilio bills the SIP leg separately. Ask the worker to find that call and
@@ -228,27 +246,33 @@ export async function finishLiveCall(context: DomainContext, input: { businessId
     disposition: DISPOSITIONS[input.end],
     providerDurationSeconds: Math.ceil(seconds),
     mediaDurationSeconds: Math.max(0, input.measuredSeconds ?? seconds),
-    providerCostUsd: costUsd,
     outbox,
+    ...(channel === "voice" && input.confirmedModel && input.confirmedModel.length <= 128 ? { fallbackLiveModel: input.confirmedModel } : {}),
     ...(seconds > 0 ? {
-      costEvent: {
-        businessId: input.businessId,
-        eventKey: `voice_ai:live_session:${input.callId}`,
-        eventKind: "voice_ai",
-        channel,
-        costUsd,
-        quantity: seconds,
-        quantityUnit: "second",
-        provider: "openai",
-        model: "gpt-live-1",
-        operation: "live_session",
-        pricingVersion: LIVE_PRICING.version,
-        pricingSource: LIVE_PRICING.source,
-        pricingEffectiveDate: LIVE_PRICING.effectiveDate,
-        pricingRates: { usdPerMinute: LIVE_PRICING.usdPerMinute },
-        callId: input.callId,
+      buildCostEvent: (liveModel: string | null) => {
+        const model = liveModel ?? LEGACY_LIVE_MODEL;
+        const pricing = LIVE_PRICING.get(model);
+        return {
+          businessId: input.businessId,
+          eventKey: `voice_ai:live_session:${input.callId}`,
+          eventKind: "voice_ai",
+          channel,
+          quantity: seconds,
+          quantityUnit: "second",
+          provider: "openai",
+          model,
+          operation: "live_session",
+          ...(pricing ? {
+            costUsd: (seconds / 60) * pricing.usdPerMinute,
+            pricingVersion: pricing.version,
+            pricingSource: `https://developers.openai.com/api/docs/models/${model}`,
+            pricingEffectiveDate: pricing.effectiveDate,
+            pricingRates: { usdPerMinute: pricing.usdPerMinute },
+          } : {}),
+          callId: input.callId,
+        };
       },
-    } : {}),
+    } : { providerCostUsd: 0 }),
   });
   // Texts held during the call go out now, after every answer the caller gave.
   await releaseCallTexts(context, { businessId: input.businessId, callId: input.callId });

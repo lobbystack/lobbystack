@@ -490,7 +490,15 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
       const seconds = providerSeconds({ ...summary, durationMs }, request.channel);
       // Only the write that finishes the call queues the recording copy, so a
       // late retry that re-attaches to an ended call doesn't copy it twice.
-      const completed = await finishLiveCall(input.domain, { ...call, seconds, measuredSeconds: durationMs / 1000, end: summary.end, channel: request.channel, recording: { sessionId: request.sessionId } });
+      const completed = await finishLiveCall(input.domain, {
+        ...call,
+        seconds,
+        measuredSeconds: durationMs / 1000,
+        end: summary.end,
+        channel: request.channel,
+        recording: { sessionId: request.sessionId },
+        ...(phone && summary.sessionModel ? { confirmedModel: summary.sessionModel } : {}),
+      });
       // A recovered call missed its start, so its latency would mislead.
       if (completed && !recovery) recordLiveCallLatency(input.domain, telemetryCall, summary);
       // A trial that used its minutes forwards the next caller to the owner instead of a busy signal.

@@ -1150,6 +1150,19 @@ describe("LiveCallController end reason", () => {
 });
 
 describe("LiveCallController transcript and silence", () => {
+  it("reports the actual model when a late SIP attach only sees session.closed", () => {
+    const { socket, closed } = setup({ phone: true });
+    socket.emit("session.closed", { reason: "remote_hangup", usage: { seconds: 90 }, session: { model: "gpt-live-1.1" } });
+    expect(closed).toEqual([expect.objectContaining({ sessionModel: "gpt-live-1.1", billedSeconds: 90 })]);
+  });
+
+  it("keeps the model from session.started when the SIP sideband disconnects", () => {
+    const { socket, closed } = setup({ phone: true });
+    socket.emit("session.started", { session: { model: "gpt-live-1" } });
+    socket.emit("close");
+    expect(closed).toEqual([expect.objectContaining({ sessionModel: "gpt-live-1", usageConfirmed: false })]);
+  });
+
   it("reports finished turns in order and the billed seconds on close", () => {
     const { socket, turns, closed } = setup();
     socket.emit("session.output_transcript.delta", { delta: "Thanks for calling.", end_ms: 500 });

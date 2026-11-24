@@ -85,6 +85,7 @@ export const translatedBasePaths = [
   "/blog/phone-answering-service-quebec/",
   "/blog/virtual-secretary-quebec/",
   "/blog/ai-phone-assistant/",
+  "/blog/dental-answering-service/",
   "/affiliate-program/",
   "/white-label/",
   "/about/",

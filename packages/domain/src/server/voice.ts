@@ -98,6 +98,7 @@ export async function startCall(
     to: string;
     transport: string;
     gatewaySessionId?: string;
+    liveModel?: string;
     startedAt?: string;
     originUrl?: string;
     userAgent?: string;
@@ -151,6 +152,7 @@ export async function startCall(
       ...(input.billable === false ? { billingExcluded: true } : {}),
       ...(blocked ? { status: "blocked", disposition: "blocked_contact" } : {}),
       gatewaySessionId: input.gatewaySessionId,
+      liveModel: input.liveModel,
       // A phone call came in on the carrier that owns the dialled number.
       ...(input.transport === "voice" ? { carrier: sql<string>`coalesce((select carrier from public.phone_numbers where business_id = ${input.businessId}::uuid and e164 = ${input.to} and status <> 'reclaimed' limit 1), 'twilio')` } : {}),
       startedAt: new Date(input.startedAt ?? Date.now()),
@@ -264,8 +266,10 @@ export async function completeCall(
     businessId: string; callId: string; status: string; endedAt: string; disposition?: string; providerDurationSeconds?: number; mediaDurationSeconds?: number; providerCostUsd?: number; expectedProviderCallId?: string;
     /** Follow-up jobs written with the completion, so only the write that finalizes the call queues them. */
     outbox?: NewOutboxMessage[];
-    /** A cost row written with the completion, for the same reason. */
-    costEvent?: UnitEconomicsEventInput;
+    /** Provider-confirmed model for a Live call whose reservation has no model. */
+    fallbackLiveModel?: string;
+    /** Builds the cost row from the model stored on the call. */
+    buildCostEvent?: (liveModel: string | null) => UnitEconomicsEventInput;
   },
 ): Promise<boolean> {
   const completion = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
@@ -274,6 +278,7 @@ export async function completeCall(
       endedAt: new Date(input.endedAt),
       disposition: input.disposition,
       providerDurationSeconds: input.providerDurationSeconds,
+      ...(input.fallbackLiveModel ? { liveModel: sql`coalesce(${calls.liveModel}, ${input.fallbackLiveModel})` } : {}),
       revision: sql`${calls.revision} + 1`,
       updatedAt: new Date(),
     }).where(and(
@@ -283,7 +288,7 @@ export async function completeCall(
       // Recovery re-validates the provider binding inside the finalizing write,
       // so a bind that lands after the read cannot have its reservation released.
       input.expectedProviderCallId !== undefined ? eq(calls.providerCallId, input.expectedProviderCallId) : undefined,
-    )).returning({ id: calls.id, revision: calls.revision, transport: calls.transport, provider: calls.provider, startedAt: calls.startedAt, billingExcluded: calls.billingExcluded, disposition: calls.disposition, conversationId: calls.conversationId, contactId: calls.contactId, widgetId: calls.widgetId, prospectDemoId: calls.prospectDemoId, mediaStartedAt: calls.mediaStartedAt });
+    )).returning({ id: calls.id, revision: calls.revision, transport: calls.transport, provider: calls.provider, liveModel: calls.liveModel, startedAt: calls.startedAt, billingExcluded: calls.billingExcluded, disposition: calls.disposition, conversationId: calls.conversationId, contactId: calls.contactId, widgetId: calls.widgetId, prospectDemoId: calls.prospectDemoId, mediaStartedAt: calls.mediaStartedAt });
     if (!call) {
       return null;
     }
@@ -319,7 +324,8 @@ export async function completeCall(
       payload: { callId: call.id },
     });
     for (const message of input.outbox ?? []) await enqueueOutbox(tx, message);
-    if (input.costEvent) await recordUnitEconomicsEventInTransaction(tx, input.costEvent);
+    const costEvent = input.buildCostEvent?.(call.liveModel);
+    if (costEvent) await recordUnitEconomicsEventInTransaction(tx, costEvent);
     await recordFirstRealCallInTransaction(tx, { businessId: input.businessId, call: { ...call, status: input.status } });
     // The short-call exemption, as opposed to spam or a non-billable call: the
     // business pays nothing, but the provider may still bill us.
@@ -331,6 +337,7 @@ export async function completeCall(
       disposition: call.disposition,
       durationSeconds,
       providerDurationSeconds: input.providerDurationSeconds,
+      estimatedCostUsd: costEvent?.costUsd,
       measuredSeconds,
       shortCallWaived,
       billingExcluded: call.billingExcluded,
@@ -352,6 +359,7 @@ export async function completeCall(
     },
   });
   if (completion.shortCallWaived) {
+    const estimatedCostUsd = completion.estimatedCostUsd ?? input.providerCostUsd;
     await recordVoiceLifecycleEvent(context, {
       name: "voice.short_call_waived",
       businessId: input.businessId,
@@ -361,7 +369,7 @@ export async function completeCall(
       properties: {
         measuredSeconds: Math.round(completion.measuredSeconds * 10) / 10,
         ...(completion.providerDurationSeconds !== undefined ? { providerDurationSeconds: completion.providerDurationSeconds } : {}),
-        ...(input.providerCostUsd !== undefined ? { estimatedCostUsd: input.providerCostUsd } : {}),
+        ...(estimatedCostUsd !== undefined ? { estimatedCostUsd } : {}),
         ...(completion.disposition !== null ? { disposition: completion.disposition } : {}),
       },
     });

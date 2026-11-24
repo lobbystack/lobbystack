@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 import { buildPhoneSessionConfig } from "@lobbystack/agent-core/live/session";
-import { finishLiveCall, getBusinessSnapshotForAgent, getCachedBusinessSnapshot, isNumberTrialEnded, markNumberTrialMinutesExhausted, startLivePhoneCall } from "@lobbystack/domain";
+import { finishLiveCall, getBusinessSnapshotForAgent, getCachedBusinessSnapshot, isNumberTrialEnded, markNumberTrialMinutesExhausted, recordAcceptedLivePhoneModel, startLivePhoneCall } from "@lobbystack/domain";
 import { getAppDatabase } from "@/lib/api-helpers";
 import { createWorkerDomainContext } from "@/lib/domain-context";
 import { noteForwardedCall } from "@/lib/forwarded-calls";
@@ -193,11 +193,15 @@ async function answerCall(client: LiveClient, input: { sessionId: string; busine
   // top-ups may have grown. Its call may be under way, so it attaches as a resume:
   // the worker numbers turns after the saved ones and skips the greeting.
   const attach = (resume = false) => attachWorkerToLiveSession({ sessionId: input.sessionId, businessId: input.businessId, callId: call.callId, conversationId: call.conversationId, channel: "voice", ...(call.agentId ? { agentId: call.agentId } : {}), ...(input.from ? { callerPhone: input.from } : {}), ...(call.maxDurationMs !== undefined ? { maxDurationMs: call.maxDurationMs } : {}), ...(resume ? { resume } : {}) });
-  // A retried delivery. The first one may have died before accepting or before
-  // the worker attached, so finish the job without touching the call record:
-  // accepting an accepted session just fails, and attaching is idempotent.
+  // The first delivery may have died before accepting or before the worker
+  // attached. Only a successful accept confirms which model started the call.
   if (call.duplicate) {
-    await client.live.sessions.accept(input.sessionId, { session: buildPhoneSessionConfig(snapshot) }).catch(() => undefined);
+    const session = buildPhoneSessionConfig(snapshot);
+    const accepted = await client.live.sessions.accept(input.sessionId, { session }).then(() => true, () => false);
+    if (accepted) {
+      await recordAcceptedLivePhoneModel(domain, { businessId: input.businessId, callId: call.callId, model: session.model })
+        .catch((error: unknown) => console.error("[live] couldn't record the accepted SIP model", error instanceof Error ? error.message : error));
+    }
     await attach(true).catch(() => undefined);
     return new NextResponse(null, { status: 200 });
   }
