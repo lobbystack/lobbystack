@@ -185,7 +185,7 @@ describe("knowledge.reembedBusiness", () => {
   it("pairs each split part with its vector when the input rows arrive in ascending sequence", async () => {
     const businessId = randomUUID();
     const documentId = randomUUID();
-    const legacyText = "hour ".repeat(9000).trim();
+    const legacyText = "hour ".repeat(2_000).trim();
     const parts = embeddingInputsForChunk(legacyText);
     expect(parts).toHaveLength(2);
     const [first, second] = parts;

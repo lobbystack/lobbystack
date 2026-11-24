@@ -5,7 +5,7 @@ import { and, asc, desc, eq, ilike, inArray, isNull, lt, ne, notInArray, sql } f
 import { agentRules, agents, businessContextSnapshots, businesses, businessHours, closures, defaultAgentOf, enqueueOutbox, inOrder, knowledgeChunks, knowledgeDocuments, knowledgeSnippets, phoneNumbers, services, staffServiceAssignments, storageObjects, websiteIngestionJobs, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { defaultGreeting, FULL_CRAWL_PAGE_LIMIT, getKnowledgeStorageLimitBytes, normalizeAppointmentChangePolicy, normalizeBookingMode, normalizeAgentVoice, normalizeRuntimeLocale, normalizeStaffFirstMode, normalizeTransferMode, ONBOARDING_CRAWL_PAGE_LIMIT, runtimeLocales, servicePriceFromColumns, stageAfterWebsite, type AgentRuleSummary, type BusinessContextSnapshot, type KnowledgeSnippet, type SnapshotAgent } from "@lobbystack/shared";
 import { agentInstructions, buildBusinessContextSnapshot, MAX_KNOWLEDGE_SNIPPETS_PER_SNAPSHOT, snapshotRules } from "../snapshot";
-import { countKnowledgeTokens, fuseKnowledgeRanks, KNOWLEDGE_SEARCH_TOKEN_BUDGET, knowledgeLexicalQueries, knowledgeQueryTerms, splitToTokenBudget, withinKnowledgeBudget, type KnowledgePassage } from "../knowledgeRanking";
+import { countKnowledgeTokens, fuseKnowledgeRanks, KNOWLEDGE_SEARCH_TOKEN_BUDGET, knowledgeLexicalQueries, knowledgeQueryTerms, splitToByteBudget, splitToTokenBudget, withinKnowledgeBudget, type KnowledgePassage } from "../knowledgeRanking";
 
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
 import { postBusinessNotificationInTransaction, resolveBusinessNotificationsInTransaction } from "./businessNotifications";
@@ -58,7 +58,7 @@ export function chunkText(text: string, options: { maxCharacters?: number; overl
         // A section can still carry more tokens than the embedding provider
         // accepts when a caller raises maxCharacters; split it instead of
         // sending one oversized input.
-        chunks.push(...splitToTokenBudget(chunk));
+        chunks.push(...embeddingInputsForChunk(chunk));
       }
       if (end >= sectionText.length) {
         break;
@@ -79,7 +79,7 @@ export function hashContent(value: string): string {
  * truncated or sent as one rejected input.
  */
 export function embeddingInputsForChunk(content: string): string[] {
-  return splitToTokenBudget(content);
+  return splitToTokenBudget(content).flatMap((piece) => splitToByteBudget(piece));
 }
 
 // The API reports a website's page limit, so its clients tell a sample from a full read by these.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { countKnowledgeTokens, EMBEDDING_INPUT_TOKEN_BUDGET, fuseKnowledgeRanks, knowledgeLexicalQueries, knowledgeQueryTerms, splitToTokenBudget, withinKnowledgeBudget, type KnowledgePassage } from "./knowledgeRanking";
+import { countKnowledgeTokens, EMBEDDING_INPUT_MAX_BYTES, EMBEDDING_INPUT_TOKEN_BUDGET, fuseKnowledgeRanks, knowledgeLexicalQueries, knowledgeQueryTerms, splitToByteBudget, splitToTokenBudget, withinKnowledgeBudget, type KnowledgePassage } from "./knowledgeRanking";
 
 const passage = (id: string): KnowledgePassage => ({ chunkId: id, documentId: "document", title: "Management", content: "MNGT 10407", sourceUrl: "https://example.com/courses", sourceRevision: 2, sequence: 0 });
 
@@ -97,5 +97,44 @@ describe("splitting an embedding input", () => {
 
   it("rejects a budget that cannot hold one token", () => {
     expect(() => splitToTokenBudget("hello", 0)).toThrow("Invalid token budget.");
+  });
+});
+
+describe("splitToByteBudget", () => {
+  const bytes = (text: string) => Buffer.byteLength(text, "utf8");
+
+  it("keeps text within the budget whole", () => {
+    expect(splitToByteBudget("Open Monday to Friday.")).toEqual(["Open Monday to Friday."]);
+  });
+
+  // cl100k needs about 1.4 tokens per estimated token on Vietnamese, so these
+  // pieces passed the token budget and the provider rejected them.
+  it("cuts Vietnamese text between words within the byte budget", () => {
+    const text = "Chúng tôi mở cửa từ thứ Hai đến thứ Sáu, từ chín giờ sáng đến năm giờ chiều. ".repeat(800).trim();
+    expect(splitToTokenBudget(text).some((piece) => bytes(piece) > EMBEDDING_INPUT_MAX_BYTES)).toBe(true);
+    const pieces = splitToByteBudget(text);
+    expect(pieces.length).toBeGreaterThan(1);
+    expect(pieces.every((piece) => bytes(piece) <= EMBEDDING_INPUT_MAX_BYTES)).toBe(true);
+    expect(pieces.slice(0, -1).every((piece) => bytes(piece) > EMBEDDING_INPUT_MAX_BYTES / 2)).toBe(true);
+    expect(pieces.join(" ")).toBe(text);
+  });
+
+  it("cuts a run without spaces, such as a base64 image, between characters", () => {
+    const text = "iVBORw0KGgoAAAANSUhEUgAA+/".repeat(2_000);
+    const pieces = splitToByteBudget(text);
+    expect(pieces.length).toBeGreaterThan(1);
+    expect(pieces.every((piece) => bytes(piece) <= EMBEDDING_INPUT_MAX_BYTES)).toBe(true);
+    expect(pieces.join("")).toBe(text);
+  });
+
+  it("never splits a character across pieces", () => {
+    const text = "😀".repeat(100);
+    const pieces = splitToByteBudget(text, 10);
+    expect(pieces).toHaveLength(50);
+    expect(pieces.every((piece) => piece === "😀😀")).toBe(true);
+  });
+
+  it("rejects a budget that cannot hold one character", () => {
+    expect(() => splitToByteBudget("hello", 4)).toThrow("Invalid byte budget.");
   });
 });

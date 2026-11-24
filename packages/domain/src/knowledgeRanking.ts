@@ -41,6 +41,14 @@ export const EMBEDDING_INPUT_MAX_TOKENS = 8192;
 export const EMBEDDING_INPUT_TOKEN_BUDGET = Math.floor(EMBEDDING_INPUT_MAX_TOKENS * 0.94);
 
 /**
+ * text-embedding-3-* count tokens with cl100k_base, not o200k. On Vietnamese,
+ * Indic scripts and base64, cl100k needs up to 1.7 times the estimate above.
+ * cl100k is a byte-level BPE, so it never needs more tokens than the text has
+ * UTF-8 bytes, and an input within this many bytes fits whatever its script.
+ */
+export const EMBEDDING_INPUT_MAX_BYTES = 8_000;
+
+/**
  * Splits text into pieces the embedding provider accepts as one input. It
  * cuts between words where it can and inside a word longer than the budget.
  * Every character lands in one piece, so nothing is truncated silently.
@@ -90,6 +98,45 @@ export function splitToTokenBudget(text: string, maxTokens: number = EMBEDDING_I
   }
   const tail = text.slice(pieceStart).trim();
   if (tail) pieces.push(tail);
+  return pieces;
+}
+
+/**
+ * Splits text into pieces of at most maxBytes UTF-8 bytes. It cuts after a
+ * space or line break in the second half of a piece where it can, and between
+ * two characters otherwise. Only whitespace at a cut is dropped.
+ */
+export function splitToByteBudget(text: string, maxBytes: number = EMBEDDING_INPUT_MAX_BYTES): string[] {
+  if (!Number.isInteger(maxBytes) || maxBytes < 8) throw new Error("Invalid byte budget.");
+  if (utf8Length(text) <= maxBytes) return [text];
+  const pieces: string[] = [];
+  const push = (piece: string) => {
+    const trimmed = piece.trim();
+    if (trimmed) pieces.push(trimmed);
+  };
+  let start = 0;
+  let bytes = 0;
+  let breakAt = -1;
+  let bytesAtBreak = 0;
+  for (let index = 0; index < text.length;) {
+    const character = String.fromCodePoint(text.codePointAt(index)!);
+    const width = utf8Length(character);
+    if (bytes + width > maxBytes) {
+      // A break in the second half carries at most half the budget forward.
+      const cut = breakAt > start && bytesAtBreak >= maxBytes / 2 ? breakAt : index;
+      push(text.slice(start, cut));
+      bytes = cut === index ? 0 : bytes - bytesAtBreak;
+      start = cut;
+      breakAt = -1;
+    }
+    bytes += width;
+    index += character.length;
+    if (/\s/.test(character)) {
+      breakAt = index;
+      bytesAtBreak = bytes;
+    }
+  }
+  push(text.slice(start));
   return pieces;
 }
 

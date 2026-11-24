@@ -6,7 +6,7 @@ import type { KnowledgePassage } from "../knowledgeRanking";
 const mocks = vi.hoisted(() => ({ transaction: vi.fn() }));
 vi.mock("@lobbystack/db", async original => ({ ...(await original<typeof import("@lobbystack/db")>()), withBusinessTransaction: mocks.transaction }));
 import { chunkText, embeddingInputsForChunk, searchKnowledgeEvidence } from "./knowledge";
-import { countKnowledgeTokens, EMBEDDING_INPUT_TOKEN_BUDGET } from "../knowledgeRanking";
+import { countKnowledgeTokens, EMBEDDING_INPUT_MAX_BYTES, EMBEDDING_INPUT_TOKEN_BUDGET } from "../knowledgeRanking";
 
 const primary: KnowledgePassage = { chunkId: "chunk", documentId: "document", title: "BAA", content: "Management", sourceUrl: "https://example.com/baa", sourceRevision: 3, sequence: 1 };
 const adjacent: KnowledgePassage = { ...primary, chunkId: "adjacent", sequence: 2, content: "MNGT 10407 — Approches du management." };
@@ -116,5 +116,14 @@ describe("knowledge chunk boundaries", () => {
     expect(inputs.length).toBeGreaterThan(1);
     expect(inputs.every(input => countKnowledgeTokens(input) <= EMBEDDING_INPUT_TOKEN_BUDGET)).toBe(true);
     expect(inputs.join("")).toBe(content);
+  });
+  it("keeps every input of a stored page with an inline image within the byte limit", () => {
+    const image = "iVBORw0KGgoAAAANSUhEUgAA+/".repeat(2_000);
+    const content = `# Contact\nCall us any weekday.\n![map](data:image/png;base64,${image})\nWe reply within a day.`;
+    const inputs = embeddingInputsForChunk(content);
+    expect(inputs.length).toBeGreaterThan(1);
+    expect(inputs.every(input => Buffer.byteLength(input, "utf8") <= EMBEDDING_INPUT_MAX_BYTES)).toBe(true);
+    // Only whitespace at a cut is dropped.
+    expect(inputs.join("").replace(/\s/g, "")).toBe(content.replace(/\s/g, ""));
   });
 });
