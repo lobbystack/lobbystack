@@ -44,6 +44,7 @@ const comparisonSlugs = [
   "white-label-ai-voice-agent-platforms",
   "phone-answering-service-quebec",
   "virtual-secretary-quebec",
+  "dental-answering-service",
 ] as const
 
 const rootPath = (path: string) =>

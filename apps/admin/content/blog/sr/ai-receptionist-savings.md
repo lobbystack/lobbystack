@@ -170,7 +170,7 @@ LobbyStack zakazuje u Google Calendar, Cal.com ili Calendly, a do drugog softver
 
 Dentina imenuje 11 sistema za ordinacije u koje zakazuje i ne naplaćuje aktivaciju. Njen Premium paket košta $399 po lokaciji mesečno uz godišnju naplatu. Vivinih 4,000 Gold kredita pokriva oko 400 minuta AI poziva ako ih trošite samo na pozive. Peerlogic Premium paket od $699 spaja AI recepcionera sa stomatološkim telefonskim sistemom.
 
-LobbyStack ne tvrdi da je usklađen sa HIPAA i zakazuje samo u Google Calendar, Cal.com ili Calendly. Ordinacija kojoj treba zakazivanje pravo u Dentrix neka počne od Dentine ili Peerlogica. Naša stranica o [AI recepcioneru za stomatološke ordinacije](/sr/solutions/ai-receptionist-for-dental-offices/) objašnjava gde se LobbyStack uklapa.
+LobbyStack ne tvrdi da je usklađen sa HIPAA i zakazuje samo u Google Calendar, Cal.com ili Calendly. Ordinacija kojoj treba zakazivanje pravo u Dentrix neka počne od Dentine ili Peerlogica. Naša stranica o [AI recepcioneru za stomatološke ordinacije](/sr/solutions/ai-receptionist-for-dental-offices/) objašnjava gde se LobbyStack uklapa, a naše poređenje [usluga za stomatološke ordinacije](/sr/blog/dental-answering-service/) daje cene opcija uživo i AI opcija.
 
 ## Da li AI recepcioner naplaćuje aktivaciju ili skrivene naknade?
 
