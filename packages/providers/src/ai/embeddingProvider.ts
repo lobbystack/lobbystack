@@ -16,9 +16,15 @@ export const DEFAULT_EMBEDDING_AI_MODEL = OPENAI_LARGE_EMBEDDING_MODEL;
 export const EMBEDDING_DIMENSIONS = 1536;
 export const DEFAULT_EMBEDDING_TIMEOUT_MS = 30_000;
 export const DEFAULT_EMBEDDING_MAX_PARALLEL_CALLS = 4;
-// OpenAI rejects a request over 300,000 tokens, and the SDK only splits at 2,048 inputs.
-// 128 chunks of up to 1,800 characters stay under that even for Cyrillic text.
 const EMBEDDING_INPUTS_PER_CALL = 128;
+// OpenAI rejects a request over 300,000 tokens. text-embedding-3-* use a
+// byte-level BPE, so an input never takes more tokens than its UTF-8 bytes,
+// and a request within this many bytes always fits. @ai-sdk/openai sets the
+// same limit; @ai-sdk/openai-compatible sets none, so embedMany would group
+// inputs by count alone.
+const EMBEDDING_REQUEST_MAX_BYTES = 300_000;
+// EXPERIMENTAL_EMBEDDING_MODEL_MAX_INPUT_BYTES_PER_CALL in @ai-sdk/provider-utils.
+const MAX_INPUT_BYTES_PER_CALL = Symbol.for("vercel.ai.embeddingModel.maxInputBytesPerCall");
 
 export type EmbeddingAiConfig = {
   apiKey?: string;
@@ -69,7 +75,7 @@ export class OpenAiCompatibleEmbeddingProvider {
       throw new Error("Embedding max parallel calls must be a positive integer.");
     }
     this.api = wrapEmbeddingModel({
-      model: factory.embeddingModel(this.model),
+      model: Object.assign(factory.embeddingModel(this.model), { [MAX_INPUT_BYTES_PER_CALL]: EMBEDDING_REQUEST_MAX_BYTES }),
       middleware: {
         overrideMaxEmbeddingsPerCall: () => EMBEDDING_INPUTS_PER_CALL,
         // Each request gets its own timeout, so a large document has time for all its requests.
