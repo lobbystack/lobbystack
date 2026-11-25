@@ -50,11 +50,14 @@ jobs:
       # airagent.fr/tarifs/ has returned 404 since October 2026, though AirAgent's own homepage
       # still links to it. Remove its exclusion once the page is back or the blog post links elsewhere.
       # BLS news release tables and Gartner's newsroom answer 403 to automated clients but load in a browser.
+      # A 429 means the site is rate limiting this check, not that the page is gone. support.google.com
+      # does it to the Google Business Profile post's links, and retrying them ran the job past its timeout.
       - uses: lycheeverse/lychee-action@v2
         with:
           args: >-
             --verbose
             --no-progress
+            --accept '100..=103,200..=299,429'
             --base-url http://127.0.0.1:4173
             --remap '^https://lobbystack\.com(.*) http://127.0.0.1:4173$1'
             --exclude '^https://app\.lobbystack\.com/'
