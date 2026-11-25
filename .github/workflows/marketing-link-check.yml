@@ -49,6 +49,7 @@ jobs:
       # www.hhs.gov answers 403 to every automated client, so its links can't be checked here.
       # airagent.fr/tarifs/ has returned 404 since October 2026, though AirAgent's own homepage
       # still links to it. Remove its exclusion once the page is back or the blog post links elsewhere.
+      # BLS news release tables and Gartner's newsroom answer 403 to automated clients but load in a browser.
       - uses: lycheeverse/lychee-action@v2
         with:
           args: >-
@@ -60,6 +61,8 @@ jobs:
             --exclude '^http://localhost:3000/api/voice/live/'
             --exclude '^https://theresanaiforthat\.com/ai/lobbystack/'
             --exclude '(?i)^https://www\.bls\.gov/ooh/office-and-administrative-support/receptionists\.htm$'
+            --exclude '^https://www\.bls\.gov/news\.release/'
+            --exclude '^https://www\.gartner\.com/en/newsroom/'
             --exclude '^https://answeringservicecare\.com/'
             --exclude '^https://answeringservicesus\.com/'
             --exclude '^https://www\.trustpilot\.com/review/'
