@@ -102,7 +102,7 @@ describe.skipIf(!client)("knowledge embedding reuse against PostgreSQL", () => {
       DATABASE_URL: testUrl!,
       LOBBYSTACK_WORKER_PASSWORD: process.env.LOBBYSTACK_WORKER_PASSWORD ?? "worker",
     });
-    const legacyText = "hour ".repeat(9000).trim();
+    const legacyText = "hour ".repeat(2_000).trim();
     const parts = embeddingInputsForChunk(legacyText);
     expect(parts).toHaveLength(2);
     const tail = "Services";

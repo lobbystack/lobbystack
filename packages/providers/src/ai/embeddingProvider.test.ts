@@ -106,4 +106,17 @@ describe("embedding requests", () => {
     expect(new Set(requests.map((request) => request.signal)).size).toBe(3);
     expect(usage).toHaveBeenCalledWith(expect.objectContaining({ inputTokens: 300 }));
   });
+
+  it("keeps each request within 300,000 UTF-8 bytes, the most tokens OpenAI accepts per request", async () => {
+    // Split parts of an old oversized chunk reach 8,000 bytes each.
+    const inputs = Array.from({ length: 100 }, (_, index) => `${index} `.padEnd(4_000, "é"));
+
+    const vectors = await new OpenAiCompatibleEmbeddingProvider({ apiKey: "test" }).embed(inputs);
+
+    expect(vectors).toHaveLength(100);
+    const requests = fetchEmbeddings.mock.calls.map(([, request]) => (JSON.parse(String(request.body)) as EmbeddingRequest).input);
+    expect(requests.map((input) => input.length)).toEqual([37, 37, 26]);
+    for (const input of requests) expect(Buffer.byteLength(input.join(""), "utf8")).toBeLessThanOrEqual(300_000);
+    expect(requests.flat()).toEqual(inputs);
+  });
 });
