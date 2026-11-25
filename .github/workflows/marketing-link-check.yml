@@ -50,6 +50,7 @@ jobs:
       # airagent.fr/tarifs/ has returned 404 since October 2026, though AirAgent's own homepage
       # still links to it. Remove its exclusion once the page is back or the blog post links elsewhere.
       # BLS news release tables and Gartner's newsroom answer 403 to automated clients but load in a browser.
+      # posh.com answers 403 to some automated clients while the pricing page loads in a browser.
       # A 429 means the site is rate limiting this check, not that the page is gone. support.google.com
       # does it to the Google Business Profile post's links, and retrying them ran the job past its timeout.
       - uses: lycheeverse/lychee-action@v2
@@ -87,6 +88,7 @@ jobs:
             --exclude '^https://www\.ftc\.gov/'
             --exclude '^https://www\.legisquebec\.gouv\.qc\.ca/'
             --exclude '^https://airagent\.fr/tarifs/$'
+            --exclude '^https://posh\.com/'
             './apps/admin/src/marketing/**/*.tsx'
             './apps/admin/content/**/*.md'
             './apps/admin/content/llms.txt'
