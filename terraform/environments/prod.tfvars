@@ -15,8 +15,10 @@ vm_size         = "Standard_B2ls_v2"
 # addresses the calls come from. Empty leaves the server closed to every carrier.
 carrier_ips = ["185.45.152.0/22"]
 
-# The web app on its own VM, on the apex domain and www. Create the records that the app_dns_records output lists at the
-# registrar. The ref is the release the VM clones, so point it at a tag or main once the feature branch is merged.
+# The web app on its own VM: the marketing site on the apex domain, with www redirecting to it, and the dashboard on app.
+# Create the records that the app_dns_records output lists at the registrar. The ref is the release the VM clones, so
+# point it at a tag or main once the feature branch is merged.
 deploy_app         = true
-app_domain         = "lobbystack.com"
+marketing_domain   = "lobbystack.com"
+app_domain         = "app.lobbystack.com"
 app_repository_ref = "main"

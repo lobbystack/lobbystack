@@ -43,6 +43,11 @@ output "app_url" {
   value       = var.deploy_app && var.app_domain != "" ? "https://${var.app_domain}" : null
 }
 
+output "marketing_url" {
+  description = "Where the marketing site answers, or null when marketing_domain is empty."
+  value       = var.deploy_app && var.marketing_domain != "" ? "https://${var.marketing_domain}" : null
+}
+
 output "app_dns_records" {
   description = "The records to create at the domain's registrar, where the domain's DNS is hosted, such as Cloudflare's DNS tab."
   value       = local.app_dns_records

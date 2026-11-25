@@ -20,8 +20,8 @@ data.tf            data sources (none yet)
 variables.tf       every setting, with its description
 providers.tf       the azurerm provider
 outputs.tf         the address, the SSH command and the Zadarma values
-environments/      dev.tfvars, sandbox.tfvars, prod.tfvars: the settings that differ per environment
-scripts/python/    deploy.py (a menu that runs Terraform), start.py and stop.py (the VM), and resources/components/ with their code
+environments/      dev.tfvars and prod.tfvars: the settings that differ per environment
+scripts/python/    deploy.py (a menu that runs Terraform), start.py and stop.py (the VMs), app_env.py (the web app's .env), and resources/components/ with their code
 modules/<name>/    one module per Azure resource type, each with main.tf, locals.tf, variables.tf and outputs.tf
 ```
 
@@ -38,9 +38,9 @@ terraform plan -var-file=environments/dev.tfvars
 Each environment keeps its own state in its own workspace, so applying one never plans to remove another's resources:
 
 ```sh
-terraform workspace new sandbox      # the first time
-terraform workspace select sandbox
-terraform apply -var-file=environments/sandbox.tfvars
+terraform workspace new prod         # the first time
+terraform workspace select prod
+terraform apply -var-file=environments/prod.tfvars
 ```
 
 `dev` was created before workspaces, so its state stays in the `default` workspace, and Terraform accepts that for `dev` only. Selecting the wrong workspace shows a warning, so read the plan before you apply. Each environment also gets its own resource group, named from `app_name`, `resource-group` and the environment, such as `lobbystack-sip-resource-group-dev`. Destroying one environment can't touch another's resources. The resources inside are named from `app_name`, their resource type and the environment, such as `lobbystack-sip-linux-virtual-machine-dev`. See AGENTS.md.
@@ -72,7 +72,7 @@ It shows the Azure subscription the environment uses and asks nothing about it. 
 
 ```sh
 python3 scripts/python/stop.py            # dev
-python3 scripts/python/start.py sandbox
+python3 scripts/python/start.py dev
 python3 scripts/python/stop.py prod       # asks first; --yes skips the question
 ```
 
@@ -86,7 +86,7 @@ python3 scripts/python/stop.py dev --target app   # takes the site down, and lea
 
 ## Subscriptions
 
-`dev` and `sandbox` use the NPD subscription, and `prod` uses the PRD one. Each environment file sets `subscription_id`, and Terraform builds everything there, whichever subscription `az` has selected. `deploy.py` shows that subscription, and `start.py` and `stop.py` read it from the same file.
+`dev` uses the NPD subscription, and `prod` uses the PRD one. Each environment file sets `subscription_id`, and Terraform builds everything there, whichever subscription `az` has selected. `deploy.py` shows that subscription, and `start.py` and `stop.py` read it from the same file.
 
 `prod.tfvars` holds a placeholder until you put the PRD subscription's id in it. While it is there, every Terraform command for prod stops on the `subscription_id` check, so prod can't be created in the NPD subscription by mistake. List the ids you can use with:
 
@@ -148,31 +148,35 @@ Replacing the VM gives it new host keys while the static address stays, so SSH t
 
 ## Run the web app
 
-`deploy_app = true` in an environment's tfvars file adds a VM for the dashboard, the worker, Postgres, Redis and Caddy, which `docker-compose.yml` runs, and serves it over HTTPS on `app_domain`. It sits beside the SIP server in the same group, takes `Standard_D2as_v6` (2 vCPUs, 8 GB) by default, and has a 64 GB disk. Its resources are named from `{app_name}-app`, such as `lobbystack-app-public-ip-dev`. Terraform prepares the VM and clones the code, but starts nothing, because the stack needs secrets that only you have.
+`deploy_app = true` in an environment's tfvars file adds a VM for the dashboard, the worker, Postgres, Redis and Caddy, which `docker-compose.yml` runs, and serves it over HTTPS on `app_domain`, the dashboard's name, and on `marketing_domain`, the marketing site's. It sits beside the SIP server in the same group, takes `Standard_D2as_v6` (2 vCPUs, 8 GB) by default, and has a 64 GB disk. Its resources are named from `{app_name}-app`, such as `lobbystack-app-public-ip-dev`. Terraform prepares the VM and clones the code, but starts nothing, because the stack needs secrets that only you have.
 
 1. **Apply.** Push the branch `app_repository_ref` names, then apply the environment. The `app_dns_records` output lists the records, and `app_ssh_command` the login.
-2. **DNS.** Where the domain's DNS lives (for `lobbystack.com`, Cloudflare), add each record from `app_dns_records`. In Cloudflare, switch the record's proxy off (grey cloud, DNS only), so Caddy can answer Let's Encrypt's challenge and reach visitors directly. For `dev.lobbystack.com` that is one `A` record with host `dev`. For `lobbystack.com` it is `A` records for `@` and `www`. Set the TTL to Automatic. Wait until `dig +short dev.lobbystack.com` answers with the address.
-3. **The settings file.** Make a copy of your `.env` and change these lines, using your own domain. Generate every secret with `openssl rand -hex 32`, and don't reuse the ones from your laptop:
-
-   ```
-   COMPOSE_FILE=docker-compose.yml:docker-compose.tls.yml
-   HTTP_BIND_ADDRESS=0.0.0.0
-   CADDY_ON_DEMAND_TLS=true
-   APP_HOSTNAME=dev.lobbystack.com
-   APP_BASE_URL=https://dev.lobbystack.com
-   NEXT_PUBLIC_APP_URL=https://dev.lobbystack.com
-   ```
-
-   Caddy asks the admin before it gets a certificate, and the admin approves only the host named by `APP_BASE_URL` and `MARKETING_HOSTS`, so those must name the domain. Keep `ZADARMA_SIP_HOST` as the SIP server's address, not this VM's.
-4. **Copy it and start.**
+2. **DNS.** Where the domain's DNS lives (Namecheap's Advanced DNS tab for a domain bought there, Cloudflare for `lobbystack.com`), add each record from `app_dns_records`. Each name is one `A` record to the VM's address, and its host is the name without the registered domain, so `dev.lobbystack.com` is host `dev`, `dev.app.lobbystack.com` is host `dev.app`, `lobbystack.com` is `@`, and `app.lobbystack.com` is `app`. In Cloudflare, switch the record's proxy off (grey cloud, DNS only), so Caddy can answer Let's Encrypt's challenge and reach visitors directly. Set the TTL to Automatic, and delete a parking page record, such as Namecheap's `CNAME www` or its `URL Redirect` on `@`, that sits on a name you add. Wait until `dig +short <name>` answers with the address.
+3. **The settings file and the start.** One command builds the VM's `.env` from your local one, copies it over, waits for the VM's first boot, and starts the stack:
 
    ```sh
-   scp -i ~/.ssh/terraform .env azureuser@<app_public_ip>:/opt/lobbystack-app/.env
-   ssh -i ~/.ssh/terraform azureuser@<app_public_ip>
-   cloud-init status --wait          # done
-   lobbystack-update                 # builds the images and starts the stack, which takes a few minutes
+   python3 scripts/python/app_env.py dev --send
    ```
+
+   It keeps your provider keys and settings, points `APP_HOSTNAME`, `APP_BASE_URL` and `NEXT_PUBLIC_APP_URL` at the environment's `app_domain`, the dashboard, turns on HTTPS (`COMPOSE_FILE`, `HTTP_BIND_ADDRESS`, `CADDY_ON_DEMAND_TLS`), and makes fresh secrets for Postgres and the app. It writes the file to `.generated/<environment>.app.env` (git ignores it) and keeps those secrets when you run it again, because Postgres keeps the passwords it started with. Without `--send` it only writes the file and prints the `scp` and `ssh` commands. `--key` or `$SSH_KEY` names the SSH key, `~/.ssh/terraform` by default, and `--source` reads another file than the repository's `.env`. Caddy asks the admin before it gets a certificate, and the admin approves only the hosts `APP_BASE_URL` and `MARKETING_HOSTS` name, so those lines must match the domains. `ZADARMA_SIP_HOST` stays the SIP server's address, not this VM's.
+4. **Check it.** `https://<app_domain>` and `https://<marketing_domain>` open once the DNS record resolves and Caddy has its certificate. On the VM, `docker compose logs -f caddy admin` in `/opt/lobbystack-app` shows both.
 5. **Webhooks.** Point OpenAI's `live.transport.incoming`, Polar and each carrier at `https://<app_domain>/api/webhooks/...` instead of a tunnel.
+
+### Serve the marketing site
+
+The same app serves the marketing site, so it needs no extra VM. `marketing_domain` in the environment's tfvars file names the site and `app_domain` names the dashboard, so the two environments read:
+
+| Environment | Marketing site | Dashboard |
+| --- | --- | --- |
+| dev | `dev.lobbystack.com` | `dev.app.lobbystack.com` |
+| prod | `lobbystack.com` (and `www`, which redirects to it) | `app.lobbystack.com` |
+
+The `app_dns_records` output lists every record. Then run `python3 scripts/python/app_env.py dev --send`. It adds `MARKETING_SITE=true`, `MARKETING_HOSTS`, `NEXT_PUBLIC_LANDING_SITE_URL` and `WEB_CALL_ALLOWED_ORIGINS` to the VM's `.env`, and `lobbystack-update` rebuilds the image with the pages in it. [Serve lobbystack.com from the admin app](../docs/deployment/marketing-site.md) explains how the pages are built and routed.
+
+- **The build is longer and bigger.** The image holds about 300 prerendered pages, so the first build takes noticeably longer and the image grows by about 380 MB. If it runs out of memory, run `lobbystack-update` again.
+- **www redirects on prod.** The first host is canonical, so `www.lobbystack.com` goes to `lobbystack.com`. Dev has no `www`. Caddy gets a certificate for each name once its record resolves.
+- **The navbar needs the app on a subdomain of the marketing domain.** A signed-in visitor sees a Dashboard link only when the app is on the same registered domain, as `dev.app.lobbystack.com` and `app.lobbystack.com` are for `lobbystack.com`.
+- **The demo call needs a business.** The hero's voice demo calls the business named by `WEB_CALL_PUBLIC_BUSINESS_SLUG` on the app, and a new database has none. Create one on the dashboard, put its slug in `.env` as `WEB_CALL_PUBLIC_BUSINESS_SLUG` and `NEXT_PUBLIC_WEB_CALL_BUSINESS_SLUG`, then run `lobbystack-update`.
 
 `lobbystack-update` fetches `app_repository_ref` again and rebuilds, so run it for each release. It needs the `.env` first and says so when it's missing. Watch the stack with `docker compose logs -f admin` in `/opt/lobbystack-app`.
 

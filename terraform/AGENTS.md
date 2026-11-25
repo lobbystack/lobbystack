@@ -11,10 +11,10 @@ data.tf            Data sources.
 variables.tf       Root variables.
 providers.tf       Terraform and provider versions, provider settings.
 outputs.tf         Root outputs.
-environments/      One .tfvars file per environment: dev, sandbox, prod.
+environments/      One .tfvars file per environment: dev, prod.
 modules/<name>/    One module per Azure resource type: locals.tf, main.tf, outputs.tf, variables.tf.
 templates/         *.tftpl files read by templatefile().
-scripts/python/    deploy.py, start.py and stop.py. Run Terraform through these.
+scripts/python/    deploy.py, start.py, stop.py and app_env.py. Run Terraform through deploy.py.
 ```
 
 Every file stays in its slot. A new value shared by modules goes in the root `locals.tf`, not in `main.tf`.
@@ -67,7 +67,7 @@ Azure can't rename a resource. A new name replaces the resource, and the public 
 ## Variables and environments
 
 - Values that differ per environment go in `environments/<env>.tfvars`. Values that are secret go in `terraform.tfvars`, which is gitignored (`terraform.tfvars.example` shows the shape).
-- Each environment has its own Azure subscription and its own resource group. `dev` and `sandbox` use the NPD subscription, `prod` uses PRD. Never fall back from one to another.
+- Each environment has its own Azure subscription and its own resource group. `dev` uses the NPD subscription, `prod` uses PRD. Never fall back from one to another.
 - `subscription_id` must be a GUID. `prod.tfvars` holds a placeholder that stops every prod command until someone sets it.
 - Every variable in `variables.tf` has a `description` and a `type`. Mark credentials and keys `sensitive = true`.
 - Tags come from `local.tags`. Pass them to every resource that takes tags.

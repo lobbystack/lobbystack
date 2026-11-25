@@ -4,7 +4,7 @@ Stops the compute bill for a server by deallocating its VM, the SIP server's unl
 address is the same when start.py brings the VM back. Calls to the number fail while the SIP server is stopped, and the site is down while the web app is.
 
     python3 stop.py [environment] [--target sip|app|all]
-                                      dev, sandbox or prod. Default dev. $RESOURCE_GROUP names a group directly.
+                                      dev or prod. Default dev. $RESOURCE_GROUP names a group directly.
 """
 
 import sys

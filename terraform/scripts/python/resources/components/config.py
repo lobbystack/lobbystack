@@ -20,7 +20,7 @@ DRIFT_PLAN_FILE = os.path.join(TERRAFORM_DIR, "drift.tfplan")
 # dev's state was created before workspaces, so it stays in the default workspace. Every other environment has a
 # workspace named after it. See README.md.
 DEFAULT_WORKSPACE_ENVIRONMENT = "dev"
-_ORDER = ["dev", "sandbox", "prod"]
+_ORDER = ["dev", "prod"]
 
 # Required for Git Bash on Windows to prevent path mangling in -var arguments
 os.environ["MSYS_NO_PATHCONV"] = "1"
@@ -29,7 +29,7 @@ os.environ.setdefault("AZURE_AUTO_UPGRADE_ENABLE", "no")
 
 
 def list_environments() -> list[str]:
-    """The environments that have a tfvars file, in the order dev, sandbox, prod, then any others."""
+    """The environments that have a tfvars file, in the order dev, prod, then any others."""
     if not os.path.isdir(ENVIRONMENTS_DIR):
         return []
     found = [f[: -len(".tfvars")] for f in os.listdir(ENVIRONMENTS_DIR) if f.endswith(".tfvars")]

@@ -4,7 +4,7 @@ Starts a VM again after stop.py, the SIP server's unless --target says the web a
 change. Docker restarts Asterisk by itself, which takes a minute after the VM is up.
 
     python3 start.py [environment] [--target sip|app|all]
-                                      dev, sandbox or prod. Default dev. $RESOURCE_GROUP names a group directly.
+                                      dev or prod. Default dev. $RESOURCE_GROUP names a group directly.
 """
 
 import sys

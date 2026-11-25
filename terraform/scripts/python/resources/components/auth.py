@@ -31,7 +31,7 @@ def _account(subscription_id: str = "") -> dict | None:
 def ensure_azure_login(subscription_id: str = "") -> bool:
     """Check that the Azure CLI can reach the environment's subscription, and show which one it is.
 
-    Terraform builds everything in the subscription environments/<environment>.tfvars names: dev and sandbox in NPD,
+    Terraform builds everything in the subscription environments/<environment>.tfvars names: dev in NPD,
     prod in PRD. That choice is made in the file, so nothing asks about it here. A subscription the CLI can't reach, or
     a placeholder id, stops the run.
     """

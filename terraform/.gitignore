@@ -9,3 +9,6 @@ terraform.tfvars
 
 # Saved plans hold the same secrets as the state.
 *.tfplan
+
+# Environment files for the web app VM, built by scripts/python/app_env.py. They hold generated secrets.
+.generated/

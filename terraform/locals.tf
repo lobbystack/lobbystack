@@ -120,11 +120,19 @@ locals {
     repository_ref = var.app_repository_ref
   })
 
-  # What to create at the registrar. A name with two labels, such as lobbystack.com, is the apex, which also gets www.
-  app_ip      = try(module.app_public_ip[0].ip_address, null)
-  app_is_apex = length(split(".", var.app_domain)) == 2
-  app_dns_records = var.deploy_app && var.app_domain != "" ? concat(
-    [{ type = "A", host = local.app_is_apex ? "@" : split(".", var.app_domain)[0], value = local.app_ip }],
-    local.app_is_apex ? [{ type = "A", host = "www", value = local.app_ip }] : [],
-  ) : []
+  # Every name the web app VM answers on: the app's, the marketing site's, and www for a marketing domain that is a
+  # registered domain itself, such as lobbystack.com, which redirects to it.
+  app_ip = try(module.app_public_ip[0].ip_address, null)
+  app_hostnames = distinct(compact(concat(
+    [var.app_domain, var.marketing_domain],
+    length(split(".", var.marketing_domain)) == 2 ? ["www.${var.marketing_domain}"] : [],
+  )))
+
+  # What to create where the domain's DNS lives. A name with two labels is the registered domain itself, which is @.
+  # Anything longer is a host in it, such as dev for dev.lobbystack.com. The registered domain is the last two labels.
+  app_dns_records = var.deploy_app ? [for name in local.app_hostnames : {
+    type  = "A"
+    host  = length(split(".", name)) == 2 ? "@" : join(".", slice(split(".", name), 0, length(split(".", name)) - 2))
+    value = local.app_ip
+  }] : []
 }

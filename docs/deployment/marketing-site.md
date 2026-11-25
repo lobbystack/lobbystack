@@ -79,6 +79,10 @@ The marketing pages are built ahead of time, so the admin image needs their sett
 
 The demo call leaves the marketing host for `app.lobbystack.com`, so the admin's `WEB_CALL_ALLOWED_ORIGINS` must keep listing `https://lobbystack.com` and `https://www.lobbystack.com`.
 
+## Serve it with Docker Compose
+
+`docker-compose.yml` passes `MARKETING_SITE`, `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_LIVE_CALL_ENDPOINT` and `NEXT_PUBLIC_WEB_CALL_BUSINESS_SLUG` to the admin's build, and `MARKETING_HOSTS` to the running server. Unset, they leave the marketing site out, as before. Set `MARKETING_SITE=true` and `MARKETING_HOSTS` in `.env` and rebuild with `docker compose up -d --build`. Caddy gets a certificate for each marketing host, because the admin approves them at `/api/tls/ask`. [Run the SIP server and the app on Azure](../../terraform/README.md#serve-the-marketing-site) automates this.
+
 ## Check a build
 
 Validate the snapshot. The validator checks the sitemaps, titles, descriptions, canonical URLs, hreflang links, headings, JSON-LD and internal links of every indexable page:

@@ -1,5 +1,5 @@
 variable "subscription_id" {
-  description = "The Azure subscription to create everything in. Each environment sets its own in environments/<environment>.tfvars: dev and sandbox use the NPD subscription and prod uses the PRD one. Null uses ARM_SUBSCRIPTION_ID, or the one `az login` selected, which is why the environment files always set it."
+  description = "The Azure subscription to create everything in. Each environment sets its own in environments/<environment>.tfvars: dev uses the NPD subscription and prod uses the PRD one. Null uses ARM_SUBSCRIPTION_ID, or the one `az login` selected, which is why the environment files always set it."
   type        = string
   default     = null
 
@@ -10,12 +10,12 @@ variable "subscription_id" {
 }
 
 variable "environment" {
-  description = "Which environment this is: dev, sandbox or prod. It goes into every resource's tags and picks the workspace that holds its state. Set it in environments/<environment>.tfvars."
+  description = "Which environment this is: dev or prod. It goes into every resource's tags and picks the workspace that holds its state. Set it in environments/<environment>.tfvars."
   type        = string
 
   validation {
-    condition     = contains(["dev", "sandbox", "prod"], var.environment)
-    error_message = "The environment is dev, sandbox or prod."
+    condition     = contains(["dev", "prod"], var.environment)
+    error_message = "The environment is dev or prod."
   }
 }
 
@@ -140,13 +140,13 @@ variable "deploy_app" {
 }
 
 variable "app_domain" {
-  description = "The domain the web app answers on, such as dev.lobbystack.com or lobbystack.com. The output app_dns_records lists the records to create at the registrar. Caddy gets the certificate by itself once they resolve."
+  description = "The domain the dashboard answers on, such as dev.app.lobbystack.com or app.lobbystack.com. The output app_dns_records lists the records to create at the registrar. Caddy gets the certificate by itself once they resolve."
   type        = string
   default     = ""
 
   validation {
     condition     = var.app_domain == "" || can(regex("^([a-z0-9]([a-z0-9-]*[a-z0-9])?\\.)+[a-z]{2,}$", var.app_domain))
-    error_message = "app_domain is a lowercase host name such as lobbystack.com or dev.lobbystack.com, with no https:// and no path."
+    error_message = "app_domain is a lowercase host name such as app.lobbystack.com or dev.app.lobbystack.com, with no https:// and no path."
   }
 }
 
@@ -173,3 +173,15 @@ variable "app_repository_ref" {
   type        = string
   default     = "main"
 }
+
+variable "marketing_domain" {
+  description = "The domain the marketing site answers on, such as dev.lobbystack.com or lobbystack.com. The same app serves it, and www redirects to a registered domain like lobbystack.com. Empty serves no marketing site. It has to share its registered domain with app_domain, so the navbar can tell a signed-in visitor from a new one."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = var.marketing_domain == "" || can(regex("^([a-z0-9]([a-z0-9-]*[a-z0-9])?\\.)+[a-z]{2,}$", var.marketing_domain))
+    error_message = "marketing_domain is a lowercase host name such as lobbystack.com, with no https:// and no path."
+  }
+}
+
