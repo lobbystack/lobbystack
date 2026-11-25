@@ -17,6 +17,7 @@ resource "azurerm_linux_virtual_machine" "this" {
   os_disk {
     caching              = local.os_disk.caching
     storage_account_type = local.os_disk.storage_account_type
+    disk_size_gb         = local.os_disk.disk_size_gb
   }
 
   source_image_reference {

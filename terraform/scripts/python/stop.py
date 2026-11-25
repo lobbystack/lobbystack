@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """
-Stops the compute bill for the SIP server by deallocating its VM. The disk, the static IP and the rest stay, so the
-address is the same when start.py brings the VM back. Calls to the number fail while it is stopped.
+Stops the compute bill for a server by deallocating its VM, the SIP server's unless --target says the web app's. The disk, the static IP and the rest stay, so the
+address is the same when start.py brings the VM back. Calls to the number fail while the SIP server is stopped, and the site is down while the web app is.
 
-    python3 stop.py [environment]     dev, sandbox or prod. Default dev. $RESOURCE_GROUP names a group directly.
+    python3 stop.py [environment] [--target sip|app|all]
+                                      dev, sandbox or prod. Default dev. $RESOURCE_GROUP names a group directly.
 """
 
 import sys
@@ -14,9 +15,9 @@ from resources.components.vm import az, confirm_production, fail, parse_environm
 def main():
     args = parse_environment("Deallocate the SIP server's VM, which ends its compute bill.")
     group, sub_args = resolve(args.environment)
-    ids = vm_ids(group, sub_args)
+    ids = vm_ids(group, sub_args, args.target)
     if not ids:
-        say(f"No VM in {group}.")
+        say(f"No {args.target} VM in {group}.")
         return
     confirm_production(args.environment, "Stop", args.yes)
 

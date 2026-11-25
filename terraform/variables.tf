@@ -132,3 +132,44 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "deploy_app" {
+  description = "Whether to create the web app's VM beside the SIP server: the dashboard, the worker, Postgres and Redis, run by Docker Compose and served over HTTPS on app_domain. It adds a VM, a disk and a static address, so an environment turns it on in environments/<environment>.tfvars."
+  type        = bool
+  default     = false
+}
+
+variable "app_domain" {
+  description = "The domain the web app answers on, such as dev.lobbystack.com or lobbystack.com. The output app_dns_records lists the records to create at the registrar. Caddy gets the certificate by itself once they resolve."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = var.app_domain == "" || can(regex("^([a-z0-9]([a-z0-9-]*[a-z0-9])?\\.)+[a-z]{2,}$", var.app_domain))
+    error_message = "app_domain is a lowercase host name such as lobbystack.com or dev.lobbystack.com, with no https:// and no path."
+  }
+}
+
+variable "app_vm_size" {
+  description = "The web app's VM size. Postgres, Redis, the admin, the worker and the image build share it, so it needs 8 GB. Standard_D2as_v6 is 2 vCPUs and 8 GB, and a subscription has quota for its family without a request. The B-series family the SIP server uses is full at two vCPUs."
+  type        = string
+  default     = "Standard_D2as_v6"
+}
+
+variable "app_os_disk_size_gb" {
+  description = "The web app's OS disk in GB. It holds the images, Postgres's data and the uploaded files."
+  type        = number
+  default     = 64
+}
+
+variable "app_repository_url" {
+  description = "The git repository the web app VM clones on its first boot. It has to be readable without a password."
+  type        = string
+  default     = "https://github.com/MilanObrenovic/lobbystack.git"
+}
+
+variable "app_repository_ref" {
+  description = "The branch or tag the web app VM clones, and that lobbystack-update checks out again."
+  type        = string
+  default     = "main"
+}

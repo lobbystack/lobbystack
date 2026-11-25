@@ -8,6 +8,7 @@ This Terraform configuration creates a VM on Azure that runs the SIP server in `
 - A static public IP address, Standard SKU. The carrier routes each number to it, so it must not change when the VM restarts.
 - A network security group. It allows SIP and audio from the carrier's addresses only, audio from OpenAI's addresses, and SSH from the addresses you list. Everything else inbound is denied.
 - An Ubuntu 24.04 VM with SSH key login only. On its first boot it installs Docker, writes the server's files from `docker/asterisk`, and starts it.
+- With `deploy_app` on, a second VM for the web app, with its own static address and firewall, in the same group. [Run the web app](#run-the-web-app) explains it.
 
 ## Layout
 
@@ -77,6 +78,12 @@ python3 scripts/python/stop.py prod       # asks first; --yes skips the question
 
 They use the environment's subscription and resource group from its tfvars file. `$RESOURCE_GROUP` names a group directly instead.
 
+An environment with the web app has two VMs. Both scripts act on the SIP server unless `--target` says otherwise: `--target app` for the web app, `--target all` for both. Each VM's `purpose` tag tells them apart.
+
+```sh
+python3 scripts/python/stop.py dev --target app   # takes the site down, and leaves the SIP server answering
+```
+
 ## Subscriptions
 
 `dev` and `sandbox` use the NPD subscription, and `prod` uses the PRD one. Each environment file sets `subscription_id`, and Terraform builds everything there, whichever subscription `az` has selected. `deploy.py` shows that subscription, and `start.py` and `stop.py` read it from the same file.
@@ -138,6 +145,38 @@ Replacing the VM gives it new host keys while the static address stays, so SSH t
 1. Put the `zadarma_sip_host` output in `.env` as `ZADARMA_SIP_HOST` on the worker.
 2. In Zadarma, set a number's destination to the `zadarma_destination_example` output, with that number's digits in place of the example's.
 3. Set `carrier_ips` in `environments/<environment>.tfvars` to the addresses Zadarma's calls come from, and apply again. That opens the firewall for them and tells the server to accept them.
+
+## Run the web app
+
+`deploy_app = true` in an environment's tfvars file adds a VM for the dashboard, the worker, Postgres, Redis and Caddy, which `docker-compose.yml` runs, and serves it over HTTPS on `app_domain`. It sits beside the SIP server in the same group, takes `Standard_D2as_v6` (2 vCPUs, 8 GB) by default, and has a 64 GB disk. Its resources are named from `{app_name}-app`, such as `lobbystack-app-public-ip-dev`. Terraform prepares the VM and clones the code, but starts nothing, because the stack needs secrets that only you have.
+
+1. **Apply.** Push the branch `app_repository_ref` names, then apply the environment. The `app_dns_records` output lists the records, and `app_ssh_command` the login.
+2. **DNS.** Where the domain's DNS lives (for `lobbystack.com`, Cloudflare), add each record from `app_dns_records`. In Cloudflare, switch the record's proxy off (grey cloud, DNS only), so Caddy can answer Let's Encrypt's challenge and reach visitors directly. For `dev.lobbystack.com` that is one `A` record with host `dev`. For `lobbystack.com` it is `A` records for `@` and `www`. Set the TTL to Automatic. Wait until `dig +short dev.lobbystack.com` answers with the address.
+3. **The settings file.** Make a copy of your `.env` and change these lines, using your own domain. Generate every secret with `openssl rand -hex 32`, and don't reuse the ones from your laptop:
+
+   ```
+   COMPOSE_FILE=docker-compose.yml:docker-compose.tls.yml
+   HTTP_BIND_ADDRESS=0.0.0.0
+   CADDY_ON_DEMAND_TLS=true
+   APP_HOSTNAME=dev.lobbystack.com
+   APP_BASE_URL=https://dev.lobbystack.com
+   NEXT_PUBLIC_APP_URL=https://dev.lobbystack.com
+   ```
+
+   Caddy asks the admin before it gets a certificate, and the admin approves only the host named by `APP_BASE_URL` and `MARKETING_HOSTS`, so those must name the domain. Keep `ZADARMA_SIP_HOST` as the SIP server's address, not this VM's.
+4. **Copy it and start.**
+
+   ```sh
+   scp -i ~/.ssh/terraform .env azureuser@<app_public_ip>:/opt/lobbystack-app/.env
+   ssh -i ~/.ssh/terraform azureuser@<app_public_ip>
+   cloud-init status --wait          # done
+   lobbystack-update                 # builds the images and starts the stack, which takes a few minutes
+   ```
+5. **Webhooks.** Point OpenAI's `live.transport.incoming`, Polar and each carrier at `https://<app_domain>/api/webhooks/...` instead of a tunnel.
+
+`lobbystack-update` fetches `app_repository_ref` again and rebuilds, so run it for each release. It needs the `.env` first and says so when it's missing. Watch the stack with `docker compose logs -f admin` in `/opt/lobbystack-app`.
+
+The VM's first-boot text is part of its definition, so changing `app_repository_url` or `app_repository_ref` replaces the VM, and its disk with it. Move the data first, or run `lobbystack-update` on the VM and leave the tfvars alone until you want a new VM. A fresh VM starts with an empty database.
 
 ## Change settings
 

@@ -30,6 +30,12 @@ def parse_environment(description: str) -> argparse.Namespace:
         choices=environments or None,
         help="Which environment's VM. Default dev. $RESOURCE_GROUP names a resource group directly.",
     )
+    parser.add_argument(
+        "--target",
+        choices=["sip", "app", "all"],
+        default="sip",
+        help="Which VM: the SIP server (default), the web app, or both. The VM's purpose tag says which is which.",
+    )
     parser.add_argument("--yes", "-y", action="store_true", help="Don't ask before touching prod.")
     return parser.parse_args()
 
@@ -60,11 +66,16 @@ def confirm_production(environment: str, action: str, yes: bool):
             fail("Cancelled.")
 
 
-def vm_ids(group: str, sub_args: list[str]) -> list[str]:
-    """The ids of the VMs in the resource group. Exits when the group doesn't exist."""
+# The purpose tag main.tf puts on each VM: locals.tf sets sip-server on the SIP server and web-app on the web app.
+PURPOSES = {"sip": "sip-server", "app": "web-app"}
+
+
+def vm_ids(group: str, sub_args: list[str], target: str = "all") -> list[str]:
+    """The ids of the VMs in the resource group, narrowed to the target's. Exits when the group doesn't exist."""
     if az(["group", "show", *sub_args, "-n", group], capture=True).returncode != 0:
         fail(f"No resource group named {group}.")
-    result = az(["vm", "list", *sub_args, "-g", group, "--query", "[].id", "-o", "tsv"], capture=True)
+    query = "[].id" if target == "all" else f"[?tags.purpose=='{PURPOSES[target]}'].id"
+    result = az(["vm", "list", *sub_args, "-g", group, "--query", query, "-o", "tsv"], capture=True)
     if result.returncode != 0:
         fail(f"Couldn't list the VMs in {group}.\n{result.stderr.strip()}")
     return result.stdout.split()

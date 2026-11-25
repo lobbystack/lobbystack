@@ -27,6 +27,7 @@ Every file stays in its slot. A new value shared by modules goes in the root `lo
 - Every module has all four files, even when `locals.tf` holds only a comment.
 - `locals.tf` holds what the module decides itself: the resource's name and the settings that never differ, such as an address range, a SKU or an image. `variables.tf` holds only what the caller supplies: the common values (`app_name`, `environment`, `location`, `resource_group_name`, `tags`) and ids or names from other modules. Don't add a variable for a value nobody overrides.
 - Variables carry a `description` and a `type`. Give a default only when one value is right almost everywhere. Add `validation` blocks for rules Azure would reject late, such as a priority range.
+- A firewall rule's source is `source_address_prefixes` (a list of addresses) or `source_address_prefix` (one address or a service tag such as `Internet`). Azure rejects a service tag inside the list with a 400, which `terraform validate` can't catch, so the module asks for exactly one of the two.
 - Outputs expose what other modules need, usually `id` and `name`, and add a `description`.
 - Wire modules in `main.tf` through outputs (`module.resource_group.name`), never by retyping a name.
 - To add a resource type, copy the smallest existing module, such as `modules/network_security_group`, and call it from `main.tf`.
@@ -56,6 +57,8 @@ name = join("-", compact([
 The module declares `app_name` and `environment` as variables and the root `main.tf` passes them in. Don't pass a finished `name` into a module that follows this pattern.
 
 Exception: `network_security_rule` names each rule by its key in the `rules` map.
+
+A second workload in the same group, such as the web app's VM, reuses the same modules with its own `app_name` (`"${var.app_name}-app"`), so its names read `lobbystack-app-public-ip-dev` and nothing collides. Give each of its modules a `count` of `var.deploy_app ? 1 : 0`, and tag its VM with its own `purpose`, which `start.py` and `stop.py` read.
 
 `resource_group`, `virtual_network`, `subnet`, `public_ip`, `network_security_group`, `network_interface` and `linux_virtual_machine` all follow this pattern. Their tokens are `resource-group`, `virtual-network`, `subnet`, `public-ip`, `network-security-group`, `network-interface` and `linux-virtual-machine`. A new module that names its resource does the same.
 

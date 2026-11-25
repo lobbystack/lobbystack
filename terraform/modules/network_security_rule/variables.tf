@@ -9,12 +9,13 @@ variable "network_security_group_name" {
 }
 
 variable "rules" {
-  description = "The rules, by name. An inbound allow from any port to any address is the default, so a rule names only what differs."
+  description = "The rules, by name. An inbound allow from any port to any address is the default, so a rule names only what differs. A rule's source is source_address_prefixes (a list of addresses) or source_address_prefix (one address, or a service tag such as Internet, which Azure refuses inside the list)."
   type = map(object({
     priority                   = number
     protocol                   = string
     destination_port_range     = string
-    source_address_prefixes    = list(string)
+    source_address_prefixes    = optional(list(string))
+    source_address_prefix      = optional(string)
     direction                  = optional(string, "Inbound")
     access                     = optional(string, "Allow")
     source_port_range          = optional(string, "*")
@@ -33,7 +34,12 @@ variable "rules" {
   }
 
   validation {
-    condition     = alltrue([for rule in values(var.rules) : !contains(rule.source_address_prefixes, "0.0.0.0/0") && !contains(rule.source_address_prefixes, "*")])
-    error_message = "A rule can't open a port to the whole internet. List the addresses that need it."
+    condition     = alltrue([for rule in values(var.rules) : (rule.source_address_prefixes == null) != (rule.source_address_prefix == null)])
+    error_message = "A rule sets source_address_prefixes, a list of addresses, or source_address_prefix, one address or service tag, and not both. Azure refuses a service tag such as Internet inside the list."
+  }
+
+  validation {
+    condition     = alltrue([for rule in values(var.rules) : !contains(concat(coalesce(rule.source_address_prefixes, []), compact([rule.source_address_prefix])), "0.0.0.0/0") && !contains(concat(coalesce(rule.source_address_prefixes, []), compact([rule.source_address_prefix])), "*")])
+    error_message = "A rule can't open a port to every address with 0.0.0.0/0 or *. List the addresses that need it, or use the Internet service tag where the whole internet is meant, as for a public website."
   }
 }

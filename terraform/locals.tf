@@ -77,4 +77,54 @@ locals {
   }
 
   network_security_rules = { for name, rule in local.network_security_rule_candidates : name => rule if rule.enabled }
+
+  # The web app VM is a second workload in the same group, so its resources take their own app_name, and its tag says
+  # which VM start.py and stop.py are dealing with.
+  app_name_for_web = "${var.app_name}-app"
+  app_tags         = merge(local.tags, { purpose = "web-app" })
+
+  # Anyone may open the site, so these rules take Azure's Internet tag, which Azure accepts only as one source_address_prefix
+  # and not inside the list. The rule module refuses 0.0.0.0/0 and *, which would open a port by mistake. HTTP stays open
+  # because Caddy answers the certificate challenge on it and sends visitors on to HTTPS. UDP 443 carries HTTP/3.
+  app_network_security_rules = {
+    http = {
+      priority               = 100
+      protocol               = "Tcp"
+      destination_port_range = "80"
+      source_address_prefix  = "Internet"
+    }
+    https = {
+      priority               = 110
+      protocol               = "Tcp"
+      destination_port_range = "443"
+      source_address_prefix  = "Internet"
+    }
+    https-udp = {
+      priority               = 120
+      protocol               = "Udp"
+      destination_port_range = "443"
+      source_address_prefix  = "Internet"
+    }
+    ssh = {
+      priority                = 200
+      protocol                = "Tcp"
+      destination_port_range  = "22"
+      source_address_prefixes = var.ssh_allowed_cidrs
+    }
+  }
+  app_network_security_rules_enabled = { for name, rule in local.app_network_security_rules : name => rule if name != "ssh" || length(var.ssh_allowed_cidrs) > 0 }
+
+  app_cloud_init = templatefile("${path.module}/templates/cloud-init-app.yaml.tftpl", {
+    admin_username = var.admin_username
+    repository_url = var.app_repository_url
+    repository_ref = var.app_repository_ref
+  })
+
+  # What to create at the registrar. A name with two labels, such as lobbystack.com, is the apex, which also gets www.
+  app_ip      = try(module.app_public_ip[0].ip_address, null)
+  app_is_apex = length(split(".", var.app_domain)) == 2
+  app_dns_records = var.deploy_app && var.app_domain != "" ? concat(
+    [{ type = "A", host = local.app_is_apex ? "@" : split(".", var.app_domain)[0], value = local.app_ip }],
+    local.app_is_apex ? [{ type = "A", host = "www", value = local.app_ip }] : [],
+  ) : []
 }

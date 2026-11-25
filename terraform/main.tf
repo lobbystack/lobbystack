@@ -115,6 +115,78 @@ module "linux_virtual_machine" {
   tags                  = local.tags
 }
 
+# The web app's VM, beside the SIP server: the dashboard, the worker, Postgres, Redis and Caddy under Docker Compose,
+# served over HTTPS on app_domain. It shares the group and the subnet, and has its own address, firewall and VM, named
+# from "${var.app_name}-app" so nothing collides with the SIP server's. deploy_app turns it on.
+module "app_public_ip" {
+  source = "./modules/public_ip"
+  count  = var.deploy_app ? 1 : 0
+
+  app_name            = local.app_name_for_web
+  environment         = var.environment
+  location            = module.resource_group.location
+  resource_group_name = module.resource_group.name
+  tags                = local.app_tags
+}
+
+module "app_network_security_group" {
+  source = "./modules/network_security_group"
+  count  = var.deploy_app ? 1 : 0
+
+  app_name            = local.app_name_for_web
+  environment         = var.environment
+  location            = module.resource_group.location
+  resource_group_name = module.resource_group.name
+  tags                = local.app_tags
+}
+
+module "app_network_security_rule" {
+  source = "./modules/network_security_rule"
+  count  = var.deploy_app ? 1 : 0
+
+  resource_group_name         = module.resource_group.name
+  network_security_group_name = module.app_network_security_group[0].name
+  rules                       = local.app_network_security_rules_enabled
+}
+
+module "app_network_interface" {
+  source = "./modules/network_interface"
+  count  = var.deploy_app ? 1 : 0
+
+  app_name             = local.app_name_for_web
+  environment          = var.environment
+  location             = module.resource_group.location
+  resource_group_name  = module.resource_group.name
+  subnet_id            = module.subnet.id
+  public_ip_address_id = module.app_public_ip[0].id
+  tags                 = local.app_tags
+}
+
+module "app_network_interface_security_group_association" {
+  source = "./modules/network_interface_security_group_association"
+  count  = var.deploy_app ? 1 : 0
+
+  network_interface_id      = module.app_network_interface[0].id
+  network_security_group_id = module.app_network_security_group[0].id
+}
+
+module "app_linux_virtual_machine" {
+  source = "./modules/linux_virtual_machine"
+  count  = var.deploy_app ? 1 : 0
+
+  app_name              = local.app_name_for_web
+  environment           = var.environment
+  location              = module.resource_group.location
+  resource_group_name   = module.resource_group.name
+  size                  = var.app_vm_size
+  admin_username        = var.admin_username
+  admin_ssh_public_key  = var.ssh_public_key
+  network_interface_ids = [module.app_network_interface[0].id]
+  custom_data           = base64encode(local.app_cloud_init)
+  os_disk_size_gb       = var.app_os_disk_size_gb
+  tags                  = local.app_tags
+}
+
 # The resources moved from the root into modules. These blocks make Terraform adopt what already exists under the old
 # addresses instead of destroying it. Once every state that held the old addresses has applied, they can be deleted.
 moved {

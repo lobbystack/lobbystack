@@ -45,6 +45,12 @@ variable "custom_data" {
   sensitive   = true
 }
 
+variable "os_disk_size_gb" {
+  description = "The OS disk's size in GB. Null keeps the image's own size, 30 GB for Ubuntu, which fits a server that only passes audio on. A server that runs a database needs more."
+  type        = number
+  default     = null
+}
+
 variable "tags" {
   description = "Tags for the VM."
   type        = map(string)

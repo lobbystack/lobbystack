@@ -13,3 +13,6 @@ vm_size         = "Standard_B2ls_v2"
 # The carrier's SIP server addresses. Zadarma's servers sit in 185.45.152.0/22. Narrow it once you know which
 # addresses the calls come from. Empty leaves the server closed to every carrier.
 carrier_ips = ["185.45.152.0/22"]
+
+# The web app stays off here. Set deploy_app = true and app_domain = "sandbox.lobbystack.com" to give sandbox its own.
+deploy_app = false

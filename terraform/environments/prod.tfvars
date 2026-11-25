@@ -14,3 +14,9 @@ vm_size         = "Standard_B2ls_v2"
 # The carrier's SIP server addresses. Zadarma's servers sit in 185.45.152.0/22. Narrow it once you know which
 # addresses the calls come from. Empty leaves the server closed to every carrier.
 carrier_ips = ["185.45.152.0/22"]
+
+# The web app on its own VM, on the apex domain and www. Create the records that the app_dns_records output lists at the
+# registrar. The ref is the release the VM clones, so point it at a tag or main once the feature branch is merged.
+deploy_app         = true
+app_domain         = "lobbystack.com"
+app_repository_ref = "main"

@@ -8,6 +8,7 @@ locals {
   os_disk = {
     caching              = "ReadWrite"
     storage_account_type = "StandardSSD_LRS"
+    disk_size_gb         = var.os_disk_size_gb
   }
 
   image = {

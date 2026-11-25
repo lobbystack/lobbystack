@@ -32,3 +32,24 @@ output "ssh_command" {
   description = "How to log in, once ssh_allowed_cidrs allows your address."
   value       = "ssh ${var.admin_username}@${module.public_ip.ip_address}"
 }
+
+output "app_public_ip" {
+  description = "The web app VM's static address, or null when deploy_app is off."
+  value       = local.app_ip
+}
+
+output "app_url" {
+  description = "Where the web app answers once the DNS records resolve and the stack is running."
+  value       = var.deploy_app && var.app_domain != "" ? "https://${var.app_domain}" : null
+}
+
+output "app_dns_records" {
+  description = "The records to create at the domain's registrar, where the domain's DNS is hosted, such as Cloudflare's DNS tab."
+  value       = local.app_dns_records
+}
+
+output "app_ssh_command" {
+  description = "How to log in to the web app VM, once ssh_allowed_cidrs allows your address."
+  value       = var.deploy_app ? "ssh ${var.admin_username}@${local.app_ip}" : null
+}
+
