@@ -240,7 +240,7 @@ Davinci Virtual facture 95 $ pour mettre en service la permanence humaine, Ambs 
 
 ### Quelles permanences répondent en espagnol ?
 
-Ruby, PATLive et Abby Connect incluent des réceptionnistes hispanophones sans supplément, et Moneypenny, MAP Communications, The Perfect Answer et Ambs Call Center mentionnent l'espagnol ou une réponse bilingue sur chaque forfait. Smith.ai facture 1 $ par appel pour une ligne en espagnol, Answering Service Care 1 $ la minute pour la traduction en direct, et la grille 2025 d'AnswerConnect présente l'espagnol en option. LobbyStack ouvre chaque appel dans la langue par défaut de l'entreprise, puis passe à la langue de l'appelant, parmi plus de 70 langues dont l'espagnol.
+Ruby, PATLive et Abby Connect incluent des réceptionnistes hispanophones sans supplément, et Moneypenny, MAP Communications, The Perfect Answer et Ambs Call Center mentionnent l'espagnol ou une réponse bilingue sur chaque forfait. Smith.ai facture 1 $ par appel pour une ligne en espagnol, Answering Service Care 1 $ la minute pour la traduction en direct, et la grille 2025 d'AnswerConnect présente l'espagnol en option. LobbyStack ouvre chaque appel dans la langue par défaut de l'entreprise, puis passe à la langue de l'appelant, parmi plus de 70 langues dont l'espagnol. Notre comparatif des [services de réponse téléphonique bilingues](/fr/blog/bilingual-answering-service/) détaille les heures en espagnol et les prix.
 
 ### Puis-je garder mon numéro professionnel ?
 

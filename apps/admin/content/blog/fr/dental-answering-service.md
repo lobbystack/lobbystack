@@ -211,7 +211,7 @@ Oui. Réglez votre opérateur pour renvoyer les appels sans réponse à midi et 
 
 ### Un secrétariat dentaire peut-il répondre en espagnol ?
 
-Oui. Ruby offre l'espagnol 24 h sur 24, PATLive de 8 h à 22 h, heure de l'Est, et SAS emploie des agents anglophones et hispanophones. Dentina couvre l'anglais et l'espagnol en Standard et jusqu'à 57 langues en Premium, et Viva annonce plus de 100 langues. LobbyStack répond dans la langue du patient, parmi plus de 70 langues, français compris.
+Oui. Ruby offre l'espagnol 24 h sur 24, PATLive de 8 h à 22 h, heure de l'Est, et SAS emploie des agents anglophones et hispanophones. Dentina couvre l'anglais et l'espagnol en Standard et jusqu'à 57 langues en Premium, et Viva annonce plus de 100 langues. LobbyStack répond dans la langue du patient, parmi plus de 70 langues, français compris. Pour les heures en espagnol et les frais d'autres services, consultez notre comparatif des [services de réponse téléphonique bilingues](/fr/blog/bilingual-answering-service/).
 
 ## Notre méthode de vérification
 

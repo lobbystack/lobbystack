@@ -240,7 +240,7 @@ Davinci Virtual cobra $95 por configurar la atención con personas, Ambs Call Ce
 
 ### ¿Qué servicios de atención telefónica contestan en español?
 
-Ruby, PATLive y Abby Connect incluyen recepcionistas que hablan español sin costo adicional, y Moneypenny, MAP Communications, The Perfect Answer y Ambs Call Center indican el español o la atención bilingüe en todos sus planes. Smith.ai cobra $1 por llamada por una línea en español, Answering Service Care $1 por minuto por la traducción en vivo, y la hoja de precios de 2025 de AnswerConnect lo incluye como complemento. LobbyStack abre cada llamada en el idioma predeterminado del negocio y después cambia al idioma de quien llama, entre más de 70 idiomas, incluido el español.
+Ruby, PATLive y Abby Connect incluyen recepcionistas que hablan español sin costo adicional, y Moneypenny, MAP Communications, The Perfect Answer y Ambs Call Center indican el español o la atención bilingüe en todos sus planes. Smith.ai cobra $1 por llamada por una línea en español, Answering Service Care $1 por minuto por la traducción en vivo, y la hoja de precios de 2025 de AnswerConnect lo incluye como complemento. LobbyStack abre cada llamada en el idioma predeterminado del negocio y después cambia al idioma de quien llama, entre más de 70 idiomas, incluido el español. Nuestra guía de [servicios de recepcionista bilingüe](/es/blog/bilingual-answering-service/) compara horarios en español y precios.
 
 ### ¿Puedo conservar el número de teléfono de mi negocio?
 

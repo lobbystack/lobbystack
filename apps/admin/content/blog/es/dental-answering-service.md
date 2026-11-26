@@ -211,7 +211,7 @@ Sí. Configure su operador para desviar las llamadas sin respuesta a la hora de 
 
 ### ¿Un servicio dental puede atender en español?
 
-Sí. Ruby ofrece español 24/7, PATLive de 8 a. m. a 10 p. m., hora del Este, y SAS emplea agentes que hablan inglés y español. Dentina cubre inglés y español en Standard y hasta 57 idiomas en Premium, y Viva anuncia más de 100. LobbyStack contesta en el idioma del paciente, entre más de 70 idiomas.
+Sí. Ruby ofrece español 24/7, PATLive de 8 a. m. a 10 p. m., hora del Este, y SAS emplea agentes que hablan inglés y español. Dentina cubre inglés y español en Standard y hasta 57 idiomas en Premium, y Viva anuncia más de 100. LobbyStack contesta en el idioma del paciente, entre más de 70 idiomas. Para ver horarios en español y cargos de más servicios, consulte nuestra guía de [servicios de recepcionista bilingüe](/es/blog/bilingual-answering-service/).
 
 ## Cómo revisamos estos servicios
 

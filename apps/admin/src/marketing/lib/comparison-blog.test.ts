@@ -45,6 +45,7 @@ const comparisonSlugs = [
   "phone-answering-service-quebec",
   "virtual-secretary-quebec",
   "dental-answering-service",
+  "bilingual-answering-service",
 ] as const
 
 const rootPath = (path: string) =>
