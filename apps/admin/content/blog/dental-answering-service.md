@@ -211,7 +211,7 @@ Yes. Set your carrier to forward unanswered calls during lunch and all calls aft
 
 ### Can a dental answering service answer in Spanish?
 
-Yes. Ruby offers Spanish 24/7, PATLive from 8 a.m. to 10 p.m. Eastern, and SAS employs English and Spanish speakers. Dentina covers English and Spanish on Standard and up to 57 languages on Premium, and Viva lists 100+. LobbyStack answers in the patient's language across 70+ languages.
+Yes. Ruby offers Spanish 24/7, PATLive from 8 a.m. to 10 p.m. Eastern, and SAS employs English and Spanish speakers. Dentina covers English and Spanish on Standard and up to 57 languages on Premium, and Viva lists 100+. LobbyStack answers in the patient's language across 70+ languages. For Spanish hours and fees across more services, see our guide to [bilingual answering services](/blog/bilingual-answering-service/).
 
 ## How we checked these services
 

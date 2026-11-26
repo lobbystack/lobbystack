@@ -240,7 +240,7 @@ Davinci Virtual charges $95 to set up live answering, Ambs Call Center $85 and A
 
 ### Which answering services answer in Spanish?
 
-Ruby, PATLive and Abby Connect include Spanish-speaking receptionists at no extra cost, and Moneypenny, MAP Communications, The Perfect Answer and Ambs Call Center list Spanish or bilingual answering on every plan. Smith.ai charges $1 a call for a Spanish line, Answering Service Care charges $1 a minute for live translation, and AnswerConnect's 2025 price sheet lists Spanish as an add-on. LobbyStack opens each call in the business's default language, then switches to the caller's language, across 70+ languages including Spanish.
+Ruby, PATLive and Abby Connect include Spanish-speaking receptionists at no extra cost, and Moneypenny, MAP Communications, The Perfect Answer and Ambs Call Center list Spanish or bilingual answering on every plan. Smith.ai charges $1 a call for a Spanish line, Answering Service Care charges $1 a minute for live translation, and AnswerConnect's 2025 price sheet lists Spanish as an add-on. LobbyStack opens each call in the business's default language, then switches to the caller's language, across 70+ languages including Spanish. Our guide to [bilingual answering services](/blog/bilingual-answering-service/) compares Spanish hours and prices.
 
 ### Can I keep my business phone number?
 

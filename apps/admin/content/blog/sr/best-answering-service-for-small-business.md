@@ -240,7 +240,7 @@ Davinci Virtual naplaćuje $95 za aktivaciju odgovaranja uživo, Ambs Call Cente
 
 ### Koje usluge odgovaraju na pozive na španskom?
 
-Ruby, PATLive i Abby Connect bez doplate uključuju recepcionere koji govore španski, a Moneypenny, MAP Communications, The Perfect Answer i Ambs Call Center navode španski ili dvojezično odgovaranje na svakom paketu. Smith.ai naplaćuje $1 po pozivu za liniju na španskom, Answering Service Care $1 po minutu za prevođenje uživo, a cenovnik AnswerConnect-a iz 2025. navodi španski kao dodatak. LobbyStack svaki poziv otvara na podrazumevanom jeziku firme, a zatim prelazi na jezik pozivaoca, među više od 70 jezika, uključujući španski i srpski.
+Ruby, PATLive i Abby Connect bez doplate uključuju recepcionere koji govore španski, a Moneypenny, MAP Communications, The Perfect Answer i Ambs Call Center navode španski ili dvojezično odgovaranje na svakom paketu. Smith.ai naplaćuje $1 po pozivu za liniju na španskom, Answering Service Care $1 po minutu za prevođenje uživo, a cenovnik AnswerConnect-a iz 2025. navodi španski kao dodatak. LobbyStack svaki poziv otvara na podrazumevanom jeziku firme, a zatim prelazi na jezik pozivaoca, među više od 70 jezika, uključujući španski i srpski. Radno vreme na španskom i cene poredimo u vodiču za [dvojezične usluge odgovaranja na pozive](/sr/blog/bilingual-answering-service/).
 
 ### Mogu li da zadržim poslovni broj?
 

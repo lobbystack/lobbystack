@@ -86,6 +86,7 @@ export const translatedBasePaths = [
   "/blog/virtual-secretary-quebec/",
   "/blog/ai-phone-assistant/",
   "/blog/dental-answering-service/",
+  "/blog/bilingual-answering-service/",
   "/affiliate-program/",
   "/white-label/",
   "/about/",

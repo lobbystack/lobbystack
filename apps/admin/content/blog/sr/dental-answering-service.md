@@ -211,7 +211,7 @@ Možete. Podesite operatera da prosleđuje neodgovorene pozive za vreme pauze i 
 
 ### Može li usluga za stomatologe da odgovara na drugim jezicima?
 
-Može. Ruby nudi španski 24/7, PATLive od 8 do 22 časa po istočnom vremenu, a SAS zapošljava agente koji govore engleski i španski. Dentina pokriva engleski i španski u paketu Standard i do 57 jezika u paketu Premium, a Viva navodi više od 100. LobbyStack odgovara na jeziku pacijenta, na više od 70 jezika, uključujući srpski.
+Može. Ruby nudi španski 24/7, PATLive od 8 do 22 časa po istočnom vremenu, a SAS zapošljava agente koji govore engleski i španski. Dentina pokriva engleski i španski u paketu Standard i do 57 jezika u paketu Premium, a Viva navodi više od 100. LobbyStack odgovara na jeziku pacijenta, na više od 70 jezika, uključujući srpski. Radno vreme na španskom i doplate drugih usluga poredimo u vodiču za [dvojezične usluge odgovaranja na pozive](/sr/blog/bilingual-answering-service/).
 
 ## Kako smo proverili ove usluge
 
