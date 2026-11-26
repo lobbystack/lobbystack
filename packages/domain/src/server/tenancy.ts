@@ -160,24 +160,30 @@ export function slugFromBusinessName(name: string): string {
 }
 
 /**
- * The slug a renamed business takes: the new name's, or that with a random
- * suffix when another business has it. Null when the slug stays, which is
- * whenever someone chose it. Only a slug this function's own rule made from
- * the old name follows a rename, so a slug the public API or CLI set, or one
- * the business's address points at, outlives the name it was made from.
+ * The slug a renamed business should take: the new name's, or null when the
+ * slug stays, which is whenever someone chose it. Only a slug this function's
+ * own rule made from the old name follows a rename, so a slug the public API
+ * or CLI set, or one the business's address points at, outlives the name it
+ * was made from. It can't tell whether another business holds that slug: row
+ * security hides every other business from the transaction, so a lookup here
+ * would always find it free. The update finds out, and takes a suffix.
  */
-export async function slugAfterRename(currentSlug: string, previousName: string, newName: string, taken: (slug: string) => Promise<boolean>): Promise<string | null> {
+export function slugAfterRename(currentSlug: string, previousName: string, newName: string): string | null {
   const previousBase = slugFromBusinessName(previousName);
   if (currentSlug !== previousBase && !new RegExp(`^${previousBase}-[0-9a-f]{12}$`).test(currentSlug)) return null;
   const base = slugFromBusinessName(newName);
   // A suffix this rule made from the new name already follows it.
   if (currentSlug === base || new RegExp(`^${base}-[0-9a-f]{12}$`).test(currentSlug)) return null;
-  if (!(await taken(base))) return base;
-  for (let attempt = 0; attempt < 5; attempt++) {
-    const candidate = `${base}-${randomBytes(6).toString("hex")}`;
-    if (!(await taken(candidate))) return candidate;
+  return base;
+}
+
+/** Whether a failed statement broke the unique slug index, which another business holding the slug does. */
+function isSlugConflict(error: unknown): boolean {
+  for (let cause: unknown = error, depth = 0; cause && typeof cause === "object" && depth < 3; cause = (cause as { cause?: unknown }).cause, depth++) {
+    const { code, constraint } = cause as { code?: unknown; constraint?: unknown };
+    if (code === "23505" && constraint === "businesses_slug_unique") return true;
   }
-  throw Object.assign(new Error("Business slug could not be updated."), { status: 409 });
+  return false;
 }
 
 async function insertBusinessRowsInTransaction(tx: DatabaseTransaction, input: NewBusiness, ownerUserId: string): Promise<{ membershipId: string }>;
@@ -376,15 +382,31 @@ export async function updateBusinessInTransaction(
   // Locks the row, so a concurrent change can't alter the zone the closures were entered in, or the language the greeting is in.
   const [before] = timezone === undefined && input.defaultLocale === undefined && input.currency === undefined ? [] : await tx.select({ timezone: businesses.timezone, defaultLocale: businesses.defaultLocale, name: businesses.name, currency: businesses.currency }).from(businesses).where(eq(businesses.id, input.businessId)).for("update");
   // Only a slug made from the old name follows the name. One the business chose stays, since it's the address people and integrations know.
-  let slug: string | null = null;
+  let slugs: Array<string | null> = [null];
   if (input.name !== undefined) {
     const [current] = await tx.select({ name: businesses.name, slug: businesses.slug }).from(businesses).where(eq(businesses.id, input.businessId)).for("update");
     if (current && current.name !== values.name) {
       await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`business-slug:${slugFromBusinessName(values.name!)}`}, 0))`);
-      slug = await slugAfterRename(current.slug, current.name, values.name!, async (candidate) => (await tx.select({ id: businesses.id }).from(businesses).where(and(eq(businesses.slug, candidate), ne(businesses.id, input.businessId))).limit(1)).length > 0);
+      const base = slugAfterRename(current.slug, current.name, values.name!);
+      // Names repeat across businesses and slugs don't. Another business may hold the slug, and this transaction can't see
+      // it, so the update tries the name's slug and then suffixed ones, each in its own savepoint.
+      if (base) slugs = [base, ...Array.from({ length: 4 }, () => `${base}-${randomBytes(6).toString("hex")}`)];
     }
   }
-  const [business] = await tx.update(businesses).set(slug ? { ...values, slug } : values).where(eq(businesses.id, input.businessId)).returning({ id: businesses.id });
+  let business: { id: string } | undefined;
+  if (slugs.length === 1) {
+    [business] = await tx.update(businesses).set(values).where(eq(businesses.id, input.businessId)).returning({ id: businesses.id });
+  } else {
+    for (const [attempt, slug] of slugs.entries()) {
+      try {
+        [business] = await tx.transaction(async (savepoint) => await savepoint.update(businesses).set({ ...values, slug: slug! }).where(eq(businesses.id, input.businessId)).returning({ id: businesses.id }));
+        break;
+      } catch (error) {
+        if (!isSlugConflict(error)) throw error;
+        if (attempt === slugs.length - 1) throw Object.assign(new Error("Business slug could not be updated."), { status: 409 });
+      }
+    }
+  }
   if (!business) throw Object.assign(new Error("Business not found."), { status: 404 });
   // Prices are stored in the currency's smallest unit. Keep the numbers people read: USD 40.00 (4000) becomes JPY 40 (40).
   const shift = input.currency !== undefined && before ? currencyFractionDigits(input.currency) - currencyFractionDigits(before.currency) : 0;

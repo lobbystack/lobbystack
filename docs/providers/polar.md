@@ -96,8 +96,9 @@ Starter, Pro and Enterprise include one phone number. A business on any of them 
 | United Kingdom | Mobile | $2.50 | None |
 | Australia | Mobile | $8.25 | None |
 | New Zealand | Local | $3.15 | None |
+| Serbia | Local | $12.00 | None |
 
-The UK and Australia sell mobile numbers only, and New Zealand local ones, so a search there ignores the kind asked for. The catalog also holds Twilio's UK local and toll-free, Australian local and toll-free, and New Zealand toll-free prices, which no search returns today.
+Serbia's price is Zadarma's monthly rate for a local number, €10.50 paid month by month, in dollars, because Twilio has no numbers there. Update it with the others when Zadarma changes it. The UK and Australia sell mobile numbers only, and New Zealand and Serbia local ones, so a search there ignores the kind asked for. The catalog also holds Twilio's UK local and toll-free, Australian local and toll-free, and New Zealand toll-free prices, which no search returns today.
 
 ### Set up the add-on product
 

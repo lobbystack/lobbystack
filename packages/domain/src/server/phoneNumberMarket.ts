@@ -1,6 +1,6 @@
 import { LEGACY_TIME_ZONE_COUNTRIES, TIME_ZONES_BY_COUNTRY } from "./timezoneCountryData";
 
-export type SupportedNumberMarketCountry = "US" | "CA" | "PR" | "GB" | "AU" | "NZ";
+export type SupportedNumberMarketCountry = "US" | "CA" | "PR" | "GB" | "AU" | "NZ" | "RS";
 
 export type BusinessNumberMarket = {
   countryCode: SupportedNumberMarketCountry;
@@ -10,7 +10,7 @@ export type BusinessNumberMarket = {
   source: "selection" | "business_location" | "default";
 };
 
-const supportedNumberMarketCountries = new Set<string>(["US", "CA", "PR", "GB", "AU", "NZ"]);
+const supportedNumberMarketCountries = new Set<string>(["US", "CA", "PR", "GB", "AU", "NZ", "RS"]);
 
 const zoneCountries = new Map<string, string>([
   ...Object.entries(TIME_ZONES_BY_COUNTRY).flatMap(([country, zones]) => zones.map((zone) => [zone, country] as const)),

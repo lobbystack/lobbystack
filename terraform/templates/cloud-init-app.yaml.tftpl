@@ -1,0 +1,30 @@
+#cloud-config
+# Prepares the web app's VM: Docker, the code, and a swap file. It starts nothing, because the stack needs the
+# secrets in /opt/lobbystack-app/.env, which only you have. README.md explains the next step. Runs once, on first boot.
+package_update: true
+packages:
+  - docker.io
+  - docker-compose-v2
+  - git
+write_files:
+  - path: /usr/local/bin/lobbystack-update
+    permissions: "0755"
+    content: |
+      #!/bin/sh
+      # Fetches ${repository_ref} and rebuilds the stack from it.
+      set -eu
+      cd /opt/lobbystack-app
+      if [ ! -f .env ]; then
+        echo "Copy your .env to /opt/lobbystack-app/.env first." >&2
+        exit 1
+      fi
+      git fetch --depth 1 origin "${repository_ref}"
+      git checkout --quiet FETCH_HEAD
+      docker compose up -d --build
+runcmd:
+  - systemctl enable --now docker
+  - usermod -aG docker ${admin_username}
+  - fallocate -l 4G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile
+  - echo '/swapfile none swap sw 0 0' >> /etc/fstab
+  - git clone --depth 1 --branch "${repository_ref}" "${repository_url}" /opt/lobbystack-app
+  - chown -R ${admin_username}:${admin_username} /opt/lobbystack-app

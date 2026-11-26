@@ -13,7 +13,7 @@ export type SmtpConfig = {
   from: string;
 };
 
-export type TemplateName = "existing_account" | "account_setup" | "verify_email" | "password_reset" | "passkey_added" | "invitation" | "operator_alert" | "feedback_submission" | "welcome" | "plan_reminder" | "number_trial" | "number_release" | "partner_pool_alert" | "business_allowance_alert" | "partner_business_allowance_alert" | "business_released" | "business_deleted" | "call_summary";
+export type TemplateName = "existing_account" | "account_setup" | "verify_email" | "password_reset" | "passkey_added" | "invitation" | "operator_alert" | "feedback_submission" | "welcome" | "plan_reminder" | "number_trial" | "number_release" | "number_ready" | "partner_pool_alert" | "business_allowance_alert" | "partner_business_allowance_alert" | "business_released" | "business_deleted" | "call_summary";
 
 /**
  * The marketing emails: the host's lifecycle emails that sell or nudge, which
@@ -175,6 +175,8 @@ function templateSubject(template: TemplateName, variables: Record<string, strin
       return numberTrialEmailSubject(variables);
     case "number_release":
       return numberReleaseEmailSubject(variables);
+    case "number_ready":
+      return numberReadyCopy(variables).subject;
     case "partner_pool_alert":
       return partnerPoolAlertCopy(variables).subject;
     case "business_allowance_alert":
@@ -266,6 +268,10 @@ function templateHtml(template: TemplateName, subject: string, variables: Record
     }
     case "number_release": {
       const copy = numberReleaseCopy(variables);
+      return renderLetterHtml(brand, subject, variables, copy.lines, copy.button, variables.url, brand.name);
+    }
+    case "number_ready": {
+      const copy = numberReadyCopy(variables);
       return renderLetterHtml(brand, subject, variables, copy.lines, copy.button, variables.url, brand.name);
     }
     case "partner_pool_alert": {
@@ -593,6 +599,8 @@ function templateBody(template: TemplateName, variables: Record<string, string>,
       return numberTrialBody(variables, brand);
     case "number_release":
       return numberReleaseBody(variables, brand);
+    case "number_ready":
+      return numberReadyBody(variables, brand);
     case "partner_pool_alert":
       return partnerPoolAlertBody(variables, brand);
     case "business_allowance_alert":
@@ -867,6 +875,28 @@ export function numberReleaseEmailSubject(variables: Record<string, string>): st
 
 function numberReleaseBody(variables: Record<string, string>, brand: EmailBrand): string {
   const copy = numberReleaseCopy(variables);
+  const greet = TRIAL_GREETINGS[variables.locale ?? "en"] ?? TRIAL_GREETINGS.en!;
+  return [greet(variables.firstName ?? ""), "", ...copy.lines.flatMap((line) => [line, ""]), `${copy.button}: ${variables.url ?? ""}`, "", brand.name].join("\n");
+}
+
+// A number a carrier took days to activate, such as a Zadarma order the regulator checks. The owner was told to wait for this.
+function numberReadyCopy(variables: Record<string, string>): TrialCopy {
+  const num = formatEmailPhoneNumber(variables.number ?? "");
+  const business = variables.businessName ?? "";
+  switch (variables.locale) {
+    case "fr":
+      return { subject: `Le ${num} est prêt`, lines: [`Le ${num} est actif pour ${business}. Les appels vers ce numéro arrivent maintenant à votre agent.`], button: "Voir votre numéro" };
+    case "es":
+      return { subject: `El ${num} está listo`, lines: [`El ${num} ya está activo para ${business}. Las llamadas a este número llegan a su agente.`], button: "Ver su número" };
+    case "sr":
+      return { subject: `Broj ${num} je spreman`, lines: [`Broj ${num} je aktivan za firmu ${business}. Pozivi na ovaj broj sada stižu Vašem agentu.`], button: "Pogledajte svoj broj" };
+    default:
+      return { subject: `${num} is ready`, lines: [`${num} is live for ${business}. Calls to it now reach your agent.`], button: "See your number" };
+  }
+}
+
+function numberReadyBody(variables: Record<string, string>, brand: EmailBrand): string {
+  const copy = numberReadyCopy(variables);
   const greet = TRIAL_GREETINGS[variables.locale ?? "en"] ?? TRIAL_GREETINGS.en!;
   return [greet(variables.firstName ?? ""), "", ...copy.lines.flatMap((line) => [line, ""]), `${copy.button}: ${variables.url ?? ""}`, "", brand.name].join("\n");
 }

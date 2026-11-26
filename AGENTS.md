@@ -38,6 +38,7 @@
 `apps/admin` is the only Next.js app, marketing site included. It runs Next.js 16.4 on Turbopack.
 
 - Read the guide for what you're changing in `apps/admin/node_modules/next/dist/docs/` before you write Next.js code or answer a Next.js question. Those docs match the installed version, so use them over memory or web results.
+- Never edit or commit `apps/admin/next-env.d.ts`. `next build` and `next dev` rewrite it, which shows up as a diff in `git status`. After any command that builds, starts the dev server, or runs the e2e script, restore it with `git checkout apps/admin/next-env.d.ts` once the command ends. It is never part of a change.
 - Start the dev server with `pnpm dev:admin` or `pnpm dev`. It listens on `ADMIN_PORT`, which defaults to 3000.
 - The running dev server answers MCP requests at `/_next/mcp`, so you can query it with `curl` and no MCP client. Call `tools/list` for the current tools. Keep both `Accept` types; without them the server answers 406.
 

@@ -27,7 +27,11 @@ import {
 
 describe("extra numbers", () => {
   it("prices each country's numbers by kind at Twilio's monthly price", () => {
-    expect(["US", "CA", "PR", "GB", "AU", "NZ"].map((country) => [country, extraNumberMonthlyCents(country, soldNumberKind(country))])).toEqual([["US", 115], ["CA", 115], ["PR", 325], ["GB", 250], ["AU", 825], ["NZ", 315]]);
+    expect(["US", "CA", "PR", "GB", "AU", "NZ", "RS"].map((country) => [country, extraNumberMonthlyCents(country, soldNumberKind(country))])).toEqual([["US", 115], ["CA", 115], ["PR", 325], ["GB", 250], ["AU", 825], ["NZ", 315], ["RS", 1_200]]);
+    // Zadarma sells landline numbers in Serbia, so a search there ignores the kind asked for.
+    expect(soldNumberKind("RS", "mobile")).toBe("local");
+    expect(soldNumberKind("RS", "toll_free")).toBe("local");
+    expect(extraNumberMonthlyCents("RS", "toll_free")).toBeUndefined();
     expect(extraNumberMonthlyCents("US", soldNumberKind("US", "toll_free"))).toBe(215);
     expect(extraNumberMonthlyCents("PR", "toll_free")).toBeUndefined();
     expect(extraNumberMonthlyCents("FR", "local")).toBeUndefined();

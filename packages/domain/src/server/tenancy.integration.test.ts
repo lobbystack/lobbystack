@@ -1,11 +1,11 @@
 import { createHash, randomUUID } from "node:crypto";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it, vi } from "vitest";
 import { agents, businesses, businessHours, businessInvitations, businessMemberships, businessNotifications, createDatabaseClient, outboxMessages, partners, services, staff, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import { defaultGreeting } from "@lobbystack/shared";
 import { findAvailability } from "./booking";
 import { HOST_BRAND_SCOPE } from "./businessAccess";
-import { acceptInvitation, createBusiness, createOwnerlessBusiness, insertOwnerlessBusinessInTransaction, inviteMember, listUserBusinesses, previewInvitation, removeMember, revokeInvitation, updateBusinessInTransaction } from "./tenancy";
+import { acceptInvitation, createBusiness, createOwnerlessBusiness, insertOwnerlessBusinessInTransaction, inviteMember, listUserBusinesses, previewInvitation, removeMember, revokeInvitation, updateBusiness, updateBusinessInTransaction } from "./tenancy";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
 const testUrl = process.env.LOBBYSTACK_RELIABILITY_TEST_DATABASE_URL;
@@ -173,6 +173,30 @@ describe.skipIf(!client)("createBusiness", () => {
       await tx.insert(businesses).values({ id: partnerBusinessId, slug: `partner-${partnerBusinessId}`, name: "Partner shop", timezone: "UTC", businessType: "test", partnerId });
       await tx.update(businesses).set({ partnerId: null }).where(eq(businesses.id, partnerBusinessId));
       expect(await tx.select({ id: businesses.id }).from(businesses).where(and(eq(businesses.id, businessId), sql`${businesses.partnerId} is null`))).toHaveLength(1);
+    });
+  });
+});
+
+describe.skipIf(!client)("renaming a business", () => {
+  it("takes a suffixed slug when another business, even the same owner's, already has the name's", async () => {
+    await rollbackTest(async (tx) => {
+      const userId = randomUUID();
+      const email = `${userId}@example.invalid`;
+      await tx.insert(users).values({ id: userId, email, normalizedEmail: email, name: "Sam Owner" });
+      await tx.execute(sql`set local role lobbystack_app`);
+      const delux = await createBusiness({ db: tx as unknown as Database }, { userId, name: "Delux", timezone: "America/Toronto", businessType: "barbershop" });
+      const goodfellas = await createBusiness({ db: tx as unknown as Database }, { userId, name: "GoodFellas Barbershop", timezone: "America/Toronto", businessType: "barbershop" });
+      // Row security shows each business only its own row, so the rename can't look the slug up. It has to survive the
+      // unique index instead, which used to answer with a 500.
+      await updateBusiness({ db: tx as unknown as Database }, { userId, businessId: goodfellas.businessId, name: "Delux" });
+      await tx.execute(sql`reset role`);
+
+      const rows = await tx.select({ id: businesses.id, name: businesses.name, slug: businesses.slug }).from(businesses).where(inArray(businesses.id, [delux.businessId, goodfellas.businessId]));
+      const renamed = rows.find((row) => row.id === goodfellas.businessId)!;
+      const original = rows.find((row) => row.id === delux.businessId)!;
+      expect(renamed.name).toBe("Delux");
+      expect(original.slug).toBe("delux");
+      expect(renamed.slug).toMatch(/^delux-[0-9a-f]{12}$/);
     });
   });
 });

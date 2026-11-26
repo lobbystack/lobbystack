@@ -133,33 +133,35 @@ describe("business slug", () => {
     expect(slugFromBusinessName("!!!")).toBe("business");
   });
 
-  it("follows a rename while the slug is still the one made from the old name", async () => {
-    expect(await slugAfterRename("old-name", "Old Name", "LobbyStack", async () => false)).toBe("lobbystack");
-    expect(await slugAfterRename("old-name-3fa9c21b04de", "Old Name", "LobbyStack", async () => false)).toBe("lobbystack");
-    const suffixed = await slugAfterRename("old-name", "Old Name", "LobbyStack", async (slug) => slug === "lobbystack");
-    expect(suffixed).toMatch(/^lobbystack-[0-9a-f]{12}$/);
+  it("follows a rename while the slug is still the one made from the old name", () => {
+    expect(slugAfterRename("old-name", "Old Name", "LobbyStack")).toBe("lobbystack");
+    expect(slugAfterRename("old-name-3fa9c21b04de", "Old Name", "LobbyStack")).toBe("lobbystack");
   });
 
-  it("keeps a slug someone chose", async () => {
-    const never = async () => { throw new Error("should not look"); };
-    expect(await slugAfterRename("my-shop", "Old Name", "LobbyStack", never)).toBeNull();
-    expect(await slugAfterRename("old-name-online", "Old Name", "LobbyStack", never)).toBeNull();
+  it("keeps a slug someone chose", () => {
+    expect(slugAfterRename("my-shop", "Old Name", "LobbyStack")).toBeNull();
+    expect(slugAfterRename("old-name-online", "Old Name", "LobbyStack")).toBeNull();
   });
 
-  it("leaves a slug that already follows the new name alone", async () => {
-    const never = async () => { throw new Error("should not look"); };
-    expect(await slugAfterRename("lobbystack", "LobbyStack", "LobbyStack!", never)).toBeNull();
-    expect(await slugAfterRename("lobbystack-3fa9c21b04de", "LobbyStack", "LobbyStack!", never)).toBeNull();
+  it("leaves a slug that already follows the new name alone", () => {
+    expect(slugAfterRename("lobbystack", "LobbyStack", "LobbyStack!")).toBeNull();
+    expect(slugAfterRename("lobbystack-3fa9c21b04de", "LobbyStack", "LobbyStack!")).toBeNull();
   });
 
+  /** takenSlugs are slugs another business holds: the update that sets one fails on the unique index, as Postgres does. */
   function useRename(current: { name: string; slug: string }, takenSlugs: string[] = []) {
     const updates: Array<{ table: unknown; values: Record<string, unknown> }> = [];
-    const tx = {
+    const tx: Record<string, unknown> = {
       execute: async () => ({ rows: [] }),
-      select: () => ({ from: () => ({ where: () => Object.assign(Promise.resolve([]), { for: async () => [current], limit: async () => takenSlugs.length ? [{ id: "other" }] : [] }) }) }),
-      update: (table: unknown) => ({ set: (values: Record<string, unknown>) => { updates.push({ table, values }); return { where: () => ({ returning: async () => [{ id: "biz-1" }] }) }; } }),
-    } as never;
-    return { tx, updates };
+      select: () => ({ from: () => ({ where: () => Object.assign(Promise.resolve([]), { for: async () => [current] }) }) }),
+      update: (table: unknown) => ({ set: (values: Record<string, unknown>) => ({ where: () => ({ returning: async () => {
+        if (typeof values.slug === "string" && takenSlugs.includes(values.slug)) throw Object.assign(new Error("Failed query"), { cause: Object.assign(new Error("duplicate key value violates unique constraint"), { code: "23505", constraint: "businesses_slug_unique" }) });
+        updates.push({ table, values });
+        return [{ id: "biz-1" }];
+      } }) }) }),
+    };
+    tx.transaction = async (run: (savepoint: unknown) => Promise<unknown>) => await run(tx);
+    return { tx: tx as never, updates };
   }
 
   it("changes the slug together with the name", async () => {
@@ -179,5 +181,24 @@ describe("business slug", () => {
     const { tx, updates } = useRename({ name: "LobbyStack", slug: "old-slug" });
     await updateBusinessInTransaction(tx, { businessId: "biz-1", name: "LobbyStack" });
     expect(updates[0]!.values).not.toHaveProperty("slug");
+  });
+
+  it("takes a suffixed slug when another business already has the name's", async () => {
+    const { tx, updates } = useRename({ name: "GoodFellas Barbershop", slug: "goodfellas-barbershop" }, ["delux"]);
+    await updateBusinessInTransaction(tx, { businessId: "biz-1", name: "Delux" });
+    expect(updates).toHaveLength(1);
+    expect(updates[0]!.values).toEqual(expect.objectContaining({ name: "Delux", slug: expect.stringMatching(/^delux-[0-9a-f]{12}$/) }));
+  });
+
+  it("refuses a rename with a 409 when every slug it tries is taken", async () => {
+    const taken = { has: () => true, includes: () => true } as unknown as string[];
+    const { tx } = useRename({ name: "Old Name", slug: "old-name" }, taken);
+    await expect(updateBusinessInTransaction(tx, { businessId: "biz-1", name: "Delux" })).rejects.toMatchObject({ status: 409 });
+  });
+
+  it("passes on any other database error", async () => {
+    const { tx } = useRename({ name: "Old Name", slug: "old-name" });
+    (tx as unknown as { update: () => never }).update = () => { throw new Error("connection lost"); };
+    await expect(updateBusinessInTransaction(tx, { businessId: "biz-1", name: "Delux" })).rejects.toThrow("connection lost");
   });
 });

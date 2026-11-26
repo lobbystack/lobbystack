@@ -9,7 +9,7 @@ export function telnyxConfigured(env: Env = process.env): boolean {
  * group: the documents and address the country's regulator asks for. The
  * group is created once in the Telnyx portal and passed with every order.
  */
-const REQUIREMENT_GROUP_COUNTRIES = ["GB", "AU", "NZ"];
+const REQUIREMENT_GROUP_COUNTRIES = ["GB", "AU", "NZ", "RS"];
 
 export function telnyxRequirementGroupVariable(countryCode: string): string {
   return `TELNYX_${countryCode.toUpperCase()}_REQUIREMENT_GROUP_ID`;

@@ -1,9 +1,10 @@
 /**
  * The carriers LobbyStack can buy numbers from, text through and take calls
  * on. Adding one means a new adapter that implements the capabilities below,
- * plus its id here.
+ * plus its id here. The order is the order a number search tries them in when
+ * TELEPHONY_NUMBERS doesn't name any for a country.
  */
-export const CARRIER_IDS = ["twilio", "telnyx"] as const;
+export const CARRIER_IDS = ["twilio", "telnyx", "zadarma"] as const;
 export type CarrierId = (typeof CARRIER_IDS)[number];
 
 export function isCarrierId(value: unknown): value is CarrierId {
@@ -52,10 +53,16 @@ export type OwnedPhoneNumber = { providerPhoneId: string; e164: string; friendly
 /** Searching, buying and releasing numbers. Each adapter applies its own regulatory documents and webhooks. */
 export interface NumberInventory {
   readonly carrier: CarrierId;
+  /** How long an order may stay pending before the claim fails, when the carrier takes longer than the worker's default. */
+  readonly orderMaxWaitMs?: number;
   listAvailablePhoneNumbers(input: NumberSearch): Promise<AvailablePhoneNumber[]>;
   /** What the carrier charges each month for a number of this kind in this country, in US cents. */
   getPhoneNumberMonthlyPrice(input: { countryCode: string; kind: NumberKind }): Promise<{ monthlyCents: number }>;
-  findOwnedPhoneNumber(input: { e164: string }): Promise<OwnedPhoneNumber | null>;
+  /**
+   * The number if the account has it and it is live. With `includePending`, one the carrier is still checking or
+   * waiting to be paid for counts too, which is how a number nobody can use but the account is billed for is found.
+   */
+  findOwnedPhoneNumber(input: { e164: string; includePending?: boolean }): Promise<OwnedPhoneNumber | null>;
   /** Buys the number with the carrier's messaging webhooks and, where the country needs them, its regulatory documents. */
   /**
    * Throws NumberOrderPendingError when the carrier is still working on the
@@ -64,8 +71,37 @@ export interface NumberInventory {
    */
   purchasePhoneNumber(input: { e164: string; countryCode: string; kind: NumberKind; label: string; pendingOrderId?: string }): Promise<{ providerPhoneId: string; e164: string; smsUrl?: string; carrierConnectionId?: string }>;
   releasePhoneNumber(input: { providerPhoneId: string }): Promise<void>;
+  /**
+   * For a carrier that names the number when it takes the order, so the buyer can't pick one from a list. Orders a
+   * number in the city and returns the one the carrier gave. The order is placed and paid when this returns, even if
+   * the carrier hasn't activated the number: purchasePhoneNumber on the returned number reports when it has.
+   */
+  /** The cities a number can be ordered in, for a carrier that has orderAssignedPhoneNumber. */
+  listOrderCities?(input: { countryCode: string; kind: NumberKind }): Promise<string[]>;
+  /**
+   * Live numbers the account already holds in this city, for a carrier that has orderAssignedPhoneNumber. The caller
+   * decides which of them no business uses, so a number that was let go can be given out again instead of buying one.
+   */
+  listReusablePhoneNumbers?(input: { countryCode: string; kind: NumberKind; city?: string | undefined }): Promise<Array<{ providerPhoneId: string; e164: string }>>;
+  /** Makes an owned number ready to give to a business again, such as turning its renewal back on after a release turned it off. */
+  takeReusablePhoneNumber?(input: { providerPhoneId: string }): Promise<void>;
+  orderAssignedPhoneNumber?(input: { countryCode: string; kind: NumberKind; city?: string | undefined; label: string }): Promise<{ providerPhoneId: string; e164: string }>;
   /** Whether a purchase failed because the number is no longer for sale. */
   isNumberUnavailableError(error: unknown): boolean;
+}
+
+/**
+ * A carrier that couldn't take a request the dashboard made, such as an account that can't pay or a service that is
+ * down. Its message names no carrier and says nothing about why, so it is safe to show an owner. The carrier's own
+ * words stay in `cause` and in the server log, for whoever runs the deployment.
+ */
+export class NumberCarrierUnavailableError extends Error {
+  readonly status = 503;
+  readonly code = "number_carrier_unavailable";
+  constructor(options: { cause?: unknown } = {}) {
+    super("We can't set up a number right now. Please try again later.", options);
+    this.name = "NumberCarrierUnavailableError";
+  }
 }
 
 /** A number order the carrier accepted but hadn't finished when the purchase stopped waiting. */

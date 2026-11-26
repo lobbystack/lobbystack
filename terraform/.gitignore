@@ -1,0 +1,14 @@
+# State and variables hold secrets: the OpenAI project id lets anyone who has it dial in.
+.terraform/
+*.tfstate
+*.tfstate.*
+terraform.tfstate.d/
+crash.log
+terraform.tfvars
+*.auto.tfvars
+
+# Saved plans hold the same secrets as the state.
+*.tfplan
+
+# Environment files for the web app VM, built by scripts/python/app_env.py. They hold generated secrets.
+.generated/

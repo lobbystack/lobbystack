@@ -61,6 +61,11 @@ export function getSafeOnboardingErrorMessage(
     return t("number.partnerTierRequired");
   }
 
+  // A carrier couldn't take the request. The owner is told to try later, and nothing about why.
+  if (code === "number_carrier_unavailable") {
+    return t("number.carrierUnavailable");
+  }
+
   // The deployment has no Twilio account, so no business here can get a number.
   if (code === "phone_numbers_unavailable") {
     return t("number.numbersUnavailable");

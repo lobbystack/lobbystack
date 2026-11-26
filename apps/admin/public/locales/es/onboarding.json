@@ -223,7 +223,14 @@
       "placeholder": "Elija un país",
       "back": "Volver a los números",
       "other": "Otro país"
-    }
+    },
+    "city": {
+      "header": "Ciudad",
+      "empty": "No hay ciudades disponibles ahora.",
+      "failed": "No pudimos pedir ese número. Inténtalo de nuevo."
+    },
+    "carrierUnavailable": "No podemos preparar un número ahora. Inténtelo de nuevo más tarde.",
+    "onOrder": "Pedimos su número. Puede tardar unos días hábiles, y le escribiremos cuando esté listo."
   },
   "attribution": {
     "title": "¿Cómo conoció {{appName}}?",

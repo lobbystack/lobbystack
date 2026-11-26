@@ -273,6 +273,10 @@
         "title": "Nismo uspeli da uvezemo {{site}}",
         "line": "Proverite adresu i uvezite ga ponovo."
       },
+      "number_ready": {
+        "title": "Broj {{number}} je spreman",
+        "line": "Pozivi na ovaj broj sada stižu Vašem agentu."
+      },
       "website_import_finished": {
         "title": "Uvoz sajta je završen",
         "line_one": "Pročitali smo {{count}} stranicu sa {{site}}.",

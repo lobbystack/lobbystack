@@ -34,4 +34,16 @@ describe("asApiResponse", () => {
     await expect(response.json()).resolves.toEqual({ error: "Phone numbers aren't set up on this deployment.", code: "phone_numbers_unavailable" });
     expect(mocks.reportServerError).not.toHaveBeenCalled();
   });
+
+  it("sends only a carrier failure's fixed message to the browser, and reports the carrier's own words", async () => {
+    const carrierWords = new Error("Zadarma /v1/direct_numbers/order/ answered 400: You do not have sufficient funds on your account.");
+    const error = Object.assign(new Error("We can't set up a number right now. Please try again later.", { cause: carrierWords }), { status: 503, code: "number_carrier_unavailable" });
+    const response = asApiResponse(error);
+
+    expect(response.status).toBe(503);
+    const body = await response.json() as { error: string; code: string; errorId: string };
+    expect(body).toMatchObject({ error: "We can't set up a number right now. Please try again later.", code: "number_carrier_unavailable" });
+    expect(JSON.stringify(body)).not.toMatch(/zadarma|funds|direct_numbers/i);
+    expect(mocks.reportServerError).toHaveBeenCalledWith(error, expect.objectContaining({ errorId: body.errorId }));
+  });
 });

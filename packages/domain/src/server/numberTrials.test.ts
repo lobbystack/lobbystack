@@ -33,6 +33,18 @@ describe("number countries", () => {
     expect(numberCountries({ TWILIO_AU_BUNDLE_SID: "BU2", TWILIO_AU_ADDRESS_SID: "AD2" })).toEqual(["US", "CA", "PR", "AU"]);
   });
 
+  it("sells Serbian numbers only through a carrier that has them, since Twilio has none", () => {
+    expect(numberCountries({ TWILIO_ACCOUNT_SID: "AC1", TWILIO_AUTH_TOKEN: "t" })).toEqual(["US", "CA", "PR"]);
+    expect(numberCountries({ ZADARMA_DOCUMENTS_GROUP_ID: "5" })).toEqual(["US", "CA", "PR", "RS"]);
+    expect(numberCountries({ TELNYX_RS_REQUIREMENT_GROUP_ID: "rg_1" })).toEqual(["US", "CA", "PR", "RS"]);
+  });
+
+  it("sells Serbia's numbers but gives no free trial, because Zadarma charges for the order up front", () => {
+    expect(numberCountries({ ZADARMA_DOCUMENTS_GROUP_ID: "5" })).toContain("RS");
+    expect(trialCountries({ ZADARMA_DOCUMENTS_GROUP_ID: "5" })).toEqual(["US", "CA", "PR"]);
+    expect(trialCountries({})).toEqual(["US", "CA", "PR"]);
+  });
+
   it("gives no free trial in Australia, where a number costs $8.25 a month", () => {
     expect(trialCountries({ TWILIO_GB_BUNDLE_SID: "BU1", TWILIO_AU_BUNDLE_SID: "BU2", TWILIO_AU_ADDRESS_SID: "AD2" })).toEqual(["US", "CA", "PR", "GB"]);
   });

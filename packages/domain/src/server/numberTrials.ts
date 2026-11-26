@@ -18,25 +18,32 @@ import { isDisposableTrialEmail, trialNeedsPhoneVerification } from "./trialElig
 import { getVoiceSecondsLeftInTransaction, readEndedVoiceSecondsLeftInTransaction } from "./usage";
 import { greetingName } from "./emailGreeting";
 
-export type NumberCountry = "US" | "CA" | "PR" | "GB" | "AU" | "NZ";
+export type NumberCountry = "US" | "CA" | "PR" | "GB" | "AU" | "NZ" | "RS";
 
 export const NUMBER_TRIAL_DAYS = 14;
 
-const NUMBER_COUNTRIES: NumberCountry[] = ["US", "CA", "PR", "GB", "AU", "NZ"];
+const NUMBER_COUNTRIES: NumberCountry[] = ["US", "CA", "PR", "GB", "AU", "NZ", "RS"];
 
 /**
  * Countries we sell numbers in. The US, Canada and Puerto Rico need no
  * registration; the others need what the country's carrier asks for, such as
- * the regulatory bundle Twilio approved for LobbyStack and its address, or a
- * Telnyx requirement group. See docs/voice/runtime.md.
+ * the regulatory bundle Twilio approved for LobbyStack and its address, a
+ * Telnyx requirement group, or the Zadarma documents group that sells Serbia's
+ * numbers, which Twilio doesn't. See docs/voice/runtime.md.
  */
 export function numberCountries(env: NodeJS.ProcessEnv = process.env): NumberCountry[] {
   return NUMBER_COUNTRIES.filter((country) => numberCountryReady(country, env));
 }
 
-/** Countries with a free trial number. An Australian number costs $8.25 a month, so Australia is paid only. */
+/**
+ * Countries where a number is paid only. An Australian number costs $8.25 a month. Serbia's numbers come from Zadarma,
+ * which charges our balance when we order and doesn't refund a number a trial customer walks away from.
+ */
+const PAID_ONLY_COUNTRIES: readonly NumberCountry[] = ["AU", "RS"];
+
+/** Countries with a free trial number. */
 export function trialCountries(env: NodeJS.ProcessEnv = process.env): NumberCountry[] {
-  return numberCountries(env).filter((country) => country !== "AU");
+  return numberCountries(env).filter((country) => !PAID_ONLY_COUNTRIES.includes(country));
 }
 
 export function isNumberCountry(value: string | null | undefined, env: NodeJS.ProcessEnv = process.env): value is NumberCountry {

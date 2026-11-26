@@ -223,7 +223,14 @@
       "placeholder": "Izaberite zemlju",
       "back": "Nazad na brojeve",
       "other": "Druga zemlja"
-    }
+    },
+    "city": {
+      "header": "Grad",
+      "empty": "Trenutno nema dostupnih gradova.",
+      "failed": "Nismo uspeli da naručimo taj broj. Pokušajte ponovo."
+    },
+    "carrierUnavailable": "Trenutno ne možemo da pripremimo broj. Pokušajte ponovo kasnije.",
+    "onOrder": "Naručili smo Vaš broj. To može da potraje nekoliko radnih dana, a javićemo Vam mejlom kada bude spreman."
   },
   "attribution": {
     "title": "Kako ste čuli za {{appName}}?",

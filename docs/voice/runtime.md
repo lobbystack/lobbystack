@@ -289,7 +289,7 @@ The admin and worker read these variables:
 | `OPENAI_WEBHOOK_SECRET` | admin | Verifies OpenAI's incoming-call webhook. Phone path only. |
 | `INTERNAL_SERVICE_TOKEN` | admin, worker | Authenticates the admin's attach request to the worker. |
 | `WORKER_INTERNAL_URL` | admin | Private URL of the worker's HTTP port, for example `http://worker:3002`. |
-| `TELEPHONY_NUMBERS` | admin, worker | The carrier that sells numbers in each country, such as `US:telnyx,*:twilio`. Defaults to `*:twilio`. See [Choose carriers](#choose-carriers). |
+| `TELEPHONY_NUMBERS` | admin, worker | The carriers that may sell numbers in each country, in the order to try them, such as `US:telnyx,*:twilio>telnyx`. Defaults to Twilio, then Telnyx, then Zadarma, skipping any without credentials. See [Choose carriers](#choose-carriers). |
 | `TELEPHONY_VERIFY`, `TELEPHONY_LOOKUP` | admin | The carrier for the onboarding phone code and the line type check. Each defaults to `twilio`. |
 | `TELEPHONY_ALERT_SMS`, `TELEPHONY_ALERT_SMS_FROM` | admin, worker | The carrier and number of the shared sender. The number falls back to `TWILIO_ALERT_SMS_FROM`, and the carrier defaults to `twilio`. |
 | `TWILIO_SIP_TRUNK_SID` | worker | Adds new phone numbers to the SIP trunk. The worker refuses to provision a number without it. |
@@ -307,7 +307,11 @@ The admin and worker read these variables:
 | `TELNYX_TEXML_WEBHOOK_SECRET` | admin | A secret the TeXML application's voice URL carries as `?key=`, in case Telnyx sends that request unsigned. |
 | `TELNYX_MESSAGING_PROFILE_ID` | worker | The messaging profile new Telnyx numbers join, so they can text. |
 | `TELNYX_VERIFY_PROFILE_ID` | admin | The Telnyx Verify profile for the onboarding phone code, when `TELEPHONY_VERIFY` is `telnyx`. |
-| `TELNYX_GB_REQUIREMENT_GROUP_ID`, `TELNYX_AU_REQUIREMENT_GROUP_ID`, `TELNYX_NZ_REQUIREMENT_GROUP_ID` | admin, worker | The approved Telnyx requirement group a number order in that country goes under, when `TELEPHONY_NUMBERS` sends the country to Telnyx. |
+| `ZADARMA_API_KEY`, `ZADARMA_API_SECRET` | admin, worker | The Zadarma API keys, from **my.zadarma.com/api**. Without them, the deployment has no Zadarma carrier. See [Use Zadarma](#use-zadarma). |
+| `ZADARMA_DOCUMENTS_GROUP_ID` | admin, worker | The id of the documents group in the Zadarma account that a number order goes under. Without it, a search skips Zadarma. |
+| `ZADARMA_SIP_HOST` | worker | The host, and port when it isn't 5060, of the SIP server in `docker/asterisk` that Zadarma sends each number's calls to. |
+| `ZADARMA_NUMBER_PURPOSE` | worker | Optional. The purpose each Zadarma order states. Defaults to answering business calls with an AI voice receptionist. |
+| `TELNYX_GB_REQUIREMENT_GROUP_ID`, `TELNYX_AU_REQUIREMENT_GROUP_ID`, `TELNYX_NZ_REQUIREMENT_GROUP_ID`, `TELNYX_RS_REQUIREMENT_GROUP_ID` | admin, worker | The approved Telnyx requirement group a number order in that country goes under, when `TELEPHONY_NUMBERS` sends the country to Telnyx. |
 
 The admin also reads the bundle variables: it offers numbers only in the countries whose bundle is set. Set `TWILIO_GB_BUNDLE_SID`, `TWILIO_AU_BUNDLE_SID` and `TWILIO_AU_ADDRESS_SID` on the admin too.
 | `WEB_CALL_MAX_DURATION_MS` | admin | Optional cap on browser call length. |
@@ -372,17 +376,19 @@ Until you set a country's bundle, number claims there fail with an error that in
 
 ## Choose carriers
 
-One deployment can buy numbers from Twilio and Telnyx at once and send each capability to either. Every setting defaults to Twilio, so a deployment that sets none works as it did before carriers were configurable.
+One deployment can buy numbers from Twilio, Telnyx and Zadarma at once and send each capability to a carrier. Every setting defaults to Twilio. A deployment with credentials for only Twilio works as it did before carriers were configurable, and one with both falls back to Telnyx when a number search finds nothing at Twilio.
 
 Requests go to a carrier by these rules:
 
 - **Operations on a number**: texts from it, its webhooks, routing it, releasing it, pricing its calls and its fallback all go to the carrier that owns it. `phone_numbers.carrier` records the owner, and `messages.carrier` and `calls.carrier` record the carrier each text and phone call used.
-- **Number search and purchase**: `TELEPHONY_NUMBERS` picks the carrier by country, with `*` for the countries it doesn't list. The signed number offer names the carrier, so the worker buys from the carrier that showed the number.
+- **Number search and purchase**: `TELEPHONY_NUMBERS` lists the carriers to try for each country, joined with `>`, with `*` for the countries it doesn't list. A country with one carrier uses only that one. A search asks the first carrier and moves to the next when the first has no credentials, has no registration for the country, fails, or has no numbers. A country the setting doesn't list tries Twilio, then Telnyx, then Zadarma. Each number comes from the carrier that showed it. The signed number offer names the carrier, so the worker buys from it, and a purchase that fails doesn't move to another carrier. The search logs `telephony.number_search_fallback` each time it gives up on a carrier.
 - **Verify, Lookup and the shared sender**: `TELEPHONY_VERIFY`, `TELEPHONY_LOOKUP` and `TELEPHONY_ALERT_SMS` each name one carrier.
 
 A malformed setting, such as an unknown carrier or a country listed twice, stops the worker at boot and fails the admin's first telephony request. Each carrier lives in `packages/providers/src/<carrier>/` behind the interfaces in `packages/providers/src/telephony/types.ts`, and `createTelephony` builds every carrier that has credentials. Adding a carrier means an adapter, its id in `CARRIER_IDS`, and its webhook routes under `/api/webhooks/<carrier>/`.
 
-Countries outside the US, Canada and Puerto Rico appear in the number picker only when the carrier `TELEPHONY_NUMBERS` sends them to has their registration: a Twilio bundle, or a Telnyx requirement group.
+Countries outside the US, Canada and Puerto Rico appear in the number picker only when a carrier `TELEPHONY_NUMBERS` tries for them has their registration: a Twilio bundle, or a Telnyx requirement group.
+
+A country neither carrier sells numbers in can use a number the business already has, from a local carrier or a reseller. The carrier sends its calls to a SIP server you run, and an operator attaches the number to the business by hand. [Answer calls on a number from another carrier](./external-numbers.md) explains it.
 
 ## Use Telnyx
 
@@ -397,7 +403,7 @@ A Telnyx number reaches GPT-Live through an FQDN connection of its own, texts th
 
 For Telnyx Verify, create a Verify profile, set it as `TELNYX_VERIFY_PROFILE_ID` on the admin, and set `TELEPHONY_VERIFY=telnyx`. To check line types with Telnyx Number Lookup, set `TELEPHONY_LOOKUP=telnyx`. To send the shared sender's texts through Telnyx, put that number on the messaging profile and set `TELEPHONY_ALERT_SMS=telnyx` and `TELEPHONY_ALERT_SMS_FROM`.
 
-To sell UK, Australian or New Zealand numbers through Telnyx, create a requirement group for the country and number type in the portal, wait for Telnyx to approve it, and set its ID as `TELNYX_GB_REQUIREMENT_GROUP_ID`, `TELNYX_AU_REQUIREMENT_GROUP_ID` or `TELNYX_NZ_REQUIREMENT_GROUP_ID` on the admin and the worker.
+To sell UK, Australian, New Zealand or Serbian numbers through Telnyx, create a requirement group for the country and number type in the portal, wait for Telnyx to approve it, and set its ID as `TELNYX_GB_REQUIREMENT_GROUP_ID`, `TELNYX_AU_REQUIREMENT_GROUP_ID`, `TELNYX_NZ_REQUIREMENT_GROUP_ID` or `TELNYX_RS_REQUIREMENT_GROUP_ID` on the admin and the worker.
 
 ### What differs from Twilio
 
@@ -414,3 +420,32 @@ These parts of the Telnyx path haven't been tested against a live account, becau
 - **TeXML signatures**: Telnyx doesn't say whether it signs the TeXML voice URL request, so the route also takes `TELNYX_TEXML_WEBHOOK_SECRET` in the URL. The texting webhooks always check the signature.
 
 Run `pnpm voice:call` against a staging Telnyx number before you send production countries to Telnyx.
+
+## Use Zadarma
+
+LobbyStack buys numbers from Zadarma in Serbia only. Twilio has none there, so a search for Serbia skips Twilio, and it asks Telnyx before Zadarma when `TELNYX_RS_REQUIREMENT_GROUP_ID` is set. Serbia is in the number picker once Telnyx or Zadarma can sell there, and it is paid only, with no free trial. Zadarma can't send a call to OpenAI, so each Zadarma number points at the SIP server in `docker/asterisk`, which passes the call on. [Answer calls on a number from another carrier](./external-numbers.md) explains that server. To set it up:
+
+1. Create API keys at **my.zadarma.com/api**. Set them as `ZADARMA_API_KEY` and `ZADARMA_API_SECRET` on the admin and the worker.
+2. In the Zadarma account, create a documents group with the company's registration papers and address, which the country's regulator asks for.
+3. Run `scripts/operations/zadarma-check.ts` (`pnpm exec tsx --tsconfig scripts/tsconfig.json scripts/operations/zadarma-check.ts`). It orders and changes nothing. It signs real requests, lists your documents groups with their ids, says whether each group is verified for the country's landline destinations, and prints what's left to set. Set the id of the group to use as `ZADARMA_DOCUMENTS_GROUP_ID` on the admin and the worker.
+4. Run the SIP server. Set its address as `ZADARMA_SIP_HOST` on the worker, and put Zadarma's addresses in the server's `CARRIER_IPS`.
+5. Keep the account's balance above what a number costs, because an order charges it, and turn on automatic top-up in the account so a customer's order doesn't fail for an empty balance.
+
+From then on nothing is set by hand for a number. A customer in Serbia picks one in the number step, the worker orders it under the documents group, and when Zadarma activates it the worker routes it to the SIP server and gives it to the business. A number the account already holds in that city, with no business on it, goes out first and nothing is ordered. The SIP server needs nothing per number, since it answers any number Zadarma sends it.
+
+While Zadarma checks an order, the owner goes on with setup and is told the number is on order and that we'll email them. The agent's phone page says the same until it arrives. When the worker gives the number to the business, `announceNumberReadyInTransaction` in `packages/domain` posts a `number_ready` bell item and emails each owner and admin the `number_ready` template. A number given out at once, such as a held one, sends neither.
+
+A Zadarma number differs from the other carriers' numbers in these ways:
+
+- **Orders take days.** Zadarma activates a number only after it checks the documents, and its order page says that takes 1 to 20 business days. The worker checks the order every 10 minutes and waits up to 30 days, where other carriers get 5.
+- **Voice only.** None of its numbers text, and Zadarma has no Verify, Lookup or shared sender.
+- **An order costs real money up front.** Zadarma charges the connection fee and the first month when the number is ordered, about €17.50 on its order page in Serbia, and doesn't refund it. So Serbian numbers have no free trial: a business needs a paid plan before it can order one.
+- **No cancel.** Releasing a number turns off its auto-renewal, so it keeps billing until the period it paid for ends.
+- **No refused-call forwarding.** Zadarma can't forward a call the agent refuses and has no webhook to ask. The admin refuses such a call, and the SIP server answers Zadarma with busy or congestion. Nothing reaches the owner.
+- **No staff answers first, and no call cost lookup.**
+- **Two incoming channels** on a landline number, so two calls at once. A third caller gets nothing, and LobbyStack never sees the call. More channels cost extra, up to 15, in the Zadarma account.
+- **A search looks through 8 destinations at most**, so it stays under Zadarma's limit of 100 API requests a minute.
+- **Prices in US dollars.** The monthly price lookup, which partner numbers use, refuses an account in another currency.
+
+These parts haven't been tested against a live Zadarma account: ordering and activation, the number format `set_sip_id` accepts (the digits with no plus), and whether it takes an address with a port. The request signature matches Zadarma's own clients. Run `pnpm voice:call` against a staging number before you route a country to Zadarma.
+

@@ -60,3 +60,69 @@ describe("original phone inventory chooser", () => {
     expect(screen.getByRole("button", { name: "Search" })).toBeTruthy();
   });
 });
+
+describe("ordering a number by city", () => {
+  const cityLabels = { header: "City", select: "Order", empty: "No cities", failed: "Order failed" };
+  const serbia = { market: { countryCode: "RS" }, suggestion: null, alternatives: [] };
+
+  function cityOrder(overrides: Partial<NonNullable<React.ComponentProps<typeof PhoneNumberChooser>["cityOrder"]>> = {}) {
+    return { countries: ["RS"], loadCities: vi.fn().mockResolvedValue(["Belgrade", "Novi Sad"]), orderCity: vi.fn().mockResolvedValue({ status: "claimed", phoneNumberId: "phone-1", e164: "+381211234567" } satisfies ClaimResult), labels: cityLabels, ...overrides };
+  }
+
+  it("lists cities instead of numbers, with no search, and orders the one picked", async () => {
+    const order = cityOrder();
+    const props = setup({ getInitialNumberSuggestion: vi.fn().mockResolvedValue(serbia), cityOrder: order });
+    expect(await screen.findByText("Novi Sad")).toBeTruthy();
+    expect(order.loadCities).toHaveBeenCalledWith({ businessId: "business-1", country: "RS" });
+    expect(screen.queryByRole("button", { name: "Search" })).toBeNull();
+    expect(screen.queryByText("Phone number")).toBeNull();
+    await userEvent.click(screen.getAllByRole("button", { name: "Order" })[1]!);
+    await waitFor(() => expect(props.onClaimed).toHaveBeenCalled());
+    expect(order.orderCity).toHaveBeenCalledWith({ businessId: "business-1", country: "RS", city: "Novi Sad" });
+    expect(props.onClaimed).toHaveBeenCalledWith({ status: "claimed", phoneNumberId: "phone-1", e164: "+381211234567" }, expect.objectContaining({ e164: "+381211234567", locality: "Novi Sad", countryCode: "RS" }));
+  });
+
+  it("lets the owner move on when the carrier took the order but is still checking it", async () => {
+    const onOrderPending = vi.fn();
+    const order = cityOrder({ orderCity: vi.fn().mockResolvedValue({ status: "pending" } satisfies ClaimResult) });
+    const props = setup({ getInitialNumberSuggestion: vi.fn().mockResolvedValue(serbia), cityOrder: order, onOrderPending });
+    await userEvent.click((await screen.findAllByRole("button", { name: "Order" }))[0]!);
+    await waitFor(() => expect(onOrderPending).toHaveBeenCalledOnce());
+    expect(props.onClaimed).not.toHaveBeenCalled();
+  });
+
+  it("asks to confirm before ordering a city, and orders nothing when the answer is no", async () => {
+    const order = cityOrder();
+    const confirmClaim = vi.fn().mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+    const props = setup({ getInitialNumberSuggestion: vi.fn().mockResolvedValue(serbia), cityOrder: order, confirmClaim });
+    await userEvent.click((await screen.findAllByRole("button", { name: "Order" }))[0]!);
+    await waitFor(() => expect(confirmClaim).toHaveBeenCalledOnce());
+    expect(confirmClaim).toHaveBeenCalledWith(expect.objectContaining({ locality: "Belgrade", countryCode: "RS" }));
+    expect(order.orderCity).not.toHaveBeenCalled();
+    await userEvent.click((await screen.findAllByRole("button", { name: "Order" }))[0]!);
+    await waitFor(() => expect(props.onClaimed).toHaveBeenCalled());
+    expect(order.orderCity).toHaveBeenCalledOnce();
+  });
+
+  it("shows one order at a time and says so when it fails", async () => {
+    let fail!: (reason: Error) => void;
+    const order = cityOrder({ orderCity: vi.fn(() => new Promise<ClaimResult>((_resolve, reject) => { fail = reject; })) });
+    setup({ getInitialNumberSuggestion: vi.fn().mockResolvedValue(serbia), cityOrder: order });
+    const [first, second] = await screen.findAllByRole("button", { name: "Order" });
+    await userEvent.click(first!);
+    expect((second as HTMLButtonElement).disabled).toBe(true);
+    expect(first!.querySelector(".animate-spin")).toBeTruthy();
+    await act(async () => fail(new Error("boom")));
+    expect(await screen.findByText("Order failed")).toBeTruthy();
+    expect(order.orderCity).toHaveBeenCalledTimes(1);
+  });
+
+  it("says when a country has no cities, and keeps listing numbers in other countries", async () => {
+    setup({ getInitialNumberSuggestion: vi.fn().mockResolvedValue(serbia), cityOrder: cityOrder({ loadCities: vi.fn().mockResolvedValue([]) }) });
+    expect(await screen.findByText("No cities")).toBeTruthy();
+    cleanup();
+    setup({ cityOrder: cityOrder() });
+    expect(await screen.findByText(offer(0).display)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Search" })).toBeTruthy();
+  });
+});

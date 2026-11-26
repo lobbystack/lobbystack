@@ -1,23 +1,26 @@
-import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 import { businesses, onboardingNumberClaimEvents, phoneNumbers } from "@lobbystack/db";
-import { extraNumberAvailabilityInTransaction, extraNumberPricesInTransaction, partnerNumberAvailabilityInTransaction, schedulePhoneNumberRelease, verifiedPhone } from "@lobbystack/domain";
+import { numberCountries, extraNumberAvailabilityInTransaction, extraNumberPricesInTransaction, partnerNumberAvailabilityInTransaction, schedulePhoneNumberRelease, verifiedPhone } from "@lobbystack/domain";
 import { extraNumbersProductId } from "@lobbystack/shared";
 import { jsonError } from "@/lib/api-helpers";
 import { operatorRoute } from "@/lib/operator-request";
+import { getTelephony, numbersConfigured } from "@/lib/telephony";
 
 export const dynamic = "force-dynamic";
 
 export const GET = operatorRoute(async ({ userId, businessId, transaction }) => NextResponse.json(await transaction(async (tx) => {
   const workspace = await tx.select({ replacementReservedAt: businesses.phoneNumberReplacementReservedAt, replacementUsedAt: businesses.phoneNumberReplacementUsedAt }).from(businesses).where(eq(businesses.id, businessId)).limit(1);
   const partnerNumbers = await partnerNumberAvailabilityInTransaction(tx, businessId);
-  const activeClaims = await tx.select({ id: onboardingNumberClaimEvents.id, status: onboardingNumberClaimEvents.status, purpose: onboardingNumberClaimEvents.purpose }).from(onboardingNumberClaimEvents).where(and(eq(onboardingNumberClaimEvents.businessId, businessId), eq(onboardingNumberClaimEvents.userId, userId), inArray(onboardingNumberClaimEvents.status, ["reserved", "provisioning"]))).orderBy(desc(onboardingNumberClaimEvents.reservedAt));
+  const activeClaims = await tx.select({ id: onboardingNumberClaimEvents.id, status: onboardingNumberClaimEvents.status, purpose: onboardingNumberClaimEvents.purpose, awaitingCarrier: sql<boolean>`${onboardingNumberClaimEvents.providerOrderId} is not null`, e164: onboardingNumberClaimEvents.requestedE164 }).from(onboardingNumberClaimEvents).where(and(eq(onboardingNumberClaimEvents.businessId, businessId), eq(onboardingNumberClaimEvents.userId, userId), inArray(onboardingNumberClaimEvents.status, ["reserved", "provisioning"]))).orderBy(desc(onboardingNumberClaimEvents.reservedAt));
   const prices = await extraNumberPricesInTransaction(tx, businessId);
   const rows = await tx.select().from(phoneNumbers).where(and(eq(phoneNumbers.businessId, businessId), eq(phoneNumbers.status, "active"))).orderBy(asc(phoneNumbers.createdAt));
   return {
     // An extra number's monthly price in US cents, or null for a number the plan includes or one that's free.
     phoneNumbers: rows.map((row) => ({ ...row, monthlyPriceCents: prices.get(row.id) ?? null })),
+    // The countries whose number is named when it is ordered, so the picker asks for a city there.
+    cityCountries: numbersConfigured() ? numberCountries().filter((country) => getTelephony().assignedNumbers.assignsOnOrder(country)) : [],
     activeClaim: activeClaims[0] ?? null,
     replacement: { reservedAt: workspace[0]?.replacementReservedAt ?? null, usedAt: workspace[0]?.replacementUsedAt ?? null, activeClaim: activeClaims.find(claim => claim.purpose === "replacement") ?? null },
     // A partner's business gets its numbers from its partner's tier, not a plan its billing page shows. Its partner's trial

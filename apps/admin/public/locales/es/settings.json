@@ -487,7 +487,8 @@
     },
     "toast": {
       "changed": "Número de teléfono cambiado. Su número anterior seguirá activo durante 30 días.",
-      "added": "Número de teléfono agregado."
+      "added": "Número de teléfono agregado.",
+      "pending": "Pedimos su número. Puede tardar unos días hábiles, y le escribiremos cuando esté listo."
     },
     "numbersUnavailable": "Los números de teléfono aún no están configurados en este panel. Pida a quien lo administra que conecte un proveedor de telefonía.",
     "extra": {
@@ -500,7 +501,14 @@
       "cancel": "Cancelar",
       "priceChanged": "El precio cambió. Busque de nuevo para verlo.",
       "unavailable": "Este espacio de trabajo no puede comprar más números."
-    }
+    },
+    "city": {
+      "header": "Ciudad",
+      "empty": "No hay ciudades disponibles ahora.",
+      "failed": "No pudimos pedir ese número. Inténtalo de nuevo."
+    },
+    "carrierUnavailable": "No podemos preparar un número ahora. Inténtelo de nuevo más tarde.",
+    "onOrder": "Pedimos el {{number}}. Puede tardar unos días hábiles, y le escribiremos cuando esté listo."
   },
   "appearance": {
     "title": "Preferencias",

@@ -20,6 +20,7 @@ export * from "./businessSummary";
 export * from "./calendar";
 export * from "./catalog";
 export * from "./compliance";
+export * from "./externalNumbers";
 export * from "./contacts";
 export * from "./contactPasscodes";
 export * from "./contactSmsConsent";

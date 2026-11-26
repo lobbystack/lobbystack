@@ -1,0 +1,6 @@
+[
+  {
+    "address": "module.resource_group.azurerm_resource_group.this",
+    "id": "/subscriptions/<subscription id>/resourceGroups/<resource group name>"
+  }
+]

@@ -255,7 +255,7 @@ export const billingMeterEventNames = {
 } as const;
 
 /** The countries LobbyStack sells numbers in, as packages/domain's numberTrials lists them. */
-export const extraNumberCountries = ["US", "CA", "PR", "GB", "AU", "NZ"] as const;
+export const extraNumberCountries = ["US", "CA", "PR", "GB", "AU", "NZ", "RS"] as const;
 export type ExtraNumberCountry = (typeof extraNumberCountries)[number];
 
 /** The kinds of number the carrier sells, as a number search names them. */
@@ -263,9 +263,11 @@ export type ExtraNumberKind = "local" | "mobile" | "toll_free";
 
 /**
  * What an extra number costs each month on Starter, Pro or Enterprise, in US
- * cents, by country and kind of number: Twilio's monthly price for it, from its
- * Pricing API, with no markup. The operator sees it before they buy, and it
- * stays the number's price, so the add-on bills a stable amount. When Twilio
+ * cents, by country and kind of number: the carrier's monthly price for it, from
+ * Twilio's Pricing API, with no markup. Serbia's comes from Zadarma, which has no
+ * Twilio price: it is Zadarma's monthly rate for a local number, €10.50 when paid
+ * month by month, in dollars. The operator sees it before they buy, and it
+ * stays the number's price, so the add-on bills a stable amount. When a carrier
  * changes a price, update it here; numbers already bought keep theirs. A kind
  * missing from a country isn't sold there as an extra number.
  */
@@ -276,6 +278,7 @@ export const extraNumberPrices = {
   GB: { local: 115, mobile: 250, toll_free: 270 },
   AU: { local: 300, mobile: 825, toll_free: 2_000 },
   NZ: { local: 315, toll_free: 4_000 },
+  RS: { local: 1_200 },
 } as const satisfies Record<ExtraNumberCountry, Partial<Record<ExtraNumberKind, number>>>;
 
 export function isExtraNumberCountry(value: string | null | undefined): value is ExtraNumberCountry {
@@ -284,12 +287,13 @@ export function isExtraNumberCountry(value: string | null | undefined): value is
 
 /**
  * The kind of number a search in the country returns: mobile in GB and AU,
- * whose registrations cover mobile numbers only, local in NZ, and otherwise
- * the kind asked for, local by default.
+ * whose registrations cover mobile numbers only, local in NZ and RS (Zadarma
+ * sells landline numbers in Serbia, not mobile ones), and otherwise the kind
+ * asked for, local by default.
  */
 export function soldNumberKind(countryCode: string, requested?: ExtraNumberKind | undefined): ExtraNumberKind {
   if (countryCode === "GB" || countryCode === "AU") return "mobile";
-  if (countryCode === "NZ") return "local";
+  if (countryCode === "NZ" || countryCode === "RS") return "local";
   return requested ?? "local";
 }
 

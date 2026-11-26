@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { resolveOnboardingRoute } from "@lobbystack/shared";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { useActiveBusiness } from "@/hooks/use-active-business";
-import { PhoneNumberChooser, phoneNumberChooserApi } from "./phone-number-chooser";
+import { onboardingCityOrderApi, PhoneNumberChooser, phoneNumberChooserApi, type CityOrder } from "./phone-number-chooser";
 import { OnboardingPlanSurface } from "./onboarding-plan-surface";
 import { OnboardingNumberCountryFallback } from "./onboarding-number-country-fallback";
 import { CountryCombobox } from "./country-combobox";
@@ -18,6 +19,7 @@ import { PhoneNumberChooserSkeleton } from "./loading-skeletons";
 import { FieldError } from "./ui/field";
 
 const onboardingNumbers = phoneNumberChooserApi(false);
+const onboardingCityOrder = onboardingCityOrderApi();
 
 // One line per refusal, from the number step's pre-check or the search itself.
 const REFUSAL_KEYS: Record<string, string> = {
@@ -29,7 +31,7 @@ const REFUSAL_KEYS: Record<string, string> = {
   email_verification_required: "number.refusals.emailVerification",
 };
 
-type NumberOutlook = { trialRefusal: string | null; countries: string[]; suggestedCountry: string | null; numberRequired?: boolean };
+type NumberOutlook = { trialRefusal: string | null; countries: string[]; cityCountries?: string[]; suggestedCountry: string | null; numberRequired?: boolean };
 
 function errorCode(error: unknown): string | undefined {
   const code = error && typeof error === "object" ? (error as { code?: unknown }).code : undefined;
@@ -66,7 +68,7 @@ export function OnboardingNumberSurface() {
   const [countryFallback, setCountryFallback] = useState<{ country: string | null } | null | undefined>(undefined);
   const trackedRefusal = useRef<string | null>(null);
   const { business } = useActiveBusiness();
-  const phones = useQuery({ queryKey: ["onboarding-primary-number", business?.businessId], refetchInterval: query => query.state.data?.activeClaim ? 1000 : false, enabled: Boolean(business), queryFn: () => requestJson<{ activeClaim?: { id: string; status: string } | null; phoneNumbers: Array<{ id: string; e164: string; reclaimScheduledAt: string | null }> }>(`/api/phone-numbers?businessId=${encodeURIComponent(business!.businessId)}`) });
+  const phones = useQuery({ queryKey: ["onboarding-primary-number", business?.businessId], refetchInterval: query => query.state.data?.activeClaim ? 1000 : false, enabled: Boolean(business), queryFn: () => requestJson<{ activeClaim?: { id: string; status: string; awaitingCarrier?: boolean } | null; phoneNumbers: Array<{ id: string; e164: string; reclaimScheduledAt: string | null }> }>(`/api/phone-numbers?businessId=${encodeURIComponent(business!.businessId)}`) });
   // Where we sell numbers, and whether a trial is still possible or which plan is needed.
   const outlook = useQuery({ queryKey: ["onboarding-number-countries", business?.businessId], enabled: Boolean(business), queryFn: () => requestJson<NumberOutlook>(`/api/onboarding/numbers?businessId=${encodeURIComponent(business!.businessId)}`) });
   // A trial number keeps its release date hidden, so any active number is the one to call.
@@ -114,6 +116,38 @@ export function OnboardingNumberSurface() {
     if (primary) router.replace(afterNumber);
   }, [afterNumber, primary, router]);
 
+  // An order the carrier accepted and is still checking, such as Zadarma's review of documents, takes days. The owner
+  // moves on to the next step meanwhile, and the number joins the business when it goes live.
+  const moveOn = useMutation({
+    mutationFn: () => requestJson(`/api/onboarding/stage?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ to: "attribution" }) }),
+    onSuccess: () => router.push(afterNumber),
+  });
+  const awaitingCarrier = Boolean(phones.data?.activeClaim?.awaitingCarrier);
+  const movedOn = useRef(false);
+  // The owner goes on with setup while the carrier activates the number, and the worker emails them when it's live.
+  const leaveWhileOnOrder = useCallback(() => {
+    if (movedOn.current) return;
+    movedOn.current = true;
+    toast.success(t("number.onOrder"));
+    moveOn.mutate();
+  }, [moveOn, t]);
+  useEffect(() => {
+    if (!awaitingCarrier || claiming || !business) return;
+    leaveWhileOnOrder();
+  }, [awaitingCarrier, business, claiming, leaveWhileOnOrder]);
+  const cityOrder = useMemo<CityOrder | undefined>(() => outlook.data?.cityCountries?.length ? {
+    countries: outlook.data.cityCountries,
+    loadCities: onboardingCityOrder.loadCities,
+    // Held like a claim, so the picker stays while the order is placed and the claim shows in the list of numbers.
+    orderCity: async (args) => {
+      setClaiming(true);
+      try { return await onboardingCityOrder.orderCity(args); } catch (error) {
+        refuse(error);
+        throw error;
+      } finally { setClaiming(false); }
+    },
+    labels: { header: t("number.city.header"), select: t("number.select"), empty: t("number.city.empty"), failed: t("number.city.failed") },
+  } : undefined, [outlook.data?.cityCountries, refuse, t]);
   // The fallback opens on its own when no country has numbers here, or when
   // the business's time zone points to a country without them.
   const countries = outlook.data?.countries ?? [];
@@ -121,7 +155,7 @@ export function OnboardingNumberSurface() {
   const suggestedWithoutNumbers = suggested && !countries.includes(suggested) ? suggested : null;
   const openFallback = countryFallback === undefined ? (suggestedWithoutNumbers ? { country: suggestedWithoutNumbers } : null) : countryFallback;
   const showsCountryFallback = Boolean(outlook.data) && (countries.length === 0 || openFallback !== null);
-  if (!phones.data || (!claiming && phones.data.activeClaim) || outlook.isLoading || primary) return <div className="mx-auto w-full max-w-lg"><PhoneNumberChooserSkeleton labels={{ country: t("number.countryLabel"), areaCode: t("number.areaCodeLabel"), search: t("number.search"), phoneNumber: t("number.tableHeaders.phoneNumber") }} /></div>;
+  if (!phones.data || (!claiming && phones.data.activeClaim) || outlook.isLoading || primary || moveOn.isPending) return <div className="mx-auto w-full max-w-lg"><PhoneNumberChooserSkeleton labels={{ country: t("number.countryLabel"), areaCode: t("number.areaCodeLabel"), search: t("number.search"), phoneNumber: t("number.tableHeaders.phoneNumber") }} /></div>;
   if (business && showsCountryFallback) return <OnboardingNumberCountryFallback businessId={business.businessId} initialCountry={openFallback?.country ?? suggested} numberCountries={countries} onBack={countries.length ? () => setCountryFallback(null) : null} onSkipped={() => router.push(withoutNumber)} />;
   if (refusalCode) {
     return (
@@ -137,7 +171,7 @@ export function OnboardingNumberSurface() {
     );
   }
   return <div className="mx-auto flex w-full max-w-lg flex-col gap-6">
-    {business ? <PhoneNumberChooser businessId={business.businessId} getInitialNumberSuggestion={chooser.getInitialNumberSuggestion} searchAvailableNumbers={chooser.searchAvailableNumbers} claimNumber={claimNumber} getErrorMessage={getErrorMessage} onClaimStarted={(number) => { telemetry.track("web.onboarding.number_claim_started", { businessId: business.businessId, countryCode: number.selectionContext.countryCode, selectionMode: number.selectionContext.mode, numberKind: number.kind }); }} onClaimCompleted={(number) => { telemetry.track("web.onboarding.number_claim_completed", { businessId: business.businessId, countryCode: number.selectionContext.countryCode, selectionMode: number.selectionContext.mode, numberKind: number.kind }); }} onClaimed={() => { setClaiming(false); void phones.refetch(); }} otherCountry={{ label: t("number.country.other"), onSelect: () => setCountryFallback({ country: null }) }} labels={{ countryLabel: t("number.countryLabel"), areaCodeLabel: t("number.areaCodeLabel"), areaCodePlaceholder: t("number.areaCodePlaceholder"), search: t("number.search"), searching: t("number.searching"), phoneNumberHeader: t("number.tableHeaders.phoneNumber"), select: t("number.select"), loadMore: t("number.loadMore"), empty: t("number.empty"), loadFailed: "number.loadFailed", searchFailed: "number.searchFailed", claimFailed: "number.claimFailed", unavailable: t("number.unavailable") }} /> : null}
+    {business ? <PhoneNumberChooser businessId={business.businessId} getInitialNumberSuggestion={chooser.getInitialNumberSuggestion} searchAvailableNumbers={chooser.searchAvailableNumbers} claimNumber={claimNumber} getErrorMessage={getErrorMessage} onClaimStarted={(number) => { telemetry.track("web.onboarding.number_claim_started", { businessId: business.businessId, countryCode: number.selectionContext.countryCode, selectionMode: number.selectionContext.mode, numberKind: number.kind }); }} onClaimCompleted={(number) => { telemetry.track("web.onboarding.number_claim_completed", { businessId: business.businessId, countryCode: number.selectionContext.countryCode, selectionMode: number.selectionContext.mode, numberKind: number.kind }); }} onClaimed={() => { setClaiming(false); void phones.refetch(); }} otherCountry={{ label: t("number.country.other"), onSelect: () => setCountryFallback({ country: null }) }} cityOrder={cityOrder} onOrderPending={leaveWhileOnOrder} labels={{ countryLabel: t("number.countryLabel"), areaCodeLabel: t("number.areaCodeLabel"), areaCodePlaceholder: t("number.areaCodePlaceholder"), search: t("number.search"), searching: t("number.searching"), phoneNumberHeader: t("number.tableHeaders.phoneNumber"), select: t("number.select"), loadMore: t("number.loadMore"), empty: t("number.empty"), loadFailed: "number.loadFailed", searchFailed: "number.searchFailed", claimFailed: "number.claimFailed", unavailable: t("number.unavailable") }} /> : null}
     {business && (skipAllowed || returnTo) ? <button className="mx-auto type-title text-muted-foreground underline underline-offset-4 hover:text-foreground disabled:opacity-50" disabled={skip.isPending || claiming} onClick={() => skip.mutate()} type="button">{skip.isPending ? t("number.skipping") : t("number.skipLater")}</button> : null}
     {skip.isError ? <FieldError>{t("number.skipFailed")}</FieldError> : null}
   </div>;

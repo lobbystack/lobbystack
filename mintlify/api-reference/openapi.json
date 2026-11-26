@@ -19735,7 +19735,7 @@
         "type": "object",
         "properties": {
           "country": {
-            "description": "Defaults to the country of the business's time zone, or US. When the account the key acts as verified a mobile number for this business, that number's country decides. A deployment offers US, CA and PR, and GB, AU and NZ once its carrier is set up for them.",
+            "description": "Defaults to the country of the business's time zone, or US. When the account the key acts as verified a mobile number for this business, that number's country decides. A deployment offers US, CA and PR, and GB, AU, NZ and RS once its carrier is set up for them.",
             "type": "string",
             "enum": [
               "US",
@@ -19743,11 +19743,12 @@
               "PR",
               "GB",
               "AU",
-              "NZ"
+              "NZ",
+              "RS"
             ]
           },
           "kind": {
-            "description": "Defaults to local. GB and AU numbers are always mobile, and NZ numbers local.",
+            "description": "Defaults to local. GB and AU numbers are always mobile, and NZ and RS numbers local.",
             "type": "string",
             "enum": [
               "local",
@@ -19805,7 +19806,8 @@
               "PR",
               "GB",
               "AU",
-              "NZ"
+              "NZ",
+              "RS"
             ]
           },
           "kind": {
@@ -19977,11 +19979,12 @@
               "PR",
               "GB",
               "AU",
-              "NZ"
+              "NZ",
+              "RS"
             ]
           },
           "kind": {
-            "description": "Defaults to local. GB and AU numbers are always mobile, and NZ numbers local. A kind a country doesn't sell as an extra number is a 400.",
+            "description": "Defaults to local. GB and AU numbers are always mobile, and NZ and RS numbers local. A kind a country doesn't sell as an extra number is a 400.",
             "type": "string",
             "enum": [
               "local",
@@ -20034,7 +20037,8 @@
               "PR",
               "GB",
               "AU",
-              "NZ"
+              "NZ",
+              "RS"
             ]
           },
           "kind": {

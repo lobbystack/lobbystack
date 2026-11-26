@@ -21,6 +21,7 @@ export const BUSINESS_NOTIFICATION_KINDS = [
   "webhook_failing",
   "website_import_failed",
   // Updates.
+  "number_ready",
   "website_import_finished",
   "forwarding_detected",
   "invite_accepted",
@@ -64,6 +65,8 @@ export const BUSINESS_NOTIFICATION_RULES: Record<BusinessNotificationKind, Busin
   instagram_reconnect: action("setup", "/business/integrations"),
   webhook_failing: action("api_keys", "/workspace/webhooks"),
   website_import_failed: action("setup", "/business/knowledge"),
+  // A number a carrier took days to activate, such as a Zadarma order the regulator checks.
+  number_ready: { category: "update", capability: "setup", minimumRole: "business_admin", href: "/agents/primary/channels/phone" },
   website_import_finished: { category: "update", capability: "setup", minimumRole: "business_admin", href: "/business/knowledge" },
   forwarding_detected: { category: "update", capability: "setup", minimumRole: "business_admin", href: "/agents/primary/channels/phone" },
   invite_accepted: { category: "update", capability: "team", minimumRole: "viewer", href: "/workspace/team" },

@@ -54,6 +54,8 @@ export function notificationCopy(item: Pick<BusinessNotificationItem, "kind" | "
       return { title: k("title", { site: text(p.site) ?? "" }), line: k("line") };
     case "website_import_finished":
       return { title: k("title"), line: k("line", { count: count(p.pages), site: text(p.site) ?? "" }) };
+    case "number_ready":
+      return { title: k("title", { number: text(p.number) ?? "" }), line: k("line") };
     case "forwarding_detected":
       return { title: k("title"), line: k("line", { from: text(p.from) ?? "" }) };
     case "invite_accepted":

@@ -1,0 +1,13 @@
+# Copy to terraform.tfvars and fill in. terraform.tfvars is gitignored, because it holds the OpenAI project id.
+# Everything that isn't secret, and differs per environment, is in environments/<environment>.tfvars.
+# Use both: terraform plan -var-file=environments/dev.tfvars
+
+# Your SSH public key, and the addresses that may reach SSH. Leave the list empty to open no SSH.
+ssh_public_key    = "ssh-ed25519 AAAA... you@example.com"
+ssh_allowed_cidrs = ["203.0.113.7/32"]
+
+# The same project id as OPENAI_PROJECT_ID on the worker.
+openai_project_id = "proj_replace_me"
+
+# An optional name for the public address: <label>.<region>.cloudapp.azure.com. It must be unique in the region.
+# dns_label = "lobbystack-sip-yourname"

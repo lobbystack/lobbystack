@@ -1,0 +1,15 @@
+# Runs the SIP server on a laptop, to try the OpenAI leg with a softphone. A carrier can't reach a laptop behind a
+# router, so Zadarma's calls still need the VM. Docker Desktop and Rancher Desktop ignore host networking on macOS,
+# so this file publishes the ports instead.
+#
+#   cp asterisk.env.example asterisk.env   # then edit it, see docs/voice/external-numbers.md "Run it locally"
+#   docker compose -f docker-compose.local.yml up --build
+services:
+  asterisk:
+    build: .
+    env_file: asterisk.env
+    ports:
+      - "5060:5060/udp"
+      - "10000-10200:10000-10200/udp"
+    volumes:
+      - ./certs:/certs:ro

@@ -382,7 +382,7 @@ async function recordOutboxBacklogSample(
 // The templates an email job may name. A worker before the notices doesn't
 // route email.sendNotice, so only that job sends them. Anything else goes out
 // as a plain alert.
-const EMAIL_SEND_TEMPLATES = ["existing_account", "account_setup", "verify_email", "password_reset", "passkey_added", "invitation", "operator_alert", "feedback_submission", "welcome", "plan_reminder", "partner_pool_alert", "business_allowance_alert", "partner_business_allowance_alert"] as const;
+const EMAIL_SEND_TEMPLATES = ["existing_account", "account_setup", "verify_email", "password_reset", "passkey_added", "invitation", "operator_alert", "feedback_submission", "welcome", "plan_reminder", "partner_pool_alert", "business_allowance_alert", "partner_business_allowance_alert", "number_ready"] as const;
 const EMAIL_NOTICE_TEMPLATES = ["business_released", "business_deleted"] as const;
 type QueuedEmailTemplate = (typeof EMAIL_SEND_TEMPLATES)[number] | (typeof EMAIL_NOTICE_TEMPLATES)[number];
 
@@ -1251,12 +1251,12 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       } catch (error) {
         if (error instanceof NumberOrderPendingError && inventory) {
           // The carrier is still working on the order, such as a review of a country's documents. Check it again later.
-          if (Date.now() - claim.reservedAt.getTime() < NUMBER_ORDER_MAX_WAIT_MS) {
+          if (Date.now() - claim.reservedAt.getTime() < (inventory.orderMaxWaitMs ?? NUMBER_ORDER_MAX_WAIT_MS)) {
             const retryAt = await deferNumberProvisioning(dependencies.domain, { businessId, claimId, providerOrderId: error.orderId });
             return { status: "deferred", entityId: claimId, retryAt };
           }
           // Given up: a number the order already put on the account would be billed with no business, so release it.
-          const late = await inventory.findOwnedPhoneNumber({ e164: claim.e164 }).catch(() => null);
+          const late = await inventory.findOwnedPhoneNumber({ e164: claim.e164, includePending: true }).catch(() => null);
           if (late) await inventory.releasePhoneNumber({ providerPhoneId: late.providerPhoneId }).catch(() => undefined);
         }
         if (purchased && providerPhoneId && inventory) await inventory.releasePhoneNumber({ providerPhoneId }).catch(() => undefined);

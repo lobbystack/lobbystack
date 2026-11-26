@@ -1,13 +1,16 @@
-import { createHash, randomBytes, randomInt, randomUUID } from "node:crypto";
+import { createHash, createHmac, randomBytes, randomInt, randomUUID } from "node:crypto";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 
-import { THIRD_PARTY_ORIGIN, THIRD_PARTY_PORT } from "./full-stack-environment";
+import { THIRD_PARTY_ORIGIN, THIRD_PARTY_PORT, ZADARMA_API_KEY, ZADARMA_API_SECRET } from "./full-stack-environment";
 
 // Local stand-ins for the carriers, Calendly, Firecrawl and the embedding
 // provider. carrier-redirect.mjs points the carrier SDKs here, and the
 // CALENDLY_, FIRECRAWL_ and AI_EMBEDDING_ settings point the others here, so the
 // real adapters run in the admin server and the worker. Each answers only what
 // those adapters ask, and records what they sent for the specs to check.
+
+export type ZadarmaCall = { method: string; route: string; params: Record<string, string>; signed: boolean };
+type ZadarmaNumber = { number: string; status: string; sip: string | null; autoprolongation: "on" | "off" };
 
 export type CarrierCall = { method: string; host: string; path: string; form: Record<string, string> };
 type Number = { sid: string; phone_number: string; friendly_name: string | null; sms_url: string | null; voice_url: string | null; trunk_sid: string | null };
@@ -39,12 +42,37 @@ async function readBody(request: IncomingMessage): Promise<string> {
   return raw;
 }
 
+function randomNoviSadNumber(): string {
+  return `381212${String(randomInt(1_000_000)).padStart(6, "0")}`;
+}
+
+function randomBelgradeNumber(): string {
+  return `381111${String(randomInt(1_000_000)).padStart(6, "0")}`;
+}
+
+/** PHP's urlencode, which Zadarma signs with. Written here a second time, apart from the adapter's, so the fake checks it. */
+function phpUrlencode(value: string): string {
+  return encodeURIComponent(value).replace(/[!'()*~]/g, (character) => `%${character.charCodeAt(0).toString(16).toUpperCase()}`).replace(/%20/g, "+");
+}
+
+function zadarmaAuthorization(route: string, params: Record<string, string>): string {
+  const paramString = Object.keys(params).sort().map((key) => `${phpUrlencode(key)}=${phpUrlencode(params[key]!)}`).join("&");
+  const signed = `${route}${paramString}${createHash("md5").update(paramString).digest("hex")}`;
+  return `${ZADARMA_API_KEY}:${Buffer.from(createHmac("sha1", ZADARMA_API_SECRET).update(signed).digest("hex")).toString("base64")}`;
+}
+
 function randomTorontoNumber(): string {
   return `+1416${String(randomInt(10_000_000)).padStart(7, "0")}`;
 }
 
 export type ThirdParties = {
   carrier: { calls: CarrierCall[]; offered: string[]; messagesTo(to: string): CarrierCall[]; addNumber(input: { sid: string; e164: string; trunkSid?: string }): void };
+  /**
+   * Zadarma's numbers API, which verifies each request's signature, and answers as the real one does for Serbia: no
+   * landline numbers to pick from, and the number named in the reply to an order. `status` is what a number is when
+   * ordered, "on" or "checking" while Zadarma reviews documents.
+   */
+  zadarma: { calls: ZadarmaCall[]; assigned: string[]; status: string; numbers(): ZadarmaNumber[]; /** Puts a live number on the account before the test starts, as one an earlier business left behind. */ hold(number: string, autoprolongation?: "on" | "off"): void };
   calendly: {
     /** What the next account to connect pays for. Calendly's Free plan is `basic` at the `free` stage. */
     plan: "paid" | "free";
@@ -73,6 +101,10 @@ export async function startThirdParties(): Promise<ThirdParties> {
   const calendly: ThirdParties["calendly"] = { plan: "paid", bookingRefusal: null, authorizations: [], tokenExchanges: [], webhooks: [], bookings: [] };
   const calls: CarrierCall[] = [];
   const offered: string[] = [];
+  const zadarmaCalls: ZadarmaCall[] = [];
+  const zadarmaAssigned: string[] = [];
+  const zadarmaSettings = { status: "on" };
+  const zadarmaNumbers = new Map<string, ZadarmaNumber>();
   const firecrawl: ThirdParties["firecrawl"] = { rateLimitedStarts: 0, starts: [] };
   const crawls = new Map<string, string>();
   const polar: ThirdParties["polar"] = { checkouts: [], events: [], subscriptionChanges: [] };
@@ -124,9 +156,48 @@ export async function startThirdParties(): Promise<ThirdParties> {
     send(response, 204);
   }
 
+  function zadarmaApi(request: IncomingMessage, response: ServerResponse, path: string, raw: string): void {
+    const url = new URL(path, "http://zadarma.invalid");
+    const method = request.method ?? "GET";
+    const params = Object.fromEntries(method === "GET" ? url.searchParams : new URLSearchParams(raw));
+    const signed = request.headers.authorization === zadarmaAuthorization(url.pathname, params);
+    zadarmaCalls.push({ method, route: url.pathname, params, signed });
+    if (!signed) return send(response, 401, { status: "error", message: "Wrong signature" });
+    const route = `${method} ${url.pathname}`;
+    if (route === "GET /v1/direct_numbers/country/") {
+      // As the real account answers for Serbia: euros, and is_toll "true" for every destination, landline ones included.
+      const direction = (id: string, areaCode: string, name: string) => ({ id, countryCode: "381", areaCode, name, connect_fee: 7, monthly_fee: 10.5, currency: "EUR", receive_sms: false, is_toll: "true", connect_time: "20" });
+      return send(response, 200, { status: "success", info: [direction("2393", "11", "Belgrade"), direction("18387", "18", "Nis"), direction("18389", "21", "Novi Sad"), direction("2390", "800", "Toll-free")] });
+    }
+    // Zadarma lists no landline numbers to pick from in Serbia: it names the number when it takes the order.
+    if (/^GET \/v1\/direct_numbers\/available\/\d+\/$/.test(route)) return send(response, 200, { status: "success", numbers: [] });
+    if (route === "POST /v1/direct_numbers/order/") {
+      if (!params.direction_id || !params.documents_group_id) return send(response, 400, { status: "error", message: "Check the order's parameters" });
+      const number = params.direction_id === "18389" ? randomNoviSadNumber() : randomBelgradeNumber();
+      zadarmaAssigned.push(number);
+      zadarmaNumbers.set(number, { number, status: zadarmaSettings.status, sip: null, autoprolongation: "on" });
+      return send(response, 200, { status: "success", number: `+${number}`, is_reserved: "false", is_activated: zadarmaSettings.status === "on" ? "true" : "false" });
+    }
+    if (route === "GET /v1/direct_numbers/") return send(response, 200, { status: "success", info: [...zadarmaNumbers.values()].map((number) => ({ number: number.number, status: number.status, sip: number.sip })) });
+    if (route === "PUT /v1/direct_numbers/set_sip_id/") {
+      const number = zadarmaNumbers.get(params.number ?? "");
+      if (!number) return send(response, 400, { status: "error", message: "Check phone's number" });
+      number.sip = params.sip_id ?? null;
+      return send(response, 200, { status: "success", number: number.number, sip_id: number.sip });
+    }
+    if (route === "PUT /v1/direct_numbers/autoprolongation/") {
+      const number = zadarmaNumbers.get(params.number ?? "");
+      if (!number) return send(response, 400, { status: "error", message: "Check phone's number" });
+      number.autoprolongation = params.value === "off" ? "off" : "on";
+      return send(response, 200, { status: "success", autoprolongation: number.autoprolongation });
+    }
+    send(response, 404, { status: "error", message: `The fake has no ${route}.` });
+  }
+
   function carrier(request: IncomingMessage, response: ServerResponse, host: string, path: string, raw: string): void {
     const form = Object.fromEntries(new URLSearchParams(raw));
     calls.push({ method: request.method ?? "GET", host, path, form });
+    if (host === "api.zadarma.com") return zadarmaApi(request, response, path, raw);
     if (host === "api.twilio.com") return twilioApi(request, response, path, form);
     if (host === "trunking.twilio.com") return twilioTrunking(request, response, path, form);
     if (host === "pricing.twilio.com") return send(response, 200, { country: "Canada", iso_country: "CA", price_unit: "USD", phone_number_prices: [{ number_type: "local", base_price: "1.15", current_price: "1.15" }] });
@@ -253,6 +324,7 @@ export async function startThirdParties(): Promise<ThirdParties> {
       messagesTo: (to) => calls.filter((call) => call.path.endsWith("/Messages.json") && call.method === "POST" && call.form.To === to),
       addNumber: ({ sid, e164, trunkSid }) => { numberResource(sid, e164).trunk_sid = trunkSid ?? null; },
     },
+    zadarma: { calls: zadarmaCalls, get assigned() { return [...zadarmaAssigned]; }, get status() { return zadarmaSettings.status; }, set status(value: string) { zadarmaSettings.status = value; }, numbers: () => [...zadarmaNumbers.values()], hold: (number, autoprolongation = "off") => { zadarmaNumbers.set(number, { number, status: "on", sip: null, autoprolongation }); } },
     calendly,
     firecrawl,
     polar,
