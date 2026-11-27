@@ -45,7 +45,7 @@ x-runtime-env: &runtime-env
   TWILIO_SIP_TRUNK_SID: ${TWILIO_SIP_TRUNK_SID:-}
   TWILIO_VERIFY_SERVICE_SID: ${TWILIO_VERIFY_SERVICE_SID:-}
   TWILIO_ALERT_SMS_FROM: ${TWILIO_ALERT_SMS_FROM:-}
-  TWILIO_STATUS_CALLBACK_URL: ${TWILIO_STATUS_CALLBACK_URL:-}
+  TWILIO_STATUS_CALLBACK_URL: ${TWILIO_STATUS_CALLBACK_URL:-${APP_BASE_URL:-http://localhost:${LOBBYSTACK_PORT:-3000}}/api/webhooks/twilio/status}
   TELEPHONY_NUMBERS: ${TELEPHONY_NUMBERS:-}
   TELEPHONY_VERIFY: ${TELEPHONY_VERIFY:-}
   TELEPHONY_LOOKUP: ${TELEPHONY_LOOKUP:-}
@@ -62,7 +62,7 @@ x-runtime-env: &runtime-env
   FIRECRAWL_API_KEY: ${FIRECRAWL_API_KEY:-}
   GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
   GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
-  GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-http://localhost:${LOBBYSTACK_PORT:-3000}/api/calendar/google/callback}
+  GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-${APP_BASE_URL:-http://localhost:${LOBBYSTACK_PORT:-3000}}/api/calendar/google/callback}
   OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
   OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}
 
@@ -139,6 +139,11 @@ services:
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?Run scripts/quickstart.sh to generate .env}
       # Plain HTTP on localhost. Set true once APP_BASE_URL is an https:// address.
       BETTER_AUTH_USE_SECURE_COOKIES: ${BETTER_AUTH_USE_SECURE_COOKIES:-false}
+      # The dashboard answers only on APP_BASE_URL's hostname and these origins,
+      # such as http://localhost:3000 once APP_BASE_URL is public.
+      AUTH_TRUSTED_ORIGINS: ${AUTH_TRUSTED_ORIGINS:-}
+      # The one header your reverse proxy sets to the client's IP, such as x-real-ip.
+      TRUSTED_CLIENT_IP_HEADER: ${TRUSTED_CLIENT_IP_HEADER:-}
       REQUIRE_EMAIL_VERIFICATION: "true"
       INTERNAL_SERVICE_SECRET: ${INTERNAL_SERVICE_SECRET:?Run scripts/quickstart.sh to generate .env}
       WIDGET_SESSION_SECRET: ${WIDGET_SESSION_SECRET:?Run scripts/quickstart.sh to generate .env}
@@ -147,7 +152,7 @@ services:
       # Phone calls only: the signing secret of the OpenAI webhook that points at
       # APP_BASE_URL/api/webhooks/openai/live.
       OPENAI_WEBHOOK_SECRET: ${OPENAI_WEBHOOK_SECRET:-}
-      TWILIO_SMS_WEBHOOK_URL: ${TWILIO_SMS_WEBHOOK_URL:-}
+      TWILIO_SMS_WEBHOOK_URL: ${TWILIO_SMS_WEBHOOK_URL:-${APP_BASE_URL:-http://localhost:${LOBBYSTACK_PORT:-3000}}/api/webhooks/twilio/sms}
       OTEL_SERVICE_NAME: lobbystack-admin
     depends_on:
       migrator:
