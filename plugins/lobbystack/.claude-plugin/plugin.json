@@ -1,0 +1,12 @@
+{
+  "name": "lobbystack",
+  "description": "Install, run and troubleshoot a self-hosted LobbyStack with Docker and an OpenAI API key, then add a phone number",
+  "author": {
+    "name": "LobbyStack",
+    "url": "https://lobbystack.com"
+  },
+  "homepage": "https://docs.lobbystack.com/self-hosting/quickstart",
+  "repository": "https://github.com/lobbystack/lobbystack",
+  "license": "MIT",
+  "keywords": ["lobbystack", "self-hosting", "docker", "ai-receptionist", "voice-agent"]
+}

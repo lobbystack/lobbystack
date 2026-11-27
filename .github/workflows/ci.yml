@@ -168,6 +168,17 @@ jobs:
         run: |
           node -e 'const results = JSON.parse(process.env.RESULTS); if (Object.values(results).some(job => job.result !== "success")) process.exit(1);'
 
+  # Publishes the generic images that docker-compose.quickstart.yml pulls, as
+  # `latest`, once every check above and the post-merge certification passed.
+  # A published release tags its own version (public-images.yml).
+  public-images:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'lobbystack/lobbystack'
+    needs: [validate, replacement]
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/public-images.yml
+
   # Ships each main commit to Dokploy production once every check above and
   # the post-merge certification passed. It runs only on lobbystack/lobbystack
   # with the repository variable DOKPLOY_AUTO_RELEASE set to "true", so a fork

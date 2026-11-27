@@ -1,0 +1,15 @@
+{
+  "name": "lobbystack",
+  "description": "Agent plugins for LobbyStack, the open-source AI receptionist",
+  "owner": {
+    "name": "LobbyStack",
+    "url": "https://lobbystack.com"
+  },
+  "plugins": [
+    {
+      "name": "lobbystack",
+      "source": "./plugins/lobbystack",
+      "description": "Install, run and troubleshoot a self-hosted LobbyStack with Docker and an OpenAI API key, then add a phone number"
+    }
+  ]
+}
