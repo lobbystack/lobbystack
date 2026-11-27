@@ -650,6 +650,11 @@ export async function claimPhoneNumberForApi(context: DomainContext, caller: Api
   }
   if (offer.businessId !== caller.businessId || offer.userId !== offerSubject(options)) throw invalidRequest("This offer was made for another business or account. Search again with this key.", [{ path: "offer_token", message: "Made for another business or account." }]);
   if (offer.purpose !== purpose) throw invalidRequest(purpose === "replacement" ? "This offer is for a new number. Claim it with POST /phone-numbers/claims." : "This offer is for a replacement. Claim it with POST /phone-numbers/{phone_number_id}/replace.", [{ path: "offer_token", message: "The wrong kind of offer." }]);
+  // The dashboard checks a trial again where it's claimed, against the
+  // person's network and country, which an API request doesn't carry. Only
+  // the dashboard signs a trial that needs no text, including offers signed
+  // before offers named who signed them.
+  if (offer.selection.trial === true && (offer.via === "dashboard" || offer.selection.withoutSms === true)) throw invalidRequest("This free trial offer came from the dashboard. Claim it there, or search with POST /phone-numbers/search and claim one of those offers.", [{ path: "offer_token", message: "A dashboard trial offer." }]);
   return await inBusiness(context, caller, async (tx) => {
     // Revoking the key waits for this claim, and a key already revoked buys nothing.
     if (options.platformKeyId !== undefined) await lockActivePartnerPlatformKey(tx, options.platformKeyId);
