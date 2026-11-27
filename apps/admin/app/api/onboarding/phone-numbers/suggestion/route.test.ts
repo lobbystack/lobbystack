@@ -6,6 +6,7 @@ vi.mock("@/lib/operator-request", () => import("@/lib/operator-request.fake"));
 vi.mock("@/lib/phone-number-search-limit", () => ({ assertPhoneNumberSearchAllowed: fixture.limit }));
 vi.mock("@lobbystack/domain", () => ({ searchBusinessNumberInventory: fixture.search }));
 vi.mock("@/lib/telephony", async (importOriginal) => ({ ...await importOriginal<typeof import("@/lib/telephony")>(), getNumberClaimTokenSecret: fixture.secret }));
+vi.mock("@lobbystack/providers/telephony/registry", async (importOriginal) => ({ ...await importOriginal<typeof import("@lobbystack/providers/telephony/registry")>(), guardedNumberSearch: (numbers: unknown) => numbers }));
 
 import { resetFakeOperator } from "@/lib/operator-request.fake";
 import { GET } from "./route";
@@ -25,4 +26,14 @@ it("says phone numbers aren't set up, before a search counts against the limit o
   expect(fixture.limit).not.toHaveBeenCalled();
   expect(fixture.secret).not.toHaveBeenCalled();
   expect(fixture.search).not.toHaveBeenCalled();
+});
+
+it("passes the trusted country to the first search, which decides the trial and its country", async () => {
+  vi.stubEnv("TWILIO_ACCOUNT_SID", "AC00000000000000000000000000000000");
+  vi.stubEnv("TWILIO_AUTH_TOKEN", "token");
+  vi.stubEnv("TRUSTED_CLIENT_COUNTRY_HEADER", "cf-ipcountry");
+  fixture.search.mockResolvedValue({ numbers: [] });
+  const response = await GET(new Request("http://localhost:3000/api/onboarding/phone-numbers/suggestion?businessId=business", { headers: { "cf-ipcountry": "ir" } }));
+  expect(response.status).toBe(200);
+  expect(fixture.search).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ ipCountry: "IR" }), expect.anything());
 });

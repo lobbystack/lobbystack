@@ -33,3 +33,11 @@ it("needs an agent", async () => {
   expect(response.status).toBe(400);
   expect(fixture.reserve).not.toHaveBeenCalled();
 });
+
+it("passes the trusted country to the claim, which refuses a sanctioned country", async () => {
+  vi.stubEnv("TRUSTED_CLIENT_COUNTRY_HEADER", "cf-ipcountry");
+  fixture.reserve.mockResolvedValue("claim-1");
+  await POST(new Request("http://localhost:3000/api/phone-numbers/extra/claim?businessId=business", { method: "POST", headers: { "content-type": "application/json", "cf-ipcountry": "sy" }, body: JSON.stringify({ claimToken: "token", agentId: AGENT }) }));
+  expect(fixture.reserve).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ ipCountry: "SY" }));
+  vi.unstubAllEnvs();
+});
