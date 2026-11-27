@@ -49,7 +49,7 @@ curl -fsSL https://raw.githubusercontent.com/lobbystack/lobbystack/main/scripts/
 
 From a clone of the repository, run `./scripts/quickstart.sh` at its root instead.
 
-The first run downloads several hundred megabytes of images, so give the command a timeout of 15 minutes or run it in the background. The script checks the key with OpenAI before it starts anything and stops with a clear message if OpenAI rejects it.
+The first run downloads about 600 MB of images, so give the command a timeout of 15 minutes or run it in the background. The script checks the key with OpenAI before it starts anything and stops with a clear message if OpenAI rejects it.
 
 Settings go in the environment of the script, and the script saves them in the env file for later runs:
 

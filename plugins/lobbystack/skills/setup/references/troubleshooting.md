@@ -27,6 +27,15 @@ Ask the user before anything that deletes data: `docker compose down -v`, `docke
 - **No verification code in Mailpit**: read the `worker` logs for `email.send`. The quickstart sends through Mailpit unless the env file sets `SMTP_HOST`; with a real provider, check its `SMTP_*` values. **Send a new code** on the sign-up page sends another.
 - **The page is a 404**: the user opened `127.0.0.1` or a LAN address. Use `http://localhost:<port>`, the address in `APP_BASE_URL`.
 
+## A dashboard feature fails
+
+The quickstart sets up OpenAI and nothing else. Each of these needs its own setting in the env file, applied by rerunning the script:
+
+- **Website import fails**: set `FIRECRAWL_API_KEY`.
+- **Emails reach Mailpit but no real inbox**: set `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD` and `EMAIL_FROM`. Use `SMTP_PORT=465` with `SMTP_SECURE=true` when the provider needs TLS from the start.
+- **Google Calendar won't connect**: set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` from a Google Cloud OAuth client whose redirect URI is `APP_BASE_URL` followed by `/api/calendar/google/callback`.
+- **Phone numbers**: see [phone-numbers.md](phone-numbers.md).
+
 ## Test call
 
 The browser shows "Something went wrong while starting the call." Find out why:

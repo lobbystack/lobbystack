@@ -10,10 +10,14 @@ import SelfHostPrompt from "/snippets/fr/setup-prompts/self-host.mdx";
 LobbyStack peut tourner sur un seul hôte Docker ou sous forme de services gérés distincts. L'auto-hébergement vous donne le contrôle des données de l'application, des identifiants, de l'utilisation des fournisseurs, des sauvegardes et des mises à niveau.
 
 <Note>
-  Les appels en direct exigent quand même Twilio, OpenAI et un point de terminaison HTTPS public pour le tableau de bord. Les appels téléphoniques nécessitent aussi un trunk Twilio Elastic SIP qui envoie les appels à votre projet OpenAI.
+  Les appels test dans le navigateur n'exigent qu'une clé API OpenAI. Les appels téléphoniques exigent aussi Twilio ou Telnyx et une adresse HTTPS publique pour le tableau de bord. Avec Twilio, ils nécessitent un trunk Elastic SIP qui envoie les appels à votre projet OpenAI.
 </Note>
 
 <SelfHostPrompt />
+
+## L'essayer sur votre ordinateur
+
+Le [démarrage rapide](/fr/self-hosting/quickstart) lance LobbyStack à partir d'images prêtes à l'emploi, en une commande. Il vous faut Docker et une clé API OpenAI. Une fois LobbyStack lancé, vous créez un compte sur `http://localhost:3000` et vous parlez à votre agent dans un appel test depuis le navigateur, sans numéro de téléphone, sans opérateur et sans domaine. Commencez par là, puis choisissez l'un des déploiements ci-dessous pour de vrais appelants.
 
 ## Déployer sur Railway
 

@@ -326,6 +326,7 @@
           {
             "group": "Self-hosting",
             "pages": [
+              "self-hosting/quickstart",
               "self-hosting/overview",
               "self-hosting/docker-compose",
               "self-hosting/environment-variables",
@@ -499,6 +500,7 @@
           {
             "group": "Auto-hébergement",
             "pages": [
+              "fr/self-hosting/quickstart",
               "fr/self-hosting/overview",
               "fr/self-hosting/docker-compose",
               "fr/self-hosting/environment-variables",
@@ -672,6 +674,7 @@
           {
             "group": "Autoalojamiento",
             "pages": [
+              "es/self-hosting/quickstart",
               "es/self-hosting/overview",
               "es/self-hosting/docker-compose",
               "es/self-hosting/environment-variables",
