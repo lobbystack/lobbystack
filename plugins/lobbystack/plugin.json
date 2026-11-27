@@ -1,0 +1,31 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "lobbystack",
+  "version": "1.0.0",
+  "description": "Install, run and troubleshoot a self-hosted LobbyStack with Docker and an OpenAI API key, then add a phone number",
+  "author": {
+    "name": "LobbyStack",
+    "url": "https://lobbystack.com"
+  },
+  "homepage": "https://docs.lobbystack.com/self-hosting/quickstart",
+  "repository": "https://github.com/lobbystack/lobbystack",
+  "license": "MIT",
+  "keywords": ["lobbystack", "self-hosting", "docker", "ai-receptionist", "voice-agent"],
+  "extensions": {
+    "com.openai": {
+      "onboardingSkill": "./skills/setup/SKILL.md",
+      "interface": {
+        "displayName": "LobbyStack",
+        "shortDescription": "Run a self-hosted LobbyStack AI receptionist",
+        "longDescription": "Installs LobbyStack with Docker and an OpenAI API key, checks that it's healthy, fixes common problems, and walks you through adding a phone number.",
+        "developerName": "LobbyStack",
+        "category": "Coding",
+        "websiteURL": "https://lobbystack.com",
+        "defaultPrompt": [
+          "Set up LobbyStack on this machine.",
+          "My LobbyStack test call won't start. Find out why."
+        ]
+      }
+    }
+  }
+}
