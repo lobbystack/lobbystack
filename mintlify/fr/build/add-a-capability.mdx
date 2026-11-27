@@ -1,0 +1,148 @@
+---
+title: "Ajouter une capacité à l'agent"
+description: "Donnez à l'agent LobbyStack un nouvel outil pour les appels, le clavardage sur le site Web, Instagram et les textos : écrivez la fonction du domaine, enregistrez l'outil, choisissez les conversations qui le reçoivent et testez chaque partie."
+sidebarTitle: "Ajouter une capacité"
+contentType: "How-to"
+---
+
+Ce guide ajoute un outil à l'agent dans votre copie de LobbyStack. Vous écrivez l'opération d'affaires dans `packages/domain`, vous l'enveloppez dans un outil dans `packages/agent-core`, et vous choisissez les conversations qui le reçoivent. Les appels téléphoniques, les appels dans le navigateur, le clavardage sur le site Web, Instagram et les réponses aux textos exécutent tous le même agent, alors l'outil fonctionne sur chacun dès que vous l'ajoutez. [Comprendre comment LobbyStack est construit](/fr/build/architecture) explique où l'agent s'exécute.
+
+L'outil d'exemple, `checkServiceArea`, dit à un appelant si l'entreprise dessert son code postal. Remplacez-le par votre propre opération en suivant les étapes.
+
+## Avant de commencer
+
+Il vous faut :
+
+- un clone de votre copie, avec `pnpm install` lancé et la pile qui tourne en local, comme le décrit le [README du dépôt](https://github.com/lobbystack/lobbystack#contributing)
+- les données que lit l'outil. Ce guide suppose une table `serviceAreas` avec les colonnes `businessId` et `postalPrefix`. Une nouvelle table demande une migration écrite à la main qui active la sécurité au niveau des lignes; la section sur la base de données de [`AGENTS.md`](https://github.com/lobbystack/lobbystack/blob/main/AGENTS.md#database) liste chaque étape.
+
+Si l'instantané contient déjà le fait dont vous avez besoin, comme les heures d'ouverture ou les employés, lisez-le dans `snapshot` dans `createAgentTools` et sautez la fonction du domaine. Un appel lit l'instantané une seule fois, alors un outil qui s'en sert répond plus vite.
+
+## Écrire la fonction du domaine
+
+Les opérations d'affaires vivent dans `packages/domain`, où l'admin, le worker et l'agent peuvent tous les appeler. Chacune reçoit un `DomainContext` et exécute ses requêtes dans `withBusinessTransaction`, qui fixe l'entreprise pour la sécurité au niveau des lignes :
+
+```typescript packages/domain/src/server/serviceAreas.ts
+import { eq } from "drizzle-orm";
+import { serviceAreas, withBusinessTransaction } from "@lobbystack/db";
+
+import type { DomainContext } from "./context";
+
+/** Whether the business serves a postal code, by its first three characters. */
+export async function servesPostalCode(
+  context: DomainContext,
+  input: { businessId: string; postalCode: string },
+) {
+  const prefix = input.postalCode.replace(/\s/g, "").slice(0, 3).toUpperCase();
+  const actor = { businessId: input.businessId, actorType: "worker" as const };
+  return await withBusinessTransaction(context.db, actor, async (tx) => {
+    const areas = await tx.select({ prefix: serviceAreas.postalPrefix })
+      .from(serviceAreas)
+      .where(eq(serviceAreas.businessId, input.businessId));
+    if (!areas.length) return { configured: false as const };
+    return { configured: true as const, serves: areas.some((area) => area.prefix === prefix) };
+  });
+}
+```
+
+La fonction renvoie `configured: false` quand l'entreprise n'a listé aucune zone, pour que l'agent distingue « nous ne desservons pas votre secteur » de « nous ne savons pas ». Exportez-la depuis `packages/domain/src/server/index.ts` avec `export * from "./serviceAreas";`.
+
+## Choisir les conversations qui reçoivent l'outil
+
+`packages/agent-core/src/capabilities.ts` contient la seule décision sur les outils que reçoit une conversation. Ajoutez l'outil à la fin de `TOOL_USE`, avec son type et la ligne qu'utilise la mise à jour de progression d'un appel :
+
+```typescript packages/agent-core/src/capabilities.ts
+checkServiceArea: { kind: "other", progress: "checked the service area" },
+```
+
+Le type indique à un appel en direct ce qu'il garde du résultat pour la demande suivante. Utilisez `action` pour un outil qui modifie quelque chose, comme une prise de rendez-vous, et `other` pour une recherche.
+
+Ajoutez ensuite l'outil à la fin de l'objet `offered` dans `agentCapabilities`. `pnpm typecheck` échoue tant que vous ne le faites pas, parce que l'objet demande une entrée pour chaque nom de `TOOL_USE`. Une recherche en lecture seule peut servir dans toutes les conversations, y compris les clavardages de test et les démos pour prospects :
+
+```typescript packages/agent-core/src/capabilities.ts
+checkServiceArea: true,
+```
+
+Les appels téléphoniques et dans le navigateur exigent aussi que GPT-Live sache qu'il peut le demander. Ajoutez une ligne à la liste `live` que renvoie `agentCapabilities` :
+
+```typescript packages/agent-core/src/capabilities.ts
+"- Service area: check whether the business serves a postal or ZIP code.",
+```
+
+## Définir l'outil
+
+Les outils vivent dans `createAgentTools` dans `packages/agent-core/src/tools.ts`. Chacun a une description que lit le modèle, un schéma d'entrée Zod et une fonction `execute`. Ajoutez le vôtre comme dernier outil, avant `return tools;`, derrière la vérification `offered`, et importez `servesPostalCode` depuis `@lobbystack/domain` en haut du fichier :
+
+```typescript packages/agent-core/src/tools.ts
+if (offered("checkServiceArea")) {
+  tools.checkServiceArea = tool({
+    description: "Check whether the business serves the caller's area. Ask for their postal or ZIP code first.",
+    inputSchema: z.object({
+      postalCode: z.string().describe("The caller's postal or ZIP code."),
+    }),
+    execute: async ({ postalCode }) => {
+      const area = await servesPostalCode(domain, { businessId, postalCode });
+      if (!area.configured) {
+        return { ok: false, reason: "The business hasn't listed its service areas. Don't say whether it serves this area. Offer to take a message." };
+      }
+      return { ok: true, serves: area.serves };
+    },
+  });
+}
+```
+
+Écrivez chaque résultat sous forme de faits et de prochaine étape, comme les outils existants. GPT-Live formule ce que l'agent lui renvoie, et ses propres instructions disent comment traiter chaque type de résultat. Gardez les descriptions et les résultats en anglais, comme ceux des autres outils : l'agent répond dans la langue de l'appelant.
+
+## Tester chaque partie
+
+Le dépôt utilise Vitest, avec chaque fichier de test à côté de sa source. Testez l'outil, la décision sur les capacités et la fonction du domaine.
+
+Commencez par l'outil. `packages/agent-core/src/tools.test.ts` simule `@lobbystack/domain` en haut du fichier, alors ajoutez votre fonction à cette simulation :
+
+```typescript packages/agent-core/src/tools.test.ts
+servesPostalCode: vi.fn(async () => ({ configured: false })),
+```
+
+Vérifiez ensuite que l'agent ne devine pas quand l'entreprise n'a listé aucune zone :
+
+```typescript packages/agent-core/src/tools.test.ts
+it("won't guess the service area when the business listed none", async () => {
+  const tools = createAgentTools({ domain: { db: {} as never }, channel: "web_chat", snapshot: demoSnapshot });
+  const execute = tools.checkServiceArea!.execute! as (input: object, options: object) => Promise<unknown>;
+  await expect(execute({ postalCode: "H2X 1Y4" }, { toolCallId: "1", messages: [] }))
+    .resolves.toMatchObject({ ok: false });
+});
+```
+
+Le test existant `creates exactly the tools capabilities.ts offers`, dans le même fichier, compare les outils que construit `createAgentTools` à la liste que renvoie `agentCapabilities`, dans l'ordre. Il échoue si vous sautez la vérification `offered`, ou si la place de l'outil dans `tools.ts` ne correspond pas à sa place dans `offered`.
+
+`capabilities.test.ts` liste les outils exacts que reçoivent certaines conversations, comme le clavardage par défaut sur le site Web, un clavardage de test et une démo pour prospect. Ajoutez votre outil à chaque liste qu'il rejoint, ou restreignez son entrée `offered` s'il n'y a pas sa place. Ajoutez ensuite un test pour les conversations qui ne doivent pas le recevoir, s'il y en a.
+
+Testez la fonction du domaine sur PostgreSQL dans `serviceAreas.integration.test.ts`. Reprenez la mise en place d'un test d'intégration existant, comme `packages/domain/src/server/appointmentRequests.integration.test.ts` : il crée une entreprise dans une transaction, appelle la fonction avec `{ db: tx as unknown as Database }` et annule la transaction. Les tests d'intégration sont ignorés sauf si `LOBBYSTACK_RELIABILITY_TEST_DATABASE_URL` pointe vers une base de test dédiée. Sur cette base, `pnpm db:check` et `pnpm db:verify-rls` vérifient votre migration et sa politique de sécurité au niveau des lignes.
+
+Lancez les tests des deux paquets :
+
+```bash
+pnpm --filter @lobbystack/agent-core exec vitest run src/tools.test.ts src/capabilities.test.ts
+pnpm --filter @lobbystack/domain exec vitest run src/server/serviceAreas
+```
+
+## Vérifier l'outil pendant un appel
+
+Modifier la liste `live` change les instructions de GPT-Live, alors lancez l'évaluation vocale avant de fusionner. Elle fait jouer des appelants scriptés contre le vrai modèle GPT-Live :
+
+```bash
+OPENAI_API_KEY=your_openai_api_key pnpm voice:eval
+```
+
+L'évaluation vérifie le déroulement et la fin des appels, et ses outils n'atteignent aucune base de données. Pour entendre la réponse de votre outil, lancez un appel test dans le navigateur depuis le tableau de bord et demandez « Desservez-vous H2X 1Y4? ». Le worker journalise chaque réponse sous `live.delegation`, avec les outils appelés dans `tools`. Les [notes sur les tests vocaux](https://github.com/lobbystack/lobbystack/blob/main/docs/voice/testing.md) couvrent chaque scénario et `pnpm voice:call`, qui passe de vrais appels téléphoniques.
+
+Pendant un appel, l'agent fait une deuxième étape de modèle pour formuler le résultat d'un outil. Pour un résultat que GPT-Live peut dire tel quel, ajoutez un formateur à `FORMATTERS` dans `packages/agent-core/src/live/directAnswer.ts`, et l'agent saute cette étape.
+
+## Prochaines étapes
+
+L'outil répond maintenant sur chaque canal où l'agent s'exécute. Pour que d'autres logiciels utilisent la même fonction du domaine :
+
+- **Clients de l'API** : ajoutez une opération dans `packages/shared/src/publicApi/operations.ts` et sa route dans `apps/admin/app/api/v1`
+- **Assistants IA** : ajoutez un outil MCP dans `apps/admin/src/lib/mcp/tools.ts`, avec la portée dont il a besoin
+- **Opérateurs** : ajoutez une page de réglages dans `apps/admin` où l'entreprise liste ses zones, avec ses textes dans les fichiers de langue

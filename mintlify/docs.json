@@ -332,6 +332,13 @@
               "self-hosting/providers",
               "self-hosting/white-label"
             ]
+          },
+          {
+            "group": "Build on LobbyStack",
+            "pages": [
+              "build/architecture",
+              "build/add-a-capability"
+            ]
           }
         ]
       },
@@ -505,6 +512,13 @@
               "fr/self-hosting/providers",
               "fr/self-hosting/white-label"
             ]
+          },
+          {
+            "group": "Développer avec LobbyStack",
+            "pages": [
+              "fr/build/architecture",
+              "fr/build/add-a-capability"
+            ]
           }
         ]
       },
@@ -677,6 +691,13 @@
               "es/self-hosting/environment-variables",
               "es/self-hosting/providers",
               "es/self-hosting/white-label"
+            ]
+          },
+          {
+            "group": "Desarrollar con LobbyStack",
+            "pages": [
+              "es/build/architecture",
+              "es/build/add-a-capability"
             ]
           }
         ]
