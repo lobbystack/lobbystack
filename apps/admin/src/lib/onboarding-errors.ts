@@ -61,6 +61,10 @@ export function getSafeOnboardingErrorMessage(
     return t("number.refusals.countryRestricted");
   }
 
+  if (code === "trial_country_mismatch") {
+    return t("number.refusals.countryMismatch");
+  }
+
   if (code === "partner_number_limit_reached") {
     return t("number.partnerTierRequired");
   }

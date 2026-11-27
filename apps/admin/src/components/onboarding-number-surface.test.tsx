@@ -12,8 +12,10 @@ vi.mock("next/navigation", () => ({ useRouter: () => navigation }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { language: "en" }, t: (key: string) => key }) }));
 vi.mock("./onboarding-plan-surface", () => ({ OnboardingPlanSurface: () => <div>plans</div> }));
 const clients: QueryClient[] = [];
+// What the chooser's own search, by area code or city, answers.
+let searchResponse: () => Response = () => Response.json({ numbers: [] });
 afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals(); });
-beforeEach(() => { telemetryRef.current = createRecordedBrowserTelemetry(); navigation.push.mockReset(); navigation.replace.mockReset(); });
+beforeEach(() => { telemetryRef.current = createRecordedBrowserTelemetry(); navigation.push.mockReset(); navigation.replace.mockReset(); searchResponse = () => Response.json({ numbers: [] }); });
 function setup(stage: string, primary = false, pending = false, suggestion?: () => Response, trialRefusal: string | null = null, suggestedCountry: string | null = "CA", numberRequired = true) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } }); clients.push(client);
   client.setQueryData(["businesses"], { businesses: [{ businessId: "business-1", active: true, onboardingStage: stage }] });
@@ -21,6 +23,7 @@ function setup(stage: string, primary = false, pending = false, suggestion?: () 
   client.setQueryData(["onboarding-number-countries", "business-1"], { countries: ["US", "CA"], trialCountries: ["US", "CA"], suggestedCountry, verifyPhone: false, trialRefusal, verifiedPhone: null, numberRequired });
   const fetchMock = vi.fn(async (input: string) => {
     if (input.includes("/api/phone-numbers?")) return Response.json({ activeClaim: null, phoneNumbers: [{ id: "phone-1", e164: "+14165550100", reclaimScheduledAt: null }] });
+    if (input.includes("/phone-numbers/search?")) return searchResponse();
     if (input.includes("/suggestion?")) return suggestion ? suggestion() : Response.json({ numbers: [{ phoneE164: "+14165550100", countryCode: "CA", claimToken: "signed-offer", capabilities: { sms: true, voice: true } }] });
     if (input.includes("/claim?")) return Response.json({ claimId: "claim-1" });
     if (input.includes("/claim/claim-1?")) return Response.json({ claim: { status: "claimed", requestedE164: "+14165550100", phoneNumberId: "phone-1" } });
@@ -191,6 +194,20 @@ describe("onboarding number API adapter", () => {
     expect(await screen.findByText("number.refusals.countryRestricted")).toBeTruthy();
     expect(screen.queryByText("plans")).toBeNull();
     await waitFor(() => telemetryRef.current!.expectEvent("web.onboarding.number_unavailable", { businessId: "business-1", code: "number_country_restricted" }));
+  });
+  it.each([
+    ["trial_country_mismatch", 409, "number.refusals.countryMismatch", true],
+    ["number_country_restricted", 403, "number.refusals.countryRestricted", false],
+  ] as const)("routes %s from an area code search to its screen", async (code, status, text, plans) => {
+    setup("phone_number");
+    await screen.findByRole("button", { name: "number.select" });
+    searchResponse = () => Response.json({ error: "Refused.", code }, { status });
+    await userEvent.type(screen.getByLabelText("number.areaCodeLabel"), "212");
+    await userEvent.click(screen.getByRole("button", { name: "number.search" }));
+    expect(await screen.findByText(text)).toBeTruthy();
+    expect(screen.queryByText("plans") !== null).toBe(plans);
+    expect(screen.queryByRole("button", { name: "number.select" })).toBeNull();
+    await waitFor(() => telemetryRef.current!.expectEvent("web.onboarding.number_unavailable", { businessId: "business-1", code }));
   });
   it("names the network limit, and the market without a trial", async () => {
     setup("phone_number", false, false, undefined, "trial_ip_limited");

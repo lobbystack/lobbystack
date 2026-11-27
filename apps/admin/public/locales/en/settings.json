@@ -493,7 +493,8 @@
       "priceChanged": "The price changed. Search again to see it.",
       "unavailable": "This workspace can't buy more numbers."
     },
-    "countryRestricted": "Phone numbers aren't available in your country."
+    "countryRestricted": "Phone numbers aren't available in your country.",
+    "countryMismatch": "A free trial number has to be in the country you're in. To get a number, choose a plan."
   },
   "appearance": {
     "title": "Preferences",

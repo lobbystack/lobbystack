@@ -71,4 +71,10 @@ describe("numberPath", () => {
     expect(numberPath({ ...direct, partnerNumbers: { available: false, refusal: "partner_number_limit_reached" } })).toBe("partnerLimit");
     expect(numberPath({ ...direct, partnerNumbers: { available: false } })).toBe("partnerUnavailable");
   });
+
+  it("offers no number at all where the country rules one out, whatever the plan or partner", () => {
+    expect(numberPath({ ...direct, numberRestricted: true, trialAvailable: true })).toBe("restricted");
+    expect(numberPath({ ...direct, numberRestricted: true, includedNumbers: 1 })).toBe("restricted");
+    expect(numberPath({ ...direct, numberRestricted: true, partnerNumbers: { available: true } })).toBe("restricted");
+  });
 });

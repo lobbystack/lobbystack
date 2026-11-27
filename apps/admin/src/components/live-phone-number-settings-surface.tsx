@@ -80,6 +80,7 @@ export function phoneNumberChooserText(t: TFunction<"settings">) {
       if (code === "phone_numbers_unavailable") return t("phoneNumber.numbersUnavailable");
       if (code === "extra_number_price_changed") return t("phoneNumber.extra.priceChanged");
       if (code === "number_country_restricted") return t("phoneNumber.countryRestricted");
+      if (code === "trial_country_mismatch") return t("phoneNumber.countryMismatch");
       return getSettingsPhoneNumberErrorMessage(error, fallback);
     },
   };

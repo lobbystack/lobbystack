@@ -501,7 +501,8 @@
       "priceChanged": "Cena se promenila. Pretražite ponovo da biste je videli.",
       "unavailable": "Ovaj radni prostor ne može da kupi još brojeva."
     },
-    "countryRestricted": "Brojevi telefona nisu dostupni u vašoj zemlji."
+    "countryRestricted": "Brojevi telefona nisu dostupni u vašoj zemlji.",
+    "countryMismatch": "Besplatan probni broj mora biti u zemlji u kojoj se nalazite. Da biste dobili broj, izaberite paket."
   },
   "appearance": {
     "title": "Postavke",

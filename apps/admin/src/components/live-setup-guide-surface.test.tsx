@@ -32,14 +32,14 @@ beforeEach(() => { telemetryRef.current = createRecordedBrowserTelemetry(); });
 afterEach(() => { cleanup(); clients.forEach((client) => client.clear()); clients.length = 0; vi.unstubAllGlobals(); vi.clearAllMocks(); search.value = ""; });
 
 const summary = (firstRealConversationAt: string | null) => ({ businessId: "business", kpis: { calls: { total: 0, deltaPercent: 0 }, appointments: { total: 0, deltaPercent: 0 }, averageDuration: { totalSeconds: 0, deltaSeconds: 0 } }, monthlyCalls: [], recentCalls: [], actionRequired: [], upcoming: [], firstRealConversationAt });
-type Setup = { firstRealConversationAt?: string | null; role?: string; capabilities?: Capability[]; activation?: Record<string, unknown>; numbers?: unknown[]; trial?: Record<string, unknown>; includedNumbers?: number | null; partnerNumbers?: Record<string, unknown> | null; complete?: string[]; skipped?: string[]; setupDown?: boolean; numberList?: { forwardedFrom?: string | null; numberLost?: boolean }; noWebsite?: boolean };
+type Setup = { firstRealConversationAt?: string | null; role?: string; capabilities?: Capability[]; activation?: Record<string, unknown>; numbers?: unknown[]; trial?: Record<string, unknown>; includedNumbers?: number | null; partnerNumbers?: Record<string, unknown> | null; complete?: string[]; skipped?: string[]; setupDown?: boolean; numberList?: { forwardedFrom?: string | null; numberLost?: boolean }; noWebsite?: boolean; suggestion?: { status: number; code: string } };
 
 const numberOrder = ["fullScan", "callNumber", "forwardCalls", "sources"] as const;
 // Without a website read in onboarding, adding one takes the place of reading the rest.
 const noWebsiteOrder = ["website", "sources", "testCall", "phoneNumber"] as const;
 const noWebsiteNumberOrder = ["callNumber", "forwardCalls", "website", "sources"] as const;
 
-async function setup({ activation = {}, capabilities, complete = [], firstRealConversationAt = null, includedNumbers = 0, noWebsite = false, numberList, numbers = [], partnerNumbers = null, role = "business_owner", setupDown = false, skipped = [], trial = { status: "none" } }: Setup = {}) {
+async function setup({ activation = {}, capabilities, complete = [], firstRealConversationAt = null, includedNumbers = 0, noWebsite = false, numberList, numbers = [], partnerNumbers = null, role = "business_owner", setupDown = false, skipped = [], suggestion, trial = { status: "none" } }: Setup = {}) {
   vi.stubGlobal("localStorage", { getItem: () => null, setItem: vi.fn(), removeItem: vi.fn() });
   vi.stubGlobal("EventSource", class { addEventListener() {} removeEventListener() {} close() {} });
   // Home's appointment details sheet picks its side from the screen width.
@@ -57,6 +57,7 @@ async function setup({ activation = {}, capabilities, complete = [], firstRealCo
     if (url.startsWith("/api/phone-numbers")) return Response.json({ phoneNumbers: numbers, activeClaim: null, replacement: { usedAt: null, activeClaim: null }, partnerNumbers });
     if (url.startsWith("/api/billing")) return Response.json({ entitlement: { includedNumbers } });
     if (url.startsWith("/api/number-trial")) return Response.json({ trial });
+    if (url.startsWith("/api/onboarding/phone-numbers/suggestion") && suggestion) return Response.json({ error: "Refused.", code: suggestion.code }, { status: suggestion.status });
     if (url.startsWith("/api/knowledge?") && init?.method === "POST") { done.add("website"); return Response.json({ id: "doc_2" }); }
     if (url.startsWith("/api/knowledge/")) return Response.json({});
     return Response.json({ error: "Not found." }, { status: 404 });
@@ -398,6 +399,28 @@ describe("the number step", () => {
     const events = telemetryRef.current!.events.map((event: { name: string }) => event.name);
     expect(events).toContain("web.activation.upgrade_prompt_shown");
     expect(events).toContain("web.activation.upgrade_prompt_clicked");
+  });
+
+  it("offers the plans when the search refuses a trial in another country", async () => {
+    await setup({ ...before, trial: { status: "available" }, includedNumbers: 0, suggestion: { status: 409, code: "trial_country_mismatch" } });
+    await userEvent.click(await screen.findByRole("button", { name: en.activation.freeTrial.cta }));
+    expect(await screen.findByRole("button", { name: en.activation.upgrade.cta })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: en.activation.freeTrial.cta })).toBeNull();
+  });
+
+  it("says no number is available, with no plans, where the trial state rules out any number", async () => {
+    const { fetchMock } = await setup({ ...before, trial: { status: "none", refusal: "number_country_restricted" }, includedNumbers: 0 });
+    expect(await screen.findByText(settingsEn.phoneNumber.countryRestricted)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: en.activation.upgrade.cta })).toBeNull();
+    expect(screen.queryByRole("button", { name: en.activation.freeTrial.cta })).toBeNull();
+    expect(apiCalls(fetchMock).some((url) => url.startsWith("/api/onboarding/phone-numbers"))).toBe(false);
+  });
+
+  it("says no number is available, with no plans, when the search refuses the country", async () => {
+    await setup({ ...before, trial: { status: "available" }, includedNumbers: 0, suggestion: { status: 403, code: "number_country_restricted" } });
+    await userEvent.click(await screen.findByRole("button", { name: en.activation.freeTrial.cta }));
+    expect(await screen.findByText(settingsEn.phoneNumber.countryRestricted)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: en.activation.upgrade.cta })).toBeNull();
   });
 
   it("follows the partner's tier", async () => {

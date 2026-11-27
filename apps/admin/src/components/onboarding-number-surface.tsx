@@ -95,10 +95,17 @@ export function OnboardingNumberSurface() {
     trackedRefusal.current = refusalCode;
     telemetry.track("web.onboarding.number_unavailable", { businessId: business.businessId, code: refusalCode });
   }, [business, refusalCode, telemetry]);
+  // Every search the chooser makes, the first or by area code or city, can refuse.
   const chooser = useMemo(() => ({
     ...onboardingNumbers,
     getInitialNumberSuggestion: async (args: Parameters<typeof onboardingNumbers.getInitialNumberSuggestion>[0]) => {
       try { return await onboardingNumbers.getInitialNumberSuggestion(args); } catch (error) {
+        refuse(error);
+        throw error;
+      }
+    },
+    searchAvailableNumbers: async (args: Parameters<typeof onboardingNumbers.searchAvailableNumbers>[0]) => {
+      try { return await onboardingNumbers.searchAvailableNumbers(args); } catch (error) {
         refuse(error);
         throw error;
       }
