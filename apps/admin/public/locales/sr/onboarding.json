@@ -175,7 +175,9 @@
       "network": "Besplatna proba je već počela sa ove mreže u poslednjih 30 dana.",
       "unavailable": "Besplatan probni broj nije dostupan za ovaj radni prostor.",
       "verification": "Besplatan broj zahteva verifikovan telefon.",
-      "emailVerification": "Verifikujte svoju imejl adresu pre nego što izaberete probni broj."
+      "emailVerification": "Verifikujte svoju imejl adresu pre nego što izaberete probni broj.",
+      "countryMismatch": "Besplatan probni broj mora biti u zemlji u kojoj se nalazite.",
+      "countryRestricted": "Brojevi telefona nisu dostupni u vašoj zemlji."
     },
     "title": "Izaberite broj telefona za svog agenta",
     "countryLabel": "Zemlja",

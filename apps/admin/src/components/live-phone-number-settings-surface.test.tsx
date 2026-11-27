@@ -13,7 +13,7 @@ vi.mock("@/lib/number-step", () => ({ useOpenNumberStep: () => vi.fn() }));
 vi.mock("./phone-number-chooser", () => ({ PhoneNumberChooser: () => <p>number chooser</p>, phoneNumberChooserApi: () => ({}) }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
-import { LivePhoneNumberSettingsSurface } from "./live-phone-number-settings-surface";
+import { LivePhoneNumberSettingsSurface, phoneNumberChooserText } from "./live-phone-number-settings-surface";
 
 beforeEach(() => { Object.defineProperty(document, "elementFromPoint", { configurable: true, value: () => null }); vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} unobserve() {} }); });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
@@ -99,5 +99,15 @@ describe("a partner's business on the phone number settings", () => {
     expect(await screen.findByText("phoneNumber.partnerNumbersUnavailable.description")).toBeTruthy();
     expect(screen.queryByText("phoneNumber.partnerTierRequired.description")).toBeNull();
     expect(screen.getByRole("button", { name: "phoneNumber.actions.getNumber" }).hasAttribute("disabled")).toBe(true);
+  });
+});
+
+describe("the settings number chooser's errors", () => {
+  const text = phoneNumberChooserText(((key: string) => key) as never);
+  const refused = (code: string) => text.getErrorMessage(Object.assign(new Error("Server text in English."), { code }), "phoneNumber.picker.searchFailed");
+
+  it("shows the translated country refusals instead of the server's English", () => {
+    expect(refused("number_country_restricted")).toBe("phoneNumber.countryRestricted");
+    expect(refused("trial_country_mismatch")).toBe("phoneNumber.countryMismatch");
   });
 });

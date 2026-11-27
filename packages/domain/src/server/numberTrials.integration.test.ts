@@ -3,7 +3,7 @@ import { asc, eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 import { agents, billingAccounts, businesses, businessNotifications, createDatabaseClient, numberTrials, numberWaitlist, onboardingNumberClaimEvents, onboardingPhoneVerifications, outboxMessages, phoneNumbers, users, withBusinessTransaction, type Database, type DatabaseTransaction, defaultAgentIdOf } from "@lobbystack/db";
 
-import { convertNumberTrialInTransaction, enqueueRefusedCallForwardRefresh, getNumberTrialState, postNumberReleasedInTransaction, sweepNumberReleases, isNumberTrialEnded, joinNumberWaitlist, keepBusinessNumbersInTransaction, loadNumberTrialEmail, markNumberTrialMinutesExhausted, numberStepRedirect, refreshStaleRefusedCallForwards, resolveNumberFallback, resolveRefusedCallForward, sweepNumberTrial } from "./numberTrials";
+import { convertNumberTrialInTransaction, enqueueRefusedCallForwardRefresh, getNumberTrialState, onboardingNumberTrialOutlook, postNumberReleasedInTransaction, sweepNumberReleases, isNumberTrialEnded, joinNumberWaitlist, keepBusinessNumbersInTransaction, loadNumberTrialEmail, markNumberTrialMinutesExhausted, numberStepRedirect, refreshStaleRefusedCallForwards, resolveNumberFallback, resolveRefusedCallForward, sweepNumberTrial } from "./numberTrials";
 import { claimNumberProvisioning, completeNumberProvisioning, failNumberProvisioning, reserveOnboardingNumberClaim, searchBusinessNumberInventory } from "./phoneNumbers";
 import { checkOnboardingPhoneVerificationCode, startOnboardingPhoneVerification } from "./phoneVerification";
 import { createBusiness } from "./tenancy";
@@ -136,11 +136,11 @@ describe.skipIf(!testUrl)("free trial numbers against dedicated PostgreSQL roles
       // The phone step passes on to the number step, as the dashboard does.
       await tx.update(businesses).set({ onboardingStage: "phone_number" }).where(eq(businesses.id, businessId));
 
-      // The offer takes its country from the search, not from a phone.
+      // The offer takes its country from the request, not from a phone.
       const search = await as(tx, "lobbystack_app", db => searchBusinessNumberInventory({ db }, { ...owner, claimTokenSecret, ipHash: network, ipCountry: "CA" }, inventory));
-      expect(search).toMatchObject({ trial: true, countryFixed: false, market: { countryCode: "CA" } });
+      expect(search).toMatchObject({ trial: true, countryFixed: true, market: { countryCode: "CA" } });
 
-      const claimId = await as(tx, "lobbystack_app", db => reserveOnboardingNumberClaim({ db }, { ...owner, claimToken: search.numbers[0]!.claimToken, claimTokenSecret, idempotencyKey: randomUUID(), ipHash: network }));
+      const claimId = await as(tx, "lobbystack_app", db => reserveOnboardingNumberClaim({ db }, { ...owner, claimToken: search.numbers[0]!.claimToken, claimTokenSecret, idempotencyKey: randomUUID(), ipHash: network, ipCountry: "CA" }));
       const [trial] = await tx.select({ id: numberTrials.id, verifiedPhone: numberTrials.verifiedPhone, ipHash: numberTrials.ipHash, status: numberTrials.status }).from(numberTrials).where(eq(numberTrials.businessId, businessId));
       expect(trial).toMatchObject({ verifiedPhone: null, ipHash: network, status: "reserved" });
 
@@ -193,6 +193,118 @@ describe.skipIf(!testUrl)("free trial numbers against dedicated PostgreSQL roles
       const claimId = await as(tx, "lobbystack_app", db => reserveOnboardingNumberClaim({ db }, { ...secondOwner, claimToken: verifiedSearch.numbers[0]!.claimToken, claimTokenSecret, idempotencyKey: randomUUID(), ipHash: network }));
       expect(claimId).toBeTruthy();
       expect((await tx.select({ verifiedPhone: numberTrials.verifiedPhone, ipHash: numberTrials.ipHash }).from(numberTrials).where(eq(numberTrials.businessId, secondBusiness)))[0]).toEqual({ verifiedPhone: ownerPhone, ipHash: null });
+    });
+  });
+
+  describe("a trial number in the country the owner is in", () => {
+    /** A direct cloud business on the number step, with a verified email and no mobile. */
+    async function onNumberStep(tx: DatabaseTransaction, name: string) {
+      const userId = randomUUID();
+      await tx.insert(users).values({ id: userId, email: `${userId}@example.invalid`, normalizedEmail: `${userId}@example.invalid`, name: "Sam Lee", emailVerified: true });
+      await tx.execute(sql`set local role lobbystack_app`);
+      const { businessId } = await createBusiness({ db: tx as unknown as Database }, { userId, name, timezone: "America/Toronto", businessType: "test" });
+      await tx.execute(sql`reset role`);
+      await tx.update(businesses).set({ onboardingStage: "phone_number", deploymentMode: "cloud" }).where(eq(businesses.id, businessId));
+      return { userId, businessId };
+    }
+    async function verifyMobile(tx: DatabaseTransaction, owner: { userId: string; businessId: string }) {
+      const { attemptId } = await as(tx, "lobbystack_app", db => startOnboardingPhoneVerification({ db }, { ...owner, phoneE164: ownerPhone, countryCode: "CA" }, verify));
+      await as(tx, "lobbystack_app", db => checkOnboardingPhoneVerificationCode({ db }, { ...owner, attemptId, code: "123456" }, verify));
+    }
+    const search = (tx: DatabaseTransaction, owner: { userId: string; businessId: string }, network: { ipHash?: string; ipCountry?: string }, selection?: { countryCode: "US" | "CA"; kind: "local" }) =>
+      as(tx, "lobbystack_app", db => searchBusinessNumberInventory({ db }, { ...owner, claimTokenSecret, ...network, ...(selection ? { selection } : {}) }, inventory));
+    const outlook = (tx: DatabaseTransaction, owner: { userId: string; businessId: string }, network: { ipHash?: string; ipCountry?: string }) =>
+      as(tx, "lobbystack_app", db => onboardingNumberTrialOutlook({ db }, { ...owner, ...network }));
+
+    it("locks the search to a trial country the owner is in, and refuses a trial for another country on the way without a text", async () => {
+      await rollbackTest(async (tx) => {
+        const canadian = await onNumberStep(tx, "Canadian clinic");
+        // A Canadian asking for a US number is offered Canadian ones, and the chooser offers no other country.
+        const offered = await search(tx, canadian, { ipHash: "network-ca", ipCountry: "CA" }, { countryCode: "US", kind: "local" });
+        expect(offered).toMatchObject({ trial: true, countryFixed: true, market: { countryCode: "CA" } });
+
+        // Someone in a country without trial numbers gets the plans before and during the search.
+        const abroad = await onNumberStep(tx, "Clinic abroad");
+        expect(await outlook(tx, abroad, { ipHash: "network-bd", ipCountry: "BD" })).toEqual({ verificationNeeded: false, refusal: "trial_country_mismatch" });
+        await expect(search(tx, abroad, { ipHash: "network-bd", ipCountry: "BD" }, { countryCode: "US", kind: "local" })).rejects.toMatchObject({ status: 409, code: "trial_country_mismatch" });
+        expect(await tx.select({ id: numberTrials.id }).from(numberTrials).where(eq(numberTrials.businessId, abroad.businessId))).toEqual([]);
+      });
+    });
+
+    it("checks the country again at the claim, so a network switched after the search gets the plans", async () => {
+      await rollbackTest(async (tx) => {
+        const owner = await onNumberStep(tx, "Switching clinic");
+        const offered = await search(tx, owner, { ipHash: "network-switch", ipCountry: "CA" });
+        const claim = (ipCountry: string) => as(tx, "lobbystack_app", db => reserveOnboardingNumberClaim({ db }, { ...owner, claimToken: offered.numbers[0]!.claimToken, claimTokenSecret, idempotencyKey: randomUUID(), ipHash: "network-switch", ipCountry }));
+        await expect(claim("US")).rejects.toMatchObject({ status: 409, code: "trial_country_mismatch" });
+        expect(await tx.select({ id: onboardingNumberClaimEvents.id }).from(onboardingNumberClaimEvents).where(eq(onboardingNumberClaimEvents.businessId, owner.businessId))).toEqual([]);
+        // Back in Canada, the same offer claims its trial.
+        expect(await claim("CA")).toBeTruthy();
+        expect((await tx.select({ status: numberTrials.status }).from(numberTrials).where(eq(numberTrials.businessId, owner.businessId)))[0]?.status).toBe("reserved");
+      });
+    });
+
+    it("refuses a verified mobile's trial from another country, and keeps it where the country matches or the deployment trusts none", async () => {
+      await rollbackTest(async (tx) => {
+        const owner = await onNumberStep(tx, "Verified clinic");
+        await verifyMobile(tx, owner);
+        expect(await outlook(tx, owner, { ipHash: "network-us", ipCountry: "US" })).toEqual({ verificationNeeded: false, refusal: "trial_country_mismatch" });
+        await expect(search(tx, owner, { ipHash: "network-us", ipCountry: "US" })).rejects.toMatchObject({ status: 409, code: "trial_country_mismatch" });
+        expect(await search(tx, owner, { ipHash: "network-ca", ipCountry: "CA" })).toMatchObject({ trial: true, countryFixed: true, market: { countryCode: "CA" } });
+        // A deployment that doesn't trust the client headers passes no country, and the mobile alone proves the trial, as before.
+        expect(await outlook(tx, owner, {})).toEqual({ verificationNeeded: false, refusal: null });
+        const offered = await search(tx, owner, {});
+        expect(offered).toMatchObject({ trial: true, countryFixed: true, market: { countryCode: "CA" } });
+        expect(await as(tx, "lobbystack_app", db => reserveOnboardingNumberClaim({ db }, { ...owner, claimToken: offered.numbers[0]!.claimToken, claimTokenSecret, idempotencyKey: randomUUID() }))).toBeTruthy();
+      });
+    });
+
+    it("offers Home's free trial only where the number step would", async () => {
+      await rollbackTest(async (tx) => {
+        const owner = await onNumberStep(tx, "Home trial clinic");
+        const state = (ipCountry?: string) => as(tx, "lobbystack_app", db => getNumberTrialState({ db }, { ...owner, ...(ipCountry ? { ipCountry } : {}) }));
+        expect(await state("CA")).toEqual({ status: "available" });
+        expect(await state("GU")).toEqual({ status: "available" });
+        // A deployment that trusts no country offers it as before.
+        expect(await state()).toEqual({ status: "available" });
+        for (const country of ["BD", "PK", "EG"]) expect(await state(country)).toEqual({ status: "none" });
+        expect(await state("IR")).toEqual({ status: "none", refusal: "number_country_restricted" });
+        // A verified mobile's trial is in its own country, so only there.
+        await verifyMobile(tx, owner);
+        expect(await state("CA")).toEqual({ status: "available" });
+        expect(await state("US")).toEqual({ status: "none" });
+      });
+    });
+
+    it("keeps today's refusal without a text when the deployment trusts no country", async () => {
+      await rollbackTest(async (tx) => {
+        const owner = await onNumberStep(tx, "Untrusted clinic");
+        expect(await outlook(tx, owner, { ipHash: "network-none" })).toEqual({ verificationNeeded: false, refusal: "trial_not_available" });
+        await expect(search(tx, owner, { ipHash: "network-none" })).rejects.toMatchObject({ status: 409, code: "trial_not_available" });
+        await expect(search(tx, owner, { ipHash: "network-tor", ipCountry: "T1" })).rejects.toMatchObject({ status: 409, code: "trial_not_available" });
+      });
+    });
+
+    it("gives no number from a sanctioned country, free or paid", async () => {
+      await rollbackTest(async (tx) => {
+        const trialOwner = await onNumberStep(tx, "Sanctioned trial clinic");
+        expect(await outlook(tx, trialOwner, { ipHash: "network-ir", ipCountry: "IR" })).toEqual({ verificationNeeded: false, refusal: "number_country_restricted" });
+        await expect(search(tx, trialOwner, { ipHash: "network-ir", ipCountry: "IR" })).rejects.toMatchObject({ status: 403, code: "number_country_restricted" });
+        // An offer signed elsewhere doesn't claim from there either.
+        const offered = await search(tx, trialOwner, { ipHash: "network-ca-first", ipCountry: "CA" });
+        await expect(as(tx, "lobbystack_app", db => reserveOnboardingNumberClaim({ db }, { ...trialOwner, claimToken: offered.numbers[0]!.claimToken, claimTokenSecret, idempotencyKey: randomUUID(), ipHash: "network-ca-first", ipCountry: "IR" }))).rejects.toMatchObject({ status: 403, code: "number_country_restricted" });
+
+        const paidOwner = await onNumberStep(tx, "Sanctioned paid clinic");
+        const { businessId } = paidOwner;
+        await tx.insert(billingAccounts).values({ businessId, billingKey: `business:${businessId}`, plan: "starter", subscriptionState: "active" }).onConflictDoUpdate({ target: billingAccounts.businessId, set: { plan: "starter", subscriptionState: "active" } });
+        expect(await outlook(tx, paidOwner, { ipCountry: "SY" })).toEqual({ verificationNeeded: false, refusal: "number_country_restricted" });
+        await expect(search(tx, paidOwner, { ipCountry: "SY" })).rejects.toMatchObject({ status: 403, code: "number_country_restricted" });
+        // The same paid business searches fine from elsewhere, and a trusted country it isn't in doesn't matter on a plan.
+        const paid = await search(tx, paidOwner, { ipCountry: "FR" }, { countryCode: "US", kind: "local" });
+        expect(paid).toMatchObject({ trial: false, countryFixed: false, market: { countryCode: "US" } });
+        await expect(as(tx, "lobbystack_app", db => reserveOnboardingNumberClaim({ db }, { ...paidOwner, claimToken: paid.numbers[0]!.claimToken, claimTokenSecret, idempotencyKey: randomUUID(), ipCountry: "KP" }))).rejects.toMatchObject({ status: 403, code: "number_country_restricted" });
+        expect(await as(tx, "lobbystack_app", db => reserveOnboardingNumberClaim({ db }, { ...paidOwner, claimToken: paid.numbers[0]!.claimToken, claimTokenSecret, idempotencyKey: randomUUID(), ipCountry: "FR" }))).toBeTruthy();
+      });
     });
   });
 

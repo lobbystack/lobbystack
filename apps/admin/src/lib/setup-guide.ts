@@ -55,18 +55,22 @@ export function isSetupGuideFinished({ skippedSteps, steps }: SetupGuide): boole
   return steps.every((step) => isSetupStepDone(step, skippedSteps));
 }
 
-export type NumberPath = "claim" | "trial" | "verify" | "plan" | "partnerLimit" | "partnerUnavailable" | "unavailable";
+export type NumberPath = "claim" | "trial" | "verify" | "plan" | "partnerLimit" | "partnerUnavailable" | "unavailable" | "restricted";
 
 type NumberAccess = {
   /** From a partner's business's number response; null for a direct business. */
   partnerNumbers: { available: boolean; trial?: boolean; refusal?: string | null; phoneVerified?: boolean } | null | undefined;
   trialAvailable: boolean;
+  /** The request comes from a country that gets no number on any plan. */
+  numberRestricted?: boolean;
   /** How many numbers the plan includes, null for no limit, undefined when the person can't read billing. */
   includedNumbers: number | null | undefined;
 };
 
 /** How a business with no number gets one. */
-export function numberPath({ includedNumbers, partnerNumbers, trialAvailable }: NumberAccess): NumberPath {
+export function numberPath({ includedNumbers, numberRestricted, partnerNumbers, trialAvailable }: NumberAccess): NumberPath {
+  // No plan, partner tier or trial gets a number there.
+  if (numberRestricted) return "restricted";
   if (partnerNumbers) {
     if (!partnerNumbers.available) return partnerNumbers.refusal === "partner_number_limit_reached" ? "partnerLimit" : "partnerUnavailable";
     return partnerNumbers.trial && partnerNumbers.phoneVerified === false ? "verify" : "claim";

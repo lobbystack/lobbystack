@@ -83,9 +83,11 @@ export function useActivation(businessId: string | undefined) {
   });
 
   // The same request as the trial banner, so the two share one cached answer.
-  const trial = useQuery({ queryKey: ["number-trial", businessId], enabled: Boolean(businessId) && canSetUp, queryFn: () => requestJson<{ trial: { status: string; e164?: string } }>(`/api/number-trial?businessId=${encodeURIComponent(businessId!)}`) });
+  const trial = useQuery({ queryKey: ["number-trial", businessId], enabled: Boolean(businessId) && canSetUp, queryFn: () => requestJson<{ trial: { status: string; e164?: string; refusal?: string } }>(`/api/number-trial?businessId=${encodeURIComponent(businessId!)}`) });
   const trialNumber = trial.data?.trial?.status === "active" ? trial.data.trial.e164 ?? null : null;
   const trialAvailable = trial.data?.trial?.status === "available";
+  // The request comes from a country that gets no number, so no plan is offered for one.
+  const numberRestricted = trial.data?.trial?.refusal === "number_country_restricted";
 
   const data = activation.data;
   // Self-hosting is carried by the business, not the billing row: a self-hosted
@@ -98,7 +100,7 @@ export function useActivation(businessId: string | undefined) {
   // screen; the upgrade dialog disables their current plan and hands out no numbers.
   const needsNumberClaim = Boolean(data?.paidPlanLive);
   // A live trial number already answers; the next step is forwarding the real line to it, and the banner asks for a plan.
-  const showsUpgrade = eligible && heardItWork && !needsNumberClaim && !trialNumber && !trialAvailable;
+  const showsUpgrade = eligible && heardItWork && !needsNumberClaim && !trialNumber && !trialAvailable && !numberRestricted;
 
   useEffect(() => {
     // Marking an ineligible workspace would also suppress the real report once
@@ -118,5 +120,5 @@ export function useActivation(businessId: string | undefined) {
     openUpgradePlanDialog();
   }, [businessId, openUpgradePlanDialog, telemetry]);
 
-  return { canSetUp, data, eligible, heardItWork, needsNumberClaim, trialAvailable, trialNumber, upgrade };
+  return { canSetUp, data, eligible, heardItWork, needsNumberClaim, numberRestricted, trialAvailable, trialNumber, upgrade };
 }

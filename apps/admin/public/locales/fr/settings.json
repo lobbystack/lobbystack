@@ -500,7 +500,9 @@
       "cancel": "Annuler",
       "priceChanged": "Le prix a changé. Relancez la recherche pour le voir.",
       "unavailable": "Cet espace de travail ne peut pas acheter d'autres numéros."
-    }
+    },
+    "countryRestricted": "Les numéros de téléphone ne sont pas disponibles dans votre pays.",
+    "countryMismatch": "Un numéro d'essai gratuit doit être dans le pays où vous vous trouvez. Pour obtenir un numéro, choisissez un forfait."
   },
   "appearance": {
     "title": "Préférences",

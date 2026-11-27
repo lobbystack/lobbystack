@@ -140,6 +140,21 @@ describe("dashboard activation card", () => {
     expect(telemetryRef.current!.events.filter(event => event.name === "web.activation.first_call_completed")).toHaveLength(1);
   });
 
+  it("offers no free trial and no plan for a number where the trial state rules out any number", async () => {
+    setup({ completedWebCalls: 1 }, { status: "none", refusal: "number_country_restricted" });
+    await activationLoaded();
+    await waitFor(() => expect(clients.at(-1)!.getQueryState(["number-trial", "business"])?.status).toBe("success"));
+    await act(async () => {});
+    expect(screen.queryByText("activation.freeTrial.title")).toBeNull();
+    expect(screen.queryByText("activation.upgrade.title")).toBeNull();
+    expect(telemetryRef.current!.events.filter(event => event.name === "web.activation.upgrade_prompt_shown")).toHaveLength(0);
+  });
+
+  it("still asks an owner there to hear the agent first", async () => {
+    setup({ completedWebCalls: 0 }, { status: "none", refusal: "number_country_restricted" });
+    expect(await screen.findByText("activation.hearIt.title")).toBeTruthy();
+  });
+
   it("stays hidden once the business has its own phone number", async () => {
     setup({ hasDedicatedNumber: true, completedWebCalls: 2 });
     await activationLoaded();

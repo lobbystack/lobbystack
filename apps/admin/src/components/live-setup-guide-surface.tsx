@@ -62,7 +62,7 @@ export function LiveSetupGuideSurface({ businessId }: { businessId: string }) {
   const { t } = useTranslation("dashboard");
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { data: activation, needsNumberClaim, trialAvailable, upgrade } = useActivation(businessId);
+  const { data: activation, needsNumberClaim, numberRestricted, trialAvailable, upgrade } = useActivation(businessId);
   const job = activation?.websiteImport;
   const importing = isWebsiteImportRunning(job);
   const stalled = isWebsiteImportStalled(job);
@@ -162,7 +162,7 @@ export function LiveSetupGuideSurface({ businessId }: { businessId: string }) {
                 ) : step.id === "testCall" ? (
                   <TestCallStep call={activation?.lastTestCall ?? null} skip={skipLink} />
                 ) : step.id === "phoneNumber" ? (
-                  <NumberStep activation={activation} businessId={businessId} needsNumberClaim={needsNumberClaim} skip={skipLink} trialAvailable={trialAvailable} upgrade={upgrade} />
+                  <NumberStep activation={activation} businessId={businessId} needsNumberClaim={needsNumberClaim} numberRestricted={numberRestricted} skip={skipLink} trialAvailable={trialAvailable} upgrade={upgrade} />
                 ) : step.id === "callNumber" || step.id === "forwardCalls" ? (
                   <NumberListStep businessId={businessId} guide={setup.data!} skip={skipLink} step={step} upgrade={upgrade} />
                 ) : null}
@@ -279,12 +279,13 @@ type NumberStepProps = {
   activation: Activation | undefined;
   businessId: string;
   needsNumberClaim: boolean;
+  numberRestricted: boolean;
   skip: ReactNode;
   trialAvailable: boolean;
   upgrade: () => void;
 };
 
-function NumberStep({ activation, businessId, needsNumberClaim, skip, trialAvailable, upgrade }: NumberStepProps) {
+function NumberStep({ activation, businessId, needsNumberClaim, numberRestricted, skip, trialAvailable, upgrade }: NumberStepProps) {
   const can = useBusinessCan();
   const numbers = useQuery({ queryKey: ["phone-numbers", businessId], refetchInterval: (query) => query.state.data?.activeClaim || query.state.data?.replacement.activeClaim ? 1000 : false, queryFn: () => requestJson<NumbersResponse>(`/api/phone-numbers?businessId=${encodeURIComponent(businessId)}`) });
   const billing = useQuery({ queryKey: ["billing", businessId], enabled: can("billing"), queryFn: () => requestJson<Pick<BillingUsageViewModel, "entitlement">>(`/api/billing?businessId=${encodeURIComponent(businessId)}`) });
@@ -294,12 +295,12 @@ function NumberStep({ activation, businessId, needsNumberClaim, skip, trialAvail
   const number = numbers.data.phoneNumbers[0];
   if (number) return <><ForwardingGuide country={forwardingCountry(number.e164, activation.country ?? null, inferPhoneCountry)} e164={number.e164} /><StepActions skip={skip} /></>;
   if (numbers.data.activeClaim) return loading;
-  if (can("billing") && billing.isPending && !numbers.data.partnerNumbers && !trialAvailable) return loading;
-  const path = numberPath({ includedNumbers: billing.data?.entitlement.includedNumbers, partnerNumbers: numbers.data.partnerNumbers, trialAvailable });
+  if (can("billing") && billing.isPending && !numbers.data.partnerNumbers && !trialAvailable && !numberRestricted) return loading;
+  const path = numberPath({ includedNumbers: billing.data?.entitlement.includedNumbers, numberRestricted, partnerNumbers: numbers.data.partnerNumbers, trialAvailable });
   return <NumberPathOffer businessId={businessId} needsNumberClaim={needsNumberClaim} path={path} skip={skip} upgrade={upgrade} />;
 }
 
-const PLAN_REQUIRED = new Set(["dedicated_number_requires_paid_plan", "trial_already_used", "trial_ip_limited", "trial_not_available"]);
+const PLAN_REQUIRED = new Set(["dedicated_number_requires_paid_plan", "trial_already_used", "trial_ip_limited", "trial_not_available", "trial_country_mismatch"]);
 
 function errorCode(error: unknown): string | undefined {
   const code = error && typeof error === "object" ? (error as { code?: unknown }).code : undefined;
@@ -312,15 +313,17 @@ function NumberPathOffer({ businessId, needsNumberClaim, path, skip, upgrade }: 
   const queryClient = useQueryClient();
   const telemetry = useTelemetry();
   const [choosing, setChoosing] = useState(false);
-  // The search can say what the status couldn't: the owner needs a verified mobile, or a plan.
-  const [override, setOverride] = useState<"verify" | "plan" | null>(null);
+  // The search can say what the status couldn't: the owner needs a verified mobile, a plan, or can't get a number here.
+  const [override, setOverride] = useState<"verify" | "plan" | "restricted" | null>(null);
   const active = override ?? path;
-  useEffect(() => { if (active === "verify") setChoosing(false); }, [active]);
+  // Each of these replaces the chooser: the phone step, the plans, or the note.
+  useEffect(() => { if (override) setChoosing(false); }, [override]);
   const api = useMemo(() => phoneNumberChooserApi(false), []);
   const chooser = useMemo(() => {
     const noticed = (error: unknown) => {
       if (PLAN_REQUIRED.has(errorCode(error) ?? "")) setOverride("plan");
       if (errorCode(error) === "phone_verification_required") setOverride("verify");
+      if (errorCode(error) === "number_country_restricted") setOverride("restricted");
     };
     return {
       ...api,
@@ -345,6 +348,7 @@ function NumberPathOffer({ businessId, needsNumberClaim, path, skip, upgrade }: 
   if (active === "plan") return needsNumberClaim ? note(tSettings("phoneNumber.current.empty")) : offer(t("setupGuide.stepDescriptions.phoneNumber"), t("activation.upgrade.cta"), upgrade);
   if (active === "partnerLimit") return note(tSettings("phoneNumber.partnerTierRequired.description"));
   if (active === "partnerUnavailable") return note(tSettings("phoneNumber.partnerNumbersUnavailable.description"));
+  if (active === "restricted") return note(tSettings("phoneNumber.countryRestricted"));
   return note(tSettings("phoneNumber.current.empty"));
 }
 

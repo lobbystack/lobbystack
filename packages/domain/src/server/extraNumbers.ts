@@ -10,7 +10,7 @@ import type { DomainContext } from "./context";
 import { loadBusinessBilling } from "./entitlement";
 import { extraNumbersSubscriptionLiveInTransaction } from "./extraNumbersSubscription";
 import { resolveBusinessNumberMarket } from "./phoneNumberMarket";
-import { claimRefusal, offerBusinessNumbers, readNumberOffer, refused, type NumberInventoryProvider, type NumberOffer, type NumberSelection } from "./phoneNumbers";
+import { assertNumberCountryAllowed, claimRefusal, offerBusinessNumbers, readNumberOffer, refused, type NumberInventoryProvider, type NumberOffer, type NumberSelection } from "./phoneNumbers";
 
 // Extra numbers (migrations 0216 and 0217). Starter, Pro and Enterprise
 // include one number, and a business on any of them buys more, each for one of
@@ -82,7 +82,8 @@ function unsupportedKind(): Error {
  * from extraNumberPrices, or none on a self-hosted server. Throws the claim
  * refusals when the business can't buy one.
  */
-export async function searchExtraNumbers(context: DomainContext, input: { userId: string; businessId: string; selection?: Partial<NumberSelection> | undefined; limit?: number | undefined; claimTokenSecret: string }, provider: NumberInventoryProvider) {
+export async function searchExtraNumbers(context: DomainContext, input: { userId: string; businessId: string; selection?: Partial<NumberSelection> | undefined; limit?: number | undefined; claimTokenSecret: string; ipCountry?: string | null | undefined }, provider: NumberInventoryProvider) {
+  assertNumberCountryAllowed(input.ipCountry);
   const found = await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
     return await extraNumberSearchInTransaction(tx, input.businessId);
@@ -117,9 +118,10 @@ export async function offerExtraNumbers(input: { userId: string; businessId: str
  * purchase. The offer's price must still be what the business's plan charges
  * for the country, so the operator pays what they saw.
  */
-export async function reserveExtraNumberClaim(context: DomainContext, input: { userId: string; businessId: string; agentId: string; claimToken: string; claimTokenSecret: string; idempotencyKey: string }): Promise<string> {
+export async function reserveExtraNumberClaim(context: DomainContext, input: { userId: string; businessId: string; agentId: string; claimToken: string; claimTokenSecret: string; idempotencyKey: string; ipCountry?: string | null | undefined }): Promise<string> {
   const offer = readNumberOffer(input.claimToken, input.claimTokenSecret);
   if (offer.purpose !== "extra" || offer.businessId !== input.businessId || offer.userId !== input.userId) throw Object.assign(new Error("Number claim token does not belong to this purchase."), { status: 400, code: "number_offer_invalid" });
+  assertNumberCountryAllowed(input.ipCountry);
   return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
     const price = await checkExtraNumberOfferInTransaction(tx, { businessId: input.businessId, agentId: input.agentId, offer });

@@ -52,4 +52,10 @@ describe("getSafeOnboardingErrorMessage", () => {
     expect(refusal("phone_country_mismatch")).toBe("verifyPhone.errors.countryMismatch");
     expect(refusal("something_else")).toBe("verifyPhone.sendFailed");
   });
+
+  it("explains the number step's country refusals in the owner's language", () => {
+    const refusal = (code: string) => getSafeOnboardingErrorMessage(Object.assign(new Error("server text"), { code }), t, "number.searchFailed");
+    expect(refusal("trial_country_mismatch")).toBe("number.refusals.countryMismatch");
+    expect(refusal("number_country_restricted")).toBe("number.refusals.countryRestricted");
+  });
 });
