@@ -20,7 +20,7 @@ LobbyStack answers a business's phone calls and website chats with an AI agent t
 
 ## Quickstart
 
-You need Docker and an OpenAI API key. This command creates a `lobbystack/` directory, asks for the key, pulls the prebuilt images and starts the stack at `http://localhost:3000`:
+You need Docker and an OpenAI API key. The script runs on macOS and Linux, and on Windows inside WSL 2. This command creates a `lobbystack/` directory, asks for the key, pulls the prebuilt images and starts the stack at `http://localhost:3000`:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/lobbystack/lobbystack/main/scripts/quickstart.sh | bash
@@ -28,13 +28,19 @@ curl -fsSL https://raw.githubusercontent.com/lobbystack/lobbystack/main/scripts/
 
 From a clone of this repository, run `./scripts/quickstart.sh` instead.
 
-Open `http://localhost:3000`, sign up, and skip the website and phone number steps. Start a browser test call to hear your agent. A phone number needs a public URL and a Twilio Elastic SIP trunk or a Telnyx FQDN connection, which you can add later. The [self-hosting quickstart](https://docs.lobbystack.com/self-hosting/quickstart) walks through each step.
+Open `http://localhost:3000` and create an account. The sign-up code goes to the bundled Mailpit inbox at `http://localhost:8025`. Skip the website and phone number steps, then start a browser test call to hear your agent. A phone number needs a public URL and a Twilio Elastic SIP trunk or a Telnyx FQDN connection, which you can add later. The [self-hosting quickstart](https://docs.lobbystack.com/self-hosting/quickstart) walks through each step.
 
-Other ways to start:
+Your coding agent can run the setup for you with the LobbyStack plugin:
 
+- **Claude Code**: run `/plugin marketplace add lobbystack/lobbystack`, then `/plugin install lobbystack@lobbystack`, and ask it to set up LobbyStack. `/lobbystack:setup` runs the same skill.
+- **Codex**: run `codex plugin marketplace add lobbystack/lobbystack`, then `codex plugin add lobbystack@lobbystack`, or install the plugin from `/plugins` in the Codex CLI.
+
+The agent can't type into the script's hidden key prompt. Export `OPENAI_API_KEY` before you start the agent, or run the quickstart command yourself when it asks.
+
+For a server that real callers reach:
+
+- **Docker Compose**: the [Docker Compose guide](https://docs.lobbystack.com/self-hosting/docker-compose) covers HTTPS, storage, upgrades and a production checklist.
 - **Railway**: the [LobbyStack template](https://railway.com/deploy/lobbystack) deploys the admin, worker, PostgreSQL, Redis and storage, and generates every secret. You enter an OpenAI API key and your Twilio credentials, then finish the steps in [After deploying](https://docs.lobbystack.com/self-hosting/overview#after-deploying).
-- **Claude Code**: run `/plugin marketplace add lobbystack/lobbystack`, then `/plugin install lobbystack@lobbystack`, and ask "set up LobbyStack". Codex gets the same setup skill.
-- **Docker Compose on your own server**: follow the [Docker Compose guide](https://docs.lobbystack.com/self-hosting/docker-compose) for TLS, backups and going live.
 
 ## What you get instead of building it yourself
 
