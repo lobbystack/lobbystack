@@ -118,6 +118,20 @@ async function outcome(run: Promise<unknown>): Promise<string> {
 }
 
 describe.skipIf(!testUrl)("extra numbers against dedicated PostgreSQL roles", () => {
+  it("sells no extra number to a request from a sanctioned country, and reserves nothing", async () => {
+    await rollbackTest(async (tx) => {
+      const owner = await businessWithNumber(tx, { plan: "starter", subscriptionState: "active" });
+      await subscribe(tx, owner.businessId);
+      expect(await as(tx, "lobbystack_app", async (db) => await outcome(searchExtraNumbers({ db }, { ...owner, claimTokenSecret, ipCountry: "IR" }, inventory)))).toBe("number_country_restricted");
+      // An offer searched from elsewhere doesn't claim from there either.
+      const search = await as(tx, "lobbystack_app", async (db) => await searchExtraNumbers({ db }, { ...owner, claimTokenSecret, ipCountry: "CA" }, inventory));
+      expect(await as(tx, "lobbystack_app", async (db) => await outcome(reserveExtraNumberClaim({ db }, { ...owner, claimToken: search.numbers[0]!.claimToken, claimTokenSecret, idempotencyKey: randomUUID(), ipCountry: "KP" })))).toBe("number_country_restricted");
+      expect(await tx.select({ id: onboardingNumberClaimEvents.id }).from(onboardingNumberClaimEvents).where(and(eq(onboardingNumberClaimEvents.businessId, owner.businessId), eq(onboardingNumberClaimEvents.purpose, "extra")))).toEqual([]);
+      // The same offer claims from a country we sell to.
+      expect(await as(tx, "lobbystack_app", async (db) => await outcome(reserveExtraNumberClaim({ db }, { ...owner, claimToken: search.numbers[0]!.claimToken, claimTokenSecret, idempotencyKey: randomUUID(), ipCountry: "CA" })))).toBe("ok");
+    });
+  });
+
   it("sells a Starter business a number for its second agent at the country's price once its add-on bills, and charges each month past the included one", async () => {
     await rollbackTest(async (tx) => {
       const owner = await businessWithNumber(tx, { plan: "starter", subscriptionState: "active" });

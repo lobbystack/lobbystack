@@ -196,6 +196,13 @@ describe("phone numbers", () => {
     expect(await refusal(await tokenFor(), "8c2b7f4e-1d3a-4e5b-9c6d-0e1f2a3b4c5d")).toMatchObject({ status: 400, message: expect.stringContaining("POST /phone-numbers/claims") });
   });
 
+  it("refuses a free trial offer the dashboard signed, which only the dashboard rechecks", async () => {
+    const trialToken = async (trial: { verifiedPhone: string | null }, via?: "dashboard") => (await offerBusinessNumbers({ businessId, userId, purpose: "onboarding", eligibility: { market: { countryCode: "CA", source: "selection" }, trial, countryFixed: true, smsRequired: false }, claimTokenSecret: secret, ...(via ? { via } : {}) }, provider))[0]!.claimToken;
+    for (const token of [await trialToken({ verifiedPhone: null }, "dashboard"), await trialToken({ verifiedPhone: "+14165550199" }, "dashboard"), await trialToken({ verifiedPhone: null })]) {
+      expect(await refusal(token)).toMatchObject({ status: 400, message: expect.stringContaining("came from the dashboard") });
+    }
+  });
+
   it("names the worker's reclaim steps for what they do", () => {
     const row = { id: businessId, e164: "+14165550123", reclaimScheduledAt: null, createdAt: now, updatedAt: now };
     const active = serializePhoneNumber({ ...row, status: "active" });

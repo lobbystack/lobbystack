@@ -27,7 +27,12 @@ const REFUSAL_KEYS: Record<string, string> = {
   trial_not_available: "number.refusals.unavailable",
   phone_verification_required: "number.refusals.verification",
   email_verification_required: "number.refusals.emailVerification",
+  trial_country_mismatch: "number.refusals.countryMismatch",
+  number_country_restricted: "number.refusals.countryRestricted",
 };
+
+// No plan gets a number here, so the step shows the line alone.
+const NO_PLAN_REFUSALS = new Set(["number_country_restricted"]);
 
 type NumberOutlook = { trialRefusal: string | null; countries: string[]; suggestedCountry: string | null; numberRequired?: boolean };
 
@@ -90,10 +95,17 @@ export function OnboardingNumberSurface() {
     trackedRefusal.current = refusalCode;
     telemetry.track("web.onboarding.number_unavailable", { businessId: business.businessId, code: refusalCode });
   }, [business, refusalCode, telemetry]);
+  // Every search the chooser makes, the first or by area code or city, can refuse.
   const chooser = useMemo(() => ({
     ...onboardingNumbers,
     getInitialNumberSuggestion: async (args: Parameters<typeof onboardingNumbers.getInitialNumberSuggestion>[0]) => {
       try { return await onboardingNumbers.getInitialNumberSuggestion(args); } catch (error) {
+        refuse(error);
+        throw error;
+      }
+    },
+    searchAvailableNumbers: async (args: Parameters<typeof onboardingNumbers.searchAvailableNumbers>[0]) => {
+      try { return await onboardingNumbers.searchAvailableNumbers(args); } catch (error) {
         refuse(error);
         throw error;
       }
@@ -122,6 +134,16 @@ export function OnboardingNumberSurface() {
   const openFallback = countryFallback === undefined ? (suggestedWithoutNumbers ? { country: suggestedWithoutNumbers } : null) : countryFallback;
   const showsCountryFallback = Boolean(outlook.data) && (countries.length === 0 || openFallback !== null);
   if (!phones.data || (!claiming && phones.data.activeClaim) || outlook.isLoading || primary) return <div className="mx-auto w-full max-w-lg"><PhoneNumberChooserSkeleton labels={{ country: t("number.countryLabel"), areaCode: t("number.areaCodeLabel"), search: t("number.search"), phoneNumber: t("number.tableHeaders.phoneNumber") }} /></div>;
+  // Ahead of the way on without a number, which a time zone there would open.
+  if (refusalCode && NO_PLAN_REFUSALS.has(refusalCode)) {
+    return (
+      <div className="flex flex-col items-center gap-3">
+        <p className="text-center type-body-muted">{t(REFUSAL_KEYS[refusalCode]!)}</p>
+        {business && (skipAllowed || returnTo) ? <button className="type-title text-muted-foreground underline underline-offset-4 hover:text-foreground disabled:opacity-50" disabled={skip.isPending} onClick={() => skip.mutate()} type="button">{skip.isPending ? t("number.skipping") : t("number.skipLater")}</button> : null}
+        {skip.isError ? <FieldError>{t("number.skipFailed")}</FieldError> : null}
+      </div>
+    );
+  }
   if (business && showsCountryFallback) return <OnboardingNumberCountryFallback businessId={business.businessId} initialCountry={openFallback?.country ?? suggested} numberCountries={countries} onBack={countries.length ? () => setCountryFallback(null) : null} onSkipped={() => router.push(withoutNumber)} />;
   if (refusalCode) {
     return (

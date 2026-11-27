@@ -19,7 +19,7 @@ export function DashboardActivationCard({ businessId }: { businessId: string | u
   const [forwardingOpen, setForwardingOpen] = useState(false);
   const openNumberStep = useOpenNumberStep();
   const testWindowReady = useTestWindowReady();
-  const { canSetUp, data, eligible, heardItWork, needsNumberClaim, trialAvailable, trialNumber, upgrade } = useActivation(businessId);
+  const { canSetUp, data, eligible, heardItWork, needsNumberClaim, numberRestricted, trialAvailable, trialNumber, upgrade } = useActivation(businessId);
 
   if (!businessId || !canSetUp || !data || !eligible) return null;
 
@@ -39,6 +39,9 @@ export function DashboardActivationCard({ businessId }: { businessId: string | u
       </Surface>
     );
   }
+
+  // Where no plan gets a number, the card has nothing to offer once the owner heard the agent.
+  if (numberRestricted && heardItWork) return null;
 
   if (trialAvailable && heardItWork && !needsNumberClaim) {
     return (

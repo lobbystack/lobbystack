@@ -173,7 +173,9 @@
       "network": "A free trial already started from this network in the last 30 days.",
       "unavailable": "A free trial number isn't available for this workspace.",
       "verification": "A free number needs a verified phone.",
-      "emailVerification": "Verify your email address before you choose a trial number."
+      "emailVerification": "Verify your email address before you choose a trial number.",
+      "countryMismatch": "A free trial number has to be in the country you're in.",
+      "countryRestricted": "Phone numbers aren't available in your country."
     },
     "title": "Pick your agent's phone number",
     "countryLabel": "Country",
