@@ -81,6 +81,22 @@ export function trustedTrialIpCountry(value: string | null | undefined): string 
   return isTrustedTrialIpCountry(value) ? value!.trim().toUpperCase() : null;
 }
 
+// US territories Cloudflare reports as countries of their own. Their phone
+// numbers are US numbers, so a trial there gets one. Puerto Rico keeps its own
+// trial numbers.
+const US_NUMBER_TERRITORIES = new Set(["VI", "GU", "AS", "MP"]);
+
+/**
+ * The country whose trial number suits someone browsing from `ipCountry`: the
+ * trusted country itself, or the US for a US territory without numbers of its
+ * own. Null when the deployment trusts no country or the edge couldn't place
+ * the person.
+ */
+export function trialNumberCountryForIp(ipCountry: string | null | undefined): string | null {
+  const country = trustedTrialIpCountry(ipCountry);
+  return country && US_NUMBER_TERRITORIES.has(country) ? "US" : country;
+}
+
 /**
  * Whether a host trial number in `numberCountry` suits someone browsing from
  * `ipCountry`: a free trial number is for the country the person is in. With
@@ -89,7 +105,7 @@ export function trustedTrialIpCountry(value: string | null | undefined): string 
  * rules in trialNeedsPhoneVerification still apply to those.
  */
 export function trialCountryMatches(ipCountry: string | null | undefined, numberCountry: string): boolean {
-  const country = trustedTrialIpCountry(ipCountry);
+  const country = trialNumberCountryForIp(ipCountry);
   return country === null || country === numberCountry.trim().toUpperCase();
 }
 
@@ -101,6 +117,25 @@ const RESTRICTED_NUMBER_COUNTRIES = new Set(["CU", "IR", "KP", "SY"]);
 export function isRestrictedNumberIpCountry(value: string | null | undefined): boolean {
   const country = trustedTrialIpCountry(value);
   return country !== null && RESTRICTED_NUMBER_COUNTRIES.has(country);
+}
+
+/** Why the request's country rules out a number or the host's free trial. */
+export type NumberCountryRefusal = "number_country_restricted" | "trial_country_mismatch";
+
+/**
+ * Why the request's country rules out the host's free trial number, or null
+ * when it doesn't. The number step's outlook, the trial state Home reads, and
+ * the number search all go by it, so they agree. A sanctioned country gets no
+ * number at all. Otherwise a trusted country must have trial numbers, and a
+ * verified mobile's number, which follows the mobile, must be in it. A mobile
+ * outside the trial countries is left to the paid-plan rule.
+ */
+export function hostTrialCountryRefusal(input: { ipCountry: string | null | undefined; verifiedCountry: string | null; trialCountries: readonly string[] }): NumberCountryRefusal | null {
+  if (isRestrictedNumberIpCountry(input.ipCountry)) return "number_country_restricted";
+  const country = trialNumberCountryForIp(input.ipCountry);
+  if (country === null) return null;
+  if (input.verifiedCountry !== null) return input.trialCountries.includes(input.verifiedCountry) && country !== input.verifiedCountry ? "trial_country_mismatch" : null;
+  return input.trialCountries.includes(country) ? null : "trial_country_mismatch";
 }
 
 export type TrialNetworkSignals = {

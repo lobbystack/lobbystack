@@ -259,6 +259,23 @@ describe.skipIf(!testUrl)("free trial numbers against dedicated PostgreSQL roles
       });
     });
 
+    it("offers Home's free trial only where the number step would", async () => {
+      await rollbackTest(async (tx) => {
+        const owner = await onNumberStep(tx, "Home trial clinic");
+        const state = (ipCountry?: string) => as(tx, "lobbystack_app", db => getNumberTrialState({ db }, { ...owner, ...(ipCountry ? { ipCountry } : {}) }));
+        expect(await state("CA")).toEqual({ status: "available" });
+        expect(await state("GU")).toEqual({ status: "available" });
+        // A deployment that trusts no country offers it as before.
+        expect(await state()).toEqual({ status: "available" });
+        for (const country of ["BD", "PK", "EG"]) expect(await state(country)).toEqual({ status: "none" });
+        expect(await state("IR")).toEqual({ status: "none", refusal: "number_country_restricted" });
+        // A verified mobile's trial is in its own country, so only there.
+        await verifyMobile(tx, owner);
+        expect(await state("CA")).toEqual({ status: "available" });
+        expect(await state("US")).toEqual({ status: "none" });
+      });
+    });
+
     it("keeps today's refusal without a text when the deployment trusts no country", async () => {
       await rollbackTest(async (tx) => {
         const owner = await onNumberStep(tx, "Untrusted clinic");

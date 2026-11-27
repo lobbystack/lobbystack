@@ -796,6 +796,23 @@ describe.skipIf(!client)("a partner's trial number", () => {
   });
 
 
+  it("keeps the partner's trial rules when the owner browses from another country, and refuses only a sanctioned one", async () => {
+    await rollbackTest(async (tx) => {
+      await billTiers(tx, true);
+      const acme = await partner(tx, "Acme Reception");
+      const harbor = await business(tx, acme, "Harbor Dental");
+      await verifyOwner(tx, harbor);
+      // The host's own trial would refuse a Canadian mobile from the US; the partner's trial follows the mobile alone.
+      const search = await searchBusinessNumberInventory(acme.context, { userId: harbor.owner.userId, businessId: harbor.businessId, claimTokenSecret, ipCountry: "US" }, inventory());
+      expect(search).toMatchObject({ trial: true, market: { countryCode: "CA" } });
+      expect(await refusal(searchBusinessNumberInventory(acme.context, { userId: harbor.owner.userId, businessId: harbor.businessId, claimTokenSecret, ipCountry: "IR" }, inventory()))).toMatchObject({ status: 403, code: "number_country_restricted" });
+      // The claim's country recheck is the host's trial's, so a partner's trial claims from a country without trial numbers too.
+      const claimId = await asAppSession(tx, async () => await reserveOnboardingNumberClaim(acme.context, { userId: harbor.owner.userId, businessId: harbor.businessId, claimToken: search.numbers[0]!.claimToken, claimTokenSecret, idempotencyKey: randomUUID(), ipHash: randomUUID(), ipCountry: "BD" }));
+      expect(claimId).toBeTruthy();
+      expect(await asMigrator(tx, async () => await tx.select({ partnerId: numberTrials.partnerId, status: numberTrials.status }).from(numberTrials).where(eq(numberTrials.businessId, harbor.businessId)))).toEqual([{ partnerId: acme.partnerId, status: "reserved" }]);
+    });
+  });
+
   it("gives a partner on Free one 14-day trial number for one of its businesses, ever, even after that business is deleted", async () => {
     await rollbackTest(async (tx) => {
       await billTiers(tx, true);

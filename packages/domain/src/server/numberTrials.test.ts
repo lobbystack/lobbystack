@@ -129,7 +129,17 @@ describe("the number step's trial outlook", () => {
   it.each(["IR", "CU", "KP", "SY"])("offers no number, paid or free, to someone in %s", async (ipCountry) => {
     expect((await outlook({ ipCountry })).result).toEqual({ verificationNeeded: false, refusal: "number_country_restricted" });
     expect((await outlook({ ipCountry, live: true })).result).toEqual({ verificationNeeded: false, refusal: "number_country_restricted" });
-    expect((await outlook({ ipCountry, partnerId: "partner-1" })).result).toEqual({ verificationNeeded: false, refusal: "number_country_restricted" });
+    expect((await outlook({ ipCountry, deploymentMode: "self_hosted_standard" })).result).toEqual({ verificationNeeded: false, refusal: "number_country_restricted" });
+  });
+
+  it("keeps a partner's business on its mobile verification in a sanctioned country", async () => {
+    expect((await outlook({ ipCountry: "IR", partnerId: "partner-1" })).result).toEqual({ verificationNeeded: true, refusal: "number_country_restricted" });
+  });
+
+  it.each(["VI", "GU", "AS", "MP"])("offers a US territory's owner (%s) a trial, which is a US number", async (ipCountry) => {
+    expect((await outlook({ ipCountry })).result).toEqual({ verificationNeeded: false, refusal: null });
+    expect((await outlook({ ipCountry, phone: [{ phone: "+13405550123" }], attempt: [{ countryCode: "US" }] })).result).toEqual({ verificationNeeded: false, refusal: null });
+    expect((await outlook({ ipCountry, phone: [{ phone: "+14165550123" }], attempt: [{ countryCode: "CA" }] })).result).toEqual({ verificationNeeded: false, refusal: "trial_country_mismatch" });
   });
 
   it("offers the plans when this network already started a trial in the last 30 days", async () => {

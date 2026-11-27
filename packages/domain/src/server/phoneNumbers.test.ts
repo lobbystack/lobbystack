@@ -12,7 +12,7 @@ vi.mock("@lobbystack/db", async (original) => ({
 vi.mock("../authz", () => ({ requireBusinessAdmin: mocks.requireBusinessAdmin }));
 vi.mock("./entitlement", () => ({ loadEntitlement: mocks.loadEntitlement }));
 
-import { reserveOnboardingNumberClaim, reserveReplacementNumberClaim, searchBusinessNumberInventory } from "./phoneNumbers";
+import { readNumberOffer, reserveOnboardingNumberClaim, reserveReplacementNumberClaim, searchBusinessNumberInventory, skipOnboardingNumber } from "./phoneNumbers";
 
 const context = { db: {} as never };
 const scope = { userId: "user-1", businessId: "business-1", claimTokenSecret: "number-claim-unit-secret" };
@@ -160,6 +160,20 @@ describe("searchBusinessNumberInventory", () => {
       expect(result).toMatchObject({ market: { countryCode: "CA" }, trial: true, countryFixed: true });
     });
 
+    it("signs the dashboard's offers as the dashboard's", async () => {
+      noPhoneSetup();
+      const { numbers } = await searchBusinessNumberInventory(context, { ...scope, ipHash: "network-hash", ipCountry: "CA" }, { listAvailablePhoneNumbers: async () => [{ phoneE164: phone, countryCode: "CA", capabilities: { sms: true, voice: true } }] });
+      expect(readNumberOffer(numbers[0]!.claimToken, scope.claimTokenSecret).via).toBe("dashboard");
+    });
+
+    it.each(["VI", "GU", "AS", "MP"])("searches US numbers for an owner in a US territory (%s)", async (ipCountry) => {
+      noPhoneSetup();
+      const listAvailablePhoneNumbers = vi.fn(async () => [{ phoneE164: "+13405550100", countryCode: "US", capabilities: { sms: true, voice: true } }]);
+      const result = await searchBusinessNumberInventory(context, { ...scope, selection: { countryCode: "CA", kind: "local" }, ipHash: "network-hash", ipCountry }, { listAvailablePhoneNumbers });
+      expect(listAvailablePhoneNumbers).toHaveBeenCalledWith(expect.objectContaining({ countryCode: "US" }));
+      expect(result).toMatchObject({ market: { countryCode: "US" }, trial: true, countryFixed: true });
+    });
+
     it("offers the plans to someone in a country without trial numbers", async () => {
       noPhoneSetup();
       await expect(searchBusinessNumberInventory(context, { ...scope, selection: { countryCode: "US", kind: "local" }, ipHash: "network-hash", ipCountry: "BD" }, { listAvailablePhoneNumbers: async () => [] })).rejects.toMatchObject({ status: 409, code: "trial_country_mismatch" });
@@ -249,6 +263,17 @@ describe("number claims", () => {
     expect(execute).not.toHaveBeenCalled();
   });
 
+  it("claims a US trial offer from a US territory", async () => {
+    entitled(planEntitlement("free_cloud"));
+    const selects = [[{ stage: "phone_number", timezone: "America/Toronto", deploymentMode: "cloud", replacementUsedAt: null }], [{ phone: null }], [{ email: "owner@example.invalid", emailVerified: true }]];
+    const execute = vi.fn(async () => ({ rows: [{ used: false, id: "claim-1" }] }));
+    const tx = { select: () => chain(selects.shift() ?? []), update: () => ({ set: () => ({ where: async () => [] }) }), execute };
+    mocks.withBusinessTransaction.mockImplementation(async (_db: unknown, _scope: unknown, callback: (tx: unknown) => unknown) => await callback(tx));
+    const { numbers } = await searchBusinessNumberInventory(context, { ...scope, ipHash: "network-hash", ipCountry: "US" }, { listAvailablePhoneNumbers: async () => [{ phoneE164: "+13405550100", countryCode: "US", capabilities: { sms: true, voice: true } }] });
+    mocks.loadEntitlement.mockResolvedValue(planEntitlement("free_cloud"));
+    expect(await reserveOnboardingNumberClaim(context, { ...scope, claimToken: numbers[0]!.claimToken, idempotencyKey: "key", ipHash: "network-hash", ipCountry: "VI" })).toBe("claim-1");
+  });
+
   it.each([
     ["number_claim_in_progress", 409],
     ["business_number_exists", 409],
@@ -268,5 +293,20 @@ describe("number claims", () => {
     const outage = new Error("connection terminated");
     setup(() => { throw outage; });
     await expect(reserveReplacementNumberClaim(context, { ...scope, claimToken: await offer("replacement"), idempotencyKey: "key" })).rejects.toBe(outage);
+  });
+});
+
+describe("skipping the number step", () => {
+  it.each(["IR", "CU", "KP", "SY"])("refuses a skip from %s before reading the business, as the number step offers no way on", async (ipCountry) => {
+    await expect(skipOnboardingNumber(context, { userId: "user-1", businessId: "business-1", countryCode: "IR", ipCountry })).rejects.toMatchObject({ status: 403, code: "number_country_restricted" });
+    expect(mocks.withBusinessTransaction).not.toHaveBeenCalled();
+  });
+
+  it("lets an owner elsewhere skip to a country without numbers", async () => {
+    const business = { stage: "phone_number", partnerId: null, deploymentMode: "cloud" };
+    const update = vi.fn(() => ({ set: () => ({ where: async () => [] }) }));
+    mocks.withBusinessTransaction.mockImplementation(async (_db: unknown, _scope: unknown, callback: (tx: unknown) => unknown) => await callback({ select: () => chain([business]), update }));
+    await expect(skipOnboardingNumber(context, { userId: "user-1", businessId: "business-1", countryCode: "FR", ipCountry: "FR" })).resolves.toBeUndefined();
+    expect(update).toHaveBeenCalled();
   });
 });
