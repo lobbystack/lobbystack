@@ -57,6 +57,10 @@ export function getSafeOnboardingErrorMessage(
     return t("number.claimRateLimited");
   }
 
+  if (code === "number_country_restricted") {
+    return t("number.refusals.countryRestricted");
+  }
+
   if (code === "partner_number_limit_reached") {
     return t("number.partnerTierRequired");
   }

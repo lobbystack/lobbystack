@@ -71,6 +71,38 @@ export function isTrustedTrialIpCountry(value: string | null | undefined): boole
   return /^[A-Z]{2}$/.test(country) && !UNTRUSTED_IP_COUNTRIES.has(country);
 }
 
+/**
+ * The trusted `cf-ipcountry`, uppercased, or null. Null covers both a
+ * deployment that supplies no country, because it doesn't trust the client
+ * address headers (see trustedClientCountry in the admin app), and the
+ * codes Cloudflare uses when it can't place the person.
+ */
+export function trustedTrialIpCountry(value: string | null | undefined): string | null {
+  return isTrustedTrialIpCountry(value) ? value!.trim().toUpperCase() : null;
+}
+
+/**
+ * Whether a host trial number in `numberCountry` suits someone browsing from
+ * `ipCountry`: a free trial number is for the country the person is in. With
+ * no trusted country there is nothing to compare, so it passes, which keeps
+ * self-hosted and untrusted-edge deployments working as before; the network
+ * rules in trialNeedsPhoneVerification still apply to those.
+ */
+export function trialCountryMatches(ipCountry: string | null | undefined, numberCountry: string): boolean {
+  const country = trustedTrialIpCountry(ipCountry);
+  return country === null || country === numberCountry.trim().toUpperCase();
+}
+
+// Countries under comprehensive US sanctions. Nobody browsing from one gets a
+// phone number from the dashboard, paid or free.
+const RESTRICTED_NUMBER_COUNTRIES = new Set(["CU", "IR", "KP", "SY"]);
+
+/** Whether `cf-ipcountry` places the person in a country we can't sell phone numbers to. */
+export function isRestrictedNumberIpCountry(value: string | null | undefined): boolean {
+  const country = trustedTrialIpCountry(value);
+  return country !== null && RESTRICTED_NUMBER_COUNTRIES.has(country);
+}
+
 export type TrialNetworkSignals = {
   /** The HMAC the dashboard stores for the caller's network, or null without a trusted address. */
   ipHash?: string | null | undefined;

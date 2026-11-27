@@ -299,7 +299,7 @@ function NumberStep({ activation, businessId, needsNumberClaim, skip, trialAvail
   return <NumberPathOffer businessId={businessId} needsNumberClaim={needsNumberClaim} path={path} skip={skip} upgrade={upgrade} />;
 }
 
-const PLAN_REQUIRED = new Set(["dedicated_number_requires_paid_plan", "trial_already_used", "trial_ip_limited", "trial_not_available"]);
+const PLAN_REQUIRED = new Set(["dedicated_number_requires_paid_plan", "trial_already_used", "trial_ip_limited", "trial_not_available", "trial_country_mismatch"]);
 
 function errorCode(error: unknown): string | undefined {
   const code = error && typeof error === "object" ? (error as { code?: unknown }).code : undefined;

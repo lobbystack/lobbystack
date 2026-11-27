@@ -500,7 +500,8 @@
       "cancel": "Cancelar",
       "priceChanged": "El precio cambió. Busque de nuevo para verlo.",
       "unavailable": "Este espacio de trabajo no puede comprar más números."
-    }
+    },
+    "countryRestricted": "Los números de teléfono no están disponibles en su país."
   },
   "appearance": {
     "title": "Preferencias",

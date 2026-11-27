@@ -175,7 +175,9 @@
       "network": "Una prueba gratuita ya se inició desde esta red en los últimos 30 días.",
       "unavailable": "No hay un número de prueba gratuito disponible para este espacio de trabajo.",
       "verification": "Un número gratuito requiere un teléfono verificado.",
-      "emailVerification": "Verifique su dirección de correo antes de elegir un número de prueba."
+      "emailVerification": "Verifique su dirección de correo antes de elegir un número de prueba.",
+      "countryMismatch": "Un número de prueba gratuito tiene que ser del país donde se encuentra.",
+      "countryRestricted": "Los números de teléfono no están disponibles en su país."
     },
     "title": "Elija el número de teléfono de su agente",
     "countryLabel": "País",

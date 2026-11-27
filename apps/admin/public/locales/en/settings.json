@@ -492,7 +492,8 @@
       "cancel": "Cancel",
       "priceChanged": "The price changed. Search again to see it.",
       "unavailable": "This workspace can't buy more numbers."
-    }
+    },
+    "countryRestricted": "Phone numbers aren't available in your country."
   },
   "appearance": {
     "title": "Preferences",

@@ -79,6 +79,7 @@ export function phoneNumberChooserText(t: TFunction<"settings">) {
       if (code === "partner_numbers_unavailable") return t("phoneNumber.partnerNumbersUnavailable.description");
       if (code === "phone_numbers_unavailable") return t("phoneNumber.numbersUnavailable");
       if (code === "extra_number_price_changed") return t("phoneNumber.extra.priceChanged");
+      if (code === "number_country_restricted") return t("phoneNumber.countryRestricted");
       return getSettingsPhoneNumberErrorMessage(error, fallback);
     },
   };

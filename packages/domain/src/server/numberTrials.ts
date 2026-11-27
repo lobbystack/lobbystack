@@ -14,7 +14,7 @@ import { postBusinessNotificationInTransaction, resolveBusinessNotificationsInTr
 import { businessGetsHostEmails } from "./hostEmails";
 import { loadPartnerNumberStanding } from "./partnerNumbers";
 import { sharedSmsSender } from "./smsSender";
-import { isDisposableTrialEmail, trialNeedsPhoneVerification } from "./trialEligibility";
+import { isDisposableTrialEmail, isRestrictedNumberIpCountry, trialCountryMatches, trialNeedsPhoneVerification, trustedTrialIpCountry } from "./trialEligibility";
 import { getVoiceSecondsLeftInTransaction, readEndedVoiceSecondsLeftInTransaction } from "./usage";
 import { greetingName } from "./emailGreeting";
 
@@ -471,12 +471,16 @@ async function trialAvailableInTransaction(tx: DatabaseTransaction, input: { use
   return !verified || (trialCountries() as string[]).includes(verified.countryCode);
 }
 
-export type NumberTrialRefusal = "dedicated_number_requires_paid_plan" | "trial_already_used" | "trial_ip_limited" | "trial_not_available" | "email_verification_required";
+export type NumberTrialRefusal = "dedicated_number_requires_paid_plan" | "trial_already_used" | "trial_ip_limited" | "trial_not_available" | "email_verification_required" | "trial_country_mismatch" | "number_country_restricted";
 
 export type OnboardingNumberTrialOutlook = {
   /** Whether a mobile must be verified before the number step can offer a trial. */
   verificationNeeded: boolean;
-  /** Why the number step can't offer a trial now, so it shows the plans instead. */
+  /**
+   * Why the number step can't offer a trial now, so it shows the plans
+   * instead. number_country_restricted means no number at all, so it shows
+   * no plans either.
+   */
   refusal: NumberTrialRefusal | null;
 };
 
@@ -506,11 +510,15 @@ export async function directTrialNetworkRefusalInTransaction(tx: DatabaseTransac
  * number search would raise. A trial needs a verified email and a clean
  * network; it needs a mobile only when the network can't identify the caller,
  * already started a trial this month, or the trial is claimed through the
- * API. The claim keeps enforcing every rule itself.
+ * API. A trial number is in the country the request comes from, when the
+ * deployment trusts one, and a sanctioned country gets no number at all. The
+ * claim keeps enforcing every rule itself.
  */
 export async function onboardingNumberTrialOutlookInTransaction(tx: DatabaseTransaction, input: { userId: string; businessId: string; ipHash?: string | null | undefined; ipCountry?: string | null | undefined }): Promise<OnboardingNumberTrialOutlook> {
   const business = (await tx.select({ deploymentMode: businesses.deploymentMode, timezone: businesses.timezone, partnerId: businesses.partnerId }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1))[0];
   if (!business) return { verificationNeeded: false, refusal: null };
+  // The number search refuses the same, on every plan and deployment.
+  if (isRestrictedNumberIpCountry(input.ipCountry)) return { verificationNeeded: false, refusal: "number_country_restricted" };
   // A self-hosted install has no host trial; it buys its numbers directly.
   if (business.deploymentMode !== "cloud") return { verificationNeeded: false, refusal: null };
   // A partner's business gets its numbers from its partner, and still verifies
@@ -524,13 +532,19 @@ export async function onboardingNumberTrialOutlookInTransaction(tx: DatabaseTran
   const email = await trialEmailInTransaction(tx, input.userId);
   if (!email?.emailVerified) return { verificationNeeded: false, refusal: "email_verification_required" };
   if (isDisposableTrialEmail(email.email)) return { verificationNeeded: false, refusal: "trial_not_available" };
-  // An owner who already verified continues to the number itself.
-  if (await verifiedPhone(tx, input)) return { verificationNeeded: false, refusal: null };
+  const countries = trialCountries() as string[];
+  // Null when the deployment trusts no country or Cloudflare couldn't place the person.
+  const ipCountry = trustedTrialIpCountry(input.ipCountry);
+  // An owner who already verified continues to the number itself, whose
+  // country follows the mobile and has to be the one they're in.
+  const verified = await verifiedPhone(tx, input);
+  if (verified) return { verificationNeeded: false, refusal: countries.includes(verified.countryCode) && !trialCountryMatches(ipCountry, verified.countryCode) ? "trial_country_mismatch" : null };
   // The same once-per-workspace, per-user and per-phone rule the claim applies.
   const used = await tx.execute(sql`SELECT app.number_trial_used(${input.businessId}::uuid, ${input.userId}::uuid) AS used`);
   if ((used.rows[0] as { used?: boolean } | undefined)?.used) return { verificationNeeded: false, refusal: "trial_already_used" };
-  const countries = trialCountries();
   if (countries.length === 0) return { verificationNeeded: false, refusal: "trial_not_available" };
+  // Someone in a country without trial numbers gets the plans before any search.
+  if (ipCountry && !countries.includes(ipCountry)) return { verificationNeeded: false, refusal: "trial_country_mismatch" };
   // The number's country comes from the search's selection. A direct owner
   // has no phone step, so a network that can't start a trial gets the plans.
   return { verificationNeeded: false, refusal: await directTrialNetworkRefusalInTransaction(tx, input) };

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { isDisposableTrialEmail, isTrustedTrialIpCountry, trialNeedsPhoneVerification } from "./trialEligibility";
+import { isDisposableTrialEmail, isRestrictedNumberIpCountry, isTrustedTrialIpCountry, trialCountryMatches, trialNeedsPhoneVerification, trustedTrialIpCountry } from "./trialEligibility";
 
 describe("a trial's disposable email check", () => {
   it("refuses the listed domains and their subdomains, whatever the case", () => {
@@ -38,7 +38,8 @@ describe("whether a trial needs a text", () => {
     }
   });
 
-  it("accepts a country other than the number's", () => {
+  // Whether the number's country fits is trialCountryMatches's question.
+  it("needs no text from a known network in any real country", () => {
     expect(trialNeedsPhoneVerification({ ...knownNetwork, ipCountry: "fr" })).toBe(false);
   });
 
@@ -51,5 +52,33 @@ describe("whether a trial needs a text", () => {
     expect(isTrustedTrialIpCountry(" xx ")).toBe(false);
     expect(isTrustedTrialIpCountry("t1")).toBe(false);
     expect(isTrustedTrialIpCountry(undefined)).toBe(false);
+  });
+});
+
+describe("a trial number's country", () => {
+  it("reads the trusted country, uppercased, and nothing for the sentinels or a missing one", () => {
+    expect(trustedTrialIpCountry(" ca ")).toBe("CA");
+    for (const value of [undefined, null, "", "X", "XXX", "XX", "T1"]) expect(trustedTrialIpCountry(value), String(value)).toBeNull();
+  });
+
+  it("matches only the country the person is in", () => {
+    expect(trialCountryMatches("CA", "CA")).toBe(true);
+    expect(trialCountryMatches("ca", "CA")).toBe(true);
+    expect(trialCountryMatches("US", "CA")).toBe(false);
+    expect(trialCountryMatches("BD", "US")).toBe(false);
+  });
+
+  it("passes when the deployment trusts no country or the edge couldn't place the person", () => {
+    for (const value of [undefined, null, "", "XX", "T1"]) expect(trialCountryMatches(value, "US"), String(value)).toBe(true);
+  });
+});
+
+describe("sanctioned countries", () => {
+  it("restricts Cuba, Iran, North Korea and Syria, whatever the case", () => {
+    for (const country of ["CU", "IR", "KP", "SY", " ir "]) expect(isRestrictedNumberIpCountry(country), country).toBe(true);
+  });
+
+  it("leaves every other country, and no country, alone", () => {
+    for (const country of ["CA", "US", "BD", "PK", "EG", "XX", "T1", "", null, undefined]) expect(isRestrictedNumberIpCountry(country), String(country)).toBe(false);
   });
 });

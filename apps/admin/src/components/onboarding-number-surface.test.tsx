@@ -163,6 +163,35 @@ describe("onboarding number API adapter", () => {
     expect(await screen.findByText("number.refusals.emailVerification")).toBeTruthy();
     await waitFor(() => telemetryRef.current!.expectEvent("web.onboarding.number_unavailable", { businessId: "business-1", code: "email_verification_required" }));
   });
+  it("shows the plans before a search when the trial number would be in another country than the owner's", async () => {
+    const fetchMock = setup("phone_number", false, false, undefined, "trial_country_mismatch");
+    expect(await screen.findByText("number.refusals.countryMismatch")).toBeTruthy();
+    expect(screen.getByText("plans")).toBeTruthy();
+    expect(fetchMock.mock.calls.some(([url]) => url.includes("/suggestion?"))).toBe(false);
+    await waitFor(() => telemetryRef.current!.expectEvent("web.onboarding.number_unavailable", { businessId: "business-1", code: "trial_country_mismatch" }));
+  });
+  it("shows the plans when the search refuses the country", async () => {
+    setup("phone_number", false, false, () => Response.json({ error: "Wrong country.", code: "trial_country_mismatch" }, { status: 409 }));
+    expect(await screen.findByText("number.refusals.countryMismatch")).toBeTruthy();
+    expect(screen.getByText("plans")).toBeTruthy();
+  });
+  it("offers no number and no plans in a country we can't sell numbers to", async () => {
+    const fetchMock = setup("phone_number", false, false, undefined, "number_country_restricted", "IR");
+    expect(await screen.findByText("number.refusals.countryRestricted")).toBeTruthy();
+    expect(screen.queryByText("plans")).toBeNull();
+    expect(screen.queryByRole("button", { name: "number.select" })).toBeNull();
+    // The time zone's country has no numbers, but the way on without one stays closed.
+    expect(screen.queryByRole("button", { name: "number.country.continue" })).toBeNull();
+    expect(screen.queryByRole("combobox", { name: "number.country.label" })).toBeNull();
+    expect(fetchMock.mock.calls.some(([url]) => url.includes("/suggestion?"))).toBe(false);
+    await waitFor(() => telemetryRef.current!.expectEvent("web.onboarding.number_unavailable", { businessId: "business-1", code: "number_country_restricted" }));
+  });
+  it("offers no plans when the search refuses a sanctioned country", async () => {
+    setup("phone_number", false, false, () => Response.json({ error: "Not here.", code: "number_country_restricted" }, { status: 403 }));
+    expect(await screen.findByText("number.refusals.countryRestricted")).toBeTruthy();
+    expect(screen.queryByText("plans")).toBeNull();
+    await waitFor(() => telemetryRef.current!.expectEvent("web.onboarding.number_unavailable", { businessId: "business-1", code: "number_country_restricted" }));
+  });
   it("names the network limit, and the market without a trial", async () => {
     setup("phone_number", false, false, undefined, "trial_ip_limited");
     expect(await screen.findByText("number.refusals.network")).toBeTruthy();
