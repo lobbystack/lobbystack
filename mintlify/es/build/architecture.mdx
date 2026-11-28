@@ -91,7 +91,15 @@ Una llamada en el navegador envía su oferta WebRTC a `/api/voice/live/session`.
 
 La voz funciona con OpenAI GPT-Live, que termina las conexiones SIP y WebRTC. LobbyStack todavía no admite otros modelos de voz. El [ADR 0008](https://github.com/lobbystack/lobbystack/blob/main/docs/adr/0008-gpt-live-voice.md) explica la elección.
 
-El núcleo del agente funciona con cualquier endpoint compatible con OpenAI que usted fije con las variables `AI_CHAT_*`. En una llamada en vivo, las variables `AI_DELEGATION_*` pueden darle un modelo más rápido o menos razonamiento mientras quien llama espera. La [referencia de variables de entorno](/es/self-hosting/environment-variables) enumera ambos grupos y sus valores predeterminados.
+El núcleo del agente funciona con cualquier endpoint compatible con OpenAI. Tres grupos de variables eligen sus modelos:
+
+| Variables | Qué fijan | Valor predeterminado |
+| --- | --- | --- |
+| `AI_CHAT_API_KEY`, `AI_CHAT_BASE_URL`, `AI_CHAT_MODEL`, `AI_CHAT_REASONING_EFFORT` | El modelo detrás de cada llamada a una herramienta y de cada chat del sitio web | `gpt-6-luna` con razonamiento alto, a través de la API Responses de OpenAI |
+| `AI_DELEGATION_MODEL`, `AI_DELEGATION_REASONING_EFFORT`, `AI_DELEGATION_SERVICE_TIER` | El mismo agente mientras quien llama espera en una llamada en vivo | El modelo `AI_CHAT_*` con razonamiento bajo y el nivel prioritario |
+| `AI_EMBEDDING_*` | La búsqueda en el conocimiento | `text-embedding-3-large` |
+
+Los endpoints distintos de los de OpenAI usan chat completions. La [referencia de variables de entorno](/es/self-hosting/environment-variables) describe cada variable.
 
 ## Dónde encajan los socios
 

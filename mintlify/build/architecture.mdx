@@ -91,7 +91,15 @@ A browser call sends its WebRTC offer to `/api/voice/live/session`. The admin cr
 
 Voice runs on OpenAI GPT-Live, which terminates the SIP and WebRTC connections. LobbyStack doesn't support other voice models yet. [ADR 0008](https://github.com/lobbystack/lobbystack/blob/main/docs/adr/0008-gpt-live-voice.md) explains the choice.
 
-The agent core runs on any OpenAI-compatible endpoint that you set with the `AI_CHAT_*` variables. On a live call, the `AI_DELEGATION_*` variables can give it a faster model or lower reasoning while the caller waits. The [environment variables reference](/self-hosting/environment-variables) lists both sets and their defaults.
+The agent core runs on any OpenAI-compatible endpoint. Three sets of variables choose its models:
+
+| Variables | What they set | Default |
+| --- | --- | --- |
+| `AI_CHAT_API_KEY`, `AI_CHAT_BASE_URL`, `AI_CHAT_MODEL`, `AI_CHAT_REASONING_EFFORT` | The model behind every tool call and every website chat | `gpt-6-luna` on high reasoning, through OpenAI's Responses API |
+| `AI_DELEGATION_MODEL`, `AI_DELEGATION_REASONING_EFFORT`, `AI_DELEGATION_SERVICE_TIER` | The same agent while a caller waits on a live call | The `AI_CHAT_*` model on low reasoning and the priority tier |
+| `AI_EMBEDDING_*` | Knowledge search | `text-embedding-3-large` |
+
+Endpoints other than OpenAI's use chat completions. The [environment variables reference](/self-hosting/environment-variables) describes each variable.
 
 ## How partners fit in
 

@@ -91,7 +91,15 @@ Un appel dans le navigateur envoie son offre WebRTC à `/api/voice/live/session`
 
 La voix passe par OpenAI GPT-Live, qui termine les connexions SIP et WebRTC. LobbyStack ne prend pas encore en charge d'autres modèles vocaux. L'[ADR 0008](https://github.com/lobbystack/lobbystack/blob/main/docs/adr/0008-gpt-live-voice.md) explique ce choix.
 
-Le cœur de l'agent tourne sur n'importe quel point de terminaison compatible OpenAI que vous fixez avec les variables `AI_CHAT_*`. Pendant un appel en direct, les variables `AI_DELEGATION_*` peuvent lui donner un modèle plus rapide ou un raisonnement plus faible pendant que l'appelant attend. La [référence des variables d'environnement](/fr/self-hosting/environment-variables) liste les deux ensembles et leurs valeurs par défaut.
+Le cœur de l'agent tourne sur n'importe quel point de terminaison compatible OpenAI. Trois ensembles de variables choisissent ses modèles :
+
+| Variables | Ce qu'elles fixent | Valeur par défaut |
+| --- | --- | --- |
+| `AI_CHAT_API_KEY`, `AI_CHAT_BASE_URL`, `AI_CHAT_MODEL`, `AI_CHAT_REASONING_EFFORT` | Le modèle derrière chaque appel d'outil et chaque clavardage sur le site Web | `gpt-6-luna` avec un raisonnement élevé, par l'API Responses d'OpenAI |
+| `AI_DELEGATION_MODEL`, `AI_DELEGATION_REASONING_EFFORT`, `AI_DELEGATION_SERVICE_TIER` | Le même agent pendant qu'un appelant attend, en appel | Le modèle `AI_CHAT_*` avec un raisonnement faible et le niveau prioritaire |
+| `AI_EMBEDDING_*` | La recherche dans les connaissances | `text-embedding-3-large` |
+
+Les points de terminaison autres que ceux d'OpenAI utilisent les chat completions. La [référence des variables d'environnement](/fr/self-hosting/environment-variables) décrit chaque variable.
 
 ## La place des partenaires
 
