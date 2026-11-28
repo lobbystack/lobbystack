@@ -30,6 +30,8 @@ pnpm dev
 
 Mock providers support routine development without live Twilio, AI, calendar, or email credentials.
 
+Local development keeps recordings and uploads under `.lobbystack/storage`. Set `STORAGE_PROVIDER=s3` to test an S3-compatible service.
+
 ## Verify your change
 
 Run these checks before opening a pull request:

@@ -1,0 +1,148 @@
+---
+title: "Add a capability to the agent"
+description: "Give the LobbyStack agent a new tool for calls, website chat, Instagram and texts: write the domain function, register the tool, decide which conversations get it, and test each part."
+sidebarTitle: "Add a capability"
+contentType: "How-to"
+---
+
+This guide adds a tool to the agent in your fork of LobbyStack. You write the business operation in `packages/domain`, wrap it in a tool in `packages/agent-core`, and decide which conversations get it. Phone calls, browser calls, website chat, Instagram and text replies all run the same agent, so the tool works on each of them once you add it. [Understand how LobbyStack is built](/build/architecture) explains where the agent runs.
+
+The example tool, `checkServiceArea`, tells a caller whether the business serves their postal or ZIP code. Swap in your own operation as you follow the steps.
+
+## Before you start
+
+You need:
+
+- a clone of your fork, with `pnpm install` run and the stack running locally, as the [repository README](https://github.com/lobbystack/lobbystack#contributing) describes
+- the data the tool reads. This guide assumes a `serviceAreas` table with `businessId` and `postalPrefix` columns. A new table needs a hand-written migration that turns on row-level security; the database section of [`AGENTS.md`](https://github.com/lobbystack/lobbystack/blob/main/AGENTS.md#database) lists each step.
+
+If the snapshot already holds the fact you need, such as the opening hours or the employees, read it from `snapshot` in `createAgentTools` and skip the domain function. Calls read the snapshot once, so a tool that uses it answers faster.
+
+## Write the domain function
+
+Business operations live in `packages/domain`, where the admin, the worker and the agent can all call them. Each one takes a `DomainContext` and runs its queries inside `withBusinessTransaction`, which sets the business for row-level security:
+
+```typescript packages/domain/src/server/serviceAreas.ts
+import { eq } from "drizzle-orm";
+import { serviceAreas, withBusinessTransaction } from "@lobbystack/db";
+
+import type { DomainContext } from "./context";
+
+/** Whether the business serves a postal code, by its first three characters. */
+export async function servesPostalCode(
+  context: DomainContext,
+  input: { businessId: string; postalCode: string },
+) {
+  const prefix = input.postalCode.replace(/\s/g, "").slice(0, 3).toUpperCase();
+  const actor = { businessId: input.businessId, actorType: "worker" as const };
+  return await withBusinessTransaction(context.db, actor, async (tx) => {
+    const areas = await tx.select({ prefix: serviceAreas.postalPrefix })
+      .from(serviceAreas)
+      .where(eq(serviceAreas.businessId, input.businessId));
+    if (!areas.length) return { configured: false as const };
+    return { configured: true as const, serves: areas.some((area) => area.prefix === prefix) };
+  });
+}
+```
+
+The function returns `configured: false` when the business has listed no areas, so the agent can tell "we don't serve you" apart from "we don't know". Export it from `packages/domain/src/server/index.ts` with `export * from "./serviceAreas";`.
+
+## Decide which conversations get the tool
+
+`packages/agent-core/src/capabilities.ts` holds the one decision about which tools a conversation gets. Add the tool at the end of `TOOL_USE`, with its kind and the line a call's progress update uses:
+
+```typescript packages/agent-core/src/capabilities.ts
+checkServiceArea: { kind: "other", progress: "checked the service area" },
+```
+
+The kind tells a live call what to keep from the result for the next request. Use `action` for a tool that changes something, such as a booking, and `other` for a lookup.
+
+Then add the tool at the end of the `offered` record in `agentCapabilities`. `pnpm typecheck` fails until you do, because the record needs an entry for each name in `TOOL_USE`. A read-only lookup can run in every conversation, test chats and prospect demos included:
+
+```typescript packages/agent-core/src/capabilities.ts
+checkServiceArea: true,
+```
+
+Phone and browser calls also need GPT-Live to know it can ask for this. Add a line to the `live` list that `agentCapabilities` returns:
+
+```typescript packages/agent-core/src/capabilities.ts
+"- Service area: check whether the business serves a postal or ZIP code.",
+```
+
+## Define the tool
+
+Tools live in `createAgentTools` in `packages/agent-core/src/tools.ts`. Each one has a description the model reads, a Zod input schema, and an `execute` function. Add yours as the last tool, before `return tools;`, behind the `offered` check, and import `servesPostalCode` from `@lobbystack/domain` at the top of the file:
+
+```typescript packages/agent-core/src/tools.ts
+if (offered("checkServiceArea")) {
+  tools.checkServiceArea = tool({
+    description: "Check whether the business serves the caller's area. Ask for their postal or ZIP code first.",
+    inputSchema: z.object({
+      postalCode: z.string().describe("The caller's postal or ZIP code."),
+    }),
+    execute: async ({ postalCode }) => {
+      const area = await servesPostalCode(domain, { businessId, postalCode });
+      if (!area.configured) {
+        return { ok: false, reason: "The business hasn't listed its service areas. Don't say whether it serves this area. Offer to take a message." };
+      }
+      return { ok: true, serves: area.serves };
+    },
+  });
+}
+```
+
+Write each result as facts and the next step, as the existing tools do. GPT-Live phrases what the agent hands back, and its own instructions say how to treat each kind of result. Keep descriptions and results in English, like the other tools, since the agent answers in the caller's language.
+
+## Test each part
+
+The repository runs Vitest, with each test file next to its source. Test the tool, the capability decision and the domain function.
+
+Start with the tool. `packages/agent-core/src/tools.test.ts` mocks `@lobbystack/domain` at the top of the file, so add your function to that mock:
+
+```typescript packages/agent-core/src/tools.test.ts
+servesPostalCode: vi.fn(async () => ({ configured: false })),
+```
+
+Then check that the agent won't guess when the business listed no areas:
+
+```typescript packages/agent-core/src/tools.test.ts
+it("won't guess the service area when the business listed none", async () => {
+  const tools = createAgentTools({ domain: { db: {} as never }, channel: "web_chat", snapshot: demoSnapshot });
+  const execute = tools.checkServiceArea!.execute! as (input: object, options: object) => Promise<unknown>;
+  await expect(execute({ postalCode: "H2X 1Y4" }, { toolCallId: "1", messages: [] }))
+    .resolves.toMatchObject({ ok: false });
+});
+```
+
+The existing test `creates exactly the tools capabilities.ts offers` in the same file compares the tools `createAgentTools` builds with the list `agentCapabilities` returns, in order. It fails if you skip the `offered` check, or if the tool's place in `tools.ts` doesn't match its place in `offered`.
+
+`capabilities.test.ts` lists the exact tools that some conversations get, such as the default web chat, a test chat and a prospect demo. Add your tool to each list it now joins, or narrow its `offered` entry if it doesn't belong there. Then add a test for the conversations that shouldn't get it, if any.
+
+Test the domain function against PostgreSQL in `serviceAreas.integration.test.ts`. Copy the setup of an existing integration test, such as `packages/domain/src/server/appointmentRequests.integration.test.ts`: it seeds a business inside a transaction, calls the function with `{ db: tx as unknown as Database }`, and rolls the transaction back. Integration tests skip unless `LOBBYSTACK_RELIABILITY_TEST_DATABASE_URL` points at a dedicated test database. Against that database, `pnpm db:check` and `pnpm db:verify-rls` check your migration and its row-level security policy.
+
+Run the tests for both packages:
+
+```bash
+pnpm --filter @lobbystack/agent-core exec vitest run src/tools.test.ts src/capabilities.test.ts
+pnpm --filter @lobbystack/domain exec vitest run src/server/serviceAreas
+```
+
+## Check the tool on a call
+
+Changing the `live` list changes GPT-Live's instructions, so run the voice evaluation before you merge. It plays scripted callers against the real GPT-Live model:
+
+```bash
+OPENAI_API_KEY=your_openai_api_key pnpm voice:eval
+```
+
+The evaluation checks how calls flow and end, and its tools can't reach a database. To hear your tool's answer, start a browser test call from the dashboard and ask "Do you serve H2X 1Y4?". The worker logs each answer as `live.delegation`, with the tools it called in `tools`. The [voice testing notes](https://github.com/lobbystack/lobbystack/blob/main/docs/voice/testing.md) cover each scenario and `pnpm voice:call`, which places real phone calls.
+
+On a call, the agent takes a second model step to put a tool's result into words. For a result GPT-Live can say as it is, add a formatter to `FORMATTERS` in `packages/agent-core/src/live/directAnswer.ts`, and the agent skips that step.
+
+## Next steps
+
+The tool now answers on every channel the agent runs on. To let other software use the same domain function:
+
+- **API clients**: add an operation in `packages/shared/src/publicApi/operations.ts` and its route in `apps/admin/app/api/v1`
+- **AI assistants**: add an MCP tool in `apps/admin/src/lib/mcp/tools.ts`, with the scope it needs
+- **Operators**: add a settings page in `apps/admin` where the business lists its areas, with its copy in the locale files

@@ -1,0 +1,154 @@
+---
+title: "Ejecute LobbyStack en su computadora"
+description: "Inicie un LobbyStack autoalojado con un solo comando, con Docker y una clave de API de OpenAI, y escuche a su agente responder una llamada de prueba en el navegador. Sin número de teléfono, operador ni dominio."
+sidebarTitle: "Inicio rápido"
+contentType: "Tutorial"
+---
+
+El inicio rápido ejecuta LobbyStack en su computadora a partir de imágenes ya compiladas. Un comando las descarga, genera todas las contraseñas y secretos, e inicia el panel en `http://localhost:3000`. Luego crea una cuenta y habla con su agente con el micrófono del navegador. Los números de teléfono llegan después, cuando LobbyStack tenga una dirección pública.
+
+## Requisitos previos
+
+Necesita:
+
+- Docker con Compose v2: [Docker Desktop](https://docs.docker.com/get-docker/) en macOS o Windows, o Docker Engine con el plugin de Compose en Linux
+- una [clave de API de OpenAI](https://platform.openai.com/api-keys) de un proyecto con crédito
+- alrededor de 1 GB de memoria libre y 3 GB de espacio en disco
+
+El inicio rápido funciona en macOS, en Linux y en Windows dentro de WSL 2, con la integración de WSL de Docker Desktop activada. Git Bash y PowerShell no son compatibles.
+
+## Inicie LobbyStack
+
+Ejecute esto en una terminal, desde la carpeta donde quiere instalar LobbyStack:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/lobbystack/lobbystack/main/scripts/quickstart.sh | bash
+```
+
+El script le pide su clave de API de OpenAI y oculta lo que escribe. Después:
+
+1. crea una carpeta `lobbystack` y descarga en ella `docker-compose.quickstart.yml`
+2. escribe `lobbystack/.env` con un valor generado para cada contraseña de base de datos y cada secreto, legible solo por usted
+3. comprueba la clave con OpenAI
+4. descarga las imágenes e inicia PostgreSQL, Redis, Mailpit, la migración de la base de datos, el panel y el worker
+5. espera a que el panel y el worker estén en buen estado y muestra la dirección del panel
+
+La primera ejecución descarga unos 600 MB de imágenes. Para no escribir la clave, expórtela primero:
+
+```bash
+export OPENAI_API_KEY=your_openai_api_key_here
+curl -fsSL https://raw.githubusercontent.com/lobbystack/lobbystack/main/scripts/quickstart.sh | bash
+```
+
+Ponga el `export` en su propia línea. Una variable escrita delante de `curl` no llega al script.
+
+Si clonó el repositorio, ejecute `./scripts/quickstart.sh` en su raíz. El script usa entonces el archivo de Compose del clon y guarda su configuración en `.env.quickstart`, que Git ignora.
+
+El panel y Mailpit solo escuchan en `127.0.0.1`, así que las demás máquinas de su red no pueden acceder a ellos.
+
+## Cree su cuenta
+
+El registro pide un código de verificación, que LobbyStack envía por correo electrónico. El inicio rápido envía todos los correos a Mailpit, una bandeja de entrada local, en lugar de a un proveedor de correo real:
+
+1. Abra `http://localhost:3000` y seleccione **Crear una**.
+2. Escriba su correo electrónico y una contraseña, y seleccione **Crear cuenta**.
+3. Abra Mailpit en `http://localhost:8025`, copie el código del correo y escríbalo en la página de registro.
+
+Use `localhost` en la dirección. El panel solo responde en el nombre de host de `APP_BASE_URL`, así que `http://127.0.0.1:3000` muestra un error 404.
+
+## Escuche a su agente
+
+La configuración inicial pide un sitio web y un número de teléfono. Omita los dos: una llamada en el navegador no los necesita.
+
+<Steps>
+  <Step title="Ponga nombre a la aplicación y a la empresa">
+    En **Personalice esta aplicación**, elija un nombre y un logotipo, o seleccione **Omitir y conservar LobbyStack**. Luego escriba el nombre de su empresa.
+  </Step>
+  <Step title="Omita el sitio web y el número">
+    Seleccione **No tengo sitio web**, conserve o cambie el idioma de quienes llaman y seleccione **Añadiré un número más tarde**. Responda **¿Cómo conoció LobbyStack?** para continuar.
+  </Step>
+  <Step title="Inicie la llamada de prueba">
+    En **Conozca a su agente**, seleccione **Iniciar llamada de prueba** y permita que el navegador use el micrófono. Su agente lo saluda con el saludo que muestra la página.
+  </Step>
+</Steps>
+
+Más adelante, **Escuchar a su agente** en la página de inicio del panel inicia la misma llamada. Cada llamada usa su cuenta de OpenAI.
+
+## Administre LobbyStack
+
+Ejecute estos comandos desde la carpeta `lobbystack`. Su `.env` le indica a Docker Compose qué archivo y qué proyecto usar:
+
+```bash
+docker compose ps
+docker compose logs -f admin worker
+docker compose down
+```
+
+`docker compose down` detiene LobbyStack y conserva sus datos en volúmenes de Docker. Vuelva a ejecutar el comando del inicio rápido para iniciarlo de nuevo o para actualizar a las imágenes más recientes. Cada ejecución conserva sus secretos, su clave guardada y sus datos.
+
+`lobbystack/.env` guarda la única copia de las contraseñas de su base de datos. Consérvelo y manténgalo privado. Para borrarlo todo y empezar de cero, ejecute `docker compose down -v` y elimine `.env`.
+
+Desde un clon, agregue el archivo y el proyecto a cada comando: `docker compose -p lobbystack -f docker-compose.quickstart.yml --env-file .env.quickstart ps`.
+
+### Cambie los puertos o la versión
+
+Defina estas variables antes de ejecutar el script. El script las guarda en `.env` para las siguientes ejecuciones:
+
+| Variable | Predeterminado | Uso |
+| --- | --- | --- |
+| `LOBBYSTACK_PORT` | `3000` | El puerto del panel |
+| `LOBBYSTACK_MAIL_PORT` | `8025` | El puerto de Mailpit |
+| `LOBBYSTACK_VERSION` | `latest` | Una etiqueta de imagen, como `1.2.0`, para quedarse en una versión |
+| `LOBBYSTACK_DIR` | `./lobbystack` | La carpeta que crea el script |
+
+## Instale con Claude Code o Codex
+
+El plugin de LobbyStack le enseña a su agente de programación a instalar el inicio rápido, comprobar que funciona, resolver problemas y agregar un número más adelante. En Claude Code, ejecute:
+
+```text
+/plugin marketplace add lobbystack/lobbystack
+/plugin install lobbystack@lobbystack
+```
+
+Para Codex, ejecute en su terminal:
+
+```bash
+codex plugin marketplace add lobbystack/lobbystack
+codex plugin add lobbystack@lobbystack
+```
+
+Luego pídale a su agente que instale LobbyStack. En Claude Code, `/lobbystack:setup` ejecuta la misma habilidad. Su agente no puede escribir en la solicitud oculta de clave del script: exporte `OPENAI_API_KEY` antes de iniciar el agente, o ejecute usted mismo el comando del inicio rápido cuando el agente se lo pida. No pegue su clave en el chat.
+
+## Qué necesita más configuración
+
+El inicio rápido cubre las llamadas en el navegador, el chat de texto en el panel y los documentos que sube para su agente. Otras funciones necesitan más:
+
+- **Importar un sitio web**: defina `FIRECRAWL_API_KEY` en `.env`. Sin ella, la importación de un sitio falla.
+- **Correo real**: defina `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD` y `EMAIL_FROM` en `.env`. Hasta entonces, todos los correos van a Mailpit.
+- **Calendarios y otros proveedores**: consulte la [referencia de proveedores](/es/self-hosting/providers).
+
+Después de editar `.env`, vuelva a ejecutar el comando del inicio rápido, o `docker compose up -d` en la carpeta `lobbystack`.
+
+## Agregue un número de teléfono
+
+Una llamada telefónica llega a su agente a través de un operador, luego de OpenAI y luego de un webhook a su panel. Ese webhook necesita una dirección HTTPS pública, así que configúrela primero:
+
+1. Ejecute LobbyStack en un servidor con un nombre DNS y un proxy inverso que termine el HTTPS, o apunte un túnel como Cloudflare Tunnel o ngrok a `http://localhost:3000`. El proxy o el túnel debe conservar la cabecera `Host` original.
+2. En `.env`, defina `APP_BASE_URL=https://your_domain_here` y `BETTER_AUTH_USE_SECURE_COOKIES=true`. Para seguir usando también `http://localhost:3000`, defina `AUTH_TRUSTED_ORIGINS=http://localhost:3000`.
+3. Conecte OpenAI y Twilio como describe la sección "Termine de configurar las llamadas telefónicas" de [Entienda el autoalojamiento](/es/self-hosting/overview): un webhook de OpenAI, `OPENAI_WEBHOOK_SECRET`, `OPENAI_PROJECT_ID`, sus credenciales de Twilio y un trunk Elastic SIP en `TWILIO_SIP_TRUNK_SID`. Para usar Telnyx, siga la [guía del runtime de voz](https://github.com/lobbystack/lobbystack/blob/main/docs/voice/runtime.md#use-telnyx), en inglés.
+4. Vuelva a ejecutar el comando del inicio rápido y seleccione **Conectar un número de teléfono** en la página de inicio del panel.
+
+Las direcciones de los webhooks de Twilio y la dirección de redirección de Google Calendar siguen a `APP_BASE_URL`, así que no tiene que definirlas.
+
+## Resuelva problemas del inicio rápido
+
+El script se detiene con un mensaje que nombra el problema y el siguiente paso. Estos son los casos más comunes:
+
+- **`OpenAI rejected the API key`**: cree una clave en la [página de claves de API de OpenAI](https://platform.openai.com/api-keys), expórtela como `OPENAI_API_KEY` y vuelva a ejecutar el script.
+- **`port is already allocated`**: otro programa usa el puerto 3000 o 8025. Vuelva a ejecutar el script con `LOBBYSTACK_PORT=3100` o `LOBBYSTACK_MAIL_PORT=8125`.
+- **No llega ningún código a Mailpit**: revise el registro del worker con `docker compose logs worker` y seleccione **Enviar un código nuevo**.
+- **"Algo salió mal al iniciar la llamada."**: abra las herramientas para desarrolladores del navegador, seleccione **Network** (Red), vuelva a iniciar la llamada y lea la respuesta de la solicitud `session`. Contiene el error de OpenAI, como una clave vencida o un proyecto sin crédito.
+
+## Ejecute LobbyStack en producción
+
+El inicio rápido no tiene HTTPS, no envía correos fuera de su computadora y lo mantiene todo en una sola máquina. Para un servidor al que llamen personas reales, siga [Implemente con Docker Compose](/es/self-hosting/docker-compose) y lea [Entienda el autoalojamiento](/es/self-hosting/overview) para las copias de seguridad y las partes que usted opera.

@@ -1,0 +1,209 @@
+# LobbyStack quickstart: prebuilt images, one OpenAI API key, browser test calls.
+#
+# scripts/quickstart.sh downloads this file, writes the .env next to it with every
+# secret generated, and starts the stack. The dashboard listens on
+# http://localhost:3000 and Mailpit, which catches every email the stack sends,
+# on http://localhost:8025. Nothing else is published, and both bind to 127.0.0.1.
+#
+# Phone calls need a public HTTPS address and a carrier. Set APP_BASE_URL,
+# BETTER_AUTH_USE_SECURE_COOKIES=true and the carrier's variables in .env, then
+# run `docker compose up -d` again. See docs.lobbystack.com/self-hosting/quickstart.
+name: lobbystack
+
+x-images:
+  # LOBBYSTACK_IMAGE_PREFIX and LOBBYSTACK_VERSION pick other images, such as a
+  # release tag instead of latest, or images you built yourself.
+  admin: &admin-image ${LOBBYSTACK_IMAGE_PREFIX:-ghcr.io/lobbystack/lobbystack}-admin:${LOBBYSTACK_VERSION:-latest}
+  worker: &worker-image ${LOBBYSTACK_IMAGE_PREFIX:-ghcr.io/lobbystack/lobbystack}-worker:${LOBBYSTACK_VERSION:-latest}
+  migrator: &migrator-image ${LOBBYSTACK_IMAGE_PREFIX:-ghcr.io/lobbystack/lobbystack}-migrator:${LOBBYSTACK_VERSION:-latest}
+
+# Settings the admin and the worker both read.
+x-runtime-env: &runtime-env
+  NODE_ENV: production
+  DEPLOYMENT_MODE: self_hosted_standard
+  APP_BASE_URL: ${APP_BASE_URL:-http://localhost:${LOBBYSTACK_PORT:-3000}}
+  REDIS_URL: redis://redis:6379
+  REDIS_PREFIX: lobbystack
+  STORAGE_PROVIDER: local
+  LOCAL_STORAGE_PATH: /var/lib/lobbystack/storage
+  LOCAL_STORAGE_SIGNING_SECRET: ${LOCAL_STORAGE_SIGNING_SECRET:?Run scripts/quickstart.sh to generate .env}
+  ENCRYPTION_KEY: ${ENCRYPTION_KEY:?Run scripts/quickstart.sh to generate .env}
+  OTP_HASH_SECRET: ${OTP_HASH_SECRET:?Run scripts/quickstart.sh to generate .env}
+  INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?Run scripts/quickstart.sh to generate .env}
+  LOBBYSTACK_DISPATCHER_PASSWORD: ${LOBBYSTACK_DISPATCHER_PASSWORD:?Run scripts/quickstart.sh to generate .env}
+  # GPT-Live answers browser test calls with this key; text replies and
+  # knowledge embeddings use it too.
+  OPENAI_API_KEY: ${OPENAI_API_KEY:?Set OPENAI_API_KEY in .env}
+  LIVE_PROTOTYPE_ENABLED: "true"
+  AI_CHAT_MODEL: ${AI_CHAT_MODEL:-}
+  AI_CHAT_REASONING_EFFORT: ${AI_CHAT_REASONING_EFFORT:-}
+  # Phone calls, all optional. Twilio sends calls to OpenAI over an Elastic SIP
+  # trunk; Telnyx over an FQDN connection. docs/voice/runtime.md lists the steps.
+  OPENAI_PROJECT_ID: ${OPENAI_PROJECT_ID:-}
+  TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+  TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+  TWILIO_SIP_TRUNK_SID: ${TWILIO_SIP_TRUNK_SID:-}
+  TWILIO_VERIFY_SERVICE_SID: ${TWILIO_VERIFY_SERVICE_SID:-}
+  TWILIO_ALERT_SMS_FROM: ${TWILIO_ALERT_SMS_FROM:-}
+  TWILIO_STATUS_CALLBACK_URL: ${TWILIO_STATUS_CALLBACK_URL:-${APP_BASE_URL:-http://localhost:${LOBBYSTACK_PORT:-3000}}/api/webhooks/twilio/status}
+  TELEPHONY_NUMBERS: ${TELEPHONY_NUMBERS:-}
+  TELEPHONY_VERIFY: ${TELEPHONY_VERIFY:-}
+  TELEPHONY_LOOKUP: ${TELEPHONY_LOOKUP:-}
+  TELEPHONY_ALERT_SMS: ${TELEPHONY_ALERT_SMS:-}
+  TELEPHONY_ALERT_SMS_FROM: ${TELEPHONY_ALERT_SMS_FROM:-}
+  TELNYX_API_KEY: ${TELNYX_API_KEY:-}
+  TELNYX_PUBLIC_KEY: ${TELNYX_PUBLIC_KEY:-}
+  TELNYX_OUTBOUND_VOICE_PROFILE_ID: ${TELNYX_OUTBOUND_VOICE_PROFILE_ID:-}
+  TELNYX_TEXML_APPLICATION_ID: ${TELNYX_TEXML_APPLICATION_ID:-}
+  TELNYX_TEXML_WEBHOOK_SECRET: ${TELNYX_TEXML_WEBHOOK_SECRET:-}
+  TELNYX_MESSAGING_PROFILE_ID: ${TELNYX_MESSAGING_PROFILE_ID:-}
+  TELNYX_VERIFY_PROFILE_ID: ${TELNYX_VERIFY_PROFILE_ID:-}
+  # Optional integrations. Each stays off while its variables are empty.
+  FIRECRAWL_API_KEY: ${FIRECRAWL_API_KEY:-}
+  GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+  GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+  GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-${APP_BASE_URL:-http://localhost:${LOBBYSTACK_PORT:-3000}}/api/calendar/google/callback}
+  OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+  OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: lobbystack
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run scripts/quickstart.sh to generate .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d lobbystack"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec", "--maxmemory-policy", "noeviction"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # Catches every email the stack sends, such as the sign-up verification code.
+  # Set SMTP_HOST and the other SMTP_* variables to send real email instead.
+  mailpit:
+    image: axllent/mailpit:v1
+    restart: unless-stopped
+    # No SMTP authentication: the worker then sends without logging in.
+    ports:
+      - "127.0.0.1:${LOBBYSTACK_MAIL_PORT:-8025}:8025"
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # Creates the schema, then gives each runtime role its login password. Runs on
+  # every start and exits; both steps are safe to repeat.
+  migrator:
+    image: *migrator-image
+    entrypoint: ["sh", "-c", "node_modules/.bin/tsx dist/cli.js migrate && node_modules/.bin/tsx dist/cli.js bootstrap"]
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/lobbystack
+      LOBBYSTACK_MIGRATOR_PASSWORD: ${LOBBYSTACK_MIGRATOR_PASSWORD:?Run scripts/quickstart.sh to generate .env}
+      LOBBYSTACK_AUTH_PASSWORD: ${LOBBYSTACK_AUTH_PASSWORD:?Run scripts/quickstart.sh to generate .env}
+      LOBBYSTACK_APP_PASSWORD: ${LOBBYSTACK_APP_PASSWORD:?Run scripts/quickstart.sh to generate .env}
+      LOBBYSTACK_WORKER_PASSWORD: ${LOBBYSTACK_WORKER_PASSWORD:?Run scripts/quickstart.sh to generate .env}
+      LOBBYSTACK_DISPATCHER_PASSWORD: ${LOBBYSTACK_DISPATCHER_PASSWORD}
+      LOBBYSTACK_READONLY_PASSWORD: ${LOBBYSTACK_READONLY_PASSWORD:?Run scripts/quickstart.sh to generate .env}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  admin:
+    image: *admin-image
+    restart: unless-stopped
+    environment:
+      <<: *runtime-env
+      PORT: 3000
+      # Other role URLs are built from DATABASE_URL and each role password (packages/db roleDatabaseUrl).
+      DATABASE_URL: postgres://lobbystack_app:${LOBBYSTACK_APP_PASSWORD}@postgres:5432/lobbystack
+      LOBBYSTACK_AUTH_PASSWORD: ${LOBBYSTACK_AUTH_PASSWORD}
+      LOBBYSTACK_WORKER_PASSWORD: ${LOBBYSTACK_WORKER_PASSWORD}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?Run scripts/quickstart.sh to generate .env}
+      # Plain HTTP on localhost. Set true once APP_BASE_URL is an https:// address.
+      BETTER_AUTH_USE_SECURE_COOKIES: ${BETTER_AUTH_USE_SECURE_COOKIES:-false}
+      # The dashboard answers only on APP_BASE_URL's hostname and these origins,
+      # such as http://localhost:3000 once APP_BASE_URL is public.
+      AUTH_TRUSTED_ORIGINS: ${AUTH_TRUSTED_ORIGINS:-}
+      # The one header your reverse proxy sets to the client's IP, such as x-real-ip.
+      TRUSTED_CLIENT_IP_HEADER: ${TRUSTED_CLIENT_IP_HEADER:-}
+      REQUIRE_EMAIL_VERIFICATION: "true"
+      INTERNAL_SERVICE_SECRET: ${INTERNAL_SERVICE_SECRET:?Run scripts/quickstart.sh to generate .env}
+      WIDGET_SESSION_SECRET: ${WIDGET_SESSION_SECRET:?Run scripts/quickstart.sh to generate .env}
+      NUMBER_CLAIM_TOKEN_SECRET: ${NUMBER_CLAIM_TOKEN_SECRET:?Run scripts/quickstart.sh to generate .env}
+      WORKER_INTERNAL_URL: http://worker:3002
+      # Phone calls only: the signing secret of the OpenAI webhook that points at
+      # APP_BASE_URL/api/webhooks/openai/live.
+      OPENAI_WEBHOOK_SECRET: ${OPENAI_WEBHOOK_SECRET:-}
+      TWILIO_SMS_WEBHOOK_URL: ${TWILIO_SMS_WEBHOOK_URL:-${APP_BASE_URL:-http://localhost:${LOBBYSTACK_PORT:-3000}}/api/webhooks/twilio/sms}
+      OTEL_SERVICE_NAME: lobbystack-admin
+    depends_on:
+      migrator:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    volumes:
+      - storage_data:/var/lib/lobbystack/storage
+    ports:
+      - "127.0.0.1:${LOBBYSTACK_PORT:-3000}:3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      start_period: 30s
+      retries: 12
+
+  worker:
+    image: *worker-image
+    restart: unless-stopped
+    environment:
+      <<: *runtime-env
+      PORT: 3002
+      DATABASE_URL: postgres://lobbystack_worker:${LOBBYSTACK_WORKER_PASSWORD}@postgres:5432/lobbystack
+      SMTP_HOST: ${SMTP_HOST:-mailpit}
+      SMTP_PORT: ${SMTP_PORT:-1025}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      EMAIL_FROM: ${EMAIL_FROM:-LobbyStack <no-reply@localhost>}
+      EMAIL_REPLY_TO: ${EMAIL_REPLY_TO:-}
+      AI_DELEGATION_MODEL: ${AI_DELEGATION_MODEL:-}
+      AI_DELEGATION_REASONING_EFFORT: ${AI_DELEGATION_REASONING_EFFORT:-}
+      OTEL_SERVICE_NAME: lobbystack-worker
+    depends_on:
+      migrator:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      mailpit:
+        condition: service_healthy
+    volumes:
+      - storage_data:/var/lib/lobbystack/storage
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3002/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      start_period: 20s
+      retries: 12
+
+volumes:
+  postgres_data:
+  redis_data:
+  storage_data:

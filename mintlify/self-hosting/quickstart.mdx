@@ -1,0 +1,154 @@
+---
+title: "Run LobbyStack on your computer"
+description: "Start a self-hosted LobbyStack with one command, using Docker and an OpenAI API key, and hear your agent answer a browser test call. No phone number, carrier or domain needed."
+sidebarTitle: "Quickstart"
+contentType: "Tutorial"
+---
+
+The quickstart runs LobbyStack on your computer from prebuilt images. One command downloads them, generates every password and secret, and starts the dashboard at `http://localhost:3000`. You then create an account and talk to your agent through your browser's microphone. Phone numbers come later, once you give LobbyStack a public address.
+
+## Prerequisites
+
+You need:
+
+- Docker with Compose v2: [Docker Desktop](https://docs.docker.com/get-docker/) on macOS or Windows, or Docker Engine with the Compose plugin on Linux
+- an [OpenAI API key](https://platform.openai.com/api-keys) from a project with credit
+- about 1 GB of free memory and 3 GB of disk space
+
+The quickstart runs on macOS, on Linux, and on Windows inside WSL 2 with Docker Desktop's WSL integration turned on. Git Bash and PowerShell aren't supported.
+
+## Start LobbyStack
+
+Run this in a terminal, from the directory where you want LobbyStack to live:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/lobbystack/lobbystack/main/scripts/quickstart.sh | bash
+```
+
+The script asks for your OpenAI API key and hides what you type. It then:
+
+1. creates a `lobbystack` directory and downloads `docker-compose.quickstart.yml` into it
+2. writes `lobbystack/.env` with a generated value for every database password and secret, readable only by you
+3. checks the key with OpenAI
+4. pulls the images and starts PostgreSQL, Redis, Mailpit, the database migration, the dashboard and the worker
+5. waits until the dashboard and the worker report healthy, then prints the dashboard's address
+
+The first run downloads about 600 MB of images. To skip the key prompt, export the key first:
+
+```bash
+export OPENAI_API_KEY=your_openai_api_key_here
+curl -fsSL https://raw.githubusercontent.com/lobbystack/lobbystack/main/scripts/quickstart.sh | bash
+```
+
+Put the `export` on its own line. A variable written in front of `curl` doesn't reach the script.
+
+If you cloned the repository, run `./scripts/quickstart.sh` from its root instead. The script then uses the clone's compose file and keeps its settings in `.env.quickstart`, which Git ignores.
+
+The dashboard and Mailpit listen on `127.0.0.1` only, so other machines on your network can't reach them.
+
+## Create your account
+
+Sign-up asks for a verification code, which LobbyStack sends by email. The quickstart sends every email to Mailpit, a local inbox, instead of a real mail provider:
+
+1. Open `http://localhost:3000` and select **Create one**.
+2. Enter your email address and a password, then select **Create account**.
+3. Open Mailpit at `http://localhost:8025`, copy the code from the email, and enter it on the sign-up page.
+
+Use `localhost` in the address. The dashboard answers only on the hostname in `APP_BASE_URL`, so `http://127.0.0.1:3000` shows a 404.
+
+## Hear your agent
+
+Onboarding asks for a website and a phone number. Skip both: neither is needed for a browser call.
+
+<Steps>
+  <Step title="Name the app and the business">
+    On **Make this app your own**, set an app name and logo, or select **Skip and keep LobbyStack**. Then enter your business name.
+  </Step>
+  <Step title="Skip the website and the number">
+    Select **I don't have a website**, keep or change the caller language, then select **I'll add a number later**. Answer **How did you hear about LobbyStack?** to continue.
+  </Step>
+  <Step title="Start the test call">
+    On **Meet your agent**, select **Start test call** and allow your browser to use the microphone. Your agent greets you with the greeting shown on the page.
+  </Step>
+</Steps>
+
+Later, **Hear your agent** on the dashboard's home page starts the same call. Each call uses your OpenAI account.
+
+## Manage the stack
+
+Run these from the `lobbystack` directory. Its `.env` tells Docker Compose which file and project to use:
+
+```bash
+docker compose ps
+docker compose logs -f admin worker
+docker compose down
+```
+
+`docker compose down` stops LobbyStack and keeps your data in Docker volumes. Run the quickstart command again to start it, or to update to the newest images. Each run keeps your secrets, your saved key and your data.
+
+`lobbystack/.env` holds the only copy of your database passwords. Keep it, and keep it private. To delete everything and start over, run `docker compose down -v` and delete `.env`.
+
+From a clone, add the file and project to each command: `docker compose -p lobbystack -f docker-compose.quickstart.yml --env-file .env.quickstart ps`.
+
+### Change the ports or the version
+
+Set these before you run the script. It saves them in `.env` for later runs:
+
+| Variable | Default | Use |
+| --- | --- | --- |
+| `LOBBYSTACK_PORT` | `3000` | The dashboard's port |
+| `LOBBYSTACK_MAIL_PORT` | `8025` | Mailpit's port |
+| `LOBBYSTACK_VERSION` | `latest` | An image tag, such as `1.2.0`, to stay on one release |
+| `LOBBYSTACK_DIR` | `./lobbystack` | Where the script creates its directory |
+
+## Set up with Claude Code or Codex
+
+The LobbyStack plugin teaches your coding agent to install the quickstart, check that it's healthy, troubleshoot it, and add a phone number later. In Claude Code, run:
+
+```text
+/plugin marketplace add lobbystack/lobbystack
+/plugin install lobbystack@lobbystack
+```
+
+In Codex, run in your terminal:
+
+```bash
+codex plugin marketplace add lobbystack/lobbystack
+codex plugin add lobbystack@lobbystack
+```
+
+Then ask your agent to set up LobbyStack. In Claude Code, `/lobbystack:setup` runs the same skill. Your agent can't type into the script's hidden key prompt, so either export `OPENAI_API_KEY` before you start the agent, or run the quickstart command yourself when the agent asks. Don't paste your key into the chat.
+
+## What else needs setup
+
+The quickstart covers browser calls, text chat in the dashboard, and documents you upload for your agent. Other features need more:
+
+- **Website import**: set `FIRECRAWL_API_KEY` in `.env`. Without it, importing a website fails.
+- **Real email**: set `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD` and `EMAIL_FROM` in `.env`. Until then, every email goes to Mailpit.
+- **Calendars and other providers**: see the [provider reference](/self-hosting/providers).
+
+After you edit `.env`, run the quickstart command again, or `docker compose up -d` in the `lobbystack` directory.
+
+## Add a phone number
+
+Phone calls reach your agent through a carrier, then OpenAI, then a webhook to your dashboard. That webhook needs a public HTTPS address, so set one up first:
+
+1. Run LobbyStack on a server with a DNS name and a reverse proxy that ends HTTPS, or point a tunnel such as Cloudflare Tunnel or ngrok at `http://localhost:3000`. The proxy or tunnel must keep the original `Host` header.
+2. In `.env`, set `APP_BASE_URL=https://your_domain_here` and `BETTER_AUTH_USE_SECURE_COOKIES=true`. To keep using `http://localhost:3000` as well, set `AUTH_TRUSTED_ORIGINS=http://localhost:3000`.
+3. Connect OpenAI and Twilio as [After deploying](/self-hosting/overview#finish-phone-calls) describes: an OpenAI webhook, `OPENAI_WEBHOOK_SECRET`, `OPENAI_PROJECT_ID`, your Twilio credentials and an Elastic SIP trunk in `TWILIO_SIP_TRUNK_SID`. To use Telnyx instead, follow the [voice runtime guide](https://github.com/lobbystack/lobbystack/blob/main/docs/voice/runtime.md#use-telnyx).
+4. Run the quickstart command again, then select **Connect a phone number** on the dashboard's home page.
+
+The Twilio webhook addresses and the Google Calendar redirect address follow `APP_BASE_URL`, so you don't set them yourself.
+
+## Troubleshoot the quickstart
+
+The script stops with a message that names the problem and the next step. These cases come up most:
+
+- **`OpenAI rejected the API key`**: create a key at [OpenAI's API keys page](https://platform.openai.com/api-keys), export it as `OPENAI_API_KEY`, and run the script again.
+- **`port is already allocated`**: another program uses port 3000 or 8025. Run the script again with `LOBBYSTACK_PORT=3100` or `LOBBYSTACK_MAIL_PORT=8125`.
+- **No code in Mailpit**: check the worker's log with `docker compose logs worker`, then select **Send a new code**.
+- **"Something went wrong while starting the call"**: open your browser's developer tools, select **Network**, start the call again, and read the response of the `session` request. It holds OpenAI's error, such as an expired key or a project with no credit.
+
+## Run LobbyStack in production
+
+The quickstart has no HTTPS, sends email nowhere, and keeps everything on one machine. For a server that real callers reach, follow [Deploy with Docker Compose](/self-hosting/docker-compose), and read [Understand self-hosting](/self-hosting/overview) for backups and the parts you operate.

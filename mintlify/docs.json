@@ -326,11 +326,19 @@
           {
             "group": "Self-hosting",
             "pages": [
+              "self-hosting/quickstart",
               "self-hosting/overview",
               "self-hosting/docker-compose",
               "self-hosting/environment-variables",
               "self-hosting/providers",
               "self-hosting/white-label"
+            ]
+          },
+          {
+            "group": "Build on LobbyStack",
+            "pages": [
+              "build/architecture",
+              "build/add-a-capability"
             ]
           }
         ]
@@ -499,11 +507,19 @@
           {
             "group": "Auto-hébergement",
             "pages": [
+              "fr/self-hosting/quickstart",
               "fr/self-hosting/overview",
               "fr/self-hosting/docker-compose",
               "fr/self-hosting/environment-variables",
               "fr/self-hosting/providers",
               "fr/self-hosting/white-label"
+            ]
+          },
+          {
+            "group": "Développer avec LobbyStack",
+            "pages": [
+              "fr/build/architecture",
+              "fr/build/add-a-capability"
             ]
           }
         ]
@@ -672,11 +688,19 @@
           {
             "group": "Autoalojamiento",
             "pages": [
+              "es/self-hosting/quickstart",
               "es/self-hosting/overview",
               "es/self-hosting/docker-compose",
               "es/self-hosting/environment-variables",
               "es/self-hosting/providers",
               "es/self-hosting/white-label"
+            ]
+          },
+          {
+            "group": "Desarrollar con LobbyStack",
+            "pages": [
+              "es/build/architecture",
+              "es/build/add-a-capability"
             ]
           }
         ]

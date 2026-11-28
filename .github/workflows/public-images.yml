@@ -1,0 +1,150 @@
+name: Public images
+
+# Builds the generic admin, worker and migrator images that
+# docker-compose.quickstart.yml pulls, for linux/amd64 and linux/arm64, and
+# pushes them to ghcr.io/<owner>/lobbystack-<service>:
+#
+#   main commit       latest, main, sha-<short sha>
+#   published release <version> and <major>.<minor>, such as 1.2.0 and 1.2
+#
+# The images take no build arguments, so they hold none of the hosted
+# deployment's settings: no PostHog or Turnstile keys, no storage origin, no
+# deployment mode. Every setting is read when the container starts. The
+# production images in dokploy-release.yml are separate packages
+# (ghcr.io/lobbystack/lobbystack/<service>) and don't change.
+on:
+  workflow_call:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: public-images-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.repository == 'lobbystack/lobbystack' || github.event_name == 'workflow_dispatch'
+    strategy:
+      fail-fast: true
+      matrix:
+        service: [admin, worker, migrator]
+        platform: [linux/amd64, linux/arm64]
+    # Each platform builds on a runner of its own architecture: emulating arm64
+    # would make the admin's Next.js build take hours.
+    runs-on: ${{ matrix.platform == 'linux/arm64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Name the image
+        id: name
+        env:
+          OWNER: ${{ github.repository_owner }}
+          SERVICE: ${{ matrix.service }}
+          PLATFORM: ${{ matrix.platform }}
+        run: |
+          echo "image=ghcr.io/${OWNER,,}/lobbystack-$SERVICE" >> "$GITHUB_OUTPUT"
+          echo "arch=${PLATFORM#linux/}" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - name: Build and load
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: Dockerfile.${{ matrix.service }}
+          platforms: ${{ matrix.platform }}
+          load: true
+          tags: lobbystack-${{ matrix.service }}:verify
+          build-args: SERVICE_VERSION=${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.licenses=MIT
+          cache-from: type=gha,scope=public-${{ matrix.service }}-${{ steps.name.outputs.arch }}
+          cache-to: type=gha,mode=max,scope=public-${{ matrix.service }}-${{ steps.name.outputs.arch }}
+      - name: Check the image holds no deployment settings
+        run: bash scripts/verify-public-image.sh "${{ matrix.service }}" "lobbystack-${{ matrix.service }}:verify"
+      - name: Push by digest
+        id: push
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: Dockerfile.${{ matrix.service }}
+          platforms: ${{ matrix.platform }}
+          provenance: false
+          build-args: SERVICE_VERSION=${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.licenses=MIT
+          outputs: type=image,name=${{ steps.name.outputs.image }},push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=public-${{ matrix.service }}-${{ steps.name.outputs.arch }}
+      - name: Save the digest
+        env:
+          DIGEST: ${{ steps.push.outputs.digest }}
+        run: |
+          mkdir -p digests
+          touch "digests/${DIGEST#sha256:}"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: digest-${{ matrix.service }}-${{ steps.name.outputs.arch }}
+          path: digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    strategy:
+      matrix:
+        service: [admin, worker, migrator]
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: digests
+          pattern: digest-${{ matrix.service }}-*
+          merge-multiple: true
+      - name: Name the image
+        id: name
+        env:
+          OWNER: ${{ github.repository_owner }}
+          SERVICE: ${{ matrix.service }}
+        run: echo "image=ghcr.io/${OWNER,,}/lobbystack-$SERVICE" >> "$GITHUB_OUTPUT"
+      - id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ steps.name.outputs.image }}
+          flavor: latest=false
+          tags: |
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=main,enable=${{ github.ref == 'refs/heads/main' }}
+            type=sha,prefix=sha-,enable=${{ github.ref == 'refs/heads/main' }}
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - name: Push the multi-platform tags
+        working-directory: digests
+        env:
+          IMAGE: ${{ steps.name.outputs.image }}
+          TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          if [[ -z "$TAGS" ]]; then echo "No tag applies to $GITHUB_REF."; exit 1; fi
+          args=()
+          while IFS= read -r tag; do [[ -n "$tag" ]] && args+=(--tag "$tag"); done <<< "$TAGS"
+          # shellcheck disable=SC2046
+          docker buildx imagetools create "${args[@]}" $(printf "$IMAGE@sha256:%s " *)
+          docker buildx imagetools inspect "$(head -n1 <<< "$TAGS")"
